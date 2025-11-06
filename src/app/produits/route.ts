@@ -25,7 +25,7 @@ if (!getApps().length) {
 const adminAuth = getAdminAuth();
 
 const vendeursMap: Record<string, string> = {
-  "nouvelleriveparis@gmail.com": "NOUVELLE RIVE"
+  "nouvelleriveparis@gmail.com": "NOUVELLE RIVE",
   "darkvintage25@gmail.com": "DARK VINTAGE",
   "laura.seror.pro@gmail.com": "MAISON BÉGUIN",
   "studio.inespineau@gmail.com": "INES PINEAU",
