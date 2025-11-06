@@ -29,16 +29,16 @@ const vendeursMap: Record<string, string> = {
   "darkvintage25@gmail.com": "DARK VINTAGE",
   "laura.seror.pro@gmail.com": "MAISON BÉGUIN",
   "studio.inespineau@gmail.com": "INES PINEAU",
-  "info@aerea.studio": "AEREA"
-  "Maisonhouni@gmail.com": "MAISON HOUNI"
-  "mathilde.royer226@gmail.com": "MAKI CORP"
-  "alexandra@theparisianvintage.com": "PARISIAN VINTAGE"
-  "sophieactisbonage@gmail.com": "BONAGE"
-  "lea@personalsellerparis.com": "PERSONAL SELLER"
-  "pristiniparis@gmail.com": "PRISTINI"
-  "contactgigiparis@gmail.com": "GIGI PARIS"
-  "rdlcweb@gmail.com": "SERGIO TACCHINERIE" 
-  "contact@tete-dorange.com": "TÊTE D'ORANGE" 
+  "info@aerea.studio": "AEREA",
+  "Maisonhouni@gmail.com": "MAISON HOUNI",
+  "mathilde.royer226@gmail.com": "MAKI CORP",
+  "alexandra@theparisianvintage.com": "PARISIAN VINTAGE",
+  "sophieactisbonage@gmail.com": "BONAGE",
+  "lea@personalsellerparis.com": "PERSONAL SELLER",
+  "pristiniparis@gmail.com": "PRISTINI",
+  "contactgigiparis@gmail.com": "GIGI PARIS",
+  "rdlcweb@gmail.com": "SERGIO TACCHINERIE",
+  "contact@tete-dorange.com": "TÊTE D'ORANGE",
   // ajoute les autres
 };
 };
