@@ -1,213 +1,118 @@
-// app/bordereau/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
-interface Commande {
-  id: string
-  produit: string
-  sku?: string
-  marque?: string
-  taille?: string
-  prix: number
-  client: {
-    nom: string
-    prenom: string
-    email: string
-    telephone?: string
-  }
-  adresse?: {
-    rue: string
-    complementAdresse?: string
-    codePostal: string
-    ville: string
-    pays: string
-  }
-  numeroGroupe?: string
-}
-
-export default function BordereauPage() {
+function BordereauContent() {
   const searchParams = useSearchParams()
   const groupe = searchParams.get('groupe')
-  
-  const [commandes, setCommandes] = useState<Commande[]>([])
+  const [commandes, setCommandes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const charger = async () => {
-      if (!groupe) return
-      
-      try {
-        // Essayer de charger par numeroGroupe
-        let snap = await getDocs(
-          query(collection(db, 'commandes'), where('numeroGroupe', '==', groupe))
-        )
-        
-        // Si pas trouvé, chercher par ID direct
-        if (snap.empty) {
-          snap = await getDocs(
-            query(collection(db, 'commandes'), where('__name__', '==', groupe))
-          )
-        }
-        
-        const data = snap.docs.map(d => ({
-          id: d.id,
-          ...d.data()
-        })) as Commande[]
-        
-        setCommandes(data)
-      } catch (err) {
-        console.error('Erreur chargement:', err)
-      } finally {
-        setLoading(false)
-      }
+    if (!groupe) return
+    const fetchCommandes = async () => {
+      const q = query(collection(db, 'commandes'), where('numeroGroupe', '==', groupe))
+      const snap = await getDocs(q)
+      setCommandes(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      setLoading(false)
     }
-    
-    charger()
+    fetchCommandes()
   }, [groupe])
 
-  const handlePrint = () => {
-    window.print()
-  }
+  if (!groupe) return <div className="p-8 text-center">Aucun groupe spécifié</div>
+  if (loading) return <div className="p-8 text-center">Chargement...</div>
+  if (commandes.length === 0) return <div className="p-8 text-center">Aucune commande trouvée</div>
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Chargement...</p>
-      </div>
-    )
-  }
-
-  if (commandes.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Aucune commande trouvée</p>
-      </div>
-    )
-  }
-
-  const client = commandes[0].client
-  const adresse = commandes[0].adresse
-  const totalPrix = commandes.reduce((sum, c) => sum + (c.prix || 0), 0)
+  const client = commandes[0]?.client || {}
+  const adresse = commandes[0]?.adresse || {}
+  const total = commandes.reduce((sum, c) => sum + (c.prix || 0), 0)
 
   return (
-    <>
-      {/* Styles pour l'impression */}
-      <style jsx global>{`
-        @media print {
-          body { margin: 0; }
-          .no-print { display: none !important; }
-          .print-page { page-break-after: always; }
-        }
-      `}</style>
+    <div className="max-w-2xl mx-auto p-8 bg-white min-h-screen">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold">NOUVELLE RIVE</h1>
+        <p className="text-sm text-gray-600">23 rue du Pont Louis-Philippe, 75004 Paris</p>
+      </div>
 
-      <div className="max-w-2xl mx-auto p-8">
-        {/* Bouton imprimer */}
-        <div className="no-print mb-6 flex gap-4">
-          <button
-            onClick={handlePrint}
-            className="bg-[#22209C] text-white px-6 py-2 rounded-lg hover:bg-[#1a1a7e]"
-          >
-            🖨️ Imprimer
-          </button>
-          <button
-            onClick={() => window.close()}
-            className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300"
-          >
-            Fermer
-          </button>
+      <h2 className="text-xl font-bold mb-4">BORDEREAU DE LIVRAISON</h2>
+      <p className="text-sm text-gray-500 mb-6">Groupe: {groupe}</p>
+
+      <div className="border-t border-b py-4 mb-6">
+        <p className="font-semibold">{client.prenom} {client.nom}</p>
+        <p>{adresse.rue}</p>
+        {adresse.complementAdresse && <p>{adresse.complementAdresse}</p>}
+        <p>{adresse.codePostal} {adresse.ville}</p>
+        <p>{adresse.pays}</p>
+        {client.email && <p className="text-sm text-gray-600">{client.email}</p>}
+        {client.telephone && <p className="text-sm text-gray-600">{client.telephone}</p>}
+      </div>
+
+      <table className="w-full mb-6">
+        <thead>
+          <tr className="border-b">
+            <th className="text-left py-2">Article</th>
+            <th className="text-right py-2">Prix</th>
+          </tr>
+        </thead>
+        <tbody>
+          {commandes.map((c, i) => (
+            <tr key={i} className="border-b">
+              <td className="py-2">
+                <p className="font-medium">{c.sku || c.productSku}</p>
+                <p className="text-sm text-gray-600">{c.produit || c.productName}</p>
+              </td>
+              <td className="text-right py-2">{(c.prix || 0).toFixed(2)} €</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="font-bold">
+            <td className="py-2">TOTAL ({commandes.length} article{commandes.length > 1 ? 's' : ''})</td>
+            <td className="text-right py-2">{total.toFixed(2)} €</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div className="border p-4 mb-6">
+        <p className="font-semibold mb-2">Expédition</p>
+        <p>Transporteur: _______________________</p>
+        <p>N° de suivi: _______________________</p>
+      </div>
+
+      <div className="text-sm text-gray-600 mb-6">
+        <p className="font-semibold mb-1">Instructions:</p>
+        <ol className="list-decimal list-inside space-y-1">
+          <li>Vérifier tous les articles</li>
+          <li>Protéger avec du papier de soie</li>
+          <li>Coller ce bordereau sur le colis</li>
+          <li>Noter le numéro de suivi</li>
+        </ol>
+      </div>
+
+      <div className="flex justify-between mt-8 pt-4 border-t">
+        <div>
+          <p className="text-sm">Préparé par: _______________</p>
         </div>
-
-        {/* Bordereau */}
-        <div className="border-2 border-black p-6 print-page">
-          {/* En-tête */}
-          <div className="text-center border-b-2 border-black pb-4 mb-6">
-            <h1 className="text-2xl font-bold uppercase tracking-wider">Nouvelle Rive</h1>
-            <p className="text-sm text-gray-600 mt-1">Vintage from Paris</p>
-          </div>
-
-          {/* Destinataire */}
-          <div className="mb-6">
-            <p className="text-xs text-gray-500 uppercase mb-2">Destinataire</p>
-            <div className="border border-gray-300 p-4 bg-gray-50">
-              <p className="font-bold text-lg">
-                {client.prenom} {client.nom}
-              </p>
-              {adresse && (
-                <>
-                  <p className="mt-2">{adresse.rue}</p>
-                  {adresse.complementAdresse && <p>{adresse.complementAdresse}</p>}
-                  <p>{adresse.codePostal} {adresse.ville}</p>
-                  <p className="font-medium">{adresse.pays}</p>
-                </>
-              )}
-              {client.telephone && (
-                <p className="mt-2 text-sm">📞 {client.telephone}</p>
-              )}
-              <p className="text-sm text-gray-600">✉️ {client.email}</p>
-            </div>
-          </div>
-
-          {/* Articles */}
-          <div className="mb-6">
-            <p className="text-xs text-gray-500 uppercase mb-2">Articles ({commandes.length})</p>
-            <table className="w-full border border-gray-300">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border border-gray-300 px-3 py-2 text-left text-sm">SKU</th>
-                  <th className="border border-gray-300 px-3 py-2 text-left text-sm">Article</th>
-                  <th className="border border-gray-300 px-3 py-2 text-right text-sm">Prix</th>
-                </tr>
-              </thead>
-              <tbody>
-                {commandes.map((c) => (
-                  <tr key={c.id}>
-                    <td className="border border-gray-300 px-3 py-2 font-mono text-sm">
-                      {c.sku || '—'}
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2 text-sm">
-                      <span className="font-medium">{c.produit}</span>
-                      {c.marque && <span className="text-gray-500"> • {c.marque}</span>}
-                      {c.taille && <span className="text-gray-500"> • T.{c.taille}</span>}
-                    </td>
-                    <td className="border border-gray-300 px-3 py-2 text-right text-sm">
-                      {c.prix?.toFixed(2)} €
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-gray-100 font-bold">
-                <tr>
-                  <td colSpan={2} className="border border-gray-300 px-3 py-2 text-right">
-                    Total
-                  </td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">
-                    {totalPrix.toFixed(2)} €
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {/* Expéditeur */}
-          <div className="border-t-2 border-black pt-4 mt-6">
-            <p className="text-xs text-gray-500 uppercase mb-2">Expéditeur</p>
-            <p className="font-bold">NOUVELLE RIVE</p>
-            <p className="text-sm">23 rue du Pont Louis-Philippe</p>
-            <p className="text-sm">75004 Paris, France</p>
-          </div>
-
-          {/* Numéro de groupe */}
-          {groupe && (
-            <div className="mt-4 pt-4 border-t border-dashed border-gray-300 text-center">
-              <p className="text-xs text-gray-400">Réf: {groupe}</p>
-            </div>
-          )}
+        <div>
+          <p className="text-sm">Contrôlé par: _______________</p>
         </div>
       </div>
-    </>
+
+      <p className="text-xs text-gray-400 text-center mt-8">
+        Généré le {new Date().toLocaleString('fr-FR')}
+      </p>
+    </div>
+  )
+}
+
+export default function BordereauPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Chargement...</div>}>
+      <BordereauContent />
+    </Suspense>
   )
 }
