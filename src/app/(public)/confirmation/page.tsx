@@ -1,7 +1,7 @@
+'use client'
+
 export const dynamic = 'force-dynamic'
 
-// src/app/(public)/confirmation/page.tsx
-'use client'
 
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'

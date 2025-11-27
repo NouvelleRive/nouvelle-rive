@@ -2,8 +2,6 @@
 
 export const dynamic = 'force-dynamic'
 
-// src/app/(public)/checkout/page.tsx
-'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
