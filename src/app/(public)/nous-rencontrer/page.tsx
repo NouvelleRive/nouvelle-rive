@@ -1,8 +1,32 @@
 // app/nous-rencontrer/page.tsx
+'use client'
+
+import { useState, useEffect } from 'react'
 
 const bleuElectrique = '#0000FF'
 
 export default function NousRencontrerPage() {
+  const [displayedText, setDisplayedText] = useState('')
+  
+  const introText = "PLEIN CŒUR MARAIS, QUARTIER DES ARTS, DE LA MODE, DE LA TOLÉRANCE, LA BOUTIQUE NOUVELLE RIVE SE NICHE RUE DES ECOUFFES, LA RUE DE VÊTEMENTS, ET L'ANCIENNE RUE AUX FILLES. ELLE RÉHABILITE LA PREMIÈRE BOÎTE LESBIENNE DU MARAIS, LE 3W, WOMEN WITH WOMEN. LA CABINE DE LA DJ SE TRANSFORME EN CAISSE, LE FUMOIR EN ESPACE D'EXPOSITION PREMIUM. UNE NOUVELLE VIE TOUT AUSSI RÉSOLUMENT FÉMINISTE."
+
+  // Typewriter effect
+  useEffect(() => {
+    setDisplayedText('')
+    let currentIndex = 0
+    
+    const interval = setInterval(() => {
+      if (currentIndex <= introText.length) {
+        setDisplayedText(introText.slice(0, currentIndex))
+        currentIndex++
+      } else {
+        clearInterval(interval)
+      }
+    }, 30)
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       
@@ -32,12 +56,24 @@ export default function NousRencontrerPage() {
           {/* Gauche - Infos */}
           <div className="p-6 lg:p-12 lg:border-r border-black">
             
-            {/* Adresse */}
+            {/* Texte intro avec typewriter */}
             <div className="mb-12">
-              <p style={{ fontSize: '12px', fontWeight: '500', lineHeight: '1.6' }}>
-                Plein coeur Marais, quartier des Arts, de la Mode, de la tolérance, la boutique NOUVELLE RIVE se niche rue des Ecouffes, la rue de vêtements, et l'ancienne rue aux filles. Elle réhabilite la première boite lesbienne du Marais, le 3W, Women With Women. La cabine de la dj se transforme en caisse, le fumoir en espace d'exposition premium. Une nouvelle vie tout aussi résolument féministe.
+              <p 
+                className="uppercase font-semibold"
+                style={{ 
+                  fontSize: 'clamp(11px, 1.2vw, 13px)',
+                  letterSpacing: '0.04em',
+                  lineHeight: '1.8',
+                  color: bleuElectrique,
+                  minHeight: '150px',
+                }}
+              >
+                {displayedText}
+                {displayedText.length < introText.length && (
+                  <span className="animate-pulse">|</span>
+                )}
               </p>
-              <p className="mt-4" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
+              <p className="mt-6" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
                 Le Marais, 75004 Paris
               </p>
               <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
@@ -118,24 +154,8 @@ export default function NousRencontrerPage() {
 
         {/* Trait */}
         <div className="w-full border-t border-black" />
-
-        {/* Section finale */}
-        <div className="px-6 py-20 text-center">
-          <p 
-            style={{ 
-              fontSize: 'clamp(18px, 3vw, 32px)',
-              fontWeight: '500',
-              maxWidth: '600px',
-              margin: '0 auto',
-              lineHeight: '1.4'
-            }}
-          >
-            Le Marais, au cœur de Paris.
-            <br />
-            <span style={{ color: '#999' }}>Une sélection vintage qui vous ressemble.</span>
-          </p>
-        </div>
-      </main>
+        
+      </main> 
 
       {/* Footer */}
       <footer className="border-t border-black py-8 text-center">

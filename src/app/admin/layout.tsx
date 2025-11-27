@@ -17,6 +17,12 @@ function AdminNavbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { selectedChineuse, setSelectedChineuse, chineusesList, produitsFiltres } = useAdmin()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Fermer le menu quand on change de page
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
 
   // Stats rapides
   const stats = {
@@ -39,6 +45,15 @@ function AdminNavbar() {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
+  const getTabClassName = (tab: typeof tabs[0], active: boolean) => {
+    if (tab.isEbay) {
+      return active 
+        ? 'text-yellow-600 underline decoration-yellow-500 bg-yellow-50 px-2 py-1 rounded' 
+        : 'text-yellow-600 hover:bg-yellow-50 px-2 py-1 rounded border border-yellow-300'
+    }
+    return active ? 'text-[#22209C] underline' : 'text-gray-600 hover:text-[#22209C]'
+  }
+
   return (
     <>
       <nav className="bg-white border-b sticky top-0 z-40">
@@ -49,24 +64,15 @@ function AdminNavbar() {
               Nouvelle Rive
             </Link>
 
-            {/* Tabs */}
-            <div className="flex space-x-6">
+            {/* Tabs Desktop */}
+            <div className="hidden lg:flex space-x-6">
               {visibleTabs.map((tab) => {
                 const active = isActive(tab.href)
-                let cls = active ? 'text-[#22209C] underline' : 'text-gray-600 hover:text-[#22209C]'
-                
-                // Style spécial pour eBay
-                if (tab.isEbay) {
-                  cls = active 
-                    ? 'text-yellow-600 underline decoration-yellow-500 bg-yellow-50 px-2 py-1 rounded' 
-                    : 'text-yellow-600 hover:bg-yellow-50 px-2 py-1 rounded border border-yellow-300'
-                }
-                
                 return (
                   <Link 
                     key={tab.key} 
                     href={tab.href} 
-                    className={`text-sm font-medium transition-all ${cls}`}
+                    className={`text-sm font-medium transition-all ${getTabClassName(tab, active)}`}
                   >
                     {tab.label}
                   </Link>
@@ -74,8 +80,8 @@ function AdminNavbar() {
               })}
             </div>
 
-            {/* Filtre "Je suis" */}
-            <div className="flex items-center gap-3">
+            {/* Filtre "Je suis" - Desktop */}
+            <div className="hidden lg:flex items-center gap-3">
               <span className="text-sm text-gray-500">Je suis</span>
               <select
                 value={selectedChineuse?.uid || ''}
@@ -86,7 +92,6 @@ function AdminNavbar() {
                     const chineuse = chineusesList.find(c => c.uid === e.target.value)
                     if (chineuse) {
                       setSelectedChineuse(chineuse)
-                      // Rediriger si on était sur l'onglet eBay (réservé admin)
                       if (pathname.includes('/admin/ebay')) {
                         router.push('/admin/nos-produits')
                       }
@@ -97,12 +102,93 @@ function AdminNavbar() {
               >
                 <option value="">NOUVELLE RIVE</option>
                 {chineusesList.map((c) => (
-                <option key={c.uid} value={c.uid}>
-                  {(c.nom || c.email?.split('@')[0] || '').toUpperCase()}
-                </option>
-              ))}
+                  <option key={c.uid} value={c.uid}>
+                    {(c.nom || c.email?.split('@')[0] || '').toUpperCase()}
+                  </option>
+                ))}
               </select>
             </div>
+
+            {/* Hamburger Mobile */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="lg:hidden flex flex-col justify-center items-center w-8 h-8"
+              aria-label="Menu"
+            >
+              <span 
+                className="block w-6 h-0.5 bg-[#22209C] transition-all duration-300"
+                style={{
+                  transform: menuOpen ? 'rotate(45deg) translateY(6px)' : 'none'
+                }}
+              />
+              <span 
+                className="block w-6 h-0.5 bg-[#22209C] my-1.5 transition-all duration-300"
+                style={{
+                  opacity: menuOpen ? 0 : 1
+                }}
+              />
+              <span 
+                className="block w-6 h-0.5 bg-[#22209C] transition-all duration-300"
+                style={{
+                  transform: menuOpen ? 'rotate(-45deg) translateY(-6px)' : 'none'
+                }}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* Menu Mobile Dropdown */}
+        <div 
+          className="lg:hidden overflow-hidden transition-all duration-300 ease-in-out border-t"
+          style={{
+            maxHeight: menuOpen ? '500px' : '0',
+            opacity: menuOpen ? 1 : 0,
+            borderTopColor: menuOpen ? '#e5e7eb' : 'transparent'
+          }}
+        >
+          <div className="px-4 py-3 flex flex-col space-y-2 bg-white">
+            {/* Filtre "Je suis" - Mobile */}
+            <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+              <span className="text-sm text-gray-500">Je suis</span>
+              <select
+                value={selectedChineuse?.uid || ''}
+                onChange={(e) => {
+                  if (e.target.value === '') {
+                    setSelectedChineuse(null)
+                  } else {
+                    const chineuse = chineusesList.find(c => c.uid === e.target.value)
+                    if (chineuse) {
+                      setSelectedChineuse(chineuse)
+                      if (pathname.includes('/admin/ebay')) {
+                        router.push('/admin/nos-produits')
+                      }
+                    }
+                  }
+                }}
+                className="border border-gray-300 rounded px-3 py-1.5 text-sm font-medium bg-white flex-1"
+              >
+                <option value="">NOUVELLE RIVE</option>
+                {chineusesList.map((c) => (
+                  <option key={c.uid} value={c.uid}>
+                    {(c.nom || c.email?.split('@')[0] || '').toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Tabs Mobile */}
+            {visibleTabs.map((tab) => {
+              const active = isActive(tab.href)
+              return (
+                <Link 
+                  key={tab.key} 
+                  href={tab.href} 
+                  className={`text-sm font-medium py-2 transition-all ${getTabClassName(tab, active)}`}
+                >
+                  {tab.label}
+                </Link>
+              )
+            })}
           </div>
         </div>
       </nav>
@@ -173,7 +259,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminNavbar />
-      <main className="max-w-7xl mx-auto p-6">
+      <main className="max-w-7xl mx-auto p-4 lg:p-6">
         {children}
       </main>
     </div>

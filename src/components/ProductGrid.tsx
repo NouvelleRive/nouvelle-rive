@@ -100,10 +100,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     })
   }
 
+  // Mobile: toujours 2 colonnes, Desktop: selon prop columns
   const gridCols = {
-    2: 'grid-cols-1 sm:grid-cols-2',
-    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+    2: 'grid-cols-2',
+    3: 'grid-cols-2 lg:grid-cols-3',
+    4: 'grid-cols-2 lg:grid-cols-4',
   }
 
   const resetFilters = () => {
@@ -121,7 +122,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       {/* Barre filtres/tri */}
       {showFilters && (
         <div 
-          className="flex justify-between items-center py-4 px-6"
+          className="flex justify-between items-center py-4 px-4 md:px-6"
           style={{ borderBottom: '1px solid #000' }}
         >
           <button
@@ -192,20 +193,20 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                 )}
               </div>
               
-              <div className="py-3 px-2 text-center bg-white">
+              <div className="py-2 md:py-3 px-1 md:px-2 text-center bg-white">
                 <h3 
-                className="uppercase font-semibold"
-                style={{ 
-                  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                  fontSize: '11px',
-                  letterSpacing: '0.05em'
-                }}
-              >
-                {produit.nom.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')}
-              </h3>
+                  className="uppercase font-semibold line-clamp-2"
+                  style={{ 
+                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                    fontSize: '10px',
+                    letterSpacing: '0.03em'
+                  }}
+                >
+                  {produit.nom.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')}
+                </h3>
                 {produit.marque && (
                   <p 
-                    className="mt-1 uppercase"
+                    className="mt-1 uppercase hidden md:block"
                     style={{ 
                       fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                       fontSize: '10px',
@@ -229,9 +230,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               </div>
             </Link>
 
-            {/* Bouton Favori - Conditionnel selon favori */}
-            <div className="absolute top-2 right-2">
-              <FavoriteButton productId={produit.id} size={24} />
+            {/* Bouton Favori */}
+            <div className="absolute top-1 right-1 md:top-2 md:right-2">
+              <FavoriteButton productId={produit.id} size={20} className="md:!w-6 md:!h-6" />
             </div>
           </div>
         ))}
