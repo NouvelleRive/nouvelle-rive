@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/(public)/confirmation/page.tsx
 'use client'
 
