@@ -2,7 +2,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import BackgroundWords from './BackgroundWords'
+import BackgroundWords from './Backgroundwords'
 
 export default function ConditionalBackground() {
   const pathname = usePathname()

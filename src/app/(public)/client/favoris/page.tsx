@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
-import FavoriteButton from '@src/components/FavoriteButton'
+import FavoriteButton from '@/components/FavoriteButton'
 
 type Produit = {
   id: string
