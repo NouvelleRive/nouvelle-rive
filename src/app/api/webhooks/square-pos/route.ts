@@ -1,0 +1,232 @@
+// src/app/api/webhooks/square-pos/route.ts
+// Webhook pour les ventes en boutique (POS Square)
+// Met à jour Firebase automatiquement quand une vente est faite sur la caisse
+
+import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
+import crypto from 'crypto'
+import { initializeApp, getApps, cert } from 'firebase-admin/app'
+import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { Client, Environment } from 'square'
+import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
+
+// Initialiser Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  })
+}
+
+const adminDb = getFirestore()
+const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY
+
+// Initialiser Square Client
+const squareClient = new Client({
+  accessToken: process.env.SQUARE_ACCESS_TOKEN!,
+  environment: process.env.SQUARE_ENV === 'production' 
+    ? Environment.Production 
+    : Environment.Sandbox
+})
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.text()
+    const headersList = await headers()
+    
+    // Vérifier la signature Square (sécurité)
+    const signature = headersList.get('x-square-hmacsha256-signature')
+    
+    if (webhookSignatureKey && signature) {
+      const hash = crypto
+        .createHmac('sha256', webhookSignatureKey)
+        .update(body)
+        .digest('base64')
+      
+      if (hash !== signature) {
+        console.error('❌ [POS] Signature webhook invalide')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+    }
+
+    const event = JSON.parse(body)
+    
+    console.log('🔔 [POS] Webhook Square reçu:', event.type)
+
+    // On traite les commandes complétées (ventes en boutique)
+    if (event.type !== 'order.updated' && event.type !== 'order.created') {
+      return NextResponse.json({ received: true })
+    }
+
+    const order = event.data?.object?.order
+    
+    if (!order) {
+      console.log('⏭️ [POS] Pas de données order')
+      return NextResponse.json({ received: true })
+    }
+
+    // Vérifier que la commande est complétée et payée
+    if (order.state !== 'COMPLETED') {
+      console.log('⏭️ [POS] Commande non complétée, état:', order.state)
+      return NextResponse.json({ received: true })
+    }
+
+    // Vérifier que c'est une vente en boutique (pas en ligne)
+    if (order.metadata?.productId) {
+      console.log('⏭️ [POS] Vente en ligne détectée, ignorée (géré par autre webhook)')
+      return NextResponse.json({ received: true })
+    }
+
+    const orderId = order.id
+    const lineItems = order.line_items || []
+    
+    console.log('🏪 [POS] Vente en boutique détectée:', orderId, '- Articles:', lineItems.length)
+
+    let nbProduitsTraites = 0
+
+    for (const item of lineItems) {
+      const catalogObjectId = item.catalog_object_id
+      const quantiteVendue = parseInt(item.quantity) || 1
+      const itemName = item.name || 'Produit inconnu'
+      
+      if (!catalogObjectId) {
+        console.warn('⚠️ [POS] Article sans catalogObjectId:', itemName)
+        continue
+      }
+
+      console.log(`📦 [POS] Traitement: ${itemName} (x${quantiteVendue}) - ID: ${catalogObjectId}`)
+
+      try {
+        // Récupérer l'item parent depuis Square pour avoir l'itemId
+        const { result } = await squareClient.catalogApi.retrieveCatalogObject(catalogObjectId, true)
+        const variationObject = result.object
+        const parentItemId = variationObject?.itemVariationData?.itemId
+
+        // Chercher le produit dans Firebase
+        let produitSnap = await adminDb.collection('produits')
+          .where('variationId', '==', catalogObjectId)
+          .limit(1)
+          .get()
+
+        if (produitSnap.empty) {
+          produitSnap = await adminDb.collection('produits')
+            .where('catalogObjectId', '==', catalogObjectId)
+            .limit(1)
+            .get()
+        }
+
+        if (produitSnap.empty && parentItemId) {
+          produitSnap = await adminDb.collection('produits')
+            .where('itemId', '==', parentItemId)
+            .limit(1)
+            .get()
+        }
+
+        if (produitSnap.empty && parentItemId) {
+          produitSnap = await adminDb.collection('produits')
+            .where('catalogObjectId', '==', parentItemId)
+            .limit(1)
+            .get()
+        }
+
+        if (produitSnap.empty) {
+          console.warn(`⚠️ [POS] Produit non trouvé dans Firebase pour: ${itemName} (${catalogObjectId})`)
+          continue
+        }
+
+        const produitDoc = produitSnap.docs[0]
+        const produitData = produitDoc.data()
+        const produitId = produitDoc.id
+        const quantiteActuelle = produitData.quantite || 1
+        const nouvelleQuantite = Math.max(0, quantiteActuelle - quantiteVendue)
+
+        console.log(`📝 [POS] Mise à jour produit: ${produitData.nom || itemName}`)
+        console.log(`   Quantité: ${quantiteActuelle} → ${nouvelleQuantite}`)
+
+        // Calculer le prix de vente réel
+        const prixVenteReel = item.total_money?.amount 
+          ? Number(item.total_money.amount) / 100 
+          : null
+
+        // Préparer les données de mise à jour
+        const updateData: any = {
+          quantite: nouvelleQuantite,
+          updatedAt: Timestamp.now()
+        }
+
+        if (nouvelleQuantite === 0) {
+          updateData.vendu = true
+          updateData.dateVente = Timestamp.now()
+          updateData.squareOrderId = orderId
+          if (prixVenteReel) {
+            updateData.prixVenteReel = prixVenteReel
+          }
+        }
+
+        // Mettre à jour le produit dans Firebase
+        await produitDoc.ref.update(updateData)
+        console.log(`✅ [POS] Produit mis à jour: ${produitId}`)
+
+        // Retirer d'eBay si stock à 0
+        if (nouvelleQuantite === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
+          try {
+            console.log('🇺🇸 Retrait du produit d\'eBay...')
+            await removeFromAllChannels(
+              {
+                id: produitId,
+                sku: produitData.sku,
+                ebayOfferId: produitData.ebayOfferId,
+                ebayListingId: produitData.ebayListingId,
+              },
+              'site'
+            )
+            console.log('✅ Produit retiré d\'eBay')
+          } catch (ebayError: any) {
+            console.error('⚠️ Erreur retrait eBay (non bloquant):', ebayError?.message)
+          }
+        }
+
+        // Créer une entrée dans la collection "ventes" pour le suivi
+        for (let i = 0; i < quantiteVendue; i++) {
+          await adminDb.collection('ventes').add({
+            produitId: produitId,
+            nom: produitData.nom || itemName,
+            sku: produitData.sku || null,
+            categorie: produitData.categorie || null,
+            marque: produitData.marque || null,
+            chineur: produitData.chineur || null,
+            chineurUid: produitData.chineurUid || null,
+            categorieRapport: produitData.categorieRapport || null,
+            trigramme: produitData.trigramme || null,
+            prixInitial: produitData.prix || null,
+            prixVenteReel: prixVenteReel ? prixVenteReel / quantiteVendue : null,
+            dateVente: Timestamp.now(),
+            orderId: orderId,
+            source: 'boutique',
+            createdAt: Timestamp.now(),
+          })
+        }
+        console.log(`✅ [POS] ${quantiteVendue} vente(s) enregistrée(s) dans collection ventes`)
+
+        nbProduitsTraites++
+
+      } catch (error: any) {
+        console.error(`❌ [POS] Erreur traitement ${itemName}:`, error?.message)
+      }
+    }
+
+    console.log(`🎉 [POS] Traitement terminé: ${nbProduitsTraites} produit(s) mis à jour`)
+
+    return NextResponse.json({ 
+      received: true, 
+      processed: nbProduitsTraites 
+    })
+
+  } catch (error) {
+    console.error('❌ [POS] Erreur webhook:', error)
+    return NextResponse.json({ error: 'Webhook failed' }, { status: 500 })
+  }
+}

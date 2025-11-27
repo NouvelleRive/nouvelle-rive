@@ -1,140 +1,135 @@
-  import { Client, Environment } from 'square'
-  import {
-    collection,
-    getDocs,
-    query,
-    where,
-    updateDoc,
-    Timestamp,
-    doc,
-    getDoc,
-  } from 'firebase/firestore'
-  import { db } from '@/lib/firebaseConfig'
+import { Client, Environment } from 'square'
+import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore'
 
-  const accessToken = process.env.SQUARE_ACCESS_TOKEN
-  const locationId = process.env.SQUARE_LOCATION_ID
+const accessToken = process.env.SQUARE_ACCESS_TOKEN
+const locationId = process.env.SQUARE_LOCATION_ID
 
-  if (!accessToken || !locationId) {
-    throw new Error('SQUARE_ACCESS_TOKEN ou SQUARE_LOCATION_ID manquant dans le .env.local')
+if (!accessToken || !locationId) {
+  throw new Error('SQUARE_ACCESS_TOKEN ou SQUARE_LOCATION_ID manquant dans le .env.local')
+}
+
+const client = new Client({
+  accessToken,
+  environment: Environment.Production,
+})
+
+export async function syncVentesDepuisSquare(
+  uid: string,
+  chineurNom: string,
+  startDateStr?: string,
+  endDateStr?: string
+) {
+  console.log('🔄 Début synchronisation ventes Square pour', chineurNom)
+
+  const adminDb = getFirestore()
+  
+  const chineuseRef = adminDb.collection('chineuse').doc(uid)
+  const chineuseSnap = await chineuseRef.get()
+
+  if (!chineuseSnap.exists) {
+    console.error(`❌ Chineuse ${uid} non trouvée dans Firestore`)
+    throw new Error(`Chineuse ${uid} non trouvée dans Firestore`)
   }
 
-  const client = new Client({
-    accessToken,
-    environment: Environment.Production,
-  })
+  const chineuseData = chineuseSnap.data()!
 
-  export async function syncVentesDepuisSquare(
-    uid: string,
-    chineurNom: string,
-    startDateStr?: string,
-    endDateStr?: string
-  ) {
-    console.log('🔄 Début synchronisation ventes Square pour', chineurNom)
+  const categoriesFirestore = Array.isArray(chineuseData?.Catégorie)
+    ? chineuseData.Catégorie
+    : []
+  const categoriesIds = categoriesFirestore
+    .map((cat: any) => cat?.idsquare)
+    .filter((id: any) => typeof id === 'string' && id.length > 0)
 
-    const chineuseRef = doc(db, 'chineuse', uid)
-    const chineuseSnap = await getDoc(chineuseRef)
+  console.log('✅ Champ catégories trouvé avec la clé : "Catégorie"')
+  console.log('📂 Catégories autorisées (idsquare) pour cette chineuse :', categoriesIds)
 
-    if (!chineuseSnap.exists()) {
-      console.error(`❌ Chineuse ${uid} non trouvée dans Firestore`)
-      throw new Error(`Chineuse ${uid} non trouvée dans Firestore`)
-    }
+  const startDate = startDateStr ? new Date(startDateStr) : undefined
+  const endDate = endDateStr ? new Date(endDateStr) : undefined
 
-    const chineuseData = chineuseSnap.data()
+  const dateTimeFilter = startDate && endDate ? {
+    closedAt: {
+      startAt: startDate.toISOString(),
+      endAt: endDate.toISOString(),
+    },
+  } : null
 
-    const categoriesFirestore = Array.isArray(chineuseData?.Catégorie)
-      ? chineuseData.Catégorie
-      : []
-    const categoriesIds = categoriesFirestore
-      .map((cat: any) => cat?.idsquare)
-      .filter((id: any) => typeof id === 'string' && id.length > 0)
+  const filterSquare: any = {
+    stateFilter: { states: ['COMPLETED'] },
+  }
+  if (dateTimeFilter) {
+    filterSquare.dateTimeFilter = { closedAt: dateTimeFilter.closedAt }
+    console.log('📅 Filtres de date appliqués:', filterSquare.dateTimeFilter)
+  }
 
-    console.log('✅ Champ catégories trouvé avec la clé : "Catégorie"')
-    console.log('📂 Catégories autorisées (idsquare) pour cette chineuse :', categoriesIds)
-
-    const startDate = startDateStr ? new Date(startDateStr) : undefined
-    const endDate = endDateStr ? new Date(endDateStr) : undefined
-
-    const dateTimeFilter = startDate && endDate ? {
-      closedAt: {
-        startAt: startDate.toISOString(),
-        endAt: endDate.toISOString(),
+  try {
+    const { result } = await client.ordersApi.searchOrders({
+      locationIds: [locationId],
+      query: {
+        filter: filterSquare,
       },
-    } : null
+      sort: { sortField: 'CLOSED_AT', sortOrder: 'DESC' },
+    })
 
-    const filterSquare: any = {
-      stateFilter: { states: ['COMPLETED'] },
-    }
-    if (dateTimeFilter) {
-      filterSquare.dateTimeFilter = { closedAt: dateTimeFilter.closedAt }
-      console.log('📅 Filtres de date appliqués:', filterSquare.dateTimeFilter)
-    }
+    const orders = result.orders || []
+    console.log(`📦 Nombre total de commandes récupérées : ${orders.length}`)
 
-    try {
-      const { result } = await client.ordersApi.searchOrders({
-        locationIds: [locationId],
-        query: {
-          filter: filterSquare,
-        },
-        sort: { sortField: 'CLOSED_AT', sortOrder: 'DESC' },
-      })
+    let nbSync = 0
 
-      const orders = result.orders || []
-      console.log(`📦 Nombre total de commandes récupérées : ${orders.length}`)
+    for (const order of orders) {
+      const lineItems = order.lineItems || []
 
-      let nbSync = 0
+      for (const item of lineItems) {
+        const variationId = item.catalogObjectId
+        const quantityVendue = parseInt(item.quantity) || 1 // ✅ Récupérer la quantité vendue
+        
+        if (!variationId) {
+          console.warn('⚠️ Ligne sans catalogObjectId, ignorée')
+          continue
+        }
 
-      for (const order of orders) {
-        const lineItems = order.lineItems || []
+        try {
+          const variationRes = await client.catalogApi.retrieveCatalogObject(variationId, true)
+          const variationObject = variationRes.result.catalogObject
+          const itemObject = variationRes.result.relatedObjects?.find(obj => obj.type === 'ITEM')
+          const parentId = variationObject?.itemVariationData?.itemId
 
-        for (const item of lineItems) {
-          const variationId = item.catalogObjectId
-          if (!variationId) {
-            console.warn('⚠️ Ligne sans catalogObjectId, ignorée')
+          if (!itemObject) {
+            console.warn(`⚠️ Aucun item parent trouvé pour la variation ${variationId}`)
             continue
           }
 
-          try {
-            const variationRes = await client.catalogApi.retrieveCatalogObject(variationId, true)
-            const variationObject = variationRes.result.catalogObject
-            const itemObject = variationRes.result.relatedObjects?.find(obj => obj.type === 'ITEM')
-            const parentId = variationObject?.itemVariationData?.itemId
+          const categoryId = itemObject.itemData?.categoryId
+          console.log(`📌 Produit : ${item.name} — Catégorie ID Square : ${categoryId} — Quantité vendue : ${quantityVendue}`)
 
-            if (!itemObject) {
-              console.warn(`⚠️ Aucun item parent trouvé pour la variation ${variationId}`)
-              continue
-            }
+          if (!categoryId || !categoriesIds.includes(categoryId)) {
+            console.log(`⏭️ Ignoré : catégorie non liée à ${chineurNom}`)
+            continue
+          }
 
-            const categoryId = itemObject.itemData?.categoryId
-            console.log(`📌 Produit : ${item.name} — Catégorie ID Square : ${categoryId}`)
+          // 1️⃣ Recherche sur variationId
+          let snap = await adminDb.collection('produits')
+            .where('catalogObjectId', '==', variationId)
+            .get()
 
-            if (!categoryId || !categoriesIds.includes(categoryId)) {
-              console.log(`⏭️ Ignoré : catégorie non liée à ${chineurNom}`)
-              continue
-            }
+          // 2️⃣ Si rien trouvé, fallback sur parentId
+          if (snap.empty && parentId) {
+            console.log(`🔁 Aucun match avec variationId ${variationId}, tentative avec parentId ${parentId}`)
+            snap = await adminDb.collection('produits')
+              .where('catalogObjectId', '==', parentId)
+              .get()
+          }
 
-            // 1️⃣ Recherche sur variationId
-            let snap = await getDocs(query(
-              collection(db, 'produits'),
-              where('catalogObjectId', '==', variationId),
-              where('vendu', '!=', true)
-            ))
+          if (snap.empty) {
+            console.warn(`❓ Aucun produit Firestore trouvé pour variationId : ${variationId} ou parentId : ${parentId}`)
+            continue
+          }
 
-            // 2️⃣ Si rien trouvé, fallback sur parentId
-            if (snap.empty && parentId) {
-              console.log(`🔁 Aucun match avec variationId ${variationId}, tentative avec parentId ${parentId}`)
-              snap = await getDocs(query(
-                collection(db, 'produits'),
-                where('catalogObjectId', '==', parentId),
-                where('vendu', '!=', true)
-              ))
-            }
+          // ✅ LOGIQUE DE DÉCRÉMENTATION
+          for (const docSnap of snap.docs) {
+            const produitData = docSnap.data()
+            const quantiteActuelle = produitData.quantite || 1
+            const nouvQuantite = Math.max(0, quantiteActuelle - quantityVendue)
 
-            if (snap.empty) {
-              console.warn(`❓ Aucun produit Firestore trouvé non vendu pour variationId : ${variationId} ou parentId : ${parentId}`)
-              continue
-            }
-
-            for (const docSnap of snap.docs) {
             const prixReelCents = item.totalMoney?.amount ?? null
             let prixReel = null
 
@@ -142,35 +137,62 @@
               prixReel = typeof prixReelCents === 'bigint'
                 ? Number(prixReelCents) / 100
                 : prixReelCents / 100
-}
-
-              
-
-              console.log(`📝 Mise à jour du produit Firestore : ${docSnap.id}`, {
-                vendu: true,
-                dateVente: order.closedAt,
-                prixVenteReel: prixReel,
-              })
-
-              await updateDoc(docSnap.ref, {
-                vendu: true,
-                dateVente: Timestamp.fromDate(new Date(order.closedAt)),
-                prixVenteReel: prixReel,
-              })
-
-              console.log(`✅ Produit mis à jour dans Firestore : ${docSnap.id}`)
-              nbSync++
             }
-          } catch (catError) {
-            console.warn(`⚠️ Erreur de récupération catalog pour ${variationId} :`, catError)
+
+            // Créer une ligne dans la collection "ventes" pour chaque unité vendue
+            for (let i = 0; i < quantityVendue; i++) {
+              await adminDb.collection('ventes').add({
+                produitId: docSnap.id,
+                nom: produitData.nom,
+                sku: produitData.sku,
+                categorie: produitData.categorie,
+                marque: produitData.marque || '',
+                chineur: produitData.chineur,
+                chineurUid: produitData.chineurUid,
+                categorieRapport: produitData.categorieRapport,
+                trigramme: produitData.trigramme,
+                prixInitial: produitData.prix,
+                prixVenteReel: prixReel ? prixReel / quantityVendue : null, // Prix unitaire
+                dateVente: Timestamp.fromDate(new Date(order.closedAt!)),
+                orderId: order.id,
+                createdAt: Timestamp.now(),
+              })
+            }
+
+            // Mise à jour du produit
+            const updateData: any = {
+              quantite: nouvQuantite,
+            }
+
+            // Si quantité = 0, marquer comme vendu
+            if (nouvQuantite === 0) {
+              updateData.vendu = true
+              updateData.dateVente = Timestamp.fromDate(new Date(order.closedAt!))
+              updateData.prixVenteReel = prixReel
+            }
+
+            console.log(`📝 Mise à jour du produit Firestore : ${docSnap.id}`, {
+              quantiteAvant: quantiteActuelle,
+              quantiteApres: nouvQuantite,
+              quantityVendue,
+              vendu: nouvQuantite === 0,
+            })
+
+            await docSnap.ref.update(updateData)
+
+            console.log(`✅ Produit mis à jour dans Firestore : ${docSnap.id}`)
+            nbSync++
           }
+        } catch (catError) {
+          console.warn(`⚠️ Erreur de récupération catalog pour ${variationId} :`, catError)
         }
       }
-
-      console.log(`🎉 Synchronisation terminée — ${nbSync} ventes synchronisées.`)
-      return { message: `${nbSync} ventes synchronisées.` }
-    } catch (error) {
-      console.error('❌ Erreur lors de la synchronisation :', error)
-      throw error
     }
+
+    console.log(`🎉 Synchronisation terminée — ${nbSync} ventes synchronisées.`)
+    return { message: `${nbSync} ventes synchronisées.` }
+  } catch (error) {
+    console.error('❌ Erreur lors de la synchronisation :', error)
+    throw error
   }
+}

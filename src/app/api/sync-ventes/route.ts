@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { syncVentesDepuisSquare } from '@/lib/syncSquareToFirestore'
 import { archiveOrDeleteByVariation } from '@/lib/square/archiveOrDeleteByVariation'
+import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 
 // Helpers
 function isNonEmptyString(x: any): x is string {
@@ -95,6 +96,20 @@ export async function POST(req: NextRequest) {
         for (const id of ids) {
           try {
             await archiveOrDeleteByVariation(id)
+          } catch {
+            // non bloquant
+          }
+        }
+
+        // eBay : retrait si listé  
+        if (p.ebayListingId || p.ebayOfferId) {
+          try {
+            await removeFromAllChannels({
+            id: d.id,
+            ebayListingId: p.ebayListingId,
+            ebayOfferId: p.ebayOfferId,
+            sku: p.sku,
+          }, 'square')
           } catch {
             // non bloquant
           }

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 350" width="380" height="350">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Special+Elite&amp;display=swap');
+      
+      .letter {
+        font-family: 'Special Elite', monospace;
+        font-size: 32px;
+        fill: #0000FF;
+        opacity: 0;
+        animation: typeIn 0.05s ease forwards;
+      }
+      
+      @keyframes typeIn {
+        to { opacity: 1; }
+      }
+    </style>
+  </defs>
+  
+  <!-- may all -->
+  <text x="100" y="50" class="letter" style="animation-delay: 0.0s">m</text>
+  <text x="120" y="50" class="letter" style="animation-delay: 0.08s">a</text>
+  <text x="140" y="50" class="letter" style="animation-delay: 0.16s">y</text>
+  <text x="160" y="50" class="letter" style="animation-delay: 0.24s"> </text>
+  <text x="175" y="50" class="letter" style="animation-delay: 0.32s">a</text>
+  <text x="195" y="50" class="letter" style="animation-delay: 0.40s">l</text>
+  <text x="210" y="50" class="letter" style="animation-delay: 0.48s">l</text>
+  
+  <!-- your -->
+  <text x="130" y="110" class="letter" style="animation-delay: 0.64s">y</text>
+  <text x="150" y="110" class="letter" style="animation-delay: 0.72s">o</text>
+  <text x="170" y="110" class="letter" style="animation-delay: 0.80s">u</text>
+  <text x="190" y="110" class="letter" style="animation-delay: 0.88s">r</text>
+  
+  <!-- delulu -->
+  <text x="105" y="175" class="letter" style="font-size: 38px; animation-delay: 1.04s">d</text>
+  <text x="130" y="175" class="letter" style="font-size: 38px; animation-delay: 1.12s">e</text>
+  <text x="155" y="175" class="letter" style="font-size: 38px; animation-delay: 1.20s">l</text>
+  <text x="175" y="175" class="letter" style="font-size: 38px; animation-delay: 1.28s">u</text>
+  <text x="200" y="175" class="letter" style="font-size: 38px; animation-delay: 1.36s">l</text>
+  <text x="220" y="175" class="letter" style="font-size: 38px; animation-delay: 1.44s">u</text>
+  
+  <!-- come -->
+  <text x="125" y="235" class="letter" style="animation-delay: 1.60s">c</text>
+  <text x="145" y="235" class="letter" style="animation-delay: 1.68s">o</text>
+  <text x="165" y="235" class="letter" style="animation-delay: 1.76s">m</text>
+  <text x="190" y="235" class="letter" style="animation-delay: 1.84s">e</text>
+  
+  <!-- trululu -->
+  <text x="95" y="300" class="letter" style="animation-delay: 2.00s">t</text>
+  <text x="115" y="300" class="letter" style="animation-delay: 2.08s">r</text>
+  <text x="135" y="300" class="letter" style="animation-delay: 2.16s">u</text>
+  <text x="155" y="300" class="letter" style="animation-delay: 2.24s">l</text>
+  <text x="170" y="300" class="letter" style="animation-delay: 2.32s">u</text>
+  <text x="190" y="300" class="letter" style="animation-delay: 2.40s">l</text>
+  <text x="205" y="300" class="letter" style="animation-delay: 2.48s">u</text>
+  
+  <!-- ⭐ étoile - même animation que les lettres -->
+  <text x="235" y="300" class="letter" style="font-size: 28px; animation-delay: 2.56s">⭐</text>
+</svg>

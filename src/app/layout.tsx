@@ -1,5 +1,7 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
+import ConditionalBackground from "@/components/ConditionalBackground";
 
 export const metadata: Metadata = {
   title: "Nouvelle Rive",
@@ -14,7 +16,10 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className="font-sans bg-white text-black antialiased">
-        {children}
+        <ConditionalBackground />
+        <div className="relative" style={{ zIndex: 10 }}>
+          {children}
+        </div>
       </body>
     </html>
   );

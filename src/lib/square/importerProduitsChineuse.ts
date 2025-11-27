@@ -1,5 +1,7 @@
 import { Client, Environment } from 'square'
 import { adminDb } from '@/lib/firebaseAdmin'
+import FormData from 'form-data'
+import fetch from 'node-fetch'
 
 const accessToken = process.env.SQUARE_ACCESS_TOKEN
 const locationId = process.env.SQUARE_LOCATION_ID
@@ -13,81 +15,166 @@ const client = new Client({
   environment: Environment.Production,
 })
 
-export async function importerProduitsChineuse({
-  nom,
-  prix,
-  description,
-  codeBarre,
-  stock,
-  categorie,
-  chineurNom,
-}: {
+type ImportArgs = {
   nom: string
   prix: number
   description?: string
-  codeBarre?: string
   stock: number
   categorie?: string
+  reportingCategoryId?: string
+  sku?: string
+  marque?: string      // ✅ 
+  taille?: string      // ✅ NOUVEAU
+  imageUrl?: string
+  imageUrls?: string[]
   chineurNom: string
-}) {
-  console.log('➡️ DÉBUT importerProduitsChineuse')
-  console.log('📥 Catégorie reçue dans la fonction:', categorie)
+}
+
+/**
+ * Télécharge une image depuis Cloudinary
+ */
+async function downloadImageAsBuffer(url: string): Promise<Buffer> {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Échec téléchargement: ${response.status}`)
+  }
+  return await response.buffer()
+}
+
+/**
+ * Upload vers Square avec appel HTTP manuel en multipart/form-data
+ */
+async function uploadImageToSquare(
+  imageUrl: string,
+  itemName: string,
+  itemId: string
+): Promise<string | undefined> {
+  try {
+    const imageBuffer = await downloadImageAsBuffer(imageUrl)
+    
+    const formData = new FormData()
+    
+    formData.append('file', imageBuffer, {
+      filename: 'product.jpg',
+      contentType: 'image/jpeg',
+    })
+    
+    const metadata = {
+      idempotency_key: `img-${itemId}-${Date.now()}`,
+      object_id: itemId,
+      image: {
+        type: 'IMAGE',
+        id: `#image-${Date.now()}`,
+        image_data: {
+          caption: itemName,
+        },
+      },
+    }
+    
+    formData.append('request', JSON.stringify(metadata), {
+      contentType: 'application/json',
+    })
+    
+    const response = await fetch('https://connect.squareup.com/v2/catalog/images', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Square-Version': '2023-09-25',
+        ...formData.getHeaders(),
+      },
+      body: formData,
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`❌ Erreur Square image ${response.status}:`, errorText)
+      return undefined
+    }
+    
+    const result = await response.json()
+    return result?.image?.id
+  } catch (err: any) {
+    console.error('❌ Erreur upload image:', err?.message)
+    return undefined
+  }
+}
+
+export async function importerProduitsChineuse(args: ImportArgs) {
+  const {
+    nom,
+    prix,
+    description,
+    stock,
+    categorie,
+    reportingCategoryId,
+    sku,
+    marque,
+    taille,  // ✅ NOUVEAU
+    imageUrl,
+    imageUrls,
+    chineurNom,
+  } = args
+
+  console.log('➡️ Import produit:', { nom, prix, sku, marque, taille })
+  
+  const imagesToUpload = Array.isArray(imageUrls) && imageUrls.length > 0 
+    ? imageUrls 
+    : (imageUrl ? [imageUrl] : [])
 
   let categoryIdSquare: string | undefined = undefined
 
   try {
-    const chineuseSnap = await adminDb.collection('chineuse').doc(chineurNom).get()
-
-    if (!chineuseSnap.exists) {
-      throw new Error(`Chineuse "${chineurNom}" introuvable dans Firestore`)
+    if (categorie && typeof categorie === 'string' && categorie.trim().length > 0) {
+      categoryIdSquare = categorie.trim()
     }
 
-    const data = chineuseSnap.data() as any
-    const categoriesField = data['Catégorie']
-
-    if (Array.isArray(categoriesField) && categorie) {
-      const labelPur = categorie.split(';')[0].trim()
-      const match = categoriesField.find((cat: any) => cat.label === labelPur)
-      if (match && match.idsquare) {
-        categoryIdSquare = match.idsquare
-        console.log('✅ ID catégorie Square trouvé pour :', labelPur)
-      } else {
-        console.warn('❌ Catégorie introuvable dans Firestore pour :', labelPur)
-      }
+    // ✅ Construction de la description enrichie (marque + taille)
+    const descParts: string[] = []
+    if (marque && marque.trim()) {
+      descParts.push(`Marque: ${marque.trim()}`)
     }
+    if (taille && taille.trim()) {
+      descParts.push(`Taille: ${taille.trim()}`)
+    }
+    if (description && description.trim()) {
+      descParts.push(description.trim())
+    }
+    const finalDescription = descParts.join('\n') || ''
 
+    // === 1) Chercher item existant ===
     const search = await client.catalogApi.searchCatalogObjects({
       objectTypes: ['ITEM'],
-      query: { textQuery: { keywords: [nom] } }
+      query: { textQuery: { keywords: [nom] } },
     })
 
-    const existing = search.result.objects?.find(obj => obj.itemData?.name === nom)
+    const existing = search.result.objects?.find((obj: any) => obj?.itemData?.name === nom)
 
     let variationId: string | undefined
     let itemId: string | undefined
-    let variationVersion: number | bigint | undefined
 
     if (existing) {
-      console.log(`✏️ Mise à jour du produit existant ID ${existing.id}`)
+      console.log(`✏️ Mise à jour item ${existing.id}`)
       itemId = existing.id
+      const itemVersion = existing.version
       variationId = existing.itemData?.variations?.[0]?.id
-      variationVersion = existing.itemData?.variations?.[0]?.version
+      const variationVersion = existing.itemData?.variations?.[0]?.version
 
       await client.catalogApi.upsertCatalogObject({
-        idempotencyKey: `${codeBarre}-${Date.now()}`,
+        idempotencyKey: `${nom}-${Date.now()}`,
         object: {
           id: itemId,
-          version: existing.version as any,
+          version: itemVersion,
           type: 'ITEM',
           presentAtAllLocations: true,
           itemData: {
             name: nom,
-            description: description || '',
+            description: finalDescription,  // ✅ Description enrichie
             categoryId: categoryIdSquare,
+            reportingCategory: reportingCategoryId ? { id: reportingCategoryId } : undefined,
             variations: [
               {
                 id: variationId,
-                version: variationVersion as any,
+                version: variationVersion,
                 type: 'ITEM_VARIATION',
                 presentAtAllLocations: true,
                 itemVariationData: {
@@ -96,67 +183,72 @@ export async function importerProduitsChineuse({
                   pricingType: 'FIXED_PRICING',
                   priceMoney: {
                     amount: Math.round(prix * 100),
-                    currency: 'EUR'
+                    currency: 'EUR',
                   },
-                  sku: codeBarre || undefined,
-                  trackInventory: true
+                  sku: sku || undefined,
+                  trackInventory: true,
                 },
               },
             ],
           },
-        },
+        } as any,
       })
     } else {
+      console.log('🆕 Création item')
+      
       const now = Date.now()
-      const itemTempId = `#${nom}-${now}`
-      const variationTempId = `#${nom}-variation-${now}`
-
-      const produit = await client.catalogApi.upsertCatalogObject({
+      const upsert = await client.catalogApi.upsertCatalogObject({
         idempotencyKey: `${now}-${Math.random()}`,
         object: {
           type: 'ITEM',
-          id: itemTempId,
+          id: `#${nom}-${now}`,
           presentAtAllLocations: true,
           itemData: {
             name: nom,
-            description: description || '',
+            description: finalDescription,  // ✅ Description enrichie
             categoryId: categoryIdSquare,
+            reportingCategory: reportingCategoryId ? { id: reportingCategoryId } : undefined,
             variations: [
               {
                 type: 'ITEM_VARIATION',
-                id: variationTempId,
+                id: `#${nom}-variation-${now}`,
                 presentAtAllLocations: true,
                 itemVariationData: {
-                  itemId: itemTempId,
+                  itemId: `#${nom}-${now}`,
                   name: 'Prix standard',
                   pricingType: 'FIXED_PRICING',
                   priceMoney: {
                     amount: Math.round(prix * 100),
-                    currency: 'EUR'
+                    currency: 'EUR',
                   },
-                  sku: codeBarre || undefined,
-                  trackInventory: true
+                  sku: sku || undefined,
+                  trackInventory: true,
                 },
               },
             ],
           },
-        },
+        } as any,
       })
-
-      console.log('🧾 Square result complet :', JSON.stringify(produit.result, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2))
-      variationId = produit.result.catalogObject?.itemData?.variations?.[0]?.id
-      itemId = produit.result.catalogObject?.id
+      
+      variationId = upsert.result.catalogObject?.itemData?.variations?.[0]?.id
+      itemId = upsert.result.catalogObject?.id
+      
+      console.log('✅ Item créé:', itemId)
     }
 
-    if (!variationId) {
-      throw new Error('Variation non créée ou trouvée correctement (ID manquant)')
+    if (!variationId || !itemId) {
+      throw new Error('Item/Variation non créés')
     }
 
-    if (typeof stock !== 'number') {
-      throw new Error(`Quantité de stock non fournie ou invalide pour "${nom}"`)
+    // === 2) Upload image ===
+    let uploadedImageId: string | undefined = undefined
+    
+    if (imagesToUpload.length > 0 && itemId) {
+      uploadedImageId = await uploadImageToSquare(imagesToUpload[0], nom, itemId)
     }
 
-    const stockResult = await client.inventoryApi.batchChangeInventory({
+    // === 3) Stock ===
+    await client.inventoryApi.batchChangeInventory({
       idempotencyKey: `${Date.now()}-${Math.random()}`,
       changes: [
         {
@@ -166,15 +258,13 @@ export async function importerProduitsChineuse({
             locationId: locationId!,
             quantity: stock.toString(),
             state: 'IN_STOCK',
-            adjustmentType: 'RECEIVE_STOCK',
-            occurredAt: new Date().toISOString()
-          }
-        }
-      ]
+            occurredAt: new Date().toISOString(),
+          },
+        },
+      ],
     })
 
-    console.log('📦 Résultat Square batchChangeInventory :', JSON.stringify(stockResult, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2))
-
+    // === 4) Firestore ===
     const snap = await adminDb
       .collection('produits')
       .where('chineur', '==', chineurNom)
@@ -187,32 +277,31 @@ export async function importerProduitsChineuse({
           categorie,
           stock,
           description,
-          codeBarre,
           prix,
-          catalogObjectId: variationId, // utilisé pour matcher la vente plus tard
-          variationId // 🔥 on stocke aussi la variation pour sync-ventes
+          sku: sku || null,
+          marque: marque || null,
+          taille: taille || null,  // ✅ NOUVEAU
+          reportingCategoryId: reportingCategoryId || null,
+          itemId,
+          variationId,
+          catalogObjectId: itemId,
+          imageId: uploadedImageId || null,
         })
       }
-      console.log('✏️ Firestore mis à jour')
     }
 
-    console.log(`✅ Produit "${nom}" importé avec stock : ${stock} unités`)
+    console.log(`✅ Produit "${nom}" importé`)
+    
     return {
-  message: 'Produit créé ou mis à jour',
-  variationId,
-  itemId
-  }
-  } catch (error: any) {
-    console.error('❌ Erreur lors de l’import produit + stock Square')
-    console.error('🧾 Détail erreur :', error)
-    try {
-      const full = JSON.stringify(error, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2)
-      console.error('🧾 Erreur JSON complète :', full)
-    } catch (e) {
-      console.warn('⚠️ Impossible d’afficher l’erreur complète en JSON')
+      message: 'Produit créé ou mis à jour',
+      variationId,
+      itemId,
+      imageId: uploadedImageId,
     }
-    if (error?.response?.body) {
-      console.error('📩 Square response body:', JSON.stringify(error.response.body, null, 2))
+  } catch (error: any) {
+    console.error('❌ ERREUR:', error?.message)
+    if (error?.errors) {
+      console.error('Détails:', JSON.stringify(error.errors, null, 2))
     }
     throw error
   }

@@ -13,19 +13,32 @@ export async function POST(req: NextRequest) {
       nom,
       prix,
       description,
-      codeBarre,
       categorie,
+      reportingCategoryId,
       stock,
       chineurNom,
       chineurEmail,
-      productId, // 👈 on récupère aussi l'ID Firestore du produit
+      productId,
+      sku,
+      marque,
+      taille,              // ✅ NOUVEAU
+      imageUrl,
+      imageUrls,
     } = body ?? {}
 
     console.log('📥 Reçu dans /api/import-square-produits', {
       nom,
+      prix,
       categorie,
+      reportingCategoryId,
       stock,
       chineurNom,
+      sku,
+      marque,
+      taille,              // ✅ NOUVEAU
+      hasImage: Boolean(imageUrl),
+      hasImages: Array.isArray(imageUrls) && imageUrls.length > 0,
+      imageCount: Array.isArray(imageUrls) ? imageUrls.length : (imageUrl ? 1 : 0),
     })
 
     if (!nom || prix === undefined || prix === null || !chineurNom || stock === undefined) {
@@ -37,41 +50,67 @@ export async function POST(req: NextRequest) {
 
     const { importerProduitsChineuse } = await import('@/lib/square/importerProduitsChineuse')
 
+    const imagesToSend = Array.isArray(imageUrls) && imageUrls.length > 0 
+      ? imageUrls 
+      : (imageUrl ? [imageUrl] : [])
+
     const result = await importerProduitsChineuse({
       nom,
       prix: Number(prix),
       description,
-      codeBarre,
       categorie,
+      reportingCategoryId,
+      sku,
+      marque,
+      taille,              // ✅ NOUVEAU
       stock: Number(stock),
       chineurNom,
+      chineurEmail,
+      imageUrl: imagesToSend[0],
+      imageUrls: imagesToSend,
     } as any)
 
     const catalogObjectId =
       (result && (result.catalogObjectId || (result as any).catalogObjectId)) || undefined
     const variationId = result?.variationId
     const itemId = result?.itemId
+    const imageId = (result && (result.imageId || (result as any).imageId)) || undefined
 
-    console.log(`✅ Import terminé pour le produit "${nom}"`, { catalogObjectId, variationId, itemId })
+    console.log(`✅ Import terminé pour "${nom}"`, {
+      catalogObjectId,
+      variationId,
+      itemId,
+      imageId,
+      sku,
+      marque,
+      taille,              // ✅ NOUVEAU
+      categorie,
+      reportingCategoryId,
+      imagesUploaded: imagesToSend.length,
+    })
 
-    // === NEW ===
-    // On met à jour le document Firestore du produit avec les IDs Square retournés
-    if (productId && catalogObjectId) {
+    if (productId && (catalogObjectId || variationId || itemId || imageId || sku)) {
       const adminDb = getFirestore()
-      await adminDb
-        .collection('produits')
-        .doc(String(productId))
-        .set(
-          {
-            catalogObjectId,
-            variationId,
-            itemId,
-          },
-          { merge: true }
-        )
+      const updateData: Record<string, any> = {}
+      if (catalogObjectId) updateData.catalogObjectId = catalogObjectId
+      else if (variationId) updateData.catalogObjectId = variationId
+      else if (itemId) updateData.catalogObjectId = itemId
+      if (variationId) updateData.variationId = variationId
+      if (itemId) updateData.itemId = itemId
+      if (imageId) updateData.imageId = imageId
+      if (sku) updateData.sku = sku
+
+      await adminDb.collection('produits').doc(String(productId)).set(updateData, { merge: true })
     }
 
-    return NextResponse.json({ success: true, catalogObjectId, variationId, itemId })
+    return NextResponse.json({
+      success: true,
+      catalogObjectId,
+      variationId,
+      itemId,
+      imageId,
+      sku,
+    })
   } catch (e: any) {
     console.error('❌ [API IMPORT SQUARE PRODUITS] Erreur attrapée')
     console.error('🧨 Message :', e?.message)
@@ -84,7 +123,7 @@ export async function POST(req: NextRequest) {
           JSON.stringify(e.response.body, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 2)
         )
       } catch {
-        console.warn('⚠️ Impossible d’afficher le corps de réponse Square')
+        console.warn('⚠️ Impossible d\'afficher le corps de réponse Square')
       }
     }
 
