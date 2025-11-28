@@ -6,6 +6,7 @@ import { adminAuth } from '@/lib/firebaseAdmin'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { archiveOrDeleteByVariation } from '@/lib/square/archiveOrDeleteByVariation'
 
+const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
 type Reason = 'erreur' | 'produit_recupere'
 
@@ -24,7 +25,14 @@ export async function POST(req: NextRequest) {
     if (!token) {
       return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 })
     }
-    const decoded = await adminAuth.verifyIdToken(token)
+    
+    let decoded
+    try {
+      decoded = await adminAuth.verifyIdToken(token)
+    } catch (authError: any) {
+      console.error('❌ Erreur vérification token:', authError?.message)
+      return NextResponse.json({ success: false, error: 'Token invalide' }, { status: 401 })
+    }
 
     const adminDb = getFirestore()
 
@@ -36,22 +44,28 @@ export async function POST(req: NextRequest) {
     }
     const data = snap.data() as any
 
-    // --- Sécurité propriétaire (tolérante) ---
-    const chineur = String(data?.chineur || '')
-    const ownerUid = String(data?.ownerUid || '')
-    const ownerEmail = String(data?.ownerEmail || '')
+    // --- Sécurité : Admin OU propriétaire ---
     const userEmail = String(decoded?.email || '')
     const userUid = String(decoded?.uid || '')
+    
+    // ✅ L'admin peut tout supprimer
+    const isAdmin = userEmail === ADMIN_EMAIL
+    
+    // Vérification propriétaire pour les non-admins
+    const chineur = String(data?.chineur || '')
+    const chineurUid = String(data?.chineurUid || '')
+    const ownerUid = String(data?.ownerUid || '')
+    const ownerEmail = String(data?.ownerEmail || '')
 
     const isOwner =
-     (chineur && (chineur === userEmail || chineur === userUid)) ||
-     (ownerUid && ownerUid === userUid) ||
-     (ownerEmail && ownerEmail === userEmail)
+      (chineur && (chineur === userEmail || chineur === userUid)) ||
+      (chineurUid && chineurUid === userUid) ||
+      (ownerUid && ownerUid === userUid) ||
+      (ownerEmail && ownerEmail === userEmail)
 
-    if (!isOwner) {
-     return NextResponse.json({ success: false, error: 'Interdit' }, { status: 403 })
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json({ success: false, error: 'Interdit' }, { status: 403 })
     }
-
 
     // ========================================================================
     // SQUARE : supprimer variation OU fallback archive (via helper)
@@ -69,28 +83,23 @@ export async function POST(req: NextRequest) {
       squareAttempted = true
 
       for (const id of squareIds) {
-        const res = await archiveOrDeleteByVariation(id)
-        if (res.ok) {
-          deletedIds.push(id)
-        } else if (res.error?.match(/NOT_FOUND|OBJECT_NOT_FOUND/i)) {
-          notFoundIds.push(id)
-        } else {
-          failedIds.push({ id, error: res.error || 'Unknown error' })
+        try {
+          const res = await archiveOrDeleteByVariation(id)
+          if (res.ok) {
+            deletedIds.push(id)
+          } else if (res.error?.match(/NOT_FOUND|OBJECT_NOT_FOUND/i)) {
+            notFoundIds.push(id)
+          } else {
+            failedIds.push({ id, error: res.error || 'Unknown error' })
+          }
+        } catch (sqErr: any) {
+          // Erreur Square non bloquante - on continue avec Firestore
+          failedIds.push({ id, error: sqErr?.message || 'Square error' })
         }
       }
 
-      // Si aucune suppression/archivage n'a fonctionné → échec
-      const okCount = deletedIds.length + notFoundIds.length
-      if (okCount === 0 && failedIds.length > 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Suppression Square échouée',
-            details: { failedIds },
-          },
-          { status: 502 }
-        )
-      }
+      // ✅ On ne bloque plus si Square échoue - on continue avec Firestore
+      // L'important c'est que le produit soit marqué/supprimé dans Firestore
     }
 
     // ================================
