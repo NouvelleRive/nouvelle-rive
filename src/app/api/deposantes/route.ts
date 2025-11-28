@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
       lien,
       imageUrl,
       ordre,
-      categories,  // [{ label: "GIGI - Bague", idsquare: "PN6QXA4B..." }, ...]
-      categorieRapport,  // { label, idsquare, siret, tva, iban, bic, banqueAdresse, adresse1, adresse2 }
+      categories,
+      categorieRapport,
     } = body
 
     if (!nom?.trim()) {
@@ -62,40 +62,42 @@ export async function POST(req: NextRequest) {
     const adminDb = getFirestore()
     const slug = id || generateSlug(nom.trim())
 
+    // On envoie TOUS les champs, même vides
     const docData: Record<string, any> = {
-      nom: nom.trim(),
-      trigramme: trigramme.trim().toUpperCase(),
+      nom: nom?.trim() || '',
+      trigramme: trigramme?.trim().toUpperCase() || '',
+      email: email?.trim() || '',
+      instagram: instagram?.trim() || '',
+      accroche: accroche?.trim() || '',
+      description: description?.trim() || '',
+      specialite: specialite?.trim() || '',
+      lien: lien?.trim() || '',
+      imageUrl: imageUrl?.trim() || '',
+      ordre: typeof ordre === 'number' ? ordre : 0,
       displayOnWebsite: true,
       slug,
     }
 
-    if (email?.trim()) docData.email = email.trim()
-    if (instagram?.trim()) docData.instagram = instagram.trim()
-    if (accroche?.trim()) docData.accroche = accroche.trim()
-    if (description?.trim()) docData.description = description.trim()
-    if (specialite?.trim()) docData.specialite = specialite.trim()
-    if (lien?.trim()) docData.lien = lien.trim()
-    if (imageUrl?.trim()) docData.imageUrl = imageUrl.trim()
-    if (typeof ordre === 'number') docData.ordre = ordre
-
-    // Catégories avec idsquare
-    if (Array.isArray(categories) && categories.length > 0) {
+    // Catégories avec idsquare - toujours envoyer le tableau
+    if (Array.isArray(categories)) {
       docData['Catégorie'] = categories
         .filter((c: any) => c?.label?.trim())
         .map((c: any) => ({
           label: c.label.trim(),
           idsquare: c.idsquare?.trim() || '',
         }))
+    } else {
+      docData['Catégorie'] = []
     }
 
     // Catégorie de rapport avec infos comptables
     if (categorieRapport?.label) {
       docData['Catégorie de rapport'] = [{
-        label: categorieRapport.label.trim(),
+        label: categorieRapport.label?.trim() || '',
         idsquare: categorieRapport.idsquare?.trim() || '',
-        nom: categorieRapport.nom?.trim() || nom.trim(),
+        nom: categorieRapport.nom?.trim() || nom?.trim() || '',
         email: categorieRapport.emailCompta?.trim() || email?.trim() || '',
-        trigramme: trigramme.trim().toUpperCase(),
+        trigramme: trigramme?.trim().toUpperCase() || '',
         siret: categorieRapport.siret?.trim() || '',
         tva: categorieRapport.tva?.trim() || '',
         iban: categorieRapport.iban?.trim() || '',
@@ -104,6 +106,8 @@ export async function POST(req: NextRequest) {
         adresse1: categorieRapport.adresse1?.trim() || '',
         adresse2: categorieRapport.adresse2?.trim() || '',
       }]
+    } else {
+      docData['Catégorie de rapport'] = []
     }
 
     const ref = adminDb.collection('chineuse').doc(slug)
@@ -111,7 +115,7 @@ export async function POST(req: NextRequest) {
 
     if (existing.exists) {
       docData.updatedAt = FieldValue.serverTimestamp()
-      await ref.update(docData)
+      await ref.set(docData, { merge: true })  // merge: true pour ne pas écraser les champs non envoyés
       return NextResponse.json({ success: true, action: 'updated', id: slug })
     } else {
       docData.createdAt = FieldValue.serverTimestamp()
