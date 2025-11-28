@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
       lien,
       imageUrl,
       ordre,
-      categories,
-      categorieRapport,
+      categories,  // [{ label: "GIGI - Bague", idsquare: "PN6QXA4B..." }, ...]
+      categorieRapport,  // { label, idsquare, siret, tva, iban, bic, banqueAdresse, adresse1, adresse2 }
     } = body
 
     if (!nom?.trim()) {
@@ -78,14 +78,31 @@ export async function POST(req: NextRequest) {
     if (imageUrl?.trim()) docData.imageUrl = imageUrl.trim()
     if (typeof ordre === 'number') docData.ordre = ordre
 
-    if (Array.isArray(categories)) {
-      docData['Catégorie'] = categories.filter((c: string) => c?.trim())
+    // Catégories avec idsquare
+    if (Array.isArray(categories) && categories.length > 0) {
+      docData['Catégorie'] = categories
+        .filter((c: any) => c?.label?.trim())
+        .map((c: any) => ({
+          label: c.label.trim(),
+          idsquare: c.idsquare?.trim() || '',
+        }))
     }
 
+    // Catégorie de rapport avec infos comptables
     if (categorieRapport?.label) {
       docData['Catégorie de rapport'] = [{
-        label: categorieRapport.label,
-        idsquare: categorieRapport.idsquare || '',
+        label: categorieRapport.label.trim(),
+        idsquare: categorieRapport.idsquare?.trim() || '',
+        nom: categorieRapport.nom?.trim() || nom.trim(),
+        email: categorieRapport.emailCompta?.trim() || email?.trim() || '',
+        trigramme: trigramme.trim().toUpperCase(),
+        siret: categorieRapport.siret?.trim() || '',
+        tva: categorieRapport.tva?.trim() || '',
+        iban: categorieRapport.iban?.trim() || '',
+        bic: categorieRapport.bic?.trim() || '',
+        banqueAdresse: categorieRapport.banqueAdresse?.trim() || '',
+        adresse1: categorieRapport.adresse1?.trim() || '',
+        adresse2: categorieRapport.adresse2?.trim() || '',
       }]
     }
 

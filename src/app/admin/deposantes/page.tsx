@@ -1,10 +1,30 @@
-// app/admin/deposantes/page.tsx
+// app/admin/deposants/page.tsx
 'use client'
 
 import { useState, useMemo } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import { Search, Plus, X, Trash2, Edit2 } from 'lucide-react'
 import { getAuth } from 'firebase/auth'
+
+type CategorieItem = {
+  label: string
+  idsquare: string
+}
+
+type CategorieRapportItem = {
+  label: string
+  idsquare: string
+  nom?: string
+  email?: string
+  trigramme?: string
+  siret?: string
+  tva?: string
+  iban?: string
+  bic?: string
+  banqueAdresse?: string
+  adresse1?: string
+  adresse2?: string
+}
 
 type Deposante = {
   id: string
@@ -18,10 +38,8 @@ type Deposante = {
   lien?: string
   imageUrl?: string
   ordre?: number
-  categories?: string[]
-  'Catégorie'?: string[]
-  'Catégorie de rapport'?: { label: string; idsquare: string }[]
-  categorieRapport?: { label: string; idsquare: string }[]
+  'Catégorie'?: CategorieItem[]
+  'Catégorie de rapport'?: CategorieRapportItem[]
 }
 
 const EMPTY_FORM = {
@@ -36,9 +54,18 @@ const EMPTY_FORM = {
   lien: '',
   imageUrl: '',
   ordre: 0,
-  categories: [] as string[],
+  categories: [] as CategorieItem[],
+  // Catégorie de rapport
   categorieRapportLabel: '',
   categorieRapportIdsquare: '',
+  // Infos comptables
+  siret: '',
+  tva: '',
+  iban: '',
+  bic: '',
+  banqueAdresse: '',
+  adresse1: '',
+  adresse2: '',
 }
 
 export default function AdminDeposantesPage() {
@@ -47,7 +74,8 @@ export default function AdminDeposantesPage() {
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
-  const [newCategorie, setNewCategorie] = useState('')
+  const [newCategorieLabel, setNewCategorieLabel] = useState('')
+  const [newCategorieIdsquare, setNewCategorieIdsquare] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
@@ -69,8 +97,8 @@ export default function AdminDeposantesPage() {
   }
 
   const openEditModal = (d: Deposante) => {
-    const cats = d['Catégorie'] || d.categories || []
-    const catRapport = (d['Catégorie de rapport'] || d.categorieRapport || [])[0] || {}
+    const cats = d['Catégorie'] || []
+    const catRapport = (d['Catégorie de rapport'] || [])[0] || {}
 
     setFormData({
       id: d.id,
@@ -87,6 +115,13 @@ export default function AdminDeposantesPage() {
       categories: cats,
       categorieRapportLabel: catRapport.label || '',
       categorieRapportIdsquare: catRapport.idsquare || '',
+      siret: catRapport.siret || '',
+      tva: catRapport.tva || '',
+      iban: catRapport.iban || '',
+      bic: catRapport.bic || '',
+      banqueAdresse: catRapport.banqueAdresse || '',
+      adresse1: catRapport.adresse1 || '',
+      adresse2: catRapport.adresse2 || '',
     })
     setImageFile(null)
     setImagePreview(d.imageUrl || null)
@@ -125,14 +160,25 @@ export default function AdminDeposantesPage() {
   }
 
   const addCategorie = () => {
-    if (!newCategorie.trim()) return
-    if (formData.categories.includes(newCategorie.trim())) return
-    setFormData({ ...formData, categories: [...formData.categories, newCategorie.trim()] })
-    setNewCategorie('')
+    if (!newCategorieLabel.trim()) return
+    if (formData.categories.some(c => c.label === newCategorieLabel.trim())) return
+    setFormData({
+      ...formData,
+      categories: [...formData.categories, { label: newCategorieLabel.trim(), idsquare: newCategorieIdsquare.trim() }]
+    })
+    setNewCategorieLabel('')
+    setNewCategorieIdsquare('')
   }
 
-  const removeCategorie = (cat: string) => {
-    setFormData({ ...formData, categories: formData.categories.filter((c) => c !== cat) })
+  const removeCategorie = (label: string) => {
+    setFormData({ ...formData, categories: formData.categories.filter((c) => c.label !== label) })
+  }
+
+  const updateCategorieIdsquare = (label: string, idsquare: string) => {
+    setFormData({
+      ...formData,
+      categories: formData.categories.map(c => c.label === label ? { ...c, idsquare } : c)
+    })
   }
 
   const handleSave = async () => {
@@ -170,8 +216,17 @@ export default function AdminDeposantesPage() {
         ordre: formData.ordre || undefined,
         categories: formData.categories,
         categorieRapport: formData.categorieRapportLabel ? {
-          label: formData.categorieRapportLabel,
-          idsquare: formData.categorieRapportIdsquare,
+          label: formData.categorieRapportLabel.trim(),
+          idsquare: formData.categorieRapportIdsquare.trim(),
+          nom: formData.nom.trim(),
+          emailCompta: formData.email.trim(),
+          siret: formData.siret.trim(),
+          tva: formData.tva.trim(),
+          iban: formData.iban.trim(),
+          bic: formData.bic.trim(),
+          banqueAdresse: formData.banqueAdresse.trim(),
+          adresse1: formData.adresse1.trim(),
+          adresse2: formData.adresse2.trim(),
         } : undefined,
       }
 
@@ -265,14 +320,14 @@ export default function AdminDeposantesPage() {
 
       <div className="space-y-4">
         {deposantesFiltrees.map((d: any) => {
-          const rawCats = d?.['Catégorie'] ?? d?.categories ?? []
-          const cats = Array.isArray(rawCats) ? rawCats.map((c: any) => typeof c === 'object' ? (c.label ?? '') : c).filter(Boolean) : []
+          const rawCats = d?.['Catégorie'] ?? []
+          const cats = Array.isArray(rawCats) ? rawCats.map((c: any) => c?.label || '').filter(Boolean) : []
           const nbProduits = produits.filter((p) => p.chineur === d.email || p.chineurUid === d.id).length
           const nbVendues = produits.filter((p) => (p.chineur === d.email || p.chineurUid === d.id) && p.vendu).length
           const caTotal = produits.filter((p) => (p.chineur === d.email || p.chineurUid === d.id) && p.vendu).reduce((sum, p) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
 
-          const accroche = d?.accroche || d?.Accroche || ''
-          const description = d?.description || d?.Description || d?.bio || d?.Bio || ''
+          const accroche = d?.accroche || ''
+          const description = d?.description || ''
 
           return (
             <div key={d.id} className="bg-white border rounded-lg overflow-hidden">
@@ -287,7 +342,7 @@ export default function AdminDeposantesPage() {
                   )}
 
                   <div className="flex-1">
-                    <p className="font-bold text-lg">{(d.nom || d.email?.split('@')[0] || '').toUpperCase()}</p>
+                    <p className="font-bold text-lg">{(d.nom || '').toUpperCase()}</p>
                     <p className="text-sm text-gray-500">{d.email || '—'}</p>
                     {accroche && <p className="text-sm text-[#22209C] font-medium mt-1 italic">"{accroche}"</p>}
                   </div>
@@ -343,150 +398,171 @@ export default function AdminDeposantesPage() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+          <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
               <h2 className="text-lg font-bold">{formData.id ? 'Modifier la' : 'Nouvelle'} déposante</h2>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Nom *</label>
+            <div className="p-4 space-y-6">
+              {/* INFOS GÉNÉRALES */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations générales</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nom *</label>
+                    <input
+                      type="text"
+                      value={formData.nom}
+                      onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                      placeholder="Ines Pineau"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Trigramme *</label>
+                    <input
+                      type="text"
+                      value={formData.trigramme}
+                      onChange={(e) => setFormData({ ...formData, trigramme: e.target.value.toUpperCase() })}
+                      placeholder="IP"
+                      maxLength={4}
+                      className="w-full border rounded px-3 py-2 uppercase"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="contact@example.com"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Instagram</label>
+                    <input
+                      type="url"
+                      value={formData.instagram}
+                      onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                      placeholder="https://instagram.com/..."
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">Accroche</label>
                   <input
                     type="text"
-                    value={formData.nom}
-                    onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                    placeholder="Ines Pineau"
+                    value={formData.accroche}
+                    onChange={(e) => setFormData({ ...formData, accroche: e.target.value })}
+                    placeholder="BIJOUX UPCYCLÉS FAITS MAIN À PARIS"
                     className="w-full border rounded px-3 py-2"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Trigramme *</label>
-                  <input
-                    type="text"
-                    value={formData.trigramme}
-                    onChange={(e) => setFormData({ ...formData, trigramme: e.target.value.toUpperCase() })}
-                    placeholder="IP"
-                    maxLength={4}
-                    className="w-full border rounded px-3 py-2 uppercase"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="contact@example.com"
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Présentation de la marque..."
+                    rows={3}
                     className="w-full border rounded px-3 py-2"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Instagram</label>
-                  <input
-                    type="url"
-                    value={formData.instagram}
-                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                    placeholder="https://instagram.com/..."
-                    className="w-full border rounded px-3 py-2"
-                  />
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Spécialité</label>
+                    <input
+                      type="text"
+                      value={formData.specialite}
+                      onChange={(e) => setFormData({ ...formData, specialite: e.target.value })}
+                      placeholder="Bijoux upcyclés"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Site web</label>
+                    <input
+                      type="url"
+                      value={formData.lien}
+                      onChange={(e) => setFormData({ ...formData, lien: e.target.value })}
+                      placeholder="https://..."
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Photo</label>
+                    <div className="flex items-center gap-4">
+                      {imagePreview && (
+                        <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                      )}
+                      <label className="flex-1 border-2 border-dashed rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50">
+                        <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                        <p className="text-xs text-gray-500">Cliquez pour ajouter</p>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Ordre d'affichage</label>
+                    <input
+                      type="number"
+                      value={formData.ordre}
+                      onChange={(e) => setFormData({ ...formData, ordre: parseInt(e.target.value) || 0 })}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Accroche</label>
-                <input
-                  type="text"
-                  value={formData.accroche}
-                  onChange={(e) => setFormData({ ...formData, accroche: e.target.value })}
-                  placeholder="BIJOUX UPCYCLÉS FAITS MAIN À PARIS"
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Présentation de la marque..."
-                  rows={4}
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Spécialité</label>
-                  <input
-                    type="text"
-                    value={formData.specialite}
-                    onChange={(e) => setFormData({ ...formData, specialite: e.target.value })}
-                    placeholder="Bijoux upcyclés"
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Site web</label>
-                  <input
-                    type="url"
-                    value={formData.lien}
-                    onChange={(e) => setFormData({ ...formData, lien: e.target.value })}
-                    placeholder="https://..."
-                    className="w-full border rounded px-3 py-2"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Photo</label>
-                <div className="flex items-center gap-4">
-                  {imagePreview && (
-                    <img src={imagePreview} alt="Preview" className="w-20 h-20 rounded-lg object-cover" />
-                  )}
-                  <label className="flex-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50">
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                    <p className="text-sm text-gray-500">Cliquez pour ajouter une image</p>
-                  </label>
-                </div>
-              </div>
-
-              <div className="w-32">
-                <label className="block text-sm font-medium mb-1">Ordre d'affichage</label>
-                <input
-                  type="number"
-                  value={formData.ordre}
-                  onChange={(e) => setFormData({ ...formData, ordre: parseInt(e.target.value) || 0 })}
-                  className="w-full border rounded px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Catégories</label>
-                <div className="flex flex-wrap gap-2 mb-2">
+              {/* CATÉGORIES */}
+              <div className="border-t pt-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Catégories produits</h3>
+                
+                <div className="space-y-2 mb-4">
                   {formData.categories.map((cat, idx) => (
-                    <span key={idx} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-sm">
-                      {cat}
-                      <button onClick={() => removeCategorie(cat)} className="hover:text-red-500">
-                        <X size={14} />
+                    <div key={idx} className="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                      <span className="flex-1 text-sm font-medium">{cat.label}</span>
+                      <input
+                        type="text"
+                        value={cat.idsquare}
+                        onChange={(e) => updateCategorieIdsquare(cat.label, e.target.value)}
+                        placeholder="ID Square"
+                        className="w-48 border rounded px-2 py-1 text-xs font-mono"
+                      />
+                      <button onClick={() => removeCategorie(cat.label)} className="p-1 text-red-400 hover:text-red-600">
+                        <X size={16} />
                       </button>
-                    </span>
+                    </div>
                   ))}
                 </div>
+
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={newCategorie}
-                    onChange={(e) => setNewCategorie(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCategorie())}
+                    value={newCategorieLabel}
+                    onChange={(e) => setNewCategorieLabel(e.target.value)}
                     placeholder="IP - Nouvelle catégorie"
                     className="flex-1 border rounded px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={newCategorieIdsquare}
+                    onChange={(e) => setNewCategorieIdsquare(e.target.value)}
+                    placeholder="ID Square (optionnel)"
+                    className="w-48 border rounded px-3 py-2 text-sm font-mono"
                   />
                   <button onClick={addCategorie} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
                     <Plus size={18} />
@@ -494,8 +570,9 @@ export default function AdminDeposantesPage() {
                 </div>
               </div>
 
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium mb-2">Catégorie de rapport (Square)</p>
+              {/* CATÉGORIE DE RAPPORT (SQUARE) */}
+              <div className="border-t pt-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Catégorie de rapport (Square)</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Label</label>
@@ -515,6 +592,91 @@ export default function AdminDeposantesPage() {
                       onChange={(e) => setFormData({ ...formData, categorieRapportIdsquare: e.target.value })}
                       placeholder="77ST6DK45WNHD6KVH2OTGX5O"
                       className="w-full border rounded px-3 py-2 text-sm font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* INFOS COMPTABLES */}
+              <div className="border-t pt-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations comptables</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">SIRET</label>
+                    <input
+                      type="text"
+                      value={formData.siret}
+                      onChange={(e) => setFormData({ ...formData, siret: e.target.value })}
+                      placeholder="123 456 789 00012"
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">N° TVA</label>
+                    <input
+                      type="text"
+                      value={formData.tva}
+                      onChange={(e) => setFormData({ ...formData, tva: e.target.value })}
+                      placeholder="FR12345678901"
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">IBAN</label>
+                    <input
+                      type="text"
+                      value={formData.iban}
+                      onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                      placeholder="FR76 1234 5678 9012 3456 7890 123"
+                      className="w-full border rounded px-3 py-2 text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">BIC</label>
+                    <input
+                      type="text"
+                      value={formData.bic}
+                      onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
+                      placeholder="BNPAFRPP"
+                      className="w-full border rounded px-3 py-2 text-sm font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-xs text-gray-500 mb-1">Adresse banque</label>
+                  <input
+                    type="text"
+                    value={formData.banqueAdresse}
+                    onChange={(e) => setFormData({ ...formData, banqueAdresse: e.target.value })}
+                    placeholder="BNP Paribas - 16 Boulevard des Italiens, 75009 Paris"
+                    className="w-full border rounded px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Adresse ligne 1</label>
+                    <input
+                      type="text"
+                      value={formData.adresse1}
+                      onChange={(e) => setFormData({ ...formData, adresse1: e.target.value })}
+                      placeholder="123 Rue de la Paix"
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Adresse ligne 2</label>
+                    <input
+                      type="text"
+                      value={formData.adresse2}
+                      onChange={(e) => setFormData({ ...formData, adresse2: e.target.value })}
+                      placeholder="75002 Paris"
+                      className="w-full border rounded px-3 py-2 text-sm"
                     />
                   </div>
                 </div>
