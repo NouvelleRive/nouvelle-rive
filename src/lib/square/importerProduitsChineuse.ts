@@ -1,7 +1,6 @@
 import { Client, Environment } from 'square'
 import { adminDb } from '@/lib/firebaseAdmin'
 import FormData from 'form-data'
-import fetch from 'node-fetch'
 
 const accessToken = process.env.SQUARE_ACCESS_TOKEN
 const locationId = process.env.SQUARE_LOCATION_ID
@@ -38,7 +37,8 @@ async function downloadImageAsBuffer(url: string): Promise<Buffer> {
   if (!response.ok) {
     throw new Error(`Échec téléchargement: ${response.status}`)
   }
-  return await response.buffer()
+  const arrayBuffer = await response.arrayBuffer()
+  return Buffer.from(arrayBuffer)
 }
 
 /**
@@ -91,7 +91,7 @@ async function uploadImageToSquare(
       return undefined
     }
     
-    const result = await response.json()
+    const result = await response.json() as any
     return result?.image?.id
   } catch (err: any) {
     console.error('❌ Erreur upload image:', err?.message)
@@ -177,8 +177,9 @@ export async function importerProduitsChineuse(args: ImportArgs) {
     const isNewItem = !existing
     const hasNewImages = imagesToUpload.length > 0
     
-    // ✅ NOUVEAU : URLs des images existantes sur Square
+    // URLs des images existantes sur Square
     let existingSquareImageUrls: string[] = []
+    let existingSquareImageIds: string[] = []
 
     if (existing) {
       console.log(`✏️ Mise à jour item ${existing.id}`)
@@ -187,10 +188,10 @@ export async function importerProduitsChineuse(args: ImportArgs) {
       variationId = existing.itemData?.variations?.[0]?.id
       const variationVersion = existing.itemData?.variations?.[0]?.version
       
-      // ✅ NOUVEAU : Récupérer les images existantes depuis Square
-      const existingImageIds = existing.itemData?.imageIds || []
-      if (existingImageIds.length > 0) {
-        existingSquareImageUrls = await getSquareImageUrls(existingImageIds as string[])
+      // Récupérer les images existantes depuis Square
+      existingSquareImageIds = (existing.itemData?.imageIds || []) as string[]
+      if (existingSquareImageIds.length > 0) {
+        existingSquareImageUrls = await getSquareImageUrls(existingSquareImageIds)
         console.log(`📸 Images existantes trouvées: ${existingSquareImageUrls.length}`)
       }
 
@@ -206,6 +207,8 @@ export async function importerProduitsChineuse(args: ImportArgs) {
             description: finalDescription,
             categoryId: categoryIdSquare,
             reportingCategory: reportingCategoryId ? { id: reportingCategoryId } : undefined,
+            // IMPORTANT: Préserver les imageIds existants
+            imageIds: existingSquareImageIds.length > 0 ? existingSquareImageIds : undefined,
             variations: [
               {
                 id: variationId,
@@ -276,7 +279,6 @@ export async function importerProduitsChineuse(args: ImportArgs) {
     }
 
     // === 2) Upload image ===
-    // Ne pas uploader d'image si c'est une mise à jour ET qu'aucune image n'est fournie
     let uploadedImageId: string | undefined = undefined
     
     if (hasNewImages && itemId) {
@@ -314,6 +316,9 @@ export async function importerProduitsChineuse(args: ImportArgs) {
 
     if (!snap.empty) {
       for (const docSnap of snap.docs) {
+        // Récupérer les données existantes de Firestore
+        const existingData = docSnap.data()
+        
         const updateData: Record<string, any> = {
           categorie,
           stock,
@@ -328,16 +333,22 @@ export async function importerProduitsChineuse(args: ImportArgs) {
           catalogObjectId: itemId,
         }
         
-        // Ne mettre à jour imageId QUE si une nouvelle image a été uploadée
+        // Gestion des images - PRÉSERVATION
         if (uploadedImageId) {
+          // Nouvelle image uploadée
           updateData.imageId = uploadedImageId
-        }
-        
-        // ✅ NOUVEAU : Stocker les URLs des images Square dans Firestore
-        if (existingSquareImageUrls.length > 0) {
+        } else if (existingSquareImageUrls.length > 0) {
+          // Images récupérées depuis Square
           updateData.imageUrls = existingSquareImageUrls
-          updateData.imageUrl = existingSquareImageUrls[0] // Image principale
-          console.log(`📸 Images Square sauvegardées dans Firestore: ${existingSquareImageUrls.length}`)
+          updateData.imageUrl = existingSquareImageUrls[0]
+          if (existingSquareImageIds.length > 0) {
+            updateData.imageId = existingSquareImageIds[0]
+          }
+          console.log(`📸 Images Square synchronisées vers Firestore: ${existingSquareImageUrls.length}`)
+        } else if (existingData.imageUrls || existingData.imageUrl) {
+          // PRÉSERVER les images existantes de Firestore
+          console.log('📸 Préservation des images Firestore existantes')
+          // Ne pas toucher aux champs imageUrls/imageUrl/imageId
         }
         
         await docSnap.ref.update(updateData)
@@ -350,8 +361,8 @@ export async function importerProduitsChineuse(args: ImportArgs) {
       message: 'Produit créé ou mis à jour',
       variationId,
       itemId,
-      imageId: uploadedImageId,
-      imageUrls: existingSquareImageUrls, // ✅ NOUVEAU : Retourner les URLs
+      imageId: uploadedImageId || (existingSquareImageIds.length > 0 ? existingSquareImageIds[0] : undefined),
+      imageUrls: existingSquareImageUrls,
     }
   } catch (error: any) {
     console.error('❌ ERREUR:', error?.message)
