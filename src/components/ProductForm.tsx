@@ -803,13 +803,25 @@ export default function ProductForm({
           </button>
           
           <div className="flex-1 flex gap-2">
-            {/* Input file VISIBLE */}
+            {/* Input file caché */}
             <input
               type="file"
               accept=".xlsx,.xls"
               onChange={handleExcelFileChange}
-             className="flex-1 text-sm file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-[#22209C] file:text-white hover:file:opacity-90 file:cursor-pointer relative z-50"
+              className="hidden"
+              id="excel-file-input"
             />
+            {/* Bouton qui déclenche l'input */}
+            <button
+              type="button"
+              onClick={() => document.getElementById('excel-file-input')?.click()}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded text-sm hover:border-[#22209C] hover:bg-white transition"
+            >
+              <Upload size={16} className="text-gray-400" />
+              <span className="text-gray-600">
+                {excelFile ? excelFile.name : 'Choisir un fichier...'}
+              </span>
+            </button>
             
             <button
               type="button"

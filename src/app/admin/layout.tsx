@@ -31,7 +31,7 @@ function AdminNavbar() {
   }
 
   const tabs = [
-    { key: 'ajouter', label: 'Ajouter produit', href: '/admin/ajouter-produit' },
+    { key: 'ajouter', label: 'Ajouter produit', href: '/admin/ajouter-produits' },  
     { key: 'produits', label: 'Nos produits', href: '/admin/nos-produits' },
     { key: 'ventes', label: 'Nos ventes', href: '/admin/nos-ventes' },
     { key: 'commandes', label: 'Nos commandes', href: '/admin/nos-commandes' },
