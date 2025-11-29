@@ -1,7 +1,7 @@
 // components/ProductForm.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Image as ImageIcon, Upload, RefreshCw, FileSpreadsheet, Download } from 'lucide-react'
 import ExcelJS from 'exceljs'
 import * as XLSX from 'xlsx'
@@ -223,6 +223,9 @@ export default function ProductForm({
   submitLabel,
   showExcelImport = true,
 }: ProductFormProps) {
+  
+  // Ref pour l'input file Excel
+  const excelInputRef = useRef<HTMLInputElement>(null)
   
   // État du formulaire
   const [formData, setFormData] = useState<ProductFormData>({
@@ -568,6 +571,22 @@ export default function ProductForm({
   }
 
   // =====================
+  // EXCEL FILE SELECTION - CORRECTION
+  // =====================
+  const handleExcelFileClick = () => {
+    excelInputRef.current?.click()
+  }
+
+  const handleExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setExcelFile(file)
+    // Reset input pour permettre de re-sélectionner le même fichier
+    if (e.target) {
+      e.target.value = ''
+    }
+  }
+
+  // =====================
   // EXCEL IMPORT
   // =====================
   const handleExcelImport = async () => {
@@ -795,18 +814,26 @@ export default function ProductForm({
                 </button>
                 
                 <div className="flex-1 flex gap-2">
-                  <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#22209C] hover:bg-white transition">
-                    <Upload size={16} className="text-gray-400" />
+                  {/* Input file caché */}
+                  <input
+                    ref={excelInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleExcelFileChange}
+                    className="hidden"
+                  />
+                  
+                  {/* Bouton pour déclencher le file picker */}
+                  <button
+                    type="button"
+                    onClick={handleExcelFileClick}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#22209C] hover:bg-white transition"
+                  >
+                    <Upload size={16} className="text-gray-400 flex-shrink-0" />
                     <span className="text-sm text-gray-600 truncate">
                       {excelFile ? excelFile.name : 'Choisir un fichier...'}
                     </span>
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-                      className="hidden"
-                    />
-                  </label>
+                  </button>
                   
                   <button
                     type="button"
