@@ -16,6 +16,44 @@ function generateSlug(nom: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+// Fonction pour créer le compte Auth (sans envoyer d'email)
+async function ensureAuthAccount(email: string, nom: string): Promise<{ uid: string; created: boolean }> {
+  if (!email?.trim()) {
+    return { uid: '', created: false }
+  }
+
+  const cleanEmail = email.trim().toLowerCase()
+
+  try {
+    // Vérifier si le compte existe déjà
+    const existingUser = await adminAuth.getUserByEmail(cleanEmail)
+    return { uid: existingUser.uid, created: false }
+  } catch (error: any) {
+    // Si l'utilisateur n'existe pas, on le crée
+    if (error.code === 'auth/user-not-found') {
+      try {
+        // Générer un mot de passe temporaire (vous pourrez le changer dans la console Firebase)
+        const tempPassword = `NR_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+        
+        const newUser = await adminAuth.createUser({
+          email: cleanEmail,
+          displayName: nom?.trim() || '',
+          password: tempPassword,
+          emailVerified: false,
+        })
+
+        console.log(`✅ Compte Auth créé pour ${cleanEmail} (uid: ${newUser.uid})`)
+
+        return { uid: newUser.uid, created: true }
+      } catch (createError: any) {
+        console.error(`❌ Erreur création compte Auth pour ${cleanEmail}:`, createError.message)
+        throw createError
+      }
+    }
+    throw error
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -59,6 +97,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Accès réservé admin' }, { status: 403 })
     }
 
+    // Créer le compte Auth si email fourni (sans envoyer d'email)
+    let authUid = ''
+    let authCreated = false
+    if (email?.trim()) {
+      try {
+        const authResult = await ensureAuthAccount(email, nom)
+        authUid = authResult.uid
+        authCreated = authResult.created
+      } catch (authError: any) {
+        console.error('⚠️ Erreur Auth (non bloquante):', authError.message)
+        // On continue même si la création Auth échoue
+      }
+    }
+
     const adminDb = getFirestore()
     const slug = id || generateSlug(nom.trim())
 
@@ -76,6 +128,11 @@ export async function POST(req: NextRequest) {
       ordre: typeof ordre === 'number' ? ordre : 0,
       displayOnWebsite: true,
       slug,
+    }
+
+    // Ajouter l'UID Auth si on l'a
+    if (authUid) {
+      docData.authUid = authUid
     }
 
     // Catégories avec idsquare - toujours envoyer le tableau
@@ -116,11 +173,23 @@ export async function POST(req: NextRequest) {
     if (existing.exists) {
       docData.updatedAt = FieldValue.serverTimestamp()
       await ref.set(docData, { merge: true })  // merge: true pour ne pas écraser les champs non envoyés
-      return NextResponse.json({ success: true, action: 'updated', id: slug })
+      return NextResponse.json({ 
+        success: true, 
+        action: 'updated', 
+        id: slug,
+        authCreated,
+        authUid: authUid || undefined
+      })
     } else {
       docData.createdAt = FieldValue.serverTimestamp()
       await ref.set(docData)
-      return NextResponse.json({ success: true, action: 'created', id: slug })
+      return NextResponse.json({ 
+        success: true, 
+        action: 'created', 
+        id: slug,
+        authCreated,
+        authUid: authUid || undefined
+      })
     }
 
   } catch (e: any) {
@@ -155,7 +224,31 @@ export async function DELETE(req: NextRequest) {
     }
 
     const adminDb = getFirestore()
-    await adminDb.collection('chineuse').doc(id).delete()
+    
+    // Récupérer le doc pour avoir l'email et supprimer aussi le compte Auth
+    const docRef = adminDb.collection('chineuse').doc(id)
+    const doc = await docRef.get()
+    
+    if (doc.exists) {
+      const data = doc.data()
+      const email = data?.email
+      
+      // Supprimer le compte Auth si il existe
+      if (email) {
+        try {
+          const user = await adminAuth.getUserByEmail(email)
+          await adminAuth.deleteUser(user.uid)
+          console.log(`✅ Compte Auth supprimé pour ${email}`)
+        } catch (authError: any) {
+          // Pas grave si le compte Auth n'existe pas
+          if (authError.code !== 'auth/user-not-found') {
+            console.error('⚠️ Erreur suppression Auth:', authError.message)
+          }
+        }
+      }
+    }
+    
+    await docRef.delete()
 
     return NextResponse.json({ success: true, action: 'deleted', id })
 
