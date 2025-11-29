@@ -1108,21 +1108,50 @@ export default function ProductForm({
                 </div>
               )}
               
-              <div className={`border-2 border-dashed rounded p-3 text-center ${formData.existingPhotos.face && !formData.deletedPhotos.face ? 'border-gray-200' : 'border-blue-300 bg-blue-50'}`}>
-                <input type="file" accept="image/*" capture="environment" onChange={(e) => setFormData({ ...formData, photoFace: e.target.files?.[0] || null })} className="hidden" id="photo-face" required={photoRequired && !formData.photoFace} />
-                <label htmlFor="photo-face" className="cursor-pointer">
-                  {formData.photoFace ? (
-                    <div className="flex items-center justify-center gap-2 text-green-600">
-                      <RefreshCw size={16} />
-                      <span className="text-xs truncate max-w-[120px]">{formData.photoFace.name}</span>
-                    </div>
-                  ) : (
+              {/* Zone Drag & Drop - Photo Face */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                  const file = e.dataTransfer.files[0]
+                  if (file && file.type.startsWith('image/')) {
+                    setFormData({ ...formData, photoFace: file })
+                  } else {
+                    alert('Veuillez déposer une image')
+                  }
+                }}
+                className={`border-2 border-dashed rounded p-3 text-center transition-colors ${formData.existingPhotos.face && !formData.deletedPhotos.face ? 'border-gray-200' : 'border-blue-300 bg-blue-50'}`}
+              >
+                {formData.photoFace ? (
+                  <div className="flex items-center justify-center gap-2 text-green-600">
+                    <RefreshCw size={16} />
+                    <span className="text-xs truncate max-w-[120px]">{formData.photoFace.name}</span>
+                    <button type="button" onClick={() => setFormData({ ...formData, photoFace: null })} className="text-red-500 hover:text-red-700">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block">
                     <div className="flex flex-col items-center gap-1 text-gray-500">
                       <Upload size={20} />
                       <span className="text-xs">{formData.existingPhotos.face ? 'Remplacer' : 'Ajouter'}</span>
                     </div>
-                  )}
-                </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => setFormData({ ...formData, photoFace: e.target.files?.[0] || null })}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
             </div>
 
@@ -1142,21 +1171,50 @@ export default function ProductForm({
                 </div>
               )}
               
-              <div className="border-2 border-dashed border-gray-200 rounded p-3 text-center">
-                <input type="file" accept="image/*" capture="environment" onChange={(e) => setFormData({ ...formData, photoDos: e.target.files?.[0] || null })} className="hidden" id="photo-dos" />
-                <label htmlFor="photo-dos" className="cursor-pointer">
-                  {formData.photoDos ? (
-                    <div className="flex items-center justify-center gap-2 text-green-600">
-                      <RefreshCw size={16} />
-                      <span className="text-xs truncate max-w-[120px]">{formData.photoDos.name}</span>
-                    </div>
-                  ) : (
+              {/* Zone Drag & Drop - Photo Dos */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                  const file = e.dataTransfer.files[0]
+                  if (file && file.type.startsWith('image/')) {
+                    setFormData({ ...formData, photoDos: file })
+                  } else {
+                    alert('Veuillez déposer une image')
+                  }
+                }}
+                className="border-2 border-dashed border-gray-200 rounded p-3 text-center transition-colors"
+              >
+                {formData.photoDos ? (
+                  <div className="flex items-center justify-center gap-2 text-green-600">
+                    <RefreshCw size={16} />
+                    <span className="text-xs truncate max-w-[120px]">{formData.photoDos.name}</span>
+                    <button type="button" onClick={() => setFormData({ ...formData, photoDos: null })} className="text-red-500 hover:text-red-700">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block">
                     <div className="flex flex-col items-center gap-1 text-gray-500">
                       <Upload size={20} />
                       <span className="text-xs">{formData.existingPhotos.dos ? 'Remplacer' : 'Ajouter'}</span>
                     </div>
-                  )}
-                </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => setFormData({ ...formData, photoDos: e.target.files?.[0] || null })}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
             </div>
 
@@ -1179,21 +1237,51 @@ export default function ProductForm({
                 </div>
               )}
               
-              <div className="border-2 border-dashed border-gray-200 rounded p-3 text-center">
-                <input type="file" accept="image/*" capture="environment" multiple onChange={(e) => setFormData({ ...formData, photosDetails: Array.from(e.target.files || []) })} className="hidden" id="photo-details" />
-                <label htmlFor="photo-details" className="cursor-pointer">
-                  {formData.photosDetails.length > 0 ? (
-                    <div className="flex items-center justify-center gap-2 text-green-600">
-                      <ImageIcon size={16} />
-                      <span className="text-xs">{formData.photosDetails.length} nouvelle(s)</span>
-                    </div>
-                  ) : (
+              {/* Zone Drag & Drop - Photos Détails */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+                  if (files.length > 0) {
+                    setFormData({ ...formData, photosDetails: [...formData.photosDetails, ...files] })
+                  } else {
+                    alert('Veuillez déposer des images')
+                  }
+                }}
+                className="border-2 border-dashed border-gray-200 rounded p-3 text-center transition-colors"
+              >
+                {formData.photosDetails.length > 0 ? (
+                  <div className="flex items-center justify-center gap-2 text-green-600">
+                    <ImageIcon size={16} />
+                    <span className="text-xs">{formData.photosDetails.length} nouvelle(s)</span>
+                    <button type="button" onClick={() => setFormData({ ...formData, photosDetails: [] })} className="text-red-500 hover:text-red-700">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block">
                     <div className="flex flex-col items-center gap-1 text-gray-500">
                       <Upload size={20} />
                       <span className="text-xs">Ajouter</span>
                     </div>
-                  )}
-                </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      multiple
+                      onChange={(e) => setFormData({ ...formData, photosDetails: Array.from(e.target.files || []) })}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </div>
             </div>
           </div>
