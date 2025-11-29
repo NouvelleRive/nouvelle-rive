@@ -38,6 +38,10 @@ type Deposante = {
   lien?: string
   imageUrl?: string
   ordre?: number
+  displayOnWebsite?: boolean
+  slug?: string
+  createdAt?: any
+  updatedAt?: any
   'Catégorie'?: CategorieItem[]
   'Catégorie de rapport'?: CategorieRapportItem[]
 }
@@ -55,10 +59,8 @@ const EMPTY_FORM = {
   imageUrl: '',
   ordre: 0,
   categories: [] as CategorieItem[],
-  // Catégorie de rapport
   categorieRapportLabel: '',
   categorieRapportIdsquare: '',
-  // Infos comptables
   siret: '',
   tva: '',
   iban: '',
@@ -206,16 +208,16 @@ export default function AdminDeposantesPage() {
         id: formData.id || undefined,
         nom: formData.nom.trim(),
         trigramme: formData.trigramme.trim().toUpperCase(),
-        email: formData.email.trim() || undefined,
-        instagram: formData.instagram.trim() || undefined,
-        accroche: formData.accroche.trim() || undefined,
-        description: formData.description.trim() || undefined,
-        specialite: formData.specialite.trim() || undefined,
-        lien: formData.lien.trim() || undefined,
-        imageUrl: finalImageUrl || undefined,
-        ordre: formData.ordre || undefined,
+        email: formData.email.trim(),
+        instagram: formData.instagram.trim(),
+        accroche: formData.accroche.trim(),
+        description: formData.description.trim(),
+        specialite: formData.specialite.trim(),
+        lien: formData.lien.trim(),
+        imageUrl: finalImageUrl,
+        ordre: formData.ordre,
         categories: formData.categories,
-        categorieRapport: formData.categorieRapportLabel ? {
+        categorieRapport: {
           label: formData.categorieRapportLabel.trim(),
           idsquare: formData.categorieRapportIdsquare.trim(),
           nom: formData.nom.trim(),
@@ -227,7 +229,7 @@ export default function AdminDeposantesPage() {
           banqueAdresse: formData.banqueAdresse.trim(),
           adresse1: formData.adresse1.trim(),
           adresse2: formData.adresse2.trim(),
-        } : undefined,
+        },
       }
 
       const res = await fetch('/api/deposantes', {
@@ -286,6 +288,14 @@ export default function AdminDeposantesPage() {
     }
   }
 
+  // Helper pour afficher si un champ est vide
+  const fieldStatus = (value: string | undefined) => {
+    if (!value || value.trim() === '') {
+      return <span className="text-red-400 text-xs ml-1">⚠️ vide</span>
+    }
+    return <span className="text-green-500 text-xs ml-1">✓</span>
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -328,6 +338,20 @@ export default function AdminDeposantesPage() {
 
           const accroche = d?.accroche || ''
           const description = d?.description || ''
+          
+          // Compter les champs manquants
+          const catRapport = (d['Catégorie de rapport'] || [])[0] || {}
+          const champsManquants = [
+            !d.email,
+            !d.instagram,
+            !d.accroche,
+            !d.description,
+            !d.specialite,
+            !d.lien,
+            !d.imageUrl,
+            !catRapport.siret,
+            !catRapport.iban,
+          ].filter(Boolean).length
 
           return (
             <div key={d.id} className="bg-white border rounded-lg overflow-hidden">
@@ -342,7 +366,14 @@ export default function AdminDeposantesPage() {
                   )}
 
                   <div className="flex-1">
-                    <p className="font-bold text-lg">{(d.nom || '').toUpperCase()}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-lg">{(d.nom || '').toUpperCase()}</p>
+                      {champsManquants > 0 && (
+                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                          {champsManquants} champ{champsManquants > 1 ? 's' : ''} manquant{champsManquants > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-500">{d.email || '—'}</p>
                     {accroche && <p className="text-sm text-[#22209C] font-medium mt-1 italic">"{accroche}"</p>}
                   </div>
@@ -412,7 +443,9 @@ export default function AdminDeposantesPage() {
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations générales</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Nom *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Nom * {fieldStatus(formData.nom)}
+                    </label>
                     <input
                       type="text"
                       value={formData.nom}
@@ -422,7 +455,9 @@ export default function AdminDeposantesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Trigramme *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Trigramme * {fieldStatus(formData.trigramme)}
+                    </label>
                     <input
                       type="text"
                       value={formData.trigramme}
@@ -436,7 +471,9 @@ export default function AdminDeposantesPage() {
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Email</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Email {fieldStatus(formData.email)}
+                    </label>
                     <input
                       type="email"
                       value={formData.email}
@@ -446,7 +483,9 @@ export default function AdminDeposantesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Instagram</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Instagram {fieldStatus(formData.instagram)}
+                    </label>
                     <input
                       type="url"
                       value={formData.instagram}
@@ -458,7 +497,9 @@ export default function AdminDeposantesPage() {
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-sm font-medium mb-1">Accroche</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Accroche {fieldStatus(formData.accroche)}
+                  </label>
                   <input
                     type="text"
                     value={formData.accroche}
@@ -469,7 +510,9 @@ export default function AdminDeposantesPage() {
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Description {fieldStatus(formData.description)}
+                  </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -481,7 +524,9 @@ export default function AdminDeposantesPage() {
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Spécialité</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Spécialité {fieldStatus(formData.specialite)}
+                    </label>
                     <input
                       type="text"
                       value={formData.specialite}
@@ -491,7 +536,9 @@ export default function AdminDeposantesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Site web</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Site web {fieldStatus(formData.lien)}
+                    </label>
                     <input
                       type="url"
                       value={formData.lien}
@@ -504,7 +551,9 @@ export default function AdminDeposantesPage() {
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Photo</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Photo {fieldStatus(formData.imageUrl)}
+                    </label>
                     <div className="flex items-center gap-4">
                       {imagePreview && (
                         <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
@@ -529,7 +578,11 @@ export default function AdminDeposantesPage() {
 
               {/* CATÉGORIES */}
               <div className="border-t pt-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Catégories produits</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                  Catégories produits 
+                  {formData.categories.length === 0 && <span className="text-red-400 text-xs ml-1">⚠️ aucune</span>}
+                  {formData.categories.length > 0 && <span className="text-green-500 text-xs ml-1">✓ {formData.categories.length}</span>}
+                </h3>
                 
                 <div className="space-y-2 mb-4">
                   {formData.categories.map((cat, idx) => (
@@ -540,8 +593,10 @@ export default function AdminDeposantesPage() {
                         value={cat.idsquare}
                         onChange={(e) => updateCategorieIdsquare(cat.label, e.target.value)}
                         placeholder="ID Square"
-                        className="w-48 border rounded px-2 py-1 text-xs font-mono"
+                        className={`w-48 border rounded px-2 py-1 text-xs font-mono ${!cat.idsquare ? 'border-orange-300 bg-orange-50' : ''}`}
                       />
+                      {!cat.idsquare && <span className="text-orange-400 text-xs">⚠️</span>}
+                      {cat.idsquare && <span className="text-green-500 text-xs">✓</span>}
                       <button onClick={() => removeCategorie(cat.label)} className="p-1 text-red-400 hover:text-red-600">
                         <X size={16} />
                       </button>
@@ -561,7 +616,7 @@ export default function AdminDeposantesPage() {
                     type="text"
                     value={newCategorieIdsquare}
                     onChange={(e) => setNewCategorieIdsquare(e.target.value)}
-                    placeholder="ID Square (optionnel)"
+                    placeholder="ID Square"
                     className="w-48 border rounded px-3 py-2 text-sm font-mono"
                   />
                   <button onClick={addCategorie} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
@@ -572,7 +627,10 @@ export default function AdminDeposantesPage() {
 
               {/* CATÉGORIE DE RAPPORT (SQUARE) */}
               <div className="border-t pt-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Catégorie de rapport (Square)</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                  Catégorie de rapport (Square)
+                  {fieldStatus(formData.categorieRapportLabel)}
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Label</label>
@@ -581,7 +639,7 @@ export default function AdminDeposantesPage() {
                       value={formData.categorieRapportLabel}
                       onChange={(e) => setFormData({ ...formData, categorieRapportLabel: e.target.value })}
                       placeholder="INES PINEAU"
-                      className="w-full border rounded px-3 py-2 text-sm"
+                      className={`w-full border rounded px-3 py-2 text-sm ${!formData.categorieRapportLabel ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                   <div>
@@ -591,7 +649,7 @@ export default function AdminDeposantesPage() {
                       value={formData.categorieRapportIdsquare}
                       onChange={(e) => setFormData({ ...formData, categorieRapportIdsquare: e.target.value })}
                       placeholder="77ST6DK45WNHD6KVH2OTGX5O"
-                      className="w-full border rounded px-3 py-2 text-sm font-mono"
+                      className={`w-full border rounded px-3 py-2 text-sm font-mono ${!formData.categorieRapportIdsquare ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                 </div>
@@ -603,80 +661,94 @@ export default function AdminDeposantesPage() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">SIRET</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      SIRET {fieldStatus(formData.siret)}
+                    </label>
                     <input
                       type="text"
                       value={formData.siret}
                       onChange={(e) => setFormData({ ...formData, siret: e.target.value })}
                       placeholder="123 456 789 00012"
-                      className="w-full border rounded px-3 py-2 text-sm"
+                      className={`w-full border rounded px-3 py-2 text-sm ${!formData.siret ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">N° TVA</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      N° TVA {fieldStatus(formData.tva)}
+                    </label>
                     <input
                       type="text"
                       value={formData.tva}
                       onChange={(e) => setFormData({ ...formData, tva: e.target.value })}
                       placeholder="FR12345678901"
-                      className="w-full border rounded px-3 py-2 text-sm"
+                      className={`w-full border rounded px-3 py-2 text-sm ${!formData.tva ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">IBAN</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      IBAN {fieldStatus(formData.iban)}
+                    </label>
                     <input
                       type="text"
                       value={formData.iban}
                       onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
                       placeholder="FR76 1234 5678 9012 3456 7890 123"
-                      className="w-full border rounded px-3 py-2 text-sm font-mono"
+                      className={`w-full border rounded px-3 py-2 text-sm font-mono ${!formData.iban ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">BIC</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      BIC {fieldStatus(formData.bic)}
+                    </label>
                     <input
                       type="text"
                       value={formData.bic}
                       onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
                       placeholder="BNPAFRPP"
-                      className="w-full border rounded px-3 py-2 text-sm font-mono"
+                      className={`w-full border rounded px-3 py-2 text-sm font-mono ${!formData.bic ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-xs text-gray-500 mb-1">Adresse banque</label>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Adresse banque {fieldStatus(formData.banqueAdresse)}
+                  </label>
                   <input
                     type="text"
                     value={formData.banqueAdresse}
                     onChange={(e) => setFormData({ ...formData, banqueAdresse: e.target.value })}
                     placeholder="BNP Paribas - 16 Boulevard des Italiens, 75009 Paris"
-                    className="w-full border rounded px-3 py-2 text-sm"
+                    className={`w-full border rounded px-3 py-2 text-sm ${!formData.banqueAdresse ? 'border-orange-300 bg-orange-50' : ''}`}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Adresse ligne 1</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Adresse ligne 1 {fieldStatus(formData.adresse1)}
+                    </label>
                     <input
                       type="text"
                       value={formData.adresse1}
                       onChange={(e) => setFormData({ ...formData, adresse1: e.target.value })}
                       placeholder="123 Rue de la Paix"
-                      className="w-full border rounded px-3 py-2 text-sm"
+                      className={`w-full border rounded px-3 py-2 text-sm ${!formData.adresse1 ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Adresse ligne 2</label>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Adresse ligne 2 {fieldStatus(formData.adresse2)}
+                    </label>
                     <input
                       type="text"
                       value={formData.adresse2}
                       onChange={(e) => setFormData({ ...formData, adresse2: e.target.value })}
                       placeholder="75002 Paris"
-                      className="w-full border rounded px-3 py-2 text-sm"
+                      className={`w-full border rounded px-3 py-2 text-sm ${!formData.adresse2 ? 'border-orange-300 bg-orange-50' : ''}`}
                     />
                   </div>
                 </div>

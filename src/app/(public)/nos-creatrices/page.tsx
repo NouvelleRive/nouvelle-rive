@@ -1,3 +1,4 @@
+// app/nos-creatrices/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -19,7 +20,6 @@ export default function NosCreateursPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  // Fetch créatrices depuis Firebase
   useEffect(() => {
     async function fetchCreateurices() {
       try {
@@ -123,7 +123,7 @@ export default function NosCreateursPage() {
         </p>
       </div>
 
-      {/* Grille */}
+      {/* Grille - format portrait 3:4 */}
       <div 
         className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
         style={{ borderLeft: '1px solid #000' }}
@@ -135,7 +135,8 @@ export default function NosCreateursPage() {
             className="group"
             style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
-            <div className="aspect-square bg-gray-100 overflow-hidden relative">
+            {/* Format portrait 3:4 au lieu de aspect-square */}
+            <div className="aspect-[3/4] bg-gray-100 overflow-hidden relative">
               {c.imageUrl ? (
                 <img
                   src={c.imageUrl}
