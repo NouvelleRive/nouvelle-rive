@@ -792,46 +792,78 @@ export default function ProductForm({
           Importez plusieurs produits d'un coup via un fichier Excel.
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col gap-3">
           <button
             type="button"
             onClick={generateExcelTemplate}
-            className="flex items-center justify-center gap-2 px-4 py-2 border border-[#22209C] text-[#22209C] rounded text-sm hover:bg-[#22209C] hover:text-white transition"
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-[#22209C] text-[#22209C] rounded text-sm hover:bg-[#22209C] hover:text-white transition w-fit"
           >
             <Download size={16} />
             Télécharger le template
           </button>
           
-          <div className="flex-1 flex gap-2">
-            {/* Input file caché */}
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleExcelFileChange}
-              className="hidden"
-              id="excel-file-input"
-            />
-            {/* Bouton qui déclenche l'input */}
-            <button
-              type="button"
-              onClick={() => document.getElementById('excel-file-input')?.click()}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded text-sm hover:border-[#22209C] hover:bg-white transition"
-            >
-              <Upload size={16} className="text-gray-400" />
-              <span className="text-gray-600">
-                {excelFile ? excelFile.name : 'Choisir un fichier...'}
-              </span>
-            </button>
-            
-            <button
-              type="button"
-              onClick={handleExcelImport}
-              disabled={!excelFile || importLoading}
-              className="px-4 py-2 bg-[#22209C] text-white rounded text-sm disabled:opacity-40 hover:opacity-90 transition"
-            >
-              {importLoading ? '...' : 'Importer'}
-            </button>
+          {/* Zone Drag & Drop */}
+          <div
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.currentTarget.classList.add('border-[#22209C]', 'bg-blue-50')
+            }}
+            onDragLeave={(e) => {
+              e.currentTarget.classList.remove('border-[#22209C]', 'bg-blue-50')
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              e.currentTarget.classList.remove('border-[#22209C]', 'bg-blue-50')
+              const file = e.dataTransfer.files[0]
+              if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                setExcelFile(file)
+              } else {
+                alert('Veuillez déposer un fichier Excel (.xlsx ou .xls)')
+              }
+            }}
+            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors"
+          >
+            {excelFile ? (
+              <div className="flex items-center justify-center gap-3">
+                <FileSpreadsheet size={24} className="text-green-600" />
+                <span className="text-green-600 font-medium">{excelFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setExcelFile(null)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Upload size={32} className="mx-auto text-gray-400" />
+                <p className="text-gray-600">Glissez-déposez votre fichier Excel ici</p>
+                <p className="text-gray-400 text-sm">ou</p>
+                <label className="inline-block px-4 py-2 bg-[#22209C] text-white rounded cursor-pointer hover:opacity-90 transition">
+                  Parcourir...
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) setExcelFile(file)
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
           </div>
+          
+          <button
+            type="button"
+            onClick={handleExcelImport}
+            disabled={!excelFile || importLoading}
+            className="w-full py-3 bg-[#22209C] text-white rounded font-medium disabled:opacity-40 hover:opacity-90 transition"
+          >
+            {importLoading ? '⏳ Import en cours...' : `📥 Importer ${excelFile ? excelFile.name : ''}`}
+          </button>
         </div>
       </div>
     )}
