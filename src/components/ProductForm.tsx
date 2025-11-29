@@ -772,65 +772,59 @@ export default function ProductForm({
     <div className="space-y-4">
       
       {/* === IMPORT EXCEL (mode création uniquement) === */}
-      {mode === 'create' && showExcelImport && onExcelImport && (
-        <div className="bg-white border rounded-lg overflow-hidden">
+{mode === 'create' && showExcelImport && onExcelImport && (
+  <div className="bg-white border rounded-lg overflow-hidden">
+    <button
+      type="button"
+      onClick={() => setShowExcelSection(!showExcelSection)}
+      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
+    >
+      <div className="flex items-center gap-2 text-[#22209C]">
+        <FileSpreadsheet size={18} />
+        <span className="font-medium text-sm">Import Excel</span>
+      </div>
+      <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
+    </button>
+    
+    {showExcelSection && (
+      <div className="px-4 pb-4 border-t bg-gray-50">
+        <p className="text-xs text-gray-500 py-3">
+          Importez plusieurs produits d'un coup via un fichier Excel.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             type="button"
-            onClick={() => setShowExcelSection(!showExcelSection)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
+            onClick={generateExcelTemplate}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-[#22209C] text-[#22209C] rounded text-sm hover:bg-[#22209C] hover:text-white transition"
           >
-            <div className="flex items-center gap-2 text-[#22209C]">
-              <FileSpreadsheet size={18} />
-              <span className="font-medium text-sm">Import Excel</span>
-            </div>
-            <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
+            <Download size={16} />
+            Télécharger le template
           </button>
           
-          {showExcelSection && (
-            <div className="px-4 pb-4 border-t bg-gray-50">
-              <p className="text-xs text-gray-500 py-3">
-                Importez plusieurs produits d'un coup via un fichier Excel.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  onClick={generateExcelTemplate}
-                  className="flex items-center justify-center gap-2 px-4 py-2 border border-[#22209C] text-[#22209C] rounded text-sm hover:bg-[#22209C] hover:text-white transition"
-                >
-                  <Download size={16} />
-                  Télécharger le template
-                </button>
-                
-                <div className="flex-1 flex gap-2">
-                  {/* ✅ CORRIGÉ: Label cliquable avec input intégré */}
-                  <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded cursor-pointer hover:border-[#22209C] hover:bg-white transition">
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleExcelFileChange}
-                      className="hidden"
-                    />
-                    <Upload size={16} className="text-gray-400 flex-shrink-0" />
-                    <span className="text-sm text-gray-600 truncate">
-                      {excelFile ? excelFile.name : 'Choisir un fichier...'}
-                    </span>
-                  </label>
-                  
-                  <button
-                    type="button"
-                    onClick={handleExcelImport}
-                    disabled={!excelFile || importLoading}
-                    className="px-4 py-2 bg-[#22209C] text-white rounded text-sm disabled:opacity-40 hover:opacity-90 transition"
-                  >
-                    {importLoading ? '...' : 'Importer'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="flex-1 flex gap-2">
+            {/* Input file VISIBLE */}
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleExcelFileChange}
+              className="flex-1 text-sm file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-[#22209C] file:text-white hover:file:opacity-90 file:cursor-pointer"
+            />
+            
+            <button
+              type="button"
+              onClick={handleExcelImport}
+              disabled={!excelFile || importLoading}
+              className="px-4 py-2 bg-[#22209C] text-white rounded text-sm disabled:opacity-40 hover:opacity-90 transition"
+            >
+              {importLoading ? '...' : 'Importer'}
+            </button>
+          </div>
         </div>
-      )}
+      </div>
+    )}
+  </div>
+)}
 
       {/* === FORMULAIRE === */}
       <form onSubmit={handleSubmit} className="space-y-4">
