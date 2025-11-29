@@ -808,7 +808,7 @@ export default function ProductForm({
               type="file"
               accept=".xlsx,.xls"
               onChange={handleExcelFileChange}
-              className="flex-1 text-sm file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-[#22209C] file:text-white hover:file:opacity-90 file:cursor-pointer"
+             className="flex-1 text-sm file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-[#22209C] file:text-white hover:file:opacity-90 file:cursor-pointer relative z-50"
             />
             
             <button
