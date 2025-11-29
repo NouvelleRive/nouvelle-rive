@@ -13,7 +13,6 @@ type Creatrice = {
   accroche: string
   description: string
   lien: string
-  site: string
   instagram: string
   imageUrl: string
   produitsPrefers?: string[] // IDs des produits
@@ -53,7 +52,6 @@ export default function CreateurPage() {
             accroche: data.accroche || '',
             description: data.description || '',
             lien: data.lien || '',
-            site: data.site || '',
             instagram: data.instagram || '',
             imageUrl: data.imageUrl || '',
             produitsPrefers: data.produitsPrefers || [],
@@ -239,9 +237,9 @@ export default function CreateurPage() {
 
           {/* Liens Site et Instagram */}
           <div className="flex flex-col gap-3">
-            {creatrice.site && (
+            {creatrice.lien && (
               <a
-                href={creatrice.site.startsWith('http') ? creatrice.site : `https://${creatrice.site}`}
+                href={creatrice.lien.startsWith('http') ? creatrice.lien : `https://${creatrice.lien}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="uppercase text-xs tracking-widest hover:opacity-50 transition flex items-center gap-2"
@@ -261,17 +259,6 @@ export default function CreateurPage() {
               >
                 <span>Instagram</span>
                 <span>→</span>
-              </a>
-            )}
-            {creatrice.lien && !creatrice.site && !creatrice.instagram && (
-              <a
-                href={creatrice.lien}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="uppercase text-xs tracking-widest hover:opacity-50 transition"
-                style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
-              >
-                Découvrir son univers
               </a>
             )}
           </div>

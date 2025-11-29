@@ -1,4 +1,4 @@
-// app/admin/deposants/page.tsx
+// app/admin/deposantes/page.tsx
 'use client'
 
 import { useState, useMemo } from 'react'
@@ -355,6 +355,7 @@ export default function AdminDeposantesPage() {
 
           return (
             <div key={d.id} className="bg-white border rounded-lg overflow-hidden">
+              {/* Header avec infos principales */}
               <div className="p-4 flex items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
                   {d.imageUrl ? (
@@ -404,18 +405,24 @@ export default function AdminDeposantesPage() {
                 </div>
               </div>
 
+              {/* Description */}
               {description && (
                 <div className="px-4 pb-3">
                   <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
                 </div>
               )}
 
+              {/* Catégories en pastilles - affiché en bas */}
               {cats.length > 0 && (
-                <div className="px-4 pb-4">
-                  <p className="text-xs text-gray-400 mb-2">Catégories</p>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="px-4 py-3 bg-gray-50 border-t">
+                  <div className="flex flex-wrap gap-2">
                     {cats.map((cat: string, idx: number) => (
-                      <span key={idx} className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full">{cat}</span>
+                      <span 
+                        key={idx} 
+                        className="text-xs bg-[#22209C]/10 text-[#22209C] px-3 py-1.5 rounded-full font-medium"
+                      >
+                        {cat}
+                      </span>
                     ))}
                   </div>
                 </div>
