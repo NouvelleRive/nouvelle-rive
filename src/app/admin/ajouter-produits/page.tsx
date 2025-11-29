@@ -14,6 +14,8 @@ import {
   extractSkuNumFromSkuOrName 
 } from '@/lib/admin/helpers'
 
+type Cat = { label: string; idsquare?: string }
+
 export default function AdminAjouterPage() {
   const { 
     selectedChineuse, 
