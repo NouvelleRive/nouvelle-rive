@@ -254,10 +254,11 @@ export default function AdminNosVentesPage() {
   const handleSyncGlobal = async () => {
     setSyncGlobalLoading(true)
     try {
-      const res = await fetch('/api/sync-ventes-global', {
+      const res = await fetch('/api/sync-ventes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          all: true,
           startDateStr: syncStartDate ? `${syncStartDate}T00:00:00Z` : undefined,
           endDateStr: syncEndDate ? `${syncEndDate}T23:59:59Z` : undefined,
         })
