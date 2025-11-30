@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import SyncVentesButton from '@/components/SyncVentesButton'
-import { Plus, X, Search, Download, Link, Trash2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Plus, X, Search, Download, Link, Trash2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface Vente {
   id: string
@@ -54,6 +54,11 @@ export default function AdminNosVentesPage() {
   // Form supprimer
   const [remettreEnStock, setRemettreEnStock] = useState(false)
   const [supprimerLoading, setSupprimerLoading] = useState(false)
+
+  // Sync global
+  const [syncGlobalLoading, setSyncGlobalLoading] = useState(false)
+  const [syncStartDate, setSyncStartDate] = useState('')
+  const [syncEndDate, setSyncEndDate] = useState('')
 
   // Charger les ventes
   const loadVentes = async () => {
@@ -245,6 +250,33 @@ export default function AdminNosVentesPage() {
     if (p?.prix) setPrixVente(p.prix.toString())
   }
 
+  // Sync global toutes les chineuses
+  const handleSyncGlobal = async () => {
+    setSyncGlobalLoading(true)
+    try {
+      const res = await fetch('/api/sync-ventes-global', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDateStr: syncStartDate ? `${syncStartDate}T00:00:00Z` : undefined,
+          endDateStr: syncEndDate ? `${syncEndDate}T23:59:59Z` : undefined,
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(`Sync terminé: ${data.message}`)
+        await loadVentes()
+        await loadData()
+      } else {
+        alert('Erreur: ' + data.error)
+      }
+    } catch (err) {
+      alert('Erreur sync global')
+    } finally {
+      setSyncGlobalLoading(false)
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—'
     return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -284,9 +316,30 @@ export default function AdminNosVentesPage() {
               buttonText={`Sync ventes ${selectedChineuse.trigramme || ''}`}
             />
           ) : (
-            <p className="text-sm text-gray-500">
-              Mode admin global — toutes les ventes
-            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={syncStartDate}
+                onChange={(e) => setSyncStartDate(e.target.value)}
+                className="border rounded px-2 py-2 text-sm"
+                placeholder="Début"
+              />
+              <input
+                type="date"
+                value={syncEndDate}
+                onChange={(e) => setSyncEndDate(e.target.value)}
+                className="border rounded px-2 py-2 text-sm"
+                placeholder="Fin"
+              />
+              <button
+                onClick={handleSyncGlobal}
+                disabled={syncGlobalLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded hover:opacity-90 disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={syncGlobalLoading ? 'animate-spin' : ''} />
+                {syncGlobalLoading ? 'Sync en cours...' : 'Sync toutes les ventes'}
+              </button>
+            </div>
           )}
         </div>
 
@@ -388,7 +441,8 @@ export default function AdminNosVentesPage() {
                     </span>
                   )}
                   <p className="font-medium truncate">
-                    {vente.sku ? `${vente.sku} - ` : ''}{vente.nom || vente.remarque || 'Vente sans nom'}
+                    {vente.sku && <span className="text-gray-500">{vente.sku} - </span>}
+                    {vente.nom?.replace(/^\d+\s*-\s*/, '') || vente.remarque || 'Vente sans nom'}
                   </p>
                 </div>
                 <p className="text-sm text-gray-500">
@@ -409,18 +463,16 @@ export default function AdminNosVentesPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-2">
-                {!vente.isAttribue && (
-                  <button
-                    onClick={() => {
-                      setVenteSelectionnee(vente)
-                      setShowModalAttribuer(true)
-                    }}
-                    className="p-2 bg-amber-100 text-amber-700 rounded hover:bg-amber-200"
-                    title="Attribuer à un produit"
-                  >
-                    <Link size={16} />
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    setVenteSelectionnee(vente)
+                    setShowModalAttribuer(true)
+                  }}
+                  className={`p-2 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
+                  title={vente.isAttribue ? 'Réattribuer à un autre produit' : 'Attribuer à un produit'}
+                >
+                  <Link size={16} />
+                </button>
                 <button
                   onClick={() => {
                     setVenteSelectionnee(vente)
