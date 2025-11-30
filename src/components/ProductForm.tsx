@@ -308,6 +308,7 @@ export default function ProductForm({
     const GRAY_LIGHT = 'F5F5F5'
     const GRAY_TEXT = '666666'
     const RED = 'DC2626'
+    const ORANGE = 'F59E0B'
 
     // === FEUILLE PRODUITS ===
     const wsProduits = workbook.addWorksheet('Produits', {
@@ -315,18 +316,19 @@ export default function ProductForm({
       properties: { defaultColWidth: 15 }
     })
     
-    // Définir les colonnes
+    // Définir les colonnes - AJOUT SKU EN PREMIÈRE POSITION
     wsProduits.columns = [
-      { key: 'nom', width: 35 },
-      { key: 'categorie', width: 25 },
-      { key: 'prix', width: 12 },
-      { key: 'quantite', width: 12 },
-      { key: 'marque', width: 20 },
-      { key: 'taille', width: 12 },
-      { key: 'matiere', width: 18 },
-      { key: 'couleur', width: 15 },
-      { key: 'madein', width: 18 },
-      { key: 'description', width: 45 },
+      { key: 'sku', width: 15 },        // A - SKU (optionnel)
+      { key: 'nom', width: 35 },        // B - Nom
+      { key: 'categorie', width: 25 },  // C - Catégorie
+      { key: 'prix', width: 12 },       // D - Prix
+      { key: 'quantite', width: 12 },   // E - Quantité
+      { key: 'marque', width: 20 },     // F - Marque
+      { key: 'taille', width: 12 },     // G - Taille
+      { key: 'matiere', width: 18 },    // H - Matière
+      { key: 'couleur', width: 15 },    // I - Couleur
+      { key: 'madein', width: 18 },     // J - Made in
+      { key: 'description', width: 45 }, // K - Description
     ]
     
     // === HEADER ===
@@ -334,18 +336,18 @@ export default function ProductForm({
     wsProduits.addRow([])
     
     // Ligne 2: NOUVELLE RIVE (titre)
-    const titleRow = wsProduits.addRow(['', 'NOUVELLE RIVE'])
-    wsProduits.mergeCells('B2:E2')
-    const titleCell = wsProduits.getCell('B2')
+    wsProduits.addRow(['', '', 'NOUVELLE RIVE'])
+    wsProduits.mergeCells('C2:F2')
+    const titleCell = wsProduits.getCell('C2')
     titleCell.font = { name: 'Helvetica', size: 24, bold: true, color: { argb: NR_BLUE } }
     titleCell.alignment = { horizontal: 'left', vertical: 'middle' }
     wsProduits.getRow(2).height = 35
     
     // Ligne 3: Sous-titre
     const displayName = userName || (isAdmin && selectedChineuse ? selectedChineuse.nom : 'Chineuse')
-    const subtitleRow = wsProduits.addRow(['', `Template d'import · ${displayName}`])
-    wsProduits.mergeCells('B3:E3')
-    const subtitleCell = wsProduits.getCell('B3')
+    wsProduits.addRow(['', '', `Template d'import · ${displayName}`])
+    wsProduits.mergeCells('C3:F3')
+    const subtitleCell = wsProduits.getCell('C3')
     subtitleCell.font = { name: 'Helvetica', size: 11, italic: true, color: { argb: GRAY_TEXT } }
     subtitleCell.alignment = { horizontal: 'left', vertical: 'middle' }
     
@@ -353,9 +355,9 @@ export default function ProductForm({
     wsProduits.addRow([])
     
     // Ligne 5: Instructions
-    const instructionRow = wsProduits.addRow(['', '⚠️ Les champs avec * sont obligatoires. Les catégories et tailles sont verrouillées - choisissez dans la liste.'])
-    wsProduits.mergeCells('B5:J5')
-    const instructionCell = wsProduits.getCell('B5')
+    wsProduits.addRow(['', '', '⚠️ Les champs avec * sont obligatoires. SKU est optionnel (généré auto si vide).'])
+    wsProduits.mergeCells('C5:K5')
+    const instructionCell = wsProduits.getCell('C5')
     instructionCell.font = { name: 'Helvetica', size: 10, color: { argb: RED } }
     instructionCell.alignment = { horizontal: 'left', vertical: 'middle' }
     
@@ -363,19 +365,21 @@ export default function ProductForm({
     wsProduits.addRow([])
     
     // === LIGNE D'EN-TÊTE (ligne 7) ===
-    const headers = ['Nom *', 'Catégorie *', 'Prix € *', 'Quantité', 'Marque', 'Taille', 'Matière', 'Couleur', 'Made in', 'Description']
+    const headers = ['SKU', 'Nom *', 'Catégorie *', 'Prix € *', 'Quantité', 'Marque', 'Taille', 'Matière', 'Couleur', 'Made in', 'Description']
     const headerRow = wsProduits.addRow(headers)
     headerRow.height = 28
     
     headerRow.eachCell((cell, colNumber) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NR_BLUE } }
+      // SKU en orange (optionnel), le reste en bleu
+      const isSkuCol = colNumber === 1
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isSkuCol ? ORANGE : NR_BLUE } }
       cell.font = { name: 'Helvetica', size: 11, bold: true, color: { argb: WHITE } }
       cell.alignment = { horizontal: 'center', vertical: 'middle' }
       cell.border = {
-        top: { style: 'thin', color: { argb: NR_BLUE } },
-        bottom: { style: 'thin', color: { argb: NR_BLUE } },
-        left: { style: 'thin', color: { argb: NR_BLUE } },
-        right: { style: 'thin', color: { argb: NR_BLUE } },
+        top: { style: 'thin', color: { argb: isSkuCol ? ORANGE : NR_BLUE } },
+        bottom: { style: 'thin', color: { argb: isSkuCol ? ORANGE : NR_BLUE } },
+        left: { style: 'thin', color: { argb: isSkuCol ? ORANGE : NR_BLUE } },
+        right: { style: 'thin', color: { argb: isSkuCol ? ORANGE : NR_BLUE } },
       }
     })
     
@@ -384,8 +388,7 @@ export default function ProductForm({
     const DATA_END_ROW = 57
     
     for (let i = 0; i < 50; i++) {
-      const rowNum = DATA_START_ROW + i
-      const dataRow = wsProduits.addRow(['', '', '', 1, '', '', '', '', '', ''])
+      const dataRow = wsProduits.addRow(['', '', '', '', 1, '', '', '', '', '', ''])
       dataRow.height = 24
       
       dataRow.eachCell((cell, colNumber) => {
@@ -401,8 +404,16 @@ export default function ProductForm({
           bottom: { style: 'hair', color: { argb: 'DDDDDD' } },
         }
         
-        // Colonnes obligatoires en fond légèrement coloré
-        if (colNumber <= 3) {
+        // SKU en fond orange clair
+        if (colNumber === 1) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: i % 2 === 0 ? 'FEF3C7' : 'FDE68A' }
+          }
+        }
+        // Colonnes obligatoires (Nom, Catégorie, Prix) en fond bleu clair
+        else if (colNumber >= 2 && colNumber <= 4) {
           cell.fill = {
             type: 'pattern',
             pattern: 'solid',
@@ -414,10 +425,10 @@ export default function ProductForm({
     
     // === DATA VALIDATION ===
     
-    // Catégories (colonne B)
+    // Catégories (colonne C)
     if (categoriesAutorisees.length > 0) {
       for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
-        wsProduits.getCell(`B${row}`).dataValidation = {
+        wsProduits.getCell(`C${row}`).dataValidation = {
           type: 'list',
           allowBlank: false,
           formulae: [`Listes!$A$2:$A$${categoriesAutorisees.length + 1}`],
@@ -431,9 +442,9 @@ export default function ProductForm({
       }
     }
     
-    // Tailles (colonne F)
+    // Tailles (colonne G)
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
-      wsProduits.getCell(`F${row}`).dataValidation = {
+      wsProduits.getCell(`G${row}`).dataValidation = {
         type: 'list',
         allowBlank: true,
         formulae: [`Listes!$B$2:$B$${ALL_TAILLES.length + 1}`],
@@ -443,18 +454,18 @@ export default function ProductForm({
       }
     }
     
-    // Made in (colonne I)
+    // Made in (colonne J)
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
-      wsProduits.getCell(`I${row}`).dataValidation = {
+      wsProduits.getCell(`J${row}`).dataValidation = {
         type: 'list',
         allowBlank: true,
         formulae: [`Listes!$C$2:$C$${MADE_IN_OPTIONS.length + 1}`],
       }
     }
     
-    // Prix (colonne C) - validation numérique
+    // Prix (colonne D) - validation numérique
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
-      wsProduits.getCell(`C${row}`).dataValidation = {
+      wsProduits.getCell(`D${row}`).dataValidation = {
         type: 'decimal',
         operator: 'greaterThan',
         formulae: [0],
@@ -463,12 +474,12 @@ export default function ProductForm({
         errorTitle: 'Prix invalide',
         error: 'Le prix doit être un nombre positif.',
       }
-      wsProduits.getCell(`C${row}`).numFmt = '#,##0.00 €'
+      wsProduits.getCell(`D${row}`).numFmt = '#,##0.00 €'
     }
     
-    // Quantité (colonne D) - validation entier
+    // Quantité (colonne E) - validation entier
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
-      wsProduits.getCell(`D${row}`).dataValidation = {
+      wsProduits.getCell(`E${row}`).dataValidation = {
         type: 'whole',
         operator: 'greaterThanOrEqual',
         formulae: [1],
@@ -517,7 +528,8 @@ export default function ProductForm({
     
     const aideData = [
       ['Champ', 'Description'],
-      ['Nom *', 'Nom de l\'article (obligatoire). Le SKU sera ajouté automatiquement.'],
+      ['SKU', 'Référence unique (optionnel). Si vide, sera généré automatiquement. Ex: PV31, ABC123'],
+      ['Nom *', 'Nom de l\'article (obligatoire).'],
       ['Catégorie *', 'Choisir dans la liste déroulante (obligatoire).'],
       ['Prix € *', 'Prix de vente en euros (obligatoire). Ex: 45 ou 129.90'],
       ['Quantité', 'Nombre d\'exemplaires. Par défaut: 1'],
@@ -538,6 +550,10 @@ export default function ProductForm({
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NR_BLUE } }
           }
         })
+      } else if (i === 1) {
+        // SKU en orange
+        r.getCell(2).font = { name: 'Helvetica', size: 10, bold: true, color: { argb: ORANGE } }
+        r.getCell(3).font = { name: 'Helvetica', size: 10 }
       } else {
         r.getCell(2).font = { name: 'Helvetica', size: 10, bold: true }
         r.getCell(3).font = { name: 'Helvetica', size: 10 }
@@ -565,14 +581,6 @@ export default function ProductForm({
     link.click()
     
     URL.revokeObjectURL(url)
-  }
-
-  // =====================
-  // EXCEL FILE SELECTION - CORRIGÉ
-  // =====================
-  const handleExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setExcelFile(file)
   }
 
   // =====================
@@ -672,6 +680,20 @@ export default function ProductForm({
               continue
             }
             
+            // SKU - récupérer tel quel s'il existe
+            let skuValue: string | undefined = undefined
+            if (rec.sku !== undefined && rec.sku !== null && rec.sku !== '') {
+              const skuRaw = rec.sku
+              // Gérer le cas où c'est un nombre (Excel peut convertir "5" en 5)
+              if (typeof skuRaw === 'number') {
+                skuValue = String(skuRaw)
+              } else {
+                skuValue = String(skuRaw).trim()
+              }
+              // Si vide après trim, c'est undefined
+              if (!skuValue) skuValue = undefined
+            }
+            
             produits.push({
               nom,
               categorie,
@@ -683,7 +705,7 @@ export default function ProductForm({
               color: rec.color ? String(rec.color).trim() : '',
               description: rec.description ? String(rec.description).trim() : '',
               madeIn: rec.madeIn ? String(rec.madeIn).trim() : '',
-              sku: rec.sku ? String(rec.sku).trim() : undefined,
+              sku: skuValue,
             })
           }
           
@@ -702,7 +724,15 @@ export default function ProductForm({
             return
           }
           
-          if (!confirm(`📦 ${produits.length} produit(s) à importer.\n\nContinuer ?`)) {
+          // Résumé avec SKU
+          const withSku = produits.filter(p => p.sku).length
+          const withoutSku = produits.length - withSku
+          let confirmMsg = `📦 ${produits.length} produit(s) à importer.`
+          if (withSku > 0) confirmMsg += `\n\n• ${withSku} avec SKU personnalisé`
+          if (withoutSku > 0) confirmMsg += `\n• ${withoutSku} avec SKU auto-généré`
+          confirmMsg += '\n\nContinuer ?'
+          
+          if (!confirm(confirmMsg)) {
             setImportLoading(false)
             return
           }
@@ -772,103 +802,103 @@ export default function ProductForm({
     <div className="space-y-4">
       
       {/* === IMPORT EXCEL (mode création uniquement) === */}
-{mode === 'create' && showExcelImport && onExcelImport && (
-  <div className="bg-white border rounded-lg overflow-hidden">
-    <button
-      type="button"
-      onClick={() => setShowExcelSection(!showExcelSection)}
-      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
-    >
-      <div className="flex items-center gap-2 text-[#22209C]">
-        <FileSpreadsheet size={18} />
-        <span className="font-medium text-sm">Import Excel</span>
-      </div>
-      <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
-    </button>
-    
-    {showExcelSection && (
-      <div className="px-4 pb-4 border-t bg-gray-50">
-        <p className="text-xs text-gray-500 py-3">
-          Importez plusieurs produits d'un coup via un fichier Excel.
-        </p>
-        
-        <div className="flex flex-col gap-3">
+      {mode === 'create' && showExcelImport && onExcelImport && (
+        <div className="bg-white border rounded-lg overflow-hidden">
           <button
             type="button"
-            onClick={generateExcelTemplate}
-            className="flex items-center justify-center gap-2 px-4 py-2 border border-[#22209C] text-[#22209C] rounded text-sm hover:bg-[#22209C] hover:text-white transition w-fit"
+            onClick={() => setShowExcelSection(!showExcelSection)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
           >
-            <Download size={16} />
-            Télécharger le template
+            <div className="flex items-center gap-2 text-[#22209C]">
+              <FileSpreadsheet size={18} />
+              <span className="font-medium text-sm">Import Excel</span>
+            </div>
+            <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
           </button>
           
-          {/* Zone Drag & Drop */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault()
-              e.currentTarget.classList.add('border-[#22209C]', 'bg-blue-50')
-            }}
-            onDragLeave={(e) => {
-              e.currentTarget.classList.remove('border-[#22209C]', 'bg-blue-50')
-            }}
-            onDrop={(e) => {
-              e.preventDefault()
-              e.currentTarget.classList.remove('border-[#22209C]', 'bg-blue-50')
-              const file = e.dataTransfer.files[0]
-              if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
-                setExcelFile(file)
-              } else {
-                alert('Veuillez déposer un fichier Excel (.xlsx ou .xls)')
-              }
-            }}
-            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors"
-          >
-            {excelFile ? (
-              <div className="flex items-center justify-center gap-3">
-                <FileSpreadsheet size={24} className="text-green-600" />
-                <span className="text-green-600 font-medium">{excelFile.name}</span>
+          {showExcelSection && (
+            <div className="px-4 pb-4 border-t bg-gray-50">
+              <p className="text-xs text-gray-500 py-3">
+                Importez plusieurs produits d'un coup via un fichier Excel.
+              </p>
+              
+              <div className="flex flex-col gap-3">
                 <button
                   type="button"
-                  onClick={() => setExcelFile(null)}
-                  className="text-red-500 hover:text-red-700"
+                  onClick={generateExcelTemplate}
+                  className="flex items-center justify-center gap-2 px-4 py-2 border border-[#22209C] text-[#22209C] rounded text-sm hover:bg-[#22209C] hover:text-white transition w-fit"
                 >
-                  <X size={18} />
+                  <Download size={16} />
+                  Télécharger le template
+                </button>
+                
+                {/* Zone Drag & Drop */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.add('border-[#22209C]', 'bg-blue-50')
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('border-[#22209C]', 'bg-blue-50')
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.remove('border-[#22209C]', 'bg-blue-50')
+                    const file = e.dataTransfer.files[0]
+                    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                      setExcelFile(file)
+                    } else {
+                      alert('Veuillez déposer un fichier Excel (.xlsx ou .xls)')
+                    }
+                  }}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors"
+                >
+                  {excelFile ? (
+                    <div className="flex items-center justify-center gap-3">
+                      <FileSpreadsheet size={24} className="text-green-600" />
+                      <span className="text-green-600 font-medium">{excelFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setExcelFile(null)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload size={32} className="mx-auto text-gray-400" />
+                      <p className="text-gray-600">Glissez-déposez votre fichier Excel ici</p>
+                      <p className="text-gray-400 text-sm">ou</p>
+                      <label className="inline-block px-4 py-2 bg-[#22209C] text-white rounded cursor-pointer hover:opacity-90 transition">
+                        Parcourir...
+                        <input
+                          type="file"
+                          accept=".xlsx,.xls"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) setExcelFile(file)
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={handleExcelImport}
+                  disabled={!excelFile || importLoading}
+                  className="w-full py-3 bg-[#22209C] text-white rounded font-medium disabled:opacity-40 hover:opacity-90 transition"
+                >
+                  {importLoading ? '⏳ Import en cours...' : `📥 Importer ${excelFile ? excelFile.name : ''}`}
                 </button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <Upload size={32} className="mx-auto text-gray-400" />
-                <p className="text-gray-600">Glissez-déposez votre fichier Excel ici</p>
-                <p className="text-gray-400 text-sm">ou</p>
-                <label className="inline-block px-4 py-2 bg-[#22209C] text-white rounded cursor-pointer hover:opacity-90 transition">
-                  Parcourir...
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) setExcelFile(file)
-                    }}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            )}
-          </div>
-          
-          <button
-            type="button"
-            onClick={handleExcelImport}
-            disabled={!excelFile || importLoading}
-            className="w-full py-3 bg-[#22209C] text-white rounded font-medium disabled:opacity-40 hover:opacity-90 transition"
-          >
-            {importLoading ? '⏳ Import en cours...' : `📥 Importer ${excelFile ? excelFile.name : ''}`}
-          </button>
+            </div>
+          )}
         </div>
-      </div>
-    )}
-  </div>
-)}
+      )}
 
       {/* === FORMULAIRE === */}
       <form onSubmit={handleSubmit} className="space-y-4">

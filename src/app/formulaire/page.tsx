@@ -16,7 +16,6 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
-import Navbar from '@/components/Navbar'
 import ProductForm, { ProductFormData, Cat, ExcelImportData } from '@/components/ProductForm'
 
 // =====================
@@ -346,7 +345,7 @@ export default function FormulairePage() {
   }
 
   // =====================
-  // EXCEL IMPORT HANDLER
+  // EXCEL IMPORT HANDLER - CHINEUSE : SKU TOUJOURS AUTO-GÉNÉRÉ
   // =====================
   const handleExcelImport = async (produits: ExcelImportData[]) => {
     if (!user || !trigramme) return
@@ -358,12 +357,9 @@ export default function FormulairePage() {
       let successCount = 0
       
       for (const produit of produits) {
-        // Générer le SKU si pas fourni
-        let rowSku = produit.sku
-        if (!rowSku) {
-          currentSkuNum++
-          rowSku = `${trigramme}${currentSkuNum}`
-        }
+        // ⚠️ CHINEUSE : SKU TOUJOURS AUTO-GÉNÉRÉ (on ignore produit.sku)
+        currentSkuNum++
+        const rowSku = `${trigramme}${currentSkuNum}`
         
         const fullName = `${rowSku} - ${produit.nom}`
         
@@ -453,7 +449,7 @@ export default function FormulairePage() {
   // =====================
   return (
     <>
-      <Navbar />
+      
       <main className="max-w-3xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="mb-4">
