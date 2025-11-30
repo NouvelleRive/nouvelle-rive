@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       productId,
       sku,
       marque,
-      taille,              // ✅ NOUVEAU
+      taille,
       imageUrl,
       imageUrls,
     } = body ?? {}
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       chineurNom,
       sku,
       marque,
-      taille,              // ✅ NOUVEAU
+      taille,
       hasImage: Boolean(imageUrl),
       hasImages: Array.isArray(imageUrls) && imageUrls.length > 0,
       imageCount: Array.isArray(imageUrls) ? imageUrls.length : (imageUrl ? 1 : 0),
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       reportingCategoryId,
       sku,
       marque,
-      taille,              // ✅ NOUVEAU
+      taille,
       stock: Number(stock),
       chineurNom,
       chineurEmail,
@@ -70,11 +70,11 @@ export async function POST(req: NextRequest) {
       imageUrls: imagesToSend,
     } as any)
 
-    const catalogObjectId =
-      (result && (result.catalogObjectId || (result as any).catalogObjectId)) || undefined
-    const variationId = result?.variationId
+    // Récupérer les IDs correctement
     const itemId = result?.itemId
-    const imageId = (result && (result.imageId || (result as any).imageId)) || undefined
+    const variationId = result?.variationId
+    const catalogObjectId = itemId || variationId // itemId est le catalogObjectId
+    const imageId = result?.imageId
 
     console.log(`✅ Import terminé pour "${nom}"`, {
       catalogObjectId,
@@ -83,18 +83,16 @@ export async function POST(req: NextRequest) {
       imageId,
       sku,
       marque,
-      taille,              // ✅ NOUVEAU
+      taille,
       categorie,
       reportingCategoryId,
       imagesUploaded: imagesToSend.length,
     })
 
-    if (productId && (catalogObjectId || variationId || itemId || imageId || sku)) {
+    if (productId && (catalogObjectId || variationId || imageId || sku)) {
       const adminDb = getFirestore()
       const updateData: Record<string, any> = {}
       if (catalogObjectId) updateData.catalogObjectId = catalogObjectId
-      else if (variationId) updateData.catalogObjectId = variationId
-      else if (itemId) updateData.catalogObjectId = itemId
       if (variationId) updateData.variationId = variationId
       if (itemId) updateData.itemId = itemId
       if (imageId) updateData.imageId = imageId
