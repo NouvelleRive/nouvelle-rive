@@ -3,12 +3,19 @@
 
 import { useState, useMemo } from 'react'
 import { updateDoc, doc } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
+import { db, auth } from '@/lib/firebaseConfig'
 import { useAdmin } from '@/lib/admin/context'
 import ProductList from '@/components/ProductList'
 import ProductForm from '@/components/ProductForm'
 import { X, Trash2, CheckSquare, Square } from 'lucide-react'
 import { uploadToCloudinary, canUseFashnAI } from '@/lib/admin/helpers'
+
+// Helper pour récupérer le token
+const getAuthToken = async () => {
+  const user = auth.currentUser
+  if (!user) return null
+  return user.getIdToken()
+}
 
 export default function AdminProduitsPage() {
   const { 
@@ -83,9 +90,17 @@ export default function AdminProduitsPage() {
     if (!confirmDeleteId || !deleteReason) return
     setDeleting(true)
     try {
+      const token = await getAuthToken()
+      if (!token) {
+        alert('Non authentifié')
+        return
+      }
       const res = await fetch('/api/delete-produits', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ productId: confirmDeleteId, reason: deleteReason }),
       })
       if (res.ok) {
@@ -104,6 +119,12 @@ export default function AdminProduitsPage() {
     setBulkDeleting(true)
     
     try {
+      const token = await getAuthToken()
+      if (!token) {
+        alert('Non authentifié')
+        return
+      }
+
       let successCount = 0
       let errorCount = 0
 
@@ -111,7 +132,10 @@ export default function AdminProduitsPage() {
         try {
           const res = await fetch('/api/delete-produits', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ productId, reason: bulkDeleteReason }),
           })
           if (res.ok) {
