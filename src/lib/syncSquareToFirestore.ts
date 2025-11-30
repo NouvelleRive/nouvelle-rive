@@ -80,7 +80,7 @@ export async function syncVentesDepuisSquare(
 
       for (const item of lineItems) {
         const variationId = item.catalogObjectId
-        const quantityVendue = parseInt(item.quantity) || 1 // ✅ Récupérer la quantité vendue
+        const quantityVendue = parseInt(item.quantity) || 1
         
         if (!variationId) {
           console.warn('⚠️ Ligne sans catalogObjectId, ignorée')
@@ -106,27 +106,59 @@ export async function syncVentesDepuisSquare(
             continue
           }
 
-          // 1️⃣ Recherche sur variationId
+          // 🔍 RECHERCHE AMÉLIORÉE - Multiple stratégies
           let snap = await adminDb.collection('produits')
             .where('catalogObjectId', '==', variationId)
             .get()
+          console.log(`🔍 Recherche par catalogObjectId=${variationId}: ${snap.size} résultat(s)`)
 
-          // 2️⃣ Si rien trouvé, fallback sur parentId
+          // 2️⃣ Fallback sur variationId field
+          if (snap.empty) {
+            snap = await adminDb.collection('produits')
+              .where('variationId', '==', variationId)
+              .get()
+            console.log(`🔍 Recherche par variationId=${variationId}: ${snap.size} résultat(s)`)
+          }
+
+          // 3️⃣ Fallback sur parentId (itemId de Square)
           if (snap.empty && parentId) {
-            console.log(`🔁 Aucun match avec variationId ${variationId}, tentative avec parentId ${parentId}`)
             snap = await adminDb.collection('produits')
               .where('catalogObjectId', '==', parentId)
               .get()
+            console.log(`🔍 Recherche par catalogObjectId=${parentId}: ${snap.size} résultat(s)`)
+          }
+
+          // 4️⃣ Fallback sur itemId field
+          if (snap.empty && parentId) {
+            snap = await adminDb.collection('produits')
+              .where('itemId', '==', parentId)
+              .get()
+            console.log(`🔍 Recherche par itemId=${parentId}: ${snap.size} résultat(s)`)
+          }
+
+          // 5️⃣ NOUVEAU: Recherche par itemId avec variationId
+          if (snap.empty) {
+            snap = await adminDb.collection('produits')
+              .where('itemId', '==', variationId)
+              .get()
+            console.log(`🔍 Recherche par itemId=${variationId}: ${snap.size} résultat(s)`)
           }
 
           if (snap.empty) {
-            console.warn(`❓ Aucun produit Firestore trouvé pour variationId : ${variationId} ou parentId : ${parentId}`)
+            console.warn(`❓ Aucun produit Firestore trouvé pour variationId: ${variationId} ou parentId: ${parentId}`)
             continue
           }
 
           // ✅ LOGIQUE DE DÉCRÉMENTATION
           for (const docSnap of snap.docs) {
             const produitData = docSnap.data()
+            
+            // Vérifier si ce produit n'est pas déjà marqué vendu pour cette commande
+            if (produitData.lastOrderId === order.id) {
+              console.log(`⏭️ Produit ${docSnap.id} déjà traité pour commande ${order.id}`)
+              continue
+            }
+            
             const quantiteActuelle = produitData.quantite || 1
             const nouvQuantite = Math.max(0, quantiteActuelle - quantityVendue)
 
@@ -152,7 +184,7 @@ export async function syncVentesDepuisSquare(
                 categorieRapport: produitData.categorieRapport,
                 trigramme: produitData.trigramme,
                 prixInitial: produitData.prix,
-                prixVenteReel: prixReel ? prixReel / quantityVendue : null, // Prix unitaire
+                prixVenteReel: prixReel ? prixReel / quantityVendue : null,
                 dateVente: Timestamp.fromDate(new Date(order.closedAt!)),
                 orderId: order.id,
                 createdAt: Timestamp.now(),
@@ -162,6 +194,7 @@ export async function syncVentesDepuisSquare(
             // Mise à jour du produit
             const updateData: any = {
               quantite: nouvQuantite,
+              lastOrderId: order.id, // Pour éviter les doublons
             }
 
             // Si quantité = 0, marquer comme vendu
