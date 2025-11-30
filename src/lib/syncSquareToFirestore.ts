@@ -1,5 +1,5 @@
 import { Client, Environment } from 'square'
-import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore'
+import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 
 const accessToken = process.env.SQUARE_ACCESS_TOKEN
 const locationId = process.env.SQUARE_LOCATION_ID
@@ -12,6 +12,100 @@ const client = new Client({
   accessToken,
   environment: Environment.Production,
 })
+
+/**
+ * Extrait le SKU depuis le nom de l'article ou le catalogue Square
+ * Stratégie :
+ * 1. Essayer de récupérer depuis le catalogue (si produit existe encore)
+ * 2. Sinon, chercher dans Firebase par nom d'article
+ */
+async function extractSkuFromItem(
+  item: any,
+  adminDb: FirebaseFirestore.Firestore,
+  uid: string,
+  trigramme: string
+): Promise<{ sku: string | null; produitDoc: FirebaseFirestore.QueryDocumentSnapshot | null }> {
+  
+  const catalogObjectId = item.catalogObjectId
+  
+  // 1. Essayer le catalogue Square (si produit pas supprimé)
+  if (catalogObjectId) {
+    try {
+      const catalogRes = await client.catalogApi.retrieveCatalogObject(catalogObjectId, true)
+      const catalogObj = catalogRes.result.object
+      
+      if (catalogObj?.type === 'ITEM_VARIATION' && catalogObj.itemVariationData?.sku) {
+        const sku = catalogObj.itemVariationData.sku
+        
+        // Chercher dans Firebase par SKU
+        let snap = await adminDb.collection('produits')
+          .where('sku', '==', sku)
+          .where('chineurUid', '==', uid)
+          .get()
+        
+        // Si pas trouvé et SKU numérique, essayer avec trigramme
+        if (snap.empty && /^\d+$/.test(sku) && trigramme) {
+          snap = await adminDb.collection('produits')
+            .where('sku', '==', `${trigramme}${sku}`)
+            .where('chineurUid', '==', uid)
+            .get()
+        }
+        
+        if (!snap.empty) {
+          return { sku, produitDoc: snap.docs[0] }
+        }
+      }
+    } catch {
+      // Produit supprimé du catalogue - on continue avec les autres méthodes
+    }
+  }
+  
+  // 2. Chercher par catalogObjectId stocké dans Firebase (ancien produit)
+  if (catalogObjectId) {
+    const snapByCatalog = await adminDb.collection('produits')
+      .where('catalogObjectId', '==', catalogObjectId)
+      .where('chineurUid', '==', uid)
+      .get()
+    
+    if (!snapByCatalog.empty) {
+      const doc = snapByCatalog.docs[0]
+      return { sku: doc.data().sku, produitDoc: doc }
+    }
+    
+    // Essayer aussi avec variationId
+    const snapByVariation = await adminDb.collection('produits')
+      .where('variationId', '==', catalogObjectId)
+      .where('chineurUid', '==', uid)
+      .get()
+    
+    if (!snapByVariation.empty) {
+      const doc = snapByVariation.docs[0]
+      return { sku: doc.data().sku, produitDoc: doc }
+    }
+  }
+  
+  // 3. Chercher par nom d'article (dernier recours)
+  const itemName = item.name?.trim()
+  if (itemName) {
+    // Chercher un produit dont le nom contient le nom de l'article
+    const allProduits = await adminDb.collection('produits')
+      .where('chineurUid', '==', uid)
+      .get()
+    
+    for (const doc of allProduits.docs) {
+      const data = doc.data()
+      const nomProduit = (data.nom || '').toLowerCase()
+      const itemNameLower = itemName.toLowerCase()
+      
+      // Match si le nom du produit contient le nom de l'article ou vice versa
+      if (nomProduit.includes(itemNameLower) || itemNameLower.includes(nomProduit.replace(/^[a-z]+\d+\s*-\s*/i, ''))) {
+        return { sku: data.sku, produitDoc: doc }
+      }
+    }
+  }
+  
+  return { sku: null, produitDoc: null }
+}
 
 export async function syncVentesDepuisSquare(
   uid: string,
@@ -32,21 +126,18 @@ export async function syncVentesDepuisSquare(
   }
 
   const chineuseData = chineuseSnap.data()!
+  const trigramme = chineuseData.trigramme || ''
 
+  // Récupérer les catégories autorisées pour filtrer les ventes
   const categoriesFirestore = Array.isArray(chineuseData?.Catégorie)
     ? chineuseData.Catégorie
     : []
   const categoriesIds = categoriesFirestore
     .map((cat: any) => cat?.idsquare)
     .filter((id: any) => typeof id === 'string' && id.length > 0)
-  
-  // Récupérer aussi les labels des catégories pour matching par label
-  const categoriesLabels = categoriesFirestore
-    .map((cat: any) => cat?.label)
-    .filter((label: any) => typeof label === 'string' && label.length > 0)
 
-  console.log('✅ Catégories autorisées (idsquare):', JSON.stringify(categoriesIds))
-  console.log('✅ Catégories autorisées (labels):', JSON.stringify(categoriesLabels))
+  console.log('✅ Trigramme:', trigramme)
+  console.log('📂 Catégories autorisées:', categoriesIds.length)
 
   const startDate = startDateStr ? new Date(startDateStr) : undefined
   const endDate = endDateStr ? new Date(endDateStr) : undefined
@@ -63,7 +154,7 @@ export async function syncVentesDepuisSquare(
   }
   if (dateTimeFilter) {
     filterSquare.dateTimeFilter = { closedAt: dateTimeFilter.closedAt }
-    console.log('📅 Filtres de date:', JSON.stringify(filterSquare.dateTimeFilter))
+    console.log('📅 Filtres de date appliqués:', filterSquare.dateTimeFilter)
   }
 
   try {
@@ -76,249 +167,96 @@ export async function syncVentesDepuisSquare(
     })
 
     const orders = result.orders || []
-    console.log(`📦 Commandes récupérées: ${orders.length}`)
+    console.log(`📦 Nombre total de commandes récupérées : ${orders.length}`)
 
     let nbSync = 0
-    let nbNoCatalogId = 0
-    let nbCategoryMismatch = 0
-    let nbNotFoundFirestore = 0
+    let nbNotFound = 0
 
     for (const order of orders) {
       const lineItems = order.lineItems || []
 
       for (const item of lineItems) {
-        const variationId = item.catalogObjectId
-        const itemName = item.name || 'Sans nom'
         const quantityVendue = parseInt(item.quantity) || 1
         
-        if (!variationId) {
-          // 🆕 LOG le nom pour debug
-          console.log(`⚠️ Sans catalogObjectId: "${itemName}"`)
-          
-          // 🆕 FALLBACK PAR SKU - Patterns améliorés
-          // Patterns possibles: "PV31 - Nom", "5 - Nom", "ABC123 - Nom", "11 - Nom"
-          const skuPatterns = [
-            /^([A-Z]{2,3}\d+)\s*-/i,        // PV31 - , ABC123 -
-            /^(\d+)\s*-/,                    // 5 - , 11 - , 42 -
-            /^([A-Z]{2,3}\d+)\s+/i,          // PV31 Nom (sans tiret)
-          ]
-          
-          let sku: string | null = null
-          for (const pattern of skuPatterns) {
-            const match = itemName.match(pattern)
-            if (match) {
-              sku = match[1].toUpperCase()
-              break
-            }
-          }
-          
-          if (sku) {
-            console.log(`🔍 Tentative par SKU: "${sku}" (depuis "${itemName}")`)
-            
-            // Chercher le produit par SKU
-            const snapBySku = await adminDb.collection('produits')
-              .where('sku', '==', sku)
-              .get()
-            
-            if (!snapBySku.empty) {
-              const docSnap = snapBySku.docs[0]
-              const produitData = docSnap.data()
-              
-              console.log(`✅ Produit trouvé par SKU: ${sku}, catégorie: ${produitData.categorie}`)
-              
-              // Vérifier si la catégorie du produit appartient à cette chineuse
-              const produitCategorie = typeof produitData.categorie === 'object' 
-                ? produitData.categorie?.label 
-                : produitData.categorie
-              
-              const chineuseHasCategory = categoriesLabels.some((label: string) => 
-                label.toLowerCase() === (produitCategorie || '').toLowerCase()
-              )
-              
-              if (!chineuseHasCategory) {
-                console.log(`⏭️ SKU ${sku}: catégorie "${produitCategorie}" pas dans [${categoriesLabels.join(', ')}]`)
-                nbCategoryMismatch++
-                continue
-              }
-              
-              // Vérifier doublon
-              if (produitData.lastOrderId === order.id) {
-                console.log(`⏭️ Déjà traité: ${docSnap.id}`)
-                continue
-              }
-              
-              const quantiteActuelle = produitData.quantite || 1
-              const nouvQuantite = Math.max(0, quantiteActuelle - quantityVendue)
-
-              const prixReelCents = item.totalMoney?.amount ?? null
-              let prixReel = null
-              if (prixReelCents !== null) {
-                prixReel = typeof prixReelCents === 'bigint'
-                  ? Number(prixReelCents) / 100
-                  : Number(prixReelCents) / 100
-              }
-
-              // Créer ventes
-              for (let i = 0; i < quantityVendue; i++) {
-                await adminDb.collection('ventes').add({
-                  produitId: docSnap.id,
-                  nom: produitData.nom,
-                  sku: produitData.sku,
-                  categorie: produitData.categorie,
-                  marque: produitData.marque || '',
-                  chineur: produitData.chineur,
-                  chineurUid: produitData.chineurUid,
-                  categorieRapport: produitData.categorieRapport,
-                  trigramme: produitData.trigramme,
-                  prixInitial: produitData.prix,
-                  prixVenteReel: prixReel ? prixReel / quantityVendue : null,
-                  dateVente: Timestamp.fromDate(new Date(order.closedAt!)),
-                  orderId: order.id,
-                  createdAt: Timestamp.now(),
-                })
-              }
-
-              // Update produit
-              const updateData: any = {
-                quantite: nouvQuantite,
-                lastOrderId: order.id,
-              }
-              if (nouvQuantite === 0) {
-                updateData.vendu = true
-                updateData.dateVente = Timestamp.fromDate(new Date(order.closedAt!))
-                updateData.prixVenteReel = prixReel
-              }
-
-              await docSnap.ref.update(updateData)
-              console.log(`✅ SYNC PAR SKU: ${sku} → ${produitData.nom}`)
-              nbSync++
-              continue
-            } else {
-              console.log(`❓ SKU "${sku}" non trouvé dans Firestore`)
-              nbNotFoundFirestore++
-            }
-          }
-          
-          nbNoCatalogId++
+        // Extraire le SKU et trouver le produit
+        const { sku, produitDoc } = await extractSkuFromItem(item, adminDb, uid, trigramme)
+        
+        if (!produitDoc) {
+          console.warn(`⚠️ Produit non trouvé pour: ${item.name}`)
+          nbNotFound++
           continue
         }
 
-        // Avec catalogObjectId - logique existante
-        try {
-          const variationRes = await client.catalogApi.retrieveCatalogObject(variationId, true)
-          const variationObject = variationRes.result.catalogObject
-          const itemObject = variationRes.result.relatedObjects?.find(obj => obj.type === 'ITEM')
-          const parentId = variationObject?.itemVariationData?.itemId
-
-          if (!itemObject) {
-            console.warn(`⚠️ Pas d'item parent pour variation ${variationId}`)
-            continue
-          }
-
-          const categoryId = itemObject.itemData?.categoryId
-
-          if (!categoryId || !categoriesIds.includes(categoryId)) {
-            nbCategoryMismatch++
-            continue
-          }
-
-          // Recherche produit Firestore
-          let snap = await adminDb.collection('produits')
-            .where('catalogObjectId', '==', variationId)
-            .get()
-
-          if (snap.empty) {
-            snap = await adminDb.collection('produits')
-              .where('variationId', '==', variationId)
-              .get()
-          }
-
-          if (snap.empty && parentId) {
-            snap = await adminDb.collection('produits')
-              .where('catalogObjectId', '==', parentId)
-              .get()
-          }
-
-          if (snap.empty && parentId) {
-            snap = await adminDb.collection('produits')
-              .where('itemId', '==', parentId)
-              .get()
-          }
-
-          if (snap.empty) {
-            snap = await adminDb.collection('produits')
-              .where('itemId', '==', variationId)
-              .get()
-          }
-
-          if (snap.empty) {
-            console.warn(`❓ Pas de produit Firestore pour ${variationId}/${parentId}`)
-            nbNotFoundFirestore++
-            continue
-          }
-
-          for (const docSnap of snap.docs) {
-            const produitData = docSnap.data()
-            
-            if (produitData.lastOrderId === order.id) {
-              continue
-            }
-            
-            const quantiteActuelle = produitData.quantite || 1
-            const nouvQuantite = Math.max(0, quantiteActuelle - quantityVendue)
-
-            const prixReelCents = item.totalMoney?.amount ?? null
-            let prixReel = null
-            if (prixReelCents !== null) {
-              prixReel = typeof prixReelCents === 'bigint'
-                ? Number(prixReelCents) / 100
-                : Number(prixReelCents) / 100
-            }
-
-            for (let i = 0; i < quantityVendue; i++) {
-              await adminDb.collection('ventes').add({
-                produitId: docSnap.id,
-                nom: produitData.nom,
-                sku: produitData.sku,
-                categorie: produitData.categorie,
-                marque: produitData.marque || '',
-                chineur: produitData.chineur,
-                chineurUid: produitData.chineurUid,
-                categorieRapport: produitData.categorieRapport,
-                trigramme: produitData.trigramme,
-                prixInitial: produitData.prix,
-                prixVenteReel: prixReel ? prixReel / quantityVendue : null,
-                dateVente: Timestamp.fromDate(new Date(order.closedAt!)),
-                orderId: order.id,
-                createdAt: Timestamp.now(),
-              })
-            }
-
-            const updateData: any = {
-              quantite: nouvQuantite,
-              lastOrderId: order.id,
-            }
-            if (nouvQuantite === 0) {
-              updateData.vendu = true
-              updateData.dateVente = Timestamp.fromDate(new Date(order.closedAt!))
-              updateData.prixVenteReel = prixReel
-            }
-
-            await docSnap.ref.update(updateData)
-            console.log(`✅ SYNC: ${docSnap.id} (${itemName})`)
-            nbSync++
-          }
-        } catch (catError: any) {
-          console.warn(`⚠️ Erreur catalog ${variationId}:`, catError?.message?.substring(0, 100))
+        const produitData = produitDoc.data()
+        
+        // Vérifier si cette vente n'a pas déjà été importée (éviter les doublons)
+        const existingVente = await adminDb.collection('ventes')
+          .where('orderId', '==', order.id)
+          .where('sku', '==', produitData.sku)
+          .get()
+        
+        if (!existingVente.empty) {
+          console.log(`⏭️ Vente déjà importée: ${produitData.sku} (order ${order.id})`)
+          continue
         }
+
+        const quantiteActuelle = produitData.quantite || 1
+        const nouvQuantite = Math.max(0, quantiteActuelle - quantityVendue)
+
+        const prixReelCents = item.totalMoney?.amount ?? null
+        let prixReel = null
+
+        if (prixReelCents !== null) {
+          prixReel = typeof prixReelCents === 'bigint'
+            ? Number(prixReelCents) / 100
+            : Number(prixReelCents) / 100
+        }
+
+        // Créer une ligne dans la collection "ventes"
+        for (let i = 0; i < quantityVendue; i++) {
+          await adminDb.collection('ventes').add({
+            produitId: produitDoc.id,
+            nom: produitData.nom,
+            sku: produitData.sku,
+            categorie: produitData.categorie,
+            marque: produitData.marque || '',
+            chineur: produitData.chineur,
+            chineurUid: produitData.chineurUid,
+            categorieRapport: produitData.categorieRapport,
+            trigramme: produitData.trigramme,
+            prixInitial: produitData.prix,
+            prixVenteReel: prixReel ? prixReel / quantityVendue : null,
+            dateVente: Timestamp.fromDate(new Date(order.closedAt!)),
+            orderId: order.id,
+            createdAt: Timestamp.now(),
+          })
+        }
+
+        // Mise à jour du produit
+        const updateData: any = {
+          quantite: nouvQuantite,
+        }
+
+        if (nouvQuantite === 0) {
+          updateData.vendu = true
+          updateData.dateVente = Timestamp.fromDate(new Date(order.closedAt!))
+          updateData.prixVenteReel = prixReel
+        }
+
+        console.log(`✅ Vente sync: ${produitData.sku} (${item.name})`, {
+          quantiteAvant: quantiteActuelle,
+          quantiteApres: nouvQuantite,
+        })
+
+        await produitDoc.ref.update(updateData)
+        nbSync++
       }
     }
 
-    const summary = `${nbSync} ventes sync, ${nbNoCatalogId} sans catalogId, ${nbCategoryMismatch} catégorie non liée, ${nbNotFoundFirestore} non trouvés`
-    console.log(`🎉 Terminé: ${summary}`)
-    return { message: summary }
+    console.log(`🎉 Terminé — ${nbSync} ventes sync, ${nbNotFound} non trouvés.`)
+    return { message: `${nbSync} ventes synchronisées, ${nbNotFound} produits non trouvés.` }
   } catch (error) {
-    console.error('❌ Erreur:', error)
+    console.error('❌ Erreur lors de la synchronisation :', error)
     throw error
   }
 }
