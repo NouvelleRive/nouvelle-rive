@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react'
 import { useAdmin, Produit } from '@/lib/admin/context'
 import ProductList from '@/components/ProductList'
+import SyncVentesButton from '@/components/SyncVentesButton'
 import { Plus, X } from 'lucide-react'
 
 export default function AdminNosVentesPage() {
@@ -109,8 +110,25 @@ export default function AdminNosVentesPage() {
 
   return (
     <>
-      {/* Bouton Ajouter */}
-      <div className="mb-4 flex justify-end">
+      {/* Actions en haut */}
+      <div className="mb-4 flex flex-wrap gap-4 items-center justify-between">
+        {/* Sync Square */}
+        <div className="flex items-center gap-4">
+          {selectedChineuse ? (
+            <SyncVentesButton
+              uid={selectedChineuse.uid}
+              onSyncComplete={loadData}
+              showDateFilters={true}
+              buttonText={`Sync ventes ${selectedChineuse.trigramme || ''}`}
+            />
+          ) : (
+            <p className="text-sm text-amber-600">
+              Sélectionnez une chineuse pour synchroniser ses ventes Square
+            </p>
+          )}
+        </div>
+
+        {/* Bouton Ajouter */}
         <button
           onClick={() => setShowModalAjout(true)}
           className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded"
