@@ -51,14 +51,55 @@ export async function POST(req: NextRequest) {
 
     for (const row of rows) {
       try {
-        // Trouver les colonnes (Square français)
+        // Trouver les colonnes - gérer les espaces insécables et variantes
         const dateStr = row['Date'] || row['date'] || ''
         const article = row['Article'] || row['article'] || ''
-        const sku = row['SKU'] || row['sku'] || row['Sku'] || ''
-        const prixStr = row['Ventes brutes'] || row['Ventes nettes'] || row['Ventes brute'] || row['Ventes nette'] || row['Prix'] || ''
-        const remarques = row['Remarques'] || row['remarques'] || ''
-        const categorie = row['Catégorie'] || row['categorie'] || ''
-        const transactionId = row['Nº de transaction'] || row['Nº\xa0de transaction'] || row['N° de transaction'] || ''
+        
+        // SKU - chercher toutes les variantes
+        let sku = ''
+        for (const key of Object.keys(row)) {
+          if (key.toLowerCase() === 'sku') {
+            sku = row[key] || ''
+            break
+          }
+        }
+        
+        // Prix - chercher toutes les variantes
+        let prixStr = ''
+        for (const key of Object.keys(row)) {
+          if (key.toLowerCase().includes('ventes brutes') || key.toLowerCase().includes('ventes nettes')) {
+            prixStr = row[key] || ''
+            break
+          }
+        }
+        if (!prixStr) prixStr = row['Ventes brutes'] || row['Ventes nettes'] || row['Prix'] || ''
+        
+        // Remarques
+        let remarques = ''
+        for (const key of Object.keys(row)) {
+          if (key.toLowerCase() === 'remarques') {
+            remarques = row[key] || ''
+            break
+          }
+        }
+        
+        // Catégorie
+        let categorie = ''
+        for (const key of Object.keys(row)) {
+          if (key.toLowerCase().includes('catégorie') || key.toLowerCase() === 'categorie') {
+            categorie = row[key] || ''
+            break
+          }
+        }
+        
+        // Transaction ID - chercher toutes les variantes avec espaces insécables
+        let transactionId = ''
+        for (const key of Object.keys(row)) {
+          if (key.toLowerCase().includes('transaction')) {
+            transactionId = row[key] || ''
+            break
+          }
+        }
 
         // Parser le prix (format français: "165,00 €")
         let prix: number | null = null
@@ -75,32 +116,33 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        // Parser la date (format YYYY-MM-DD)
+        // Parser la date
         let dateVente: Date | null = null
         if (dateStr) {
           if (typeof dateStr === 'string') {
             if (dateStr.includes('/')) {
               const [day, month, year] = dateStr.split('/')
               dateVente = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+            } else if (dateStr.includes('-')) {
+              dateVente = new Date(dateStr)
             } else {
               dateVente = new Date(dateStr)
             }
           } else if (dateStr instanceof Date) {
             dateVente = dateStr
-          } else {
+          } else if (typeof dateStr === 'number') {
             // Excel date number
             dateVente = new Date((dateStr - 25569) * 86400 * 1000)
           }
         }
 
         if (!dateVente || isNaN(dateVente.getTime())) {
-          console.warn(`⚠️ Date invalide: ${dateStr} | Article: ${article}`)
+          console.warn(`⚠️ Date invalide: ${dateStr} (type: ${typeof dateStr}) | Article: ${article}`)
           errors++
           continue
         }
 
-        // Vérifier doublon - clé unique = transactionId + article + ligne (index)
-        // On ne déduplique que si déjà en base, pas entre lignes Excel
+        // Vérifier doublon - clé unique = transactionId + article + prix
         const dedupeKey = transactionId ? `${transactionId}-${article}-${prix}` : `${dateVente.toISOString().split('T')[0]}-${article}-${prix}-${imported}`
         if (ventesExistantes.has(dedupeKey)) {
           console.log(`⏭️ Doublon base: ${dedupeKey.substring(0, 50)}`)
