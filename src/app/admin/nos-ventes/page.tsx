@@ -61,17 +61,19 @@ export default function AdminNosVentesPage() {
   const [syncEndDate, setSyncEndDate] = useState('')
 
   // Charger les ventes
-  const loadVentes = async () => {
+  const loadVentes = async (chineuseUid?: string) => {
     setLoadingVentes(true)
     try {
-      const url = selectedChineuse?.uid 
-        ? `/api/ventes?uid=${selectedChineuse.uid}`
+      const url = chineuseUid 
+        ? `/api/ventes?uid=${chineuseUid}`
         : '/api/ventes'
       
+      console.log('📊 Chargement ventes:', url)
       const res = await fetch(url)
       const data = await res.json()
       if (data.success) {
         setVentes(data.ventes || [])
+        console.log(`✅ ${data.ventes?.length || 0} ventes chargées`)
       }
     } catch (err) {
       console.error('Erreur chargement ventes:', err)
@@ -80,8 +82,9 @@ export default function AdminNosVentesPage() {
     }
   }
 
+  // Recharger quand la chineuse change
   useEffect(() => {
-    loadVentes()
+    loadVentes(selectedChineuse?.uid)
   }, [selectedChineuse?.uid])
 
   // Produits disponibles (non vendus)
@@ -181,7 +184,7 @@ export default function AdminNosVentesPage() {
         setShowModalAjout(false)
         setSelectedSku('')
         setPrixVente('')
-        await loadVentes()
+        await loadVentes(selectedChineuse?.uid)
         await loadData()
       } else {
         alert('Erreur lors de l\'ajout')
@@ -208,7 +211,7 @@ export default function AdminNosVentesPage() {
         setShowModalAttribuer(false)
         setVenteSelectionnee(null)
         setSelectedProduitId('')
-        await loadVentes()
+        await loadVentes(selectedChineuse?.uid)
         await loadData()
       } else {
         alert('Erreur: ' + data.error)
@@ -235,7 +238,7 @@ export default function AdminNosVentesPage() {
         setShowModalSupprimer(false)
         setVenteSelectionnee(null)
         setRemettreEnStock(false)
-        await loadVentes()
+        await loadVentes(selectedChineuse?.uid)
         await loadData()
       } else {
         alert('Erreur: ' + data.error)
@@ -266,7 +269,7 @@ export default function AdminNosVentesPage() {
       const data = await res.json()
       if (data.success) {
         alert(`Sync terminé: ${data.message}`)
-        await loadVentes()
+        await loadVentes(selectedChineuse?.uid)
         await loadData()
       } else {
         alert('Erreur: ' + data.error)
@@ -310,7 +313,7 @@ export default function AdminNosVentesPage() {
             <SyncVentesButton
               uid={selectedChineuse.uid}
               onSyncComplete={() => {
-                loadVentes()
+                loadVentes(selectedChineuse?.uid)
                 loadData()
               }}
               showDateFilters={true}
