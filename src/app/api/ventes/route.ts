@@ -2,235 +2,228 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { Timestamp } from 'firebase-admin/firestore'
 
-/**
- * GET - Récupérer toutes les ventes (ou filtrées par chineuse)
- * Query: ?uid=xxx (optionnel - si absent, retourne toutes les ventes)
- */
-export async function GET(req: NextRequest) {
+// GET - Récupérer les ventes
+export async function GET() {
   try {
-    const uid = req.nextUrl.searchParams.get('uid')
-    const startDate = req.nextUrl.searchParams.get('startDate')
-    const endDate = req.nextUrl.searchParams.get('endDate')
+    const snapshot = await adminDb.collection('ventes')
+      .orderBy('dateVente', 'desc')
+      .get()
 
-    let query: FirebaseFirestore.Query = adminDb.collection('ventes')
-    
-    if (uid) {
-      query = query.where('chineurUid', '==', uid)
-    }
-    
-    query = query.orderBy('dateVente', 'desc')
-    
-    const ventesSnap = await query.get()
-
-    let ventes = ventesSnap.docs.map(doc => {
-      const data = doc.data()
+    const ventes = snapshot.docs.map(doc => {
+      const d = doc.data()
       return {
         id: doc.id,
-        ...data,
-        dateVente: data.dateVente?.toDate?.()?.toISOString() || null,
-        createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
-        attribueAt: data.attribueAt?.toDate?.()?.toISOString() || null,
-        isAttribue: data.attribue !== false && data.produitId !== null,
+        produitId: d.produitId || null,
+        nom: d.nom || d.nomSquare || '',
+        sku: d.sku || d.skuSquare || null,
+        categorie: d.categorie || null,
+        marque: d.marque || null,
+        trigramme: d.trigramme || null,
+        chineurUid: d.chineurUid || null,
+        prixInitial: d.prixInitial || null,
+        prixVenteReel: d.prixVenteReel || 0,
+        dateVente: d.dateVente?.toDate?.()?.toISOString?.() || null,
+        remarque: d.remarque || d.noteArticle || null,
+        source: d.source || 'manual',
+        isAttribue: d.attribue === true || !!d.produitId,
       }
     })
 
-    // Filtrer par date si demandé
-    if (startDate) {
-      const start = new Date(startDate)
-      ventes = ventes.filter(v => v.dateVente && new Date(v.dateVente) >= start)
-    }
-    if (endDate) {
-      const end = new Date(endDate)
-      ventes = ventes.filter(v => v.dateVente && new Date(v.dateVente) <= end)
-    }
-
-    return NextResponse.json({
-      success: true,
-      ventes,
-      total: ventes.length,
-      nonAttribuees: ventes.filter(v => !v.isAttribue).length,
-    })
-
+    console.log(`✅ ${ventes.length} ventes chargées`)
+    return NextResponse.json({ success: true, ventes })
   } catch (err: any) {
     console.error('[API VENTES GET]', err)
-    return NextResponse.json(
-      { success: false, error: err?.message || 'Erreur serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 })
   }
 }
 
-/**
- * POST - Attribuer une vente non attribuée à un produit
- * Body: { venteId: string, produitId: string }
- */
+// POST - Attribuer une vente à un produit
 export async function POST(req: NextRequest) {
   try {
-    const { venteId, produitId } = await req.json()
+    const { venteId, produitId, prixVenteReel } = await req.json()
 
     if (!venteId || !produitId) {
-      return NextResponse.json(
-        { success: false, error: 'venteId et produitId requis' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'venteId et produitId requis' }, { status: 400 })
     }
-
-    // Récupérer la vente
-    const venteRef = adminDb.collection('ventes').doc(venteId)
-    const venteSnap = await venteRef.get()
-
-    if (!venteSnap.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Vente non trouvée' },
-        { status: 404 }
-      )
-    }
-
-    const venteData = venteSnap.data()!
 
     // Récupérer le produit
     const produitRef = adminDb.collection('produits').doc(produitId)
-    const produitSnap = await produitRef.get()
+    const produitDoc = await produitRef.get()
 
-    if (!produitSnap.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Produit non trouvé' },
-        { status: 404 }
-      )
+    if (!produitDoc.exists) {
+      return NextResponse.json({ success: false, error: 'Produit non trouvé' }, { status: 404 })
     }
 
-    const produitData = produitSnap.data()!
+    const p = produitDoc.data()!
 
-    // Mettre à jour la vente avec les infos du produit
-    await venteRef.update({
-      produitId: produitId,
-      nom: produitData.nom,
-      sku: produitData.sku,
-      categorie: produitData.categorie,
-      marque: produitData.marque || '',
-      prixInitial: produitData.prix,
-      chineur: produitData.chineur,
-      chineurUid: produitData.chineurUid,
-      trigramme: produitData.trigramme,
-      categorieRapport: produitData.categorieRapport,
+    // Mettre à jour la vente
+    const venteRef = adminDb.collection('ventes').doc(venteId)
+    const venteDoc = await venteRef.get()
+    const venteData = venteDoc.data()
+    
+    const updateVente: any = {
+      produitId,
+      nom: p.nom,
+      sku: p.sku,
+      chineur: p.chineur,
+      chineurUid: p.chineurUid,
+      trigramme: p.trigramme,
+      prixInitial: p.prix,
       attribue: true,
-      source: 'montant_perso_attribue',
-      attribueAt: Timestamp.now(),
-    })
-
-    // Mettre à jour le produit (décrémenter quantité, marquer vendu si nécessaire)
-    const quantiteActuelle = produitData.quantite || 1
-    const nouvQuantite = Math.max(0, quantiteActuelle - 1)
-
-    const updateData: any = { quantite: nouvQuantite }
-    if (nouvQuantite === 0) {
-      updateData.vendu = true
-      updateData.dateVente = venteData.dateVente
-      updateData.prixVenteReel = venteData.prixVenteReel
     }
+    
+    // Si nouveau prix fourni, le mettre à jour
+    if (prixVenteReel !== undefined) {
+      updateVente.prixVenteReel = prixVenteReel
+    }
+    
+    await venteRef.update(updateVente)
 
+    // Mettre à jour le produit (marquer comme vendu)
+    const newQty = Math.max(0, (p.quantite || 1) - 1)
+    const updateData: any = { quantite: newQty }
+    if (newQty === 0) {
+      updateData.vendu = true
+      updateData.dateVente = venteData?.dateVente || Timestamp.now()
+      updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
+    }
     await produitRef.update(updateData)
 
-    return NextResponse.json({
-      success: true,
-      message: `Vente attribuée à ${produitData.sku}`,
-    })
-
+    console.log(`✅ Vente ${venteId} attribuée au produit ${produitId}`)
+    return NextResponse.json({ success: true })
   } catch (err: any) {
     console.error('[API VENTES POST]', err)
-    return NextResponse.json(
-      { success: false, error: err?.message || 'Erreur serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 })
   }
 }
 
-/**
- * DELETE - Supprimer une ou plusieurs ventes
- * Body: { venteId: string, remettreEnStock?: boolean } OU { venteIds: string[] }
- */
+// DELETE - Supprimer une ou plusieurs ventes
 export async function DELETE(req: NextRequest) {
   try {
     const body = await req.json()
-    
-    // Mode batch : plusieurs ventes
-    if (body.venteIds && Array.isArray(body.venteIds)) {
+    const { venteId, venteIds, remettreEnStock } = body
+
+    // Suppression batch (plusieurs IDs)
+    if (venteIds && Array.isArray(venteIds) && venteIds.length > 0) {
+      console.log(`🗑️ Suppression batch de ${venteIds.length} ventes`)
+      
       const BATCH_SIZE = 500
       let deleted = 0
-      
-      for (let i = 0; i < body.venteIds.length; i += BATCH_SIZE) {
+
+      for (let i = 0; i < venteIds.length; i += BATCH_SIZE) {
         const batch = adminDb.batch()
-        const chunk = body.venteIds.slice(i, i + BATCH_SIZE)
+        const batchIds = venteIds.slice(i, i + BATCH_SIZE)
         
-        for (const id of chunk) {
+        for (const id of batchIds) {
           batch.delete(adminDb.collection('ventes').doc(id))
+          deleted++
         }
         
         await batch.commit()
-        deleted += chunk.length
       }
+
+      console.log(`✅ ${deleted} ventes supprimées`)
+      return NextResponse.json({ success: true, deleted })
+    }
+
+    // Suppression simple (un seul ID)
+    if (venteId) {
+      const venteRef = adminDb.collection('ventes').doc(venteId)
+      const venteDoc = await venteRef.get()
       
-      return NextResponse.json({
-        success: true,
-        message: `${deleted} ventes supprimées`,
-        deleted,
-      })
-    }
-    
-    // Mode single
-    const { venteId, remettreEnStock } = body
-
-    if (!venteId) {
-      return NextResponse.json(
-        { success: false, error: 'venteId requis' },
-        { status: 400 }
-      )
-    }
-
-    const venteRef = adminDb.collection('ventes').doc(venteId)
-    const venteSnap = await venteRef.get()
-
-    if (!venteSnap.exists) {
-      return NextResponse.json(
-        { success: false, error: 'Vente non trouvée' },
-        { status: 404 }
-      )
-    }
-
-    const venteData = venteSnap.data()!
-
-    // Si on remet en stock et qu'il y a un produit lié
-    if (remettreEnStock && venteData.produitId) {
-      const produitRef = adminDb.collection('produits').doc(venteData.produitId)
-      const produitSnap = await produitRef.get()
-      
-      if (produitSnap.exists) {
-        const produitData = produitSnap.data()!
-        await produitRef.update({
-          quantite: (produitData.quantite || 0) + 1,
-          vendu: false,
-          dateVente: null,
-          prixVenteReel: null,
-        })
+      if (!venteDoc.exists) {
+        return NextResponse.json({ success: false, error: 'Vente non trouvée' }, { status: 404 })
       }
+
+      const venteData = venteDoc.data()
+
+      // Remettre en stock si demandé
+      if (remettreEnStock && venteData?.produitId) {
+        const produitRef = adminDb.collection('produits').doc(venteData.produitId)
+        const produitDoc = await produitRef.get()
+        
+        if (produitDoc.exists) {
+          const p = produitDoc.data()
+          await produitRef.update({
+            vendu: false,
+            quantite: (p?.quantite || 0) + 1,
+            dateVente: null,
+            prixVenteReel: null,
+          })
+        }
+      }
+
+      await venteRef.delete()
+      console.log(`✅ Vente ${venteId} supprimée`)
+      return NextResponse.json({ success: true })
     }
 
-    // Supprimer la vente
-    await venteRef.delete()
-
-    return NextResponse.json({
-      success: true,
-      message: 'Vente supprimée',
-    })
-
+    return NextResponse.json({ success: false, error: 'venteId ou venteIds requis' }, { status: 400 })
   } catch (err: any) {
     console.error('[API VENTES DELETE]', err)
-    return NextResponse.json(
-      { success: false, error: err?.message || 'Erreur serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 })
+  }
+}
+
+// PUT - Attribuer une vente à un produit
+export async function PUT(req: NextRequest) {
+  try {
+    const { venteId, produitId, prixVenteReel } = await req.json()
+
+    if (!venteId || !produitId) {
+      return NextResponse.json({ success: false, error: 'venteId et produitId requis' }, { status: 400 })
+    }
+
+    // Récupérer le produit
+    const produitRef = adminDb.collection('produits').doc(produitId)
+    const produitDoc = await produitRef.get()
+
+    if (!produitDoc.exists) {
+      return NextResponse.json({ success: false, error: 'Produit non trouvé' }, { status: 404 })
+    }
+
+    const p = produitDoc.data()!
+
+    // Mettre à jour la vente
+    const venteRef = adminDb.collection('ventes').doc(venteId)
+    const venteDoc = await venteRef.get()
+    const venteData = venteDoc.data()
+    
+    const updateVente: any = {
+      produitId,
+      nom: p.nom,
+      sku: p.sku,
+      chineur: p.chineur,
+      chineurUid: p.chineurUid,
+      trigramme: p.trigramme,
+      prixInitial: p.prix,
+      attribue: true,
+    }
+    
+    // Si nouveau prix fourni, le mettre à jour
+    if (prixVenteReel !== undefined) {
+      updateVente.prixVenteReel = prixVenteReel
+    }
+    
+    await venteRef.update(updateVente)
+
+    // Mettre à jour le produit (marquer comme vendu)
+    const newQty = Math.max(0, (p.quantite || 1) - 1)
+    const updateData: any = { quantite: newQty }
+    if (newQty === 0) {
+      updateData.vendu = true
+      updateData.dateVente = venteData?.dateVente || Timestamp.now()
+      updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
+    }
+    await produitRef.update(updateData)
+
+    console.log(`✅ Vente ${venteId} attribuée au produit ${produitId}`)
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('[API VENTES PUT]', err)
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 })
   }
 }

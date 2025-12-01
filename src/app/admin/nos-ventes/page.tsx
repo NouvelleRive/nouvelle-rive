@@ -73,6 +73,7 @@ export default function AdminNosVentesPage() {
   const [selectedProduitId, setSelectedProduitId] = useState('')
   const [attribuerLoading, setAttribuerLoading] = useState(false)
   const [searchProduit, setSearchProduit] = useState('')
+  const [editPrixVente, setEditPrixVente] = useState('')
 
   // Produits recherchés (pour modal attribution)
   const [allProduits, setAllProduits] = useState<any[]>([])
@@ -128,6 +129,11 @@ export default function AdminNosVentesPage() {
         let score = 0
         const pCat = (typeof p.categorie === 'string' ? p.categorie : p.categorie?.label || '').toLowerCase()
 
+        // Même prix exact = +10000 (priorité absolue)
+        if (prixVente > 0 && p.prix === prixVente) {
+          score += 10000
+        }
+
         // Même trigramme = +1000
         if (trigrammeFromRemarque && p.trigramme?.toUpperCase() === trigrammeFromRemarque) {
           score += 1000
@@ -138,14 +144,10 @@ export default function AdminNosVentesPage() {
           score += 100
         }
 
-        // Même prix exact = +50, prix proche = +25
-        if (prixVente > 0 && p.prix) {
-          if (p.prix === prixVente) {
-            score += 50
-          } else {
-            const diff = Math.abs(p.prix - prixVente) / prixVente
-            if (diff <= 0.15) score += 25  // ±15%
-          }
+        // Prix proche (mais pas exact) = +25
+        if (prixVente > 0 && p.prix && p.prix !== prixVente) {
+          const diff = Math.abs(p.prix - prixVente) / prixVente
+          if (diff <= 0.15) score += 25  // ±15%
         }
 
         return { ...p, _score: score }
@@ -419,6 +421,9 @@ export default function AdminNosVentesPage() {
   const handleAttribuerVente = async () => {
     if (!venteSelectionnee || !selectedProduitId) return
 
+    // Sauvegarder la position de scroll
+    const scrollY = window.scrollY
+
     setAttribuerLoading(true)
     try {
       const res = await fetch('/api/ventes', {
@@ -426,7 +431,8 @@ export default function AdminNosVentesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           venteId: venteSelectionnee.id,
-          produitId: selectedProduitId
+          produitId: selectedProduitId,
+          prixVenteReel: editPrixVente ? parseFloat(editPrixVente) : undefined
         })
       })
       const data = await res.json()
@@ -435,9 +441,12 @@ export default function AdminNosVentesPage() {
         setVenteSelectionnee(null)
         setSelectedProduitId('')
         setSearchProduit('')
+        setEditPrixVente('')
         await loadVentes()
         await loadData()
         await loadAllProduits()
+        // Restaurer la position de scroll
+        setTimeout(() => window.scrollTo(0, scrollY), 100)
       } else {
         alert(data.error || 'Erreur')
       }
@@ -770,6 +779,7 @@ export default function AdminNosVentesPage() {
                 <button
                   onClick={() => {
                     setVenteSelectionnee(vente)
+                    setEditPrixVente(vente.prixVenteReel?.toString() || '')
                     setShowModalAttribuer(true)
                   }}
                   className={`p-2 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200'}`}
@@ -902,9 +912,16 @@ export default function AdminNosVentesPage() {
             
             <div className="bg-amber-50 p-3 rounded mb-4">
               <p className="font-medium">{venteSelectionnee.remarque || venteSelectionnee.nom || 'Vente sans nom'}</p>
-              <p className="text-sm text-gray-600">
-                {formatDate(venteSelectionnee.dateVente)} • <strong>{venteSelectionnee.prixVenteReel}€</strong>
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm text-gray-600">{formatDate(venteSelectionnee.dateVente)} •</span>
+                <input
+                  type="number"
+                  value={editPrixVente}
+                  onChange={(e) => setEditPrixVente(e.target.value)}
+                  className="w-20 px-2 py-1 border rounded text-sm font-bold"
+                />
+                <span className="text-sm font-bold">€</span>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -944,21 +961,24 @@ export default function AdminNosVentesPage() {
                         onClick={() => setSelectedProduitId(p.id)}
                         className={`w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 ${
                           selectedProduitId === p.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                        } ${p._score >= 100 ? 'bg-green-50' : p._score >= 50 ? 'bg-yellow-50' : ''}`}
+                        } ${p._score >= 10000 ? 'bg-green-50' : p._score >= 1000 ? 'bg-yellow-50' : ''}`}
                       >
                         <div className="flex justify-between items-center">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-mono text-sm text-gray-500">[{p.trigramme}]</span>
                               <span className="font-medium">{p.sku}</span>
-                              {p._score >= 100 && (
-                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">Match !</span>
+                              {p._score >= 10000 && (
+                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">Prix exact !</span>
                               )}
-                              {p._score >= 50 && p._score < 100 && (
-                                <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">Probable</span>
+                              {p._score >= 1000 && p._score < 10000 && (
+                                <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">Même chineuse</span>
                               )}
                             </div>
                             <p className="text-gray-600 text-sm truncate">{p.nom}</p>
+                            {p.description && (
+                              <p className="text-xs text-gray-400 truncate">{p.description}</p>
+                            )}
                             <p className="text-xs text-gray-400">{p.categorie}</p>
                           </div>
                           <span className="text-green-600 font-medium ml-2">{p.prix}€</span>
