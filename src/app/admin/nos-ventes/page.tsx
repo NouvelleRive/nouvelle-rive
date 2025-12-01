@@ -98,16 +98,65 @@ export default function AdminNosVentesPage() {
     loadAllProduits()
   }, [])
 
-  // Filtrer les produits selon la recherche
+  // Filtrer et trier les produits selon la recherche ET la vente sélectionnée
   const produitsRecherches = useMemo(() => {
     if (!searchProduit.trim()) return []
     const term = searchProduit.toLowerCase().trim()
-    return allProduits.filter(p => 
+    
+    // Filtrer d'abord
+    let filtered = allProduits.filter(p => 
       p.sku?.toLowerCase().includes(term) ||
       p.nom?.toLowerCase().includes(term) ||
       p.trigramme?.toLowerCase().includes(term)
-    ).slice(0, 100)
-  }, [allProduits, searchProduit])
+    )
+
+    // Si une vente est sélectionnée, trier par pertinence
+    if (venteSelectionnee) {
+      const remarque = (venteSelectionnee.remarque || venteSelectionnee.nom || '').toLowerCase()
+      const prixVente = venteSelectionnee.prixVenteReel || 0
+
+      // Extraire le trigramme de la remarque (premier mot de 2-4 lettres)
+      const words = remarque.split(/\s+/)
+      const trigrammeFromRemarque = words[0]?.match(/^[a-z]{2,4}$/i) ? words[0].toUpperCase() : null
+
+      // Mots-clés catégorie dans la remarque
+      const catKeywords = ['jupe', 'short', 'robe', 'top', 'haut', 'chemise', 'blouse', 'pull', 'veste', 'blazer', 'pantalon', 'jean', 'manteau', 'coat', 'sac', 'collier', 'bague', 'boucle']
+      const catFromRemarque = catKeywords.find(k => remarque.includes(k)) || null
+
+      // Trier par score
+      filtered = filtered.map(p => {
+        let score = 0
+        const pCat = (typeof p.categorie === 'string' ? p.categorie : p.categorie?.label || '').toLowerCase()
+
+        // Même trigramme = +1000
+        if (trigrammeFromRemarque && p.trigramme?.toUpperCase() === trigrammeFromRemarque) {
+          score += 1000
+        }
+
+        // Même catégorie = +100
+        if (catFromRemarque && pCat.includes(catFromRemarque)) {
+          score += 100
+        }
+
+        // Même prix exact = +50, prix proche = +25
+        if (prixVente > 0 && p.prix) {
+          if (p.prix === prixVente) {
+            score += 50
+          } else {
+            const diff = Math.abs(p.prix - prixVente) / prixVente
+            if (diff <= 0.15) score += 25  // ±15%
+          }
+        }
+
+        return { ...p, _score: score }
+      })
+
+      // Trier par score décroissant
+      filtered.sort((a, b) => (b._score || 0) - (a._score || 0))
+    }
+
+    return filtered.slice(0, 100)
+  }, [allProduits, searchProduit, venteSelectionnee])
 
   // ==================== IMPORT EXCEL ====================
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -879,6 +928,9 @@ export default function AdminNosVentesPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Produit ({produitsRecherches.length} résultat{produitsRecherches.length > 1 ? 's' : ''})
+                  {produitsRecherches.length > 0 && produitsRecherches[0]._score > 0 && (
+                    <span className="text-xs text-gray-400 ml-2">• Triés par pertinence</span>
+                  )}
                 </label>
                 <div className="border rounded max-h-60 overflow-y-auto">
                   {produitsRecherches.length === 0 ? (
@@ -892,15 +944,24 @@ export default function AdminNosVentesPage() {
                         onClick={() => setSelectedProduitId(p.id)}
                         className={`w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 ${
                           selectedProduitId === p.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                        }`}
+                        } ${p._score >= 100 ? 'bg-green-50' : p._score >= 50 ? 'bg-yellow-50' : ''}`}
                       >
                         <div className="flex justify-between items-center">
-                          <div>
-                            <span className="font-mono text-sm text-gray-500">[{p.trigramme}]</span>
-                            <span className="font-medium ml-1">{p.sku}</span>
-                            <span className="text-gray-600 ml-2">{p.nom}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm text-gray-500">[{p.trigramme}]</span>
+                              <span className="font-medium">{p.sku}</span>
+                              {p._score >= 100 && (
+                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">Match !</span>
+                              )}
+                              {p._score >= 50 && p._score < 100 && (
+                                <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded">Probable</span>
+                              )}
+                            </div>
+                            <p className="text-gray-600 text-sm truncate">{p.nom}</p>
+                            <p className="text-xs text-gray-400">{p.categorie}</p>
                           </div>
-                          <span className="text-green-600 font-medium">{p.prix}€</span>
+                          <span className="text-green-600 font-medium ml-2">{p.prix}€</span>
                         </div>
                       </button>
                     ))
