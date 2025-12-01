@@ -48,15 +48,16 @@ export async function POST(req: NextRequest) {
 
     for (const row of rows) {
       try {
-        // Trouver les colonnes (Square peut avoir différents noms)
+        // Trouver les colonnes (Square français)
         const dateStr = row['Date'] || row['date'] || ''
-        const heureStr = row['Heure'] || row['heure'] || ''
-        const article = row['Article'] || row['article'] || row['Nom'] || row['nom'] || ''
+        const article = row['Article'] || row['article'] || ''
         const sku = row['SKU'] || row['sku'] || row['Sku'] || ''
-        const prixStr = row['Ventes brute'] || row['Ventes nette'] || row['Prix'] || row['prix'] || row['Montant'] || ''
-        const remarques = row['Remarques'] || row['remarques'] || row['Note'] || row['note'] || ''
+        const prixStr = row['Ventes brutes'] || row['Ventes nettes'] || row['Ventes brute'] || row['Ventes nette'] || row['Prix'] || ''
+        const remarques = row['Remarques'] || row['remarques'] || ''
+        const categorie = row['Catégorie'] || row['categorie'] || ''
+        const transactionId = row['Nº de transaction'] || row['Nº\xa0de transaction'] || ''
 
-        // Parser le prix
+        // Parser le prix (format français: "165,00 €")
         let prix: number | null = null
         if (prixStr) {
           const prixClean = prixStr.toString().replace(/[€\s]/g, '').replace(',', '.')
@@ -64,15 +65,21 @@ export async function POST(req: NextRequest) {
           if (isNaN(prix)) prix = null
         }
 
-        // Parser la date
+        // Parser la date (format YYYY-MM-DD)
         let dateVente: Date | null = null
         if (dateStr) {
-          // Format DD/MM/YYYY ou YYYY-MM-DD
-          if (dateStr.includes('/')) {
-            const [day, month, year] = dateStr.split('/')
-            dateVente = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+          if (typeof dateStr === 'string') {
+            if (dateStr.includes('/')) {
+              const [day, month, year] = dateStr.split('/')
+              dateVente = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+            } else {
+              dateVente = new Date(dateStr)
+            }
+          } else if (dateStr instanceof Date) {
+            dateVente = dateStr
           } else {
-            dateVente = new Date(dateStr)
+            // Excel date number
+            dateVente = new Date((dateStr - 25569) * 86400 * 1000)
           }
         }
 
@@ -82,8 +89,8 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        // Vérifier doublon
-        const dedupeKey = `${dateVente.toISOString().split('T')[0]}-${article}-${prix}`
+        // Vérifier doublon par transactionId + article
+        const dedupeKey = transactionId ? `${transactionId}-${article}` : `${dateVente.toISOString().split('T')[0]}-${article}-${prix}`
         if (ventesExistantes.has(dedupeKey)) {
           skipped++
           continue
@@ -118,6 +125,8 @@ export async function POST(req: NextRequest) {
           nomSquare: article,
           skuSquare: foundSku,
           remarque: remarques || null,
+          categorie: categorie || null,
+          transactionId: transactionId || null,
           source: 'excel',
           createdAt: Timestamp.now(),
         }
