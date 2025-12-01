@@ -56,6 +56,40 @@ export default function AdminNosVentesPage() {
   // Form attribuer
   const [selectedProduitId, setSelectedProduitId] = useState('')
   const [attribuerLoading, setAttribuerLoading] = useState(false)
+  const [searchProduit, setSearchProduit] = useState('')
+
+  // Produits recherchés (pour modal attribution)
+  const [allProduits, setAllProduits] = useState<any[]>([])
+
+  // Charger TOUS les produits pour l'attribution (pas seulement ceux de la chineuse sélectionnée)
+  const loadAllProduits = async () => {
+    try {
+      const res = await fetch('/api/produits?all=true')
+      const data = await res.json()
+      if (data.produits) {
+        setAllProduits(data.produits.filter((p: any) => 
+          !p.vendu && (p.quantite ?? 1) > 0 && p.statut !== 'supprime' && p.statut !== 'retour'
+        ))
+      }
+    } catch (err) {
+      console.error('Erreur chargement produits:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadAllProduits()
+  }, [])
+
+  // Filtrer les produits selon la recherche
+  const produitsRecherches = useMemo(() => {
+    if (!searchProduit.trim()) return []
+    const term = searchProduit.toLowerCase().trim()
+    return allProduits.filter(p => 
+      p.sku?.toLowerCase().includes(term) ||
+      p.nom?.toLowerCase().includes(term) ||
+      p.trigramme?.toLowerCase().includes(term)
+    ).slice(0, 100)
+  }, [allProduits, searchProduit])
 
   // Form supprimer
   const [remettreEnStock, setRemettreEnStock] = useState(false)
@@ -264,8 +298,10 @@ export default function AdminNosVentesPage() {
         setShowModalAttribuer(false)
         setVenteSelectionnee(null)
         setSelectedProduitId('')
+        setSearchProduit('')
         await loadVentes()
         await loadData()
+        await loadAllProduits()
       } else {
         alert(data.error || 'Erreur')
       }
@@ -690,10 +726,10 @@ export default function AdminNosVentesPage() {
       {/* Modal Attribuer */}
       {showModalAttribuer && venteSelectionnee && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold text-lg">Attribuer la vente</h3>
-              <button onClick={() => { setShowModalAttribuer(false); setVenteSelectionnee(null) }}><X size={20} /></button>
+              <button onClick={() => { setShowModalAttribuer(false); setVenteSelectionnee(null); setSearchProduit('') }}><X size={20} /></button>
             </div>
             
             <div className="bg-amber-50 p-3 rounded mb-4">
@@ -703,25 +739,69 @@ export default function AdminNosVentesPage() {
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Attribuer à quel produit ?</label>
-              <select
-                value={selectedProduitId}
-                onChange={(e) => setSelectedProduitId(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-              >
-                <option value="">Sélectionner un produit...</option>
-                {produitsDisponibles.map(p => (
-                  <option key={p.id} value={p.id}>
-                    [{p.trigramme}] {p.sku} - {p.nom} ({p.prix}€)
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-4">
+              {/* Recherche par SKU */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Rechercher par SKU ou nom</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Ex: DM28, SOIR0023, veste cuir..."
+                    value={searchProduit}
+                    onChange={(e) => setSearchProduit(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Liste des produits filtrés */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Produit ({produitsRecherches.length} résultat{produitsRecherches.length > 1 ? 's' : ''})
+                </label>
+                <div className="border rounded max-h-60 overflow-y-auto">
+                  {produitsRecherches.length === 0 ? (
+                    <p className="p-3 text-gray-500 text-sm">
+                      {searchProduit ? 'Aucun produit trouvé' : 'Tapez pour rechercher...'}
+                    </p>
+                  ) : (
+                    produitsRecherches.slice(0, 50).map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => setSelectedProduitId(p.id)}
+                        className={`w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 ${
+                          selectedProduitId === p.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-mono text-sm text-gray-500">[{p.trigramme}]</span>
+                            <span className="font-medium ml-1">{p.sku}</span>
+                            <span className="text-gray-600 ml-2">{p.nom}</span>
+                          </div>
+                          <span className="text-green-600 font-medium">{p.prix}€</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Produit sélectionné */}
+              {selectedProduitId && (
+                <div className="bg-green-50 border border-green-200 rounded p-3">
+                  <p className="text-sm text-green-700">
+                    <strong>Sélectionné :</strong> {produitsRecherches.find(p => p.id === selectedProduitId)?.sku} - {produitsRecherches.find(p => p.id === selectedProduitId)?.nom}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
               <button 
-                onClick={() => { setShowModalAttribuer(false); setVenteSelectionnee(null); setSelectedProduitId('') }} 
+                onClick={() => { setShowModalAttribuer(false); setVenteSelectionnee(null); setSelectedProduitId(''); setSearchProduit('') }} 
                 className="px-4 py-2 border rounded"
               >
                 Annuler
