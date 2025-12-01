@@ -2,158 +2,168 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { FieldValue } from 'firebase-admin/firestore'
-import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
+import { adminDb } from '@/lib/firebaseAdmin'
+import { Timestamp } from 'firebase-admin/firestore'
 
-const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
-
-async function verifyAdmin(req: NextRequest) {
-  const authHeader = req.headers.get('authorization') || ''
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
-  
-  if (!token) {
-    return null
-  }
-  
-  try {
-    const decoded = await adminAuth.verifyIdToken(token)
-    if (decoded.email !== ADMIN_EMAIL) {
-      return null
-    }
-    return decoded
-  } catch {
-    return null
-  }
-}
-
-// GET - Liste des créneaux (admin)
+/**
+ * GET - Récupérer tous les créneaux (avec réservations)
+ */
 export async function GET(req: NextRequest) {
-  const admin = await verifyAdmin(req)
-  if (!admin) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
-
   try {
-    const { searchParams } = new URL(req.url)
-    const start = searchParams.get('start')
-    const end = searchParams.get('end')
-
-    const db = adminDb
+    const creneauxSnap = await adminDb.collection('ateliers_creneaux')
+      .orderBy('date', 'asc')
+      .get()
     
-    let creneauxQuery = db.collection('ateliers_creneaux').orderBy('date').orderBy('heure')
-    
-    if (start) {
-      creneauxQuery = creneauxQuery.where('date', '>=', start)
-    }
-    if (end) {
-      creneauxQuery = creneauxQuery.where('date', '<=', end)
-    }
-
-    const creneauxSnap = await creneauxQuery.get()
-    const creneaux = creneauxSnap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
-
-    // Récupérer les réservations pour ces créneaux
-    const creneauIds = creneaux.map(c => c.id)
-    let reservations: any[] = []
-    
-    if (creneauIds.length > 0) {
-      // Firestore limite à 10 éléments dans 'in', on fait par batch
-      for (let i = 0; i < creneauIds.length; i += 10) {
-        const batch = creneauIds.slice(i, i + 10)
-        const resaSnap = await db.collection('ateliers_reservations')
-          .where('creneauId', 'in', batch)
-          .get()
-        
-        reservations.push(...resaSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })))
+    const creneaux = await Promise.all(creneauxSnap.docs.map(async (doc) => {
+      const data = doc.data()
+      
+      // Récupérer les réservations pour ce créneau
+      const reservationsSnap = await adminDb.collection('ateliers_reservations')
+        .where('creneauId', '==', doc.id)
+        .get()
+      
+      const reservations = reservationsSnap.docs.map(rDoc => ({
+        id: rDoc.id,
+        ...rDoc.data(),
+        createdAt: rDoc.data().createdAt?.toDate?.()?.toISOString() || null,
+      }))
+      
+      return {
+        id: doc.id,
+        date: data.date,
+        heure: data.heure,
+        lieu: data.lieu,
+        animatrice: data.animatrice || 'Non assignée',
+        placesMax: data.placesMax || 4,
+        placesReservees: data.placesReservees || 0,
+        reservations,
       }
-    }
-
-    return NextResponse.json({ creneaux, reservations })
-  } catch (error: any) {
-    console.error('Erreur GET admin créneaux:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    }))
+    
+    return NextResponse.json({ success: true, creneaux })
+    
+  } catch (err: any) {
+    console.error('[ADMIN CRENEAUX GET]', err)
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Erreur serveur' },
+      { status: 500 }
+    )
   }
 }
 
-// POST - Créer un créneau
+/**
+ * POST - Créer un nouveau créneau
+ * Body: { date, heure, lieu, animatrice, placesMax }
+ */
 export async function POST(req: NextRequest) {
-  const admin = await verifyAdmin(req)
-  if (!admin) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
-
   try {
-    const { date, heure, lieu, placesMax } = await req.json()
-
-    if (!date || !heure || !lieu || !placesMax) {
-      return NextResponse.json({ error: 'Données manquantes' }, { status: 400 })
-    }
-
-    if (!['ecouffes', 'printemps'].includes(lieu)) {
-      return NextResponse.json({ error: 'Lieu invalide' }, { status: 400 })
-    }
-
-    const db = adminDb
+    const { date, heure, lieu, animatrice, placesMax } = await req.json()
     
-    const docRef = await db.collection('ateliers_creneaux').add({
+    if (!date || !heure || !lieu) {
+      return NextResponse.json(
+        { success: false, error: 'Date, heure et lieu requis' },
+        { status: 400 }
+      )
+    }
+    
+    const docRef = await adminDb.collection('ateliers_creneaux').add({
       date,
       heure,
       lieu,
-      placesMax,
+      animatrice: animatrice || 'Non assignée',
+      placesMax: placesMax || 4,
       placesReservees: 0,
-      createdAt: FieldValue.serverTimestamp(),
+      createdAt: Timestamp.now(),
     })
-
-    return NextResponse.json({ 
-      success: true, 
+    
+    return NextResponse.json({
+      success: true,
       id: docRef.id,
+      message: 'Créneau créé',
     })
-  } catch (error: any) {
-    console.error('Erreur POST admin créneau:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    
+  } catch (err: any) {
+    console.error('[ADMIN CRENEAUX POST]', err)
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Erreur serveur' },
+      { status: 500 }
+    )
   }
 }
 
-// DELETE - Supprimer un créneau
-export async function DELETE(req: NextRequest) {
-  const admin = await verifyAdmin(req)
-  if (!admin) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
-
+/**
+ * PUT - Modifier un créneau
+ * Body: { id, ...fieldsToUpdate }
+ */
+export async function PUT(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
-    const id = searchParams.get('id')
-
+    const { id, ...updates } = await req.json()
+    
     if (!id) {
-      return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: 'ID requis' },
+        { status: 400 }
+      )
     }
+    
+    await adminDb.collection('ateliers_creneaux').doc(id).update({
+      ...updates,
+      updatedAt: Timestamp.now(),
+    })
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Créneau mis à jour',
+    })
+    
+  } catch (err: any) {
+    console.error('[ADMIN CRENEAUX PUT]', err)
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Erreur serveur' },
+      { status: 500 }
+    )
+  }
+}
 
-    const db = adminDb
+/**
+ * DELETE - Supprimer un créneau
+ * Body: { id }
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const { id } = await req.json()
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'ID requis' },
+        { status: 400 }
+      )
+    }
     
     // Vérifier s'il y a des réservations
-    const resaSnap = await db.collection('ateliers_reservations')
+    const reservationsSnap = await adminDb.collection('ateliers_reservations')
       .where('creneauId', '==', id)
-      .limit(1)
       .get()
-
-    if (!resaSnap.empty) {
-      return NextResponse.json({ 
-        error: 'Impossible de supprimer : des réservations existent' 
-      }, { status: 400 })
+    
+    if (!reservationsSnap.empty) {
+      return NextResponse.json(
+        { success: false, error: 'Impossible de supprimer un créneau avec des réservations' },
+        { status: 400 }
+      )
     }
-
-    await db.collection('ateliers_creneaux').doc(id).delete()
-
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    console.error('Erreur DELETE admin créneau:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    
+    await adminDb.collection('ateliers_creneaux').doc(id).delete()
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Créneau supprimé',
+    })
+    
+  } catch (err: any) {
+    console.error('[ADMIN CRENEAUX DELETE]', err)
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Erreur serveur' },
+      { status: 500 }
+    )
   }
 }
