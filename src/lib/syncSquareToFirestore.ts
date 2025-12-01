@@ -77,13 +77,6 @@ export async function syncVentesDepuisSquare(
 
   console.log(`📥 ${allOrders.length} commandes Square`)
 
-  // 🔍 DEBUG: Log la première commande pour voir la structure
-  if (allOrders.length > 0) {
-    console.log('📋 STRUCTURE COMMANDE:', JSON.stringify(allOrders[0], (key, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    , 2))
-  }
-
   // 4. Récupérer les SKUs depuis Square Catalog pour les articles avec catalogObjectId
   const catalogIds = new Set<string>()
   for (const order of allOrders) {
@@ -173,20 +166,13 @@ export async function syncVentesDepuisSquare(
 
       // 3. SKU extrait de la note de l'article
       if (!sku && itemNote) {
-        // Enlever "square regist" et chercher pattern SKU
-        const cleanNote = itemNote.toLowerCase().replace(/square\s*regist(er)?\s*/gi, '').trim()
-        // Pattern: lettres + chiffres optionnel espace (ex: "cam70", "dm 72", "ng28", "apf441")
-        const match = cleanNote.match(/\b([a-z]{2,4})\s*(\d{1,4})\b/i)
+        const cleanNote = itemNote.toLowerCase().trim()
+        // Pattern: 2-4 lettres + 1-4 chiffres (ex: "ng56", "dm72", "cam70", "apf441")
+        // Chercher PARTOUT dans la note, pas seulement au début
+        const match = cleanNote.match(/\b([a-z]{2,4})(\d{1,4})\b/i)
         if (match) {
           sku = (match[1] + match[2]).toUpperCase()
           skuSource = 'itemNote'
-        } else {
-          // Fallback: premier mot qui ressemble à un SKU
-          const firstMatch = cleanNote.match(/^([a-z0-9]{2,12})/i)
-          if (firstMatch) {
-            sku = firstMatch[1].toUpperCase()
-            skuSource = 'itemNote-fallback'
-          }
         }
       }
 
