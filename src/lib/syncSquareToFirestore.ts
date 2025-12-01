@@ -1,6 +1,7 @@
+// lib/syncSquareToFirestore.ts
 import { Client, Environment } from 'square'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { Timestamp, FieldValue } from 'firebase-admin/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 
 const accessToken = process.env.SQUARE_ACCESS_TOKEN
 const locationId = process.env.SQUARE_LOCATION_ID
@@ -14,27 +15,22 @@ const client = new Client({
   environment: Environment.Production,
 })
 
+/**
+ * Sync TOUTES les ventes Square d'une période
+ * 1. Récupère toutes les commandes Square
+ * 2. Pour chaque article vendu, cherche le produit par SKU
+ * 3. Si trouvé → vente attribuée avec toutes les infos
+ * 4. Si pas trouvé → vente non attribuée (à matcher manuellement)
+ */
 export async function syncVentesDepuisSquare(
-  uid: string,
-  chineurNom: string,
   startDateStr?: string,
   endDateStr?: string
 ) {
-  console.log('🔄 Sync ventes pour', chineurNom)
+  console.log('🔄 Sync TOUTES les ventes Square')
+  console.log(`📅 Période: ${startDateStr || 'début'} → ${endDateStr || 'maintenant'}`)
 
-  const chineuseSnap = await adminDb.collection('chineuse').doc(uid).get()
-  if (!chineuseSnap.exists) {
-    throw new Error(`Chineuse ${uid} non trouvée`)
-  }
-
-  const chineuseData = chineuseSnap.data()!
-  const trigramme = chineuseData.trigramme || ''
-  const categorieRapportLabel = chineuseData['Catégorie de rapport']?.[0]?.label?.toLowerCase() || ''
-
-  // 1. Pré-charger TOUS les produits de cette chineuse une seule fois
-  const produitsSnap = await adminDb.collection('produits')
-    .where('chineurUid', '==', uid)
-    .get()
+  // 1. Pré-charger TOUS les produits (index par SKU et catalogObjectId)
+  const produitsSnap = await adminDb.collection('produits').get()
   
   const produitsBySku = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>()
   const produitsByCatalogId = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>()
@@ -42,7 +38,16 @@ export async function syncVentesDepuisSquare(
   for (const doc of produitsSnap.docs) {
     const data = doc.data()
     if (data.sku) {
+      // Index par SKU (en minuscule pour matching insensible à la casse)
       produitsBySku.set(data.sku.toLowerCase(), doc)
+      
+      // Index aussi par SKU sans trigramme (ex: "28" pour "DM28")
+      const skuSansTrigramme = data.sku.replace(/^[a-zA-Z]+/, '')
+      if (skuSansTrigramme) {
+        // On garde le trigramme pour retrouver le bon produit
+        const key = `${data.trigramme?.toLowerCase() || ''}-${skuSansTrigramme}`
+        produitsBySku.set(key, doc)
+      }
     }
     if (data.catalogObjectId) {
       produitsByCatalogId.set(data.catalogObjectId, doc)
@@ -51,56 +56,75 @@ export async function syncVentesDepuisSquare(
       produitsByCatalogId.set(data.variationId, doc)
     }
   }
+  
+  console.log(`📦 ${produitsSnap.docs.length} produits indexés`)
 
-  // 2. Pré-charger les ventes existantes GLOBALEMENT pour éviter les doublons
-  // On vérifie par orderId + itemName/sku car une vente Square ne doit exister qu'une fois
+  // 2. Pré-charger les ventes existantes pour déduplication (par orderId + index ligne)
   const ventesExistantes = new Set<string>()
   const ventesSnap = await adminDb.collection('ventes').get()
   
   for (const doc of ventesSnap.docs) {
     const data = doc.data()
     if (data.orderId) {
-      // Clé unique : orderId + sku OU orderId + nom
-      if (data.sku) {
-        ventesExistantes.add(`${data.orderId}-${data.sku}`)
+      // Clé unique: orderId + lineItemUid OU orderId + nom
+      if (data.lineItemUid) {
+        ventesExistantes.add(`${data.orderId}-${data.lineItemUid}`)
       }
-      if (data.nom) {
-        ventesExistantes.add(`${data.orderId}-${data.nom}`)
-      }
-      if (data.remarque) {
-        ventesExistantes.add(`${data.orderId}-${data.remarque}`)
+      // Fallback sur nom/remarque pour les anciennes ventes
+      const itemKey = data.sku || data.nom || data.remarque
+      if (itemKey) {
+        ventesExistantes.add(`${data.orderId}-${itemKey}`)
       }
     }
   }
+  
+  console.log(`📋 ${ventesExistantes.size} ventes existantes (pour dédup)`)
 
   // 3. Récupérer les commandes Square
   const startDate = startDateStr ? new Date(startDateStr) : undefined
   const endDate = endDateStr ? new Date(endDateStr) : undefined
+  
+  // Si pas de date de fin, prendre maintenant
+  const effectiveEndDate = endDate ? new Date(endDate) : new Date()
+  // Ajouter 1 jour à la fin pour inclure toute la journée
+  effectiveEndDate.setDate(effectiveEndDate.getDate() + 1)
 
   const filterSquare: any = {
     stateFilter: { states: ['COMPLETED'] },
   }
-  if (startDate && endDate) {
+  
+  if (startDate) {
     filterSquare.dateTimeFilter = {
       closedAt: {
         startAt: startDate.toISOString(),
-        endAt: endDate.toISOString(),
+        endAt: effectiveEndDate.toISOString(),
       }
     }
   }
 
-  const { result } = await client.ordersApi.searchOrders({
-    locationIds: [locationId],
-    query: { filter: filterSquare },
-    sort: { sortField: 'CLOSED_AT', sortOrder: 'DESC' },
-  })
+  let allOrders: any[] = []
+  let cursor: string | undefined = undefined
 
-  const orders = result.orders || []
-  console.log(`📦 ${orders.length} commandes récupérées`)
+  // Pagination pour récupérer toutes les commandes
+  do {
+    const { result } = await client.ordersApi.searchOrders({
+      locationIds: [locationId],
+      query: { filter: filterSquare },
+      cursor,
+      limit: 100,
+    })
+    
+    allOrders = allOrders.concat(result.orders || [])
+    cursor = result.cursor
+    
+    console.log(`📥 ${allOrders.length} commandes récupérées...`)
+  } while (cursor)
 
-  // 4. Collecter tous les catalogObjectIds uniques pour un seul appel batch
+  console.log(`📦 Total: ${allOrders.length} commandes Square`)
+
+  // 4. Collecter les catalogObjectIds pour récupérer les SKUs en batch
   const catalogIdsToFetch = new Set<string>()
-  for (const order of orders) {
+  for (const order of allOrders) {
     for (const item of order.lineItems || []) {
       if (item.catalogObjectId && !produitsByCatalogId.has(item.catalogObjectId)) {
         catalogIdsToFetch.add(item.catalogObjectId)
@@ -108,11 +132,13 @@ export async function syncVentesDepuisSquare(
     }
   }
 
-  // 5. Récupérer les SKUs en batch depuis Square (max 1000 par appel)
+  // 5. Récupérer les SKUs depuis Square Catalog en batch
   const catalogIdToSku = new Map<string, string>()
   const catalogIdsArray = Array.from(catalogIdsToFetch)
   
   if (catalogIdsArray.length > 0) {
+    console.log(`🔍 Récupération de ${catalogIdsArray.length} SKUs depuis Square...`)
+    
     for (let i = 0; i < catalogIdsArray.length; i += 100) {
       const batch = catalogIdsArray.slice(i, i + 100)
       try {
@@ -127,188 +153,211 @@ export async function syncVentesDepuisSquare(
           }
         }
       } catch (err) {
-        console.warn(`⚠️ Batch catalog fetch failed for some items`)
+        console.warn(`⚠️ Erreur batch catalog:`, err)
       }
     }
+    
+    console.log(`✅ ${catalogIdToSku.size} SKUs récupérés depuis Square`)
   }
 
-  // 6. Traiter les commandes et collecter les opérations batch
-  let nbSync = 0
+  // 6. Traiter chaque commande et créer les ventes
+  let nbImported = 0
+  let nbAttribuees = 0
   let nbNonAttribuees = 0
-  let nbNotFound = 0
+  let nbSkipped = 0
 
   const ventesToAdd: any[] = []
   const produitsToUpdate: { ref: FirebaseFirestore.DocumentReference; data: any }[] = []
 
-  for (const order of orders) {
+  for (const order of allOrders) {
+    const orderDate = order.closedAt ? new Date(order.closedAt) : new Date()
+    
     for (const item of order.lineItems || []) {
+      const lineItemUid = item.uid
       const itemName = item.name || ''
-      const itemNote = item.note || order.note || ''
+      const itemNote = item.note || ''
+      const orderNote = order.note || ''
       const catalogObjectId = item.catalogObjectId
       const quantityVendue = parseInt(item.quantity) || 1
       
       const prixReelCents = item.totalMoney?.amount ?? null
-      const prixReel = prixReelCents !== null
-        ? Number(prixReelCents) / 100
-        : null
+      const prixReel = prixReelCents !== null ? Number(prixReelCents) / 100 : null
 
-      const isMontantPerso = itemName === 'Montant personnalisé' || !catalogObjectId
-
-      let produitDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null
-      let sku: string | null = null
-
-      if (isMontantPerso) {
-        const noteLower = itemNote.toLowerCase()
-        const belongsToChineuse = 
-          noteLower.includes(trigramme.toLowerCase()) ||
-          (categorieRapportLabel && noteLower.startsWith(categorieRapportLabel.substring(0, 3)))
-        
-        if (!belongsToChineuse) continue
-
-        const skuMatch = noteLower.match(/\b([a-z]{2,4})(\d{1,4})\b/i)
-        if (skuMatch) {
-          const potentialSku = skuMatch[0].toLowerCase()
-          produitDoc = produitsBySku.get(potentialSku) || null
-          
-          if (!produitDoc && trigramme) {
-            const skuAvecTri = `${trigramme.toLowerCase()}${skuMatch[2]}`
-            produitDoc = produitsBySku.get(skuAvecTri) || null
-          }
-          
-          if (produitDoc) {
-            sku = produitDoc.data().sku
-          }
-        }
-      } else {
-        produitDoc = produitsByCatalogId.get(catalogObjectId!) || null
-        
-        if (!produitDoc) {
-          const skuFromCatalog = catalogIdToSku.get(catalogObjectId!)
-          if (skuFromCatalog) {
-            produitDoc = produitsBySku.get(skuFromCatalog.toLowerCase()) || null
-            
-            if (!produitDoc && /^\d+$/.test(skuFromCatalog) && trigramme) {
-              const skuAvecTri = `${trigramme.toLowerCase()}${skuFromCatalog}`
-              produitDoc = produitsBySku.get(skuAvecTri) || null
-            }
-          }
-        }
-        
-        if (produitDoc) {
-          sku = produitDoc.data().sku
-        }
-      }
-
-      // Vérifier doublon - clé globale unique
-      const dedupeKeys = [
-        sku ? `${order.id}-${sku}` : null,
-        `${order.id}-${itemName}`,
-        itemNote ? `${order.id}-${itemNote}` : null,
-      ].filter(Boolean) as string[]
+      // Vérifier doublon
+      const dedupeKey1 = `${order.id}-${lineItemUid}`
+      const dedupeKey2 = `${order.id}-${itemName}`
       
-      const isDuplicate = dedupeKeys.some(key => ventesExistantes.has(key))
-      if (isDuplicate) {
+      if (ventesExistantes.has(dedupeKey1) || ventesExistantes.has(dedupeKey2)) {
+        nbSkipped++
         continue
       }
       
-      // Ajouter toutes les clés pour éviter les doublons futurs dans ce batch
-      dedupeKeys.forEach(key => ventesExistantes.add(key))
+      // Ajouter aux clés pour éviter doublons dans ce batch
+      ventesExistantes.add(dedupeKey1)
+      ventesExistantes.add(dedupeKey2)
+
+      // Chercher le produit correspondant
+      let produitDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null
+      let matchedSku: string | null = null
+      let matchMethod: string = 'none'
+
+      // Méthode 1: Par catalogObjectId
+      if (catalogObjectId) {
+        produitDoc = produitsByCatalogId.get(catalogObjectId) || null
+        if (produitDoc) {
+          matchMethod = 'catalogId'
+          matchedSku = produitDoc.data().sku
+        }
+      }
+
+      // Méthode 2: Par SKU du catalogue Square
+      if (!produitDoc && catalogObjectId) {
+        const skuFromSquare = catalogIdToSku.get(catalogObjectId)
+        if (skuFromSquare) {
+          produitDoc = produitsBySku.get(skuFromSquare.toLowerCase()) || null
+          if (produitDoc) {
+            matchMethod = 'skuCatalog'
+            matchedSku = produitDoc.data().sku
+          }
+        }
+      }
+
+      // Méthode 3: Extraire SKU du nom de l'article (ex: "DM28 - Veste cuir")
+      if (!produitDoc) {
+        const skuMatch = itemName.match(/^([A-Za-z]{2,4}\d{1,4})/i)
+        if (skuMatch) {
+          const potentialSku = skuMatch[1].toLowerCase()
+          produitDoc = produitsBySku.get(potentialSku) || null
+          if (produitDoc) {
+            matchMethod = 'skuFromName'
+            matchedSku = produitDoc.data().sku
+          }
+        }
+      }
+
+      // Méthode 4: Extraire SKU de la note (montant personnalisé)
+      if (!produitDoc && (itemNote || orderNote)) {
+        const noteToSearch = `${itemNote} ${orderNote}`.toLowerCase()
+        const skuMatch = noteToSearch.match(/\b([a-z]{2,4})(\d{1,4})\b/i)
+        if (skuMatch) {
+          const potentialSku = skuMatch[0].toLowerCase()
+          produitDoc = produitsBySku.get(potentialSku) || null
+          if (produitDoc) {
+            matchMethod = 'skuFromNote'
+            matchedSku = produitDoc.data().sku
+          }
+        }
+      }
+
+      // Créer la vente
+      const venteData: any = {
+        // Identifiants Square
+        orderId: order.id,
+        lineItemUid: lineItemUid,
+        catalogObjectId: catalogObjectId || null,
+        
+        // Infos vente
+        prixVenteReel: prixReel,
+        dateVente: Timestamp.fromDate(orderDate),
+        quantite: quantityVendue,
+        
+        // Nom affiché (pour faciliter l'identification)
+        nomSquare: itemName,
+        remarque: itemNote || orderNote || null,
+        
+        // Source
+        source: catalogObjectId ? 'square' : 'montant_perso',
+        createdAt: Timestamp.now(),
+      }
 
       if (produitDoc) {
+        // Vente attribuée
         const produitData = produitDoc.data()
+        
+        venteData.produitId = produitDoc.id
+        venteData.nom = produitData.nom
+        venteData.sku = produitData.sku
+        venteData.categorie = produitData.categorie
+        venteData.marque = produitData.marque || ''
+        venteData.chineur = produitData.chineur
+        venteData.chineurUid = produitData.chineurUid
+        venteData.trigramme = produitData.trigramme
+        venteData.categorieRapport = produitData.categorieRapport
+        venteData.prixInitial = produitData.prix
+        venteData.attribue = true
+        venteData.matchMethod = matchMethod
+        
+        // Mettre à jour le produit (décrémenter stock)
         const quantiteActuelle = produitData.quantite || 1
         const nouvQuantite = Math.max(0, quantiteActuelle - quantityVendue)
-
-        ventesToAdd.push({
-          produitId: produitDoc.id,
-          nom: produitData.nom,
-          sku: produitData.sku,
-          categorie: produitData.categorie,
-          marque: produitData.marque || '',
-          chineur: produitData.chineur,
-          chineurUid: uid,
-          categorieRapport: produitData.categorieRapport,
-          trigramme: trigramme,
-          prixInitial: produitData.prix,
-          prixVenteReel: prixReel,
-          dateVente: Timestamp.fromDate(new Date(order.closedAt!)),
-          orderId: order.id,
-          remarque: isMontantPerso ? itemNote : null,
-          source: isMontantPerso ? 'montant_perso' : 'square',
-          attribue: true,
-          createdAt: Timestamp.now(),
-        })
-
+        
         const updateData: any = { quantite: nouvQuantite }
         if (nouvQuantite === 0) {
           updateData.vendu = true
-          updateData.dateVente = Timestamp.fromDate(new Date(order.closedAt!))
+          updateData.dateVente = Timestamp.fromDate(orderDate)
           updateData.prixVenteReel = prixReel
         }
-        produitsToUpdate.push({ ref: produitDoc.ref, data: updateData })
         
-        nbSync++
-      } else if (isMontantPerso) {
-        ventesToAdd.push({
-          produitId: null,
-          nom: itemNote || 'Vente non attribuée',
-          sku: null,
-          categorie: null,
-          marque: null,
-          chineur: chineuseData.email || null,
-          chineurUid: uid,
-          categorieRapport: categorieRapportLabel || null,
-          trigramme: trigramme,
-          prixInitial: null,
-          prixVenteReel: prixReel,
-          dateVente: Timestamp.fromDate(new Date(order.closedAt!)),
-          orderId: order.id,
-          remarque: itemNote,
-          source: 'montant_perso_non_attribue',
-          attribue: false,
-          createdAt: Timestamp.now(),
-        })
-        nbNonAttribuees++
+        produitsToUpdate.push({ ref: produitDoc.ref, data: updateData })
+        nbAttribuees++
       } else {
-        console.warn(`❓ Produit non trouvé: ${itemName}`)
-        nbNotFound++
+        // Vente non attribuée
+        venteData.produitId = null
+        venteData.nom = itemName || itemNote || orderNote || 'Vente inconnue'
+        venteData.sku = null
+        venteData.chineurUid = null
+        venteData.trigramme = null
+        venteData.attribue = false
+        
+        nbNonAttribuees++
       }
+
+      ventesToAdd.push(venteData)
+      nbImported++
     }
   }
 
-  // 7. Batch write Firestore (max 500 par batch)
+  // 7. Batch write Firestore
   const BATCH_SIZE = 500
   
   // Écrire les ventes
   for (let i = 0; i < ventesToAdd.length; i += BATCH_SIZE) {
     const batch = adminDb.batch()
-    const ventesChunk = ventesToAdd.slice(i, i + BATCH_SIZE)
+    const chunk = ventesToAdd.slice(i, i + BATCH_SIZE)
     
-    for (const vente of ventesChunk) {
+    for (const vente of chunk) {
       const ref = adminDb.collection('ventes').doc()
       batch.set(ref, vente)
     }
     
     await batch.commit()
+    console.log(`💾 ${Math.min(i + BATCH_SIZE, ventesToAdd.length)}/${ventesToAdd.length} ventes écrites`)
   }
 
   // Mettre à jour les produits
   for (let i = 0; i < produitsToUpdate.length; i += BATCH_SIZE) {
     const batch = adminDb.batch()
-    const produitsChunk = produitsToUpdate.slice(i, i + BATCH_SIZE)
+    const chunk = produitsToUpdate.slice(i, i + BATCH_SIZE)
     
-    for (const { ref, data } of produitsChunk) {
+    for (const { ref, data } of chunk) {
       batch.update(ref, data)
     }
     
     await batch.commit()
   }
 
-  console.log(`✅ ${chineurNom}: ${nbSync} sync, ${nbNonAttribuees} non attribuées`)
-  return { 
-    message: `${nbSync} ventes sync, ${nbNonAttribuees} à attribuer`,
-    nbSync,
+  console.log(`✅ Sync terminé:`)
+  console.log(`   - ${nbImported} ventes importées`)
+  console.log(`   - ${nbAttribuees} attribuées automatiquement`)
+  console.log(`   - ${nbNonAttribuees} à attribuer manuellement`)
+  console.log(`   - ${nbSkipped} doublons ignorés`)
+
+  return {
+    success: true,
+    message: `${nbImported} ventes importées (${nbAttribuees} attribuées, ${nbNonAttribuees} à attribuer)`,
+    nbImported,
+    nbAttribuees,
     nbNonAttribuees,
-    nbNotFound
+    nbSkipped,
   }
 }
