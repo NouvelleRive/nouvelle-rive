@@ -1,10 +1,11 @@
 // app/admin/nos-ventes/page.tsx
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import SyncVentesButton from '@/components/SyncVentesButton'
-import { Plus, X, Search, Download, Link, Trash2, CheckCircle, AlertCircle, RefreshCw, CheckSquare, Square } from 'lucide-react'
+import { Plus, X, Search, Download, Link, Trash2, CheckCircle, AlertCircle, RefreshCw, CheckSquare, Square, Upload } from 'lucide-react'
+import * as XLSX from 'xlsx'
 
 interface Vente {
   id: string
@@ -23,12 +24,27 @@ interface Vente {
   isAttribue: boolean
 }
 
+interface ExcelRow {
+  Date: string
+  Heure: string
+  Article: string
+  SKU: string
+  'Ventes brute': string
+  Remarques: string
+  [key: string]: any
+}
+
 export default function AdminNosVentesPage() {
   const { selectedChineuse, produitsFiltres, deposants, loading, loadData } = useAdmin()
 
   // Ventes
   const [ventes, setVentes] = useState<Vente[]>([])
   const [loadingVentes, setLoadingVentes] = useState(false)
+
+  // Import Excel
+  const [isDragging, setIsDragging] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importResult, setImportResult] = useState<{ success: number; errors: number } | null>(null)
 
   // Sélection multiple
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -92,6 +108,75 @@ export default function AdminNosVentesPage() {
       p.trigramme?.toLowerCase().includes(term)
     ).slice(0, 100)
   }, [allProduits, searchProduit])
+
+  // ==================== IMPORT EXCEL ====================
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    
+    const file = e.dataTransfer.files[0]
+    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+      await importExcelFile(file)
+    } else {
+      alert('Fichier Excel (.xlsx ou .xls) requis')
+    }
+  }, [])
+
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      await importExcelFile(file)
+    }
+    e.target.value = ''
+  }, [])
+
+  const importExcelFile = async (file: File) => {
+    setImportLoading(true)
+    setImportResult(null)
+    
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const sheetName = workbook.SheetNames[0]
+      const sheet = workbook.Sheets[sheetName]
+      const rows: ExcelRow[] = XLSX.utils.sheet_to_json(sheet)
+      
+      console.log('📥 Excel importé:', rows.length, 'lignes')
+      console.log('Colonnes:', Object.keys(rows[0] || {}))
+      
+      // Envoyer à l'API
+      const res = await fetch('/api/import-ventes-excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows })
+      })
+      
+      const result = await res.json()
+      
+      if (result.success) {
+        setImportResult({ success: result.imported, errors: result.errors })
+        await loadVentes()
+      } else {
+        alert(result.error || 'Erreur import')
+      }
+    } catch (err) {
+      console.error('Erreur import Excel:', err)
+      alert('Erreur lors de l\'import')
+    }
+    
+    setImportLoading(false)
+  }
+  // ==================== FIN IMPORT EXCEL ====================
 
   // Form supprimer
   const [remettreEnStock, setRemettreEnStock] = useState(false)
@@ -446,6 +531,38 @@ export default function AdminNosVentesPage() {
             Ajouter une vente
           </button>
         </div>
+      </div>
+
+      {/* Zone Import Excel */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`mb-6 border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+          isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+        }`}
+      >
+        <input
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleFileSelect}
+          className="hidden"
+          id="excel-upload"
+        />
+        <label htmlFor="excel-upload" className="cursor-pointer">
+          <div className="flex items-center justify-center gap-3">
+            <Upload size={20} className="text-gray-400" />
+            <span className="text-sm text-gray-600">
+              {importLoading ? 'Import en cours...' : 'Glisser un fichier Excel Square ici ou cliquer pour sélectionner'}
+            </span>
+          </div>
+        </label>
+        {importResult && (
+          <p className="mt-2 text-sm">
+            <span className="text-green-600">{importResult.success} importées</span>
+            {importResult.errors > 0 && <span className="text-red-600 ml-2">{importResult.errors} erreurs</span>}
+          </p>
+        )}
       </div>
 
       {/* Stats */}
