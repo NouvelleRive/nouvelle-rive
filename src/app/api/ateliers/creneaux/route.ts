@@ -11,30 +11,36 @@ export async function GET(req: NextRequest) {
     const start = searchParams.get('start')
     const end = searchParams.get('end')
 
-    if (!lieu) {
-      return NextResponse.json({ error: 'Lieu requis' }, { status: 400 })
-    }
+    // Récupérer tous les créneaux et filtrer en mémoire pour éviter les problèmes d'index
+    const snap = await adminDb.collection('ateliers_creneaux').get()
 
-    let query = adminDb.collection('ateliers_creneaux')
-      .where('lieu', '==', lieu)
-
-    if (start) {
-      query = query.where('date', '>=', start)
-    }
-    if (end) {
-      query = query.where('date', '<=', end)
-    }
-
-    const snap = await query.orderBy('date').orderBy('heure').get()
-
-    const creneaux = snap.docs.map(doc => ({
+    let creneaux = snap.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }))
 
-    return NextResponse.json({ creneaux })
+    // Filtrer par lieu
+    if (lieu) {
+      creneaux = creneaux.filter((c: any) => c.lieu === lieu)
+    }
+
+    // Filtrer par date
+    if (start) {
+      creneaux = creneaux.filter((c: any) => c.date >= start)
+    }
+    if (end) {
+      creneaux = creneaux.filter((c: any) => c.date <= end)
+    }
+
+    // Trier par date puis heure
+    creneaux.sort((a: any, b: any) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date)
+      return a.heure.localeCompare(b.heure)
+    })
+
+    return NextResponse.json({ success: true, creneaux })
   } catch (error: any) {
     console.error('Erreur GET créneaux:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

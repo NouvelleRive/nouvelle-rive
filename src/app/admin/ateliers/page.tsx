@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Calendar, Users } from 'lucide-react'
 
 type Lieu = 'printemps' | 'ecouffes'
 type Animatrice = 'INES PINEAU' | 'TÊTE D\'ORANGE' | 'ARCHIVE.S' | 'GIGI PARIS'
@@ -150,25 +150,57 @@ export default function AdminAteliersPage() {
     })
   }
 
+  // Stats
+  const stats = {
+    total: creneaux.length,
+    aVenir: creneaux.filter(c => new Date(c.date) >= new Date(new Date().setHours(0,0,0,0))).length,
+    reservations: creneaux.reduce((sum, c) => sum + (c.placesReservees || 0), 0),
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-6 h-6 border-2 border-black border-t-transparent animate-spin"></div>
+        <div className="w-6 h-6 border-2 border-[#22209C] border-t-transparent animate-spin rounded-full"></div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">ATELIERS</h1>
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Ateliers</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-black text-white text-sm hover:bg-gray-900 transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white text-sm rounded hover:opacity-90"
         >
           <Plus size={16} />
           Nouveau créneau
         </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white border rounded-lg p-4">
+          <div className="flex items-center gap-2 text-gray-500 mb-1">
+            <Calendar size={16} />
+            <span className="text-sm">Total créneaux</span>
+          </div>
+          <p className="text-2xl font-bold">{stats.total}</p>
+        </div>
+        <div className="bg-white border rounded-lg p-4">
+          <div className="flex items-center gap-2 text-gray-500 mb-1">
+            <Calendar size={16} />
+            <span className="text-sm">À venir</span>
+          </div>
+          <p className="text-2xl font-bold text-green-600">{stats.aVenir}</p>
+        </div>
+        <div className="bg-white border rounded-lg p-4">
+          <div className="flex items-center gap-2 text-gray-500 mb-1">
+            <Users size={16} />
+            <span className="text-sm">Réservations</span>
+          </div>
+          <p className="text-2xl font-bold text-blue-600">{stats.reservations}</p>
+        </div>
       </div>
 
       {/* Filtres */}
@@ -176,7 +208,7 @@ export default function AdminAteliersPage() {
         <select
           value={filterLieu}
           onChange={(e) => setFilterLieu(e.target.value as Lieu | 'all')}
-          className="border border-black px-3 py-2 text-sm bg-white"
+          className="border rounded px-3 py-2 text-sm"
         >
           <option value="all">Tous les lieux</option>
           {LIEUX.map(l => (
@@ -187,7 +219,7 @@ export default function AdminAteliersPage() {
         <select
           value={filterAnimatrice}
           onChange={(e) => setFilterAnimatrice(e.target.value as Animatrice | 'all')}
-          className="border border-black px-3 py-2 text-sm bg-white"
+          className="border rounded px-3 py-2 text-sm"
         >
           <option value="all">Toutes les animatrices</option>
           {ANIMATRICES.map(a => (
@@ -197,7 +229,7 @@ export default function AdminAteliersPage() {
       </div>
 
       {/* Liste des créneaux */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {creneauxFiltres.length === 0 ? (
           <p className="text-center text-gray-500 py-8">Aucun créneau</p>
         ) : (
@@ -208,7 +240,7 @@ export default function AdminAteliersPage() {
             return (
               <div
                 key={creneau.id}
-                className={`border border-black p-4 ${isPast ? 'opacity-50' : ''}`}
+                className={`bg-white border rounded-lg p-4 ${isPast ? 'opacity-50' : ''}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -220,7 +252,7 @@ export default function AdminAteliersPage() {
                       <span className="text-gray-500">Animatrice :</span> {creneau.animatrice}
                     </p>
                     <p className="text-sm">
-                      <span className={places === 0 ? 'text-red-600' : 'text-green-600'}>
+                      <span className={places === 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
                         {creneau.placesReservees}/{creneau.placesMax} places réservées
                       </span>
                     </p>
@@ -229,13 +261,13 @@ export default function AdminAteliersPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setSelectedCreneau(creneau)}
-                      className="px-3 py-1 border border-black text-sm hover:bg-black hover:text-white transition-all"
+                      className="px-3 py-1 border border-[#22209C] text-[#22209C] text-sm rounded hover:bg-[#22209C] hover:text-white transition-all"
                     >
                       Détails
                     </button>
                     <button
                       onClick={() => handleDelete(creneau.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 transition-all"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -249,40 +281,41 @@ export default function AdminAteliersPage() {
 
       {/* Modal création */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md border border-black">
-            <div className="flex justify-between items-center p-6 border-b border-black">
-              <h3 className="text-sm tracking-widest">NOUVEAU CRÉNEAU</h3>
-              <button onClick={() => setShowModal(false)} className="text-2xl hover:opacity-50">×</button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-lg shadow-xl">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="font-semibold text-lg">Nouveau créneau</h3>
+              <button onClick={() => setShowModal(false)} className="text-2xl text-gray-400 hover:text-gray-600">×</button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs tracking-widest mb-2">DATE</label>
+                <label className="block text-sm font-medium mb-1">Date</label>
                 <input
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full border border-black p-3 text-sm"
+                  className="w-full border rounded px-3 py-2"
+                  min={new Date().toISOString().split('T')[0]}
                 />
               </div>
               
               <div>
-                <label className="block text-xs tracking-widest mb-2">HEURE</label>
+                <label className="block text-sm font-medium mb-1">Heure</label>
                 <input
                   type="time"
                   value={formData.heure}
                   onChange={(e) => setFormData({ ...formData, heure: e.target.value })}
-                  className="w-full border border-black p-3 text-sm"
+                  className="w-full border rounded px-3 py-2"
                 />
               </div>
               
               <div>
-                <label className="block text-xs tracking-widest mb-2">LIEU</label>
+                <label className="block text-sm font-medium mb-1">Lieu</label>
                 <select
                   value={formData.lieu}
                   onChange={(e) => setFormData({ ...formData, lieu: e.target.value as Lieu })}
-                  className="w-full border border-black p-3 text-sm bg-white"
+                  className="w-full border rounded px-3 py-2"
                 >
                   {LIEUX.map(l => (
                     <option key={l.id} value={l.id}>{l.nom}</option>
@@ -291,11 +324,11 @@ export default function AdminAteliersPage() {
               </div>
               
               <div>
-                <label className="block text-xs tracking-widest mb-2">ANIMATRICE</label>
+                <label className="block text-sm font-medium mb-1">Animatrice</label>
                 <select
                   value={formData.animatrice}
                   onChange={(e) => setFormData({ ...formData, animatrice: e.target.value as Animatrice })}
-                  className="w-full border border-black p-3 text-sm bg-white"
+                  className="w-full border rounded px-3 py-2"
                 >
                   {ANIMATRICES.map(a => (
                     <option key={a} value={a}>{a}</option>
@@ -304,25 +337,31 @@ export default function AdminAteliersPage() {
               </div>
               
               <div>
-                <label className="block text-xs tracking-widest mb-2">PLACES MAX</label>
+                <label className="block text-sm font-medium mb-1">Places max</label>
                 <input
                   type="number"
                   min="1"
                   max="10"
                   value={formData.placesMax}
                   onChange={(e) => setFormData({ ...formData, placesMax: parseInt(e.target.value) })}
-                  className="w-full border border-black p-3 text-sm"
+                  className="w-full border rounded px-3 py-2"
                 />
               </div>
             </div>
             
-            <div className="p-6 border-t border-black">
+            <div className="p-6 border-t flex gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="flex-1 py-2 border rounded hover:bg-gray-50"
+              >
+                Annuler
+              </button>
               <button
                 onClick={handleSubmit}
                 disabled={!formData.date || submitting}
-                className="w-full py-3 bg-black text-white text-sm tracking-widest hover:bg-gray-900 disabled:opacity-50"
+                className="flex-1 py-2 bg-[#22209C] text-white rounded hover:opacity-90 disabled:opacity-50"
               >
-                {submitting ? '...' : 'CRÉER'}
+                {submitting ? '...' : 'Créer'}
               </button>
             </div>
           </div>
@@ -331,14 +370,14 @@ export default function AdminAteliersPage() {
 
       {/* Modal détails réservations */}
       {selectedCreneau && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-lg border border-black max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-black">
-              <h3 className="text-sm tracking-widest">RÉSERVATIONS</h3>
-              <button onClick={() => setSelectedCreneau(null)} className="text-2xl hover:opacity-50">×</button>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-lg rounded-lg shadow-xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="font-semibold text-lg">Réservations</h3>
+              <button onClick={() => setSelectedCreneau(null)} className="text-2xl text-gray-400 hover:text-gray-600">×</button>
             </div>
             
-            <div className="p-6 border-b border-black">
+            <div className="p-6 border-b bg-gray-50">
               <p className="font-medium">{formatDate(selectedCreneau.date)} à {selectedCreneau.heure}</p>
               <p className="text-sm text-gray-600">{LIEUX.find(l => l.id === selectedCreneau.lieu)?.nom}</p>
               <p className="text-sm text-gray-600">Animatrice : {selectedCreneau.animatrice}</p>
@@ -350,14 +389,14 @@ export default function AdminAteliersPage() {
               ) : (
                 <div className="space-y-4">
                   {selectedCreneau.reservations.map((r) => (
-                    <div key={r.id} className="border border-black p-4">
+                    <div key={r.id} className="border rounded-lg p-4">
                       <p className="font-medium">{r.nom}</p>
                       <p className="text-sm text-gray-600">{r.email}</p>
                       <p className="text-sm text-gray-600">{r.telephone}</p>
-                      <p className="text-sm mt-2">
-                        {r.participants} participant{r.participants > 1 ? 's' : ''}
-                        {r.paye && <span className="ml-2 text-green-600">✓ Payé</span>}
-                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-sm">{r.participants} participant{r.participants > 1 ? 's' : ''}</span>
+                        {r.paye && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Payé</span>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -366,6 +405,6 @@ export default function AdminAteliersPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
