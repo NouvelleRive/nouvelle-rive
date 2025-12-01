@@ -55,9 +55,7 @@ export async function syncVentesDepuisSquare(
   // 2. Pré-charger les ventes existantes GLOBALEMENT pour éviter les doublons
   // On vérifie par orderId + itemName/sku car une vente Square ne doit exister qu'une fois
   const ventesExistantes = new Set<string>()
-  const ventesSnap = await adminDb.collection('ventes')
-    .where('orderId', '!=', null)
-    .get()
+  const ventesSnap = await adminDb.collection('ventes').get()
   
   for (const doc of ventesSnap.docs) {
     const data = doc.data()
