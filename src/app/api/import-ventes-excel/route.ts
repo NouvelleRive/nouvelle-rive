@@ -34,10 +34,13 @@ export async function POST(req: NextRequest) {
     const ventesSnap = await adminDb.collection('ventes').get()
     for (const doc of ventesSnap.docs) {
       const data = doc.data()
-      // Clé: date + article + prix
-      const key = `${data.dateVente?.toDate?.()?.toISOString?.()?.split('T')[0] || ''}-${data.nomSquare || data.nom || ''}-${data.prixVenteReel || ''}`
-      ventesExistantes.add(key)
+      // Clé: transactionId + article + prix
+      if (data.transactionId) {
+        ventesExistantes.add(`${data.transactionId}-${data.nomSquare || data.nom || ''}-${data.prixVenteReel || ''}`)
+      }
     }
+    
+    console.log(`📋 ${ventesExistantes.size} ventes existantes`)
 
     let imported = 0
     let errors = 0
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
         const prixStr = row['Ventes brutes'] || row['Ventes nettes'] || row['Ventes brute'] || row['Ventes nette'] || row['Prix'] || ''
         const remarques = row['Remarques'] || row['remarques'] || ''
         const categorie = row['Catégorie'] || row['categorie'] || ''
-        const transactionId = row['Nº de transaction'] || row['Nº\xa0de transaction'] || ''
+        const transactionId = row['Nº de transaction'] || row['Nº\xa0de transaction'] || row['N° de transaction'] || ''
 
         // Parser le prix (format français: "165,00 €")
         let prix: number | null = null
@@ -63,6 +66,13 @@ export async function POST(req: NextRequest) {
           const prixClean = prixStr.toString().replace(/[€\s]/g, '').replace(',', '.')
           prix = parseFloat(prixClean)
           if (isNaN(prix)) prix = null
+        }
+
+        // Skip si prix est 0 ou null (remboursements, annulations)
+        if (!prix || prix <= 0) {
+          console.log(`⏭️ Skip ligne sans prix: ${article}`)
+          skipped++
+          continue
         }
 
         // Parser la date (format YYYY-MM-DD)
@@ -84,14 +94,16 @@ export async function POST(req: NextRequest) {
         }
 
         if (!dateVente || isNaN(dateVente.getTime())) {
-          console.warn(`⚠️ Date invalide: ${dateStr}`)
+          console.warn(`⚠️ Date invalide: ${dateStr} | Article: ${article}`)
           errors++
           continue
         }
 
-        // Vérifier doublon par transactionId + article
-        const dedupeKey = transactionId ? `${transactionId}-${article}` : `${dateVente.toISOString().split('T')[0]}-${article}-${prix}`
+        // Vérifier doublon - clé unique = transactionId + article + ligne (index)
+        // On ne déduplique que si déjà en base, pas entre lignes Excel
+        const dedupeKey = transactionId ? `${transactionId}-${article}-${prix}` : `${dateVente.toISOString().split('T')[0]}-${article}-${prix}-${imported}`
         if (ventesExistantes.has(dedupeKey)) {
+          console.log(`⏭️ Doublon base: ${dedupeKey.substring(0, 50)}`)
           skipped++
           continue
         }
