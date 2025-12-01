@@ -1,24 +1,20 @@
 // app/ateliers/confirmation/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, Calendar, MapPin, Clock } from 'lucide-react'
 
-export default function ConfirmationPage() {
+function ConfirmationContent() {
   const searchParams = useSearchParams()
-  const sessionId = searchParams.get('session_id')
+  const reservationId = searchParams.get('reservation')
   const [loading, setLoading] = useState(true)
-  const [reservation, setReservation] = useState<any>(null)
 
   useEffect(() => {
-    if (sessionId) {
-      // On pourrait récupérer les détails de la réservation ici
-      // Pour l'instant on affiche juste la confirmation
-      setLoading(false)
-    }
-  }, [sessionId])
+    // Simule le chargement
+    setLoading(false)
+  }, [reservationId])
 
   if (loading) {
     return (
@@ -89,5 +85,17 @@ export default function ConfirmationPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22209C]"></div>
+      </div>
+    }>
+      <ConfirmationContent />
+    </Suspense>
   )
 }
