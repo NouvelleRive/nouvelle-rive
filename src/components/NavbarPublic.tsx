@@ -36,6 +36,7 @@ export default function NavbarPublic() {
     { href: '/boutique/homme', label: '(PLUTÔT) HOMME' },
     { href: '/boutique/enfant', label: 'ENFANT' },
     { href: '/boutique/accessoires', label: 'ACCESSOIRES' },
+    { href: '/ateliers', label: 'ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE' },
     { href: '/nous-rencontrer', label: '8 RUE DES ECOUFFES #IRL' },
   ]
 
