@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import SyncVentesButton from '@/components/SyncVentesButton'
-import { Plus, X, Search, Download, Link, Trash2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { Plus, X, Search, Download, Link, Trash2, CheckCircle, AlertCircle, RefreshCw, CheckSquare, Square } from 'lucide-react'
 
 interface Vente {
   id: string
@@ -29,6 +29,12 @@ export default function AdminNosVentesPage() {
   // Ventes
   const [ventes, setVentes] = useState<Vente[]>([])
   const [loadingVentes, setLoadingVentes] = useState(false)
+
+  // Sélection multiple
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingBatch, setDeletingBatch] = useState(false)
+  const [deleteProgress, setDeleteProgress] = useState({ done: 0, total: 0 })
 
   // Filtres
   const [searchTerm, setSearchTerm] = useState('')
@@ -60,16 +66,12 @@ export default function AdminNosVentesPage() {
   const [syncStartDate, setSyncStartDate] = useState('')
   const [syncEndDate, setSyncEndDate] = useState('')
 
-  // Charger les ventes
-  const loadVentes = async (chineuseUid?: string) => {
+  // Charger les ventes - TOUJOURS charger toutes les ventes puis filtrer côté client
+  const loadVentes = async () => {
     setLoadingVentes(true)
     try {
-      const url = chineuseUid 
-        ? `/api/ventes?uid=${chineuseUid}`
-        : '/api/ventes'
-      
-      console.log('📊 Chargement ventes:', url)
-      const res = await fetch(url)
+      // Toujours charger TOUTES les ventes (le filtre se fait côté client)
+      const res = await fetch('/api/ventes')
       const data = await res.json()
       if (data.success) {
         setVentes(data.ventes || [])
@@ -82,31 +84,26 @@ export default function AdminNosVentesPage() {
     }
   }
 
-  // Recharger quand la chineuse change
+  // Charger au montage
   useEffect(() => {
-    loadVentes(selectedChineuse?.uid)
-  }, [selectedChineuse?.uid])
+    loadVentes()
+  }, [])
 
   // Produits disponibles (non vendus)
   const produitsDisponibles = useMemo(() => {
-    // Si une chineuse est sélectionnée, filtrer ses produits
-    // Sinon, afficher tous les produits de toutes les chineuses
-    if (selectedChineuse) {
-      return produitsFiltres.filter(p => 
-        !p.vendu && (p.quantite ?? 1) > 0 && p.statut !== 'supprime' && p.statut !== 'retour'
-      )
-    } else {
-      // Mode admin global - on a besoin de tous les produits
-      // Pour l'instant, on utilise produitsFiltres mais en mode admin il faudrait charger tous les produits
-      return produitsFiltres.filter(p => 
-        !p.vendu && (p.quantite ?? 1) > 0 && p.statut !== 'supprime' && p.statut !== 'retour'
-      )
-    }
-  }, [produitsFiltres, selectedChineuse])
+    return produitsFiltres.filter(p => 
+      !p.vendu && (p.quantite ?? 1) > 0 && p.statut !== 'supprime' && p.statut !== 'retour'
+    )
+  }, [produitsFiltres])
 
-  // Filtrer les ventes
+  // Filtrer les ventes - INCLUANT le filtre par chineuse
   const ventesFiltrees = useMemo(() => {
     let result = [...ventes]
+
+    // FILTRE PAR CHINEUSE (le plus important!)
+    if (selectedChineuse?.uid) {
+      result = result.filter(v => v.chineurUid === selectedChineuse.uid)
+    }
 
     // Filtre recherche
     if (searchTerm) {
@@ -137,21 +134,25 @@ export default function AdminNosVentesPage() {
     }
 
     return result
-  }, [ventes, searchTerm, filterMois, filterStatut])
+  }, [ventes, selectedChineuse?.uid, searchTerm, filterMois, filterStatut])
 
-  // Liste des mois disponibles
+  // Liste des mois disponibles (basée sur les ventes filtrées par chineuse)
   const moisDisponibles = useMemo(() => {
+    const ventesChineuse = selectedChineuse?.uid 
+      ? ventes.filter(v => v.chineurUid === selectedChineuse.uid)
+      : ventes
+    
     const mois = new Set<string>()
-    ventes.forEach(v => {
+    ventesChineuse.forEach(v => {
       if (v.dateVente) {
         const date = new Date(v.dateVente)
         mois.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`)
       }
     })
     return Array.from(mois).sort().reverse()
-  }, [ventes])
+  }, [ventes, selectedChineuse?.uid])
 
-  // Stats
+  // Stats (basées sur ventes filtrées)
   const stats = useMemo(() => {
     const attribuees = ventesFiltrees.filter(v => v.isAttribue)
     const nonAttribuees = ventesFiltrees.filter(v => !v.isAttribue)
@@ -164,7 +165,59 @@ export default function AdminNosVentesPage() {
     }
   }, [ventesFiltrees])
 
-  // Handlers
+  // Sélection
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds)
+    if (newSet.has(id)) {
+      newSet.delete(id)
+    } else {
+      newSet.add(id)
+    }
+    setSelectedIds(newSet)
+  }
+
+  const selectAll = () => {
+    if (selectedIds.size === ventesFiltrees.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(ventesFiltrees.map(v => v.id)))
+    }
+  }
+
+  // Suppression groupée - utilise l'API batch
+  const handleDeleteBatch = async () => {
+    if (selectedIds.size === 0) return
+    
+    setDeletingBatch(true)
+    setDeleteProgress({ done: 0, total: selectedIds.size })
+    
+    try {
+      // Utiliser l'API batch pour supprimer toutes les ventes d'un coup
+      const res = await fetch('/api/ventes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ venteIds: Array.from(selectedIds) })
+      })
+      
+      const data = await res.json()
+      
+      if (data.success) {
+        setDeleteProgress({ done: selectedIds.size, total: selectedIds.size })
+        setShowDeleteModal(false)
+        setSelectedIds(new Set())
+        await loadVentes()
+      } else {
+        alert(data.error || 'Erreur lors de la suppression')
+      }
+    } catch (err) {
+      console.error('Erreur suppression batch:', err)
+      alert('Erreur lors de la suppression')
+    } finally {
+      setDeletingBatch(false)
+    }
+  }
+
+  // Handlers existants
   const handleAjoutVente = async () => {
     const produit = produitsDisponibles.find(p => p.sku === selectedSku)
     if (!produit || !prixVente) return
@@ -184,7 +237,7 @@ export default function AdminNosVentesPage() {
         setShowModalAjout(false)
         setSelectedSku('')
         setPrixVente('')
-        await loadVentes(selectedChineuse?.uid)
+        await loadVentes()
         await loadData()
       } else {
         alert('Erreur lors de l\'ajout')
@@ -211,10 +264,10 @@ export default function AdminNosVentesPage() {
         setShowModalAttribuer(false)
         setVenteSelectionnee(null)
         setSelectedProduitId('')
-        await loadVentes(selectedChineuse?.uid)
+        await loadVentes()
         await loadData()
       } else {
-        alert('Erreur: ' + data.error)
+        alert(data.error || 'Erreur')
       }
     } catch { alert('Erreur') }
     finally { setAttribuerLoading(false) }
@@ -238,10 +291,10 @@ export default function AdminNosVentesPage() {
         setShowModalSupprimer(false)
         setVenteSelectionnee(null)
         setRemettreEnStock(false)
-        await loadVentes(selectedChineuse?.uid)
-        await loadData()
+        await loadVentes()
+        if (remettreEnStock) await loadData()
       } else {
-        alert('Erreur: ' + data.error)
+        alert(data.error || 'Erreur')
       }
     } catch { alert('Erreur') }
     finally { setSupprimerLoading(false) }
@@ -249,188 +302,231 @@ export default function AdminNosVentesPage() {
 
   const handleSkuChange = (sku: string) => {
     setSelectedSku(sku)
-    const p = produitsDisponibles.find(p => p.sku === sku)
-    if (p?.prix) setPrixVente(p.prix.toString())
+    const produit = produitsDisponibles.find(p => p.sku === sku)
+    if (produit?.prix) {
+      setPrixVente(produit.prix.toString())
+    }
   }
 
-  // Sync global toutes les chineuses
   const handleSyncGlobal = async () => {
+    if (!syncStartDate || !syncEndDate) {
+      alert('Veuillez sélectionner une période')
+      return
+    }
+    
     setSyncGlobalLoading(true)
     try {
       const res = await fetch('/api/sync-ventes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          all: true,
-          startDateStr: syncStartDate ? `${syncStartDate}T00:00:00Z` : undefined,
-          endDateStr: syncEndDate ? `${syncEndDate}T23:59:59Z` : undefined,
+          startDate: syncStartDate,
+          endDate: syncEndDate
         })
       })
       const data = await res.json()
       if (data.success) {
-        alert(`Sync terminé: ${data.message}`)
-        await loadVentes(selectedChineuse?.uid)
-        await loadData()
+        alert(`Sync terminé: ${data.imported || 0} ventes importées`)
+        await loadVentes()
       } else {
-        alert('Erreur: ' + data.error)
+        alert(data.error || 'Erreur sync')
       }
-    } catch (err) {
-      alert('Erreur sync global')
+    } catch (e) {
+      alert('Erreur de synchronisation')
     } finally {
       setSyncGlobalLoading(false)
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '—'
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
+  const formatDate = (date: string | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleDateString('fr-FR')
   }
 
-  const formatMois = (moisStr: string) => {
-    const [annee, mois] = moisStr.split('-')
-    const date = new Date(parseInt(annee), parseInt(mois) - 1)
+  const formatMois = (mois: string) => {
+    const [year, month] = mois.split('-')
+    const date = new Date(parseInt(year), parseInt(month) - 1)
     return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
   }
 
   if (loading || loadingVentes) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22209C]"></div>
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#22209C]"></div>
       </div>
     )
   }
 
   return (
     <>
-      {/* Header */}
-      <div className="mb-4 flex flex-wrap gap-4 items-center justify-between">
-        <div className="flex items-center gap-4">
-          {selectedChineuse ? (
-            <SyncVentesButton
-              uid={selectedChineuse.uid}
-              onSyncComplete={() => {
-                loadVentes(selectedChineuse?.uid)
-                loadData()
-              }}
-              showDateFilters={true}
-              buttonText={`Sync ventes ${selectedChineuse.trigramme || ''}`}
-            />
-          ) : (
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={syncStartDate}
-                onChange={(e) => setSyncStartDate(e.target.value)}
-                className="border rounded px-2 py-2 text-sm"
-                placeholder="Début"
-              />
-              <input
-                type="date"
-                value={syncEndDate}
-                onChange={(e) => setSyncEndDate(e.target.value)}
-                className="border rounded px-2 py-2 text-sm"
-                placeholder="Fin"
-              />
-              <button
-                onClick={handleSyncGlobal}
-                disabled={syncGlobalLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded hover:opacity-90 disabled:opacity-50"
-              >
-                <RefreshCw size={16} className={syncGlobalLoading ? 'animate-spin' : ''} />
-                {syncGlobalLoading ? 'Sync en cours...' : 'Sync toutes les ventes'}
-              </button>
-            </div>
+      {/* Header avec sync */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          {selectedChineuse && (
+            <span className="px-3 py-1 bg-gray-100 rounded text-sm font-medium">
+              {selectedChineuse.trigramme}
+            </span>
           )}
         </div>
 
-        <button
-          onClick={() => setShowModalAjout(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded hover:opacity-90"
-        >
-          <Plus size={18} /> Ajouter une vente
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Sync par période */}
+          <div className="flex items-center gap-2">
+            <div>
+              <label className="block text-xs text-gray-500">Début</label>
+              <input 
+                type="date" 
+                value={syncStartDate}
+                onChange={(e) => setSyncStartDate(e.target.value)}
+                className="border rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500">Fin</label>
+              <input 
+                type="date" 
+                value={syncEndDate}
+                onChange={(e) => setSyncEndDate(e.target.value)}
+                className="border rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <button
+              onClick={handleSyncGlobal}
+              disabled={syncGlobalLoading || !syncStartDate || !syncEndDate}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 mt-4"
+            >
+              <RefreshCw size={16} className={syncGlobalLoading ? 'animate-spin' : ''} />
+              {syncGlobalLoading ? 'Sync...' : `Sync ventes ${selectedChineuse?.trigramme || ''}`}
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowModalAjout(true)}
+            className="flex items-center gap-2 px-4 py-2 border-2 border-[#22209C] text-[#22209C] rounded text-sm hover:bg-[#22209C] hover:text-white mt-4"
+          >
+            <Plus size={16} />
+            Ajouter une vente
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-white border rounded-lg p-4">
           <p className="text-sm text-gray-500">Total ventes</p>
           <p className="text-2xl font-bold">{stats.total}</p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-sm text-green-600">Attribuées</p>
-          <p className="text-2xl font-bold text-green-700">{stats.attribuees}</p>
+        <div className="bg-white border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-600">Attribuées</p>
+          <p className="text-2xl font-bold text-blue-600">{stats.attribuees}</p>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-600">À attribuer</p>
-          <p className="text-2xl font-bold text-red-700">{stats.nonAttribuees}</p>
+        <div className="bg-white border border-amber-200 rounded-lg p-4">
+          <p className="text-sm text-amber-600">À attribuer</p>
+          <p className="text-2xl font-bold text-amber-600">{stats.nonAttribuees}</p>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-600">CA (attribuées)</p>
-          <p className="text-2xl font-bold text-blue-700">{stats.totalCA.toFixed(0)}€</p>
+        <div className="bg-white border border-green-200 rounded-lg p-4">
+          <p className="text-sm text-green-600">CA (attribuées)</p>
+          <p className="text-2xl font-bold text-green-600">{stats.totalCA}€</p>
         </div>
       </div>
 
-      {/* Filtres */}
-      <div className="bg-white border rounded-lg p-4 mb-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* Recherche */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher SKU, nom, remarque..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded"
-            />
+      {/* Barre d'actions groupées */}
+      {selectedIds.size > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 flex items-center justify-between">
+          <span className="font-medium">{selectedIds.size} vente{selectedIds.size > 1 ? 's' : ''} sélectionnée{selectedIds.size > 1 ? 's' : ''}</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1 border rounded text-sm hover:bg-white"
+            >
+              Désélectionner
+            </button>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1"
+            >
+              <Trash2 size={14} />
+              Supprimer ({selectedIds.size})
+            </button>
           </div>
-
-          {/* Filtre mois */}
-          <select
-            value={filterMois}
-            onChange={(e) => setFilterMois(e.target.value)}
-            className="border rounded px-3 py-2"
-          >
-            <option value="all">Tous les mois</option>
-            {moisDisponibles.map(m => (
-              <option key={m} value={m}>{formatMois(m)}</option>
-            ))}
-          </select>
-
-          {/* Filtre statut */}
-          <select
-            value={filterStatut}
-            onChange={(e) => setFilterStatut(e.target.value as any)}
-            className="border rounded px-3 py-2"
-          >
-            <option value="all">Tous statuts</option>
-            <option value="attribue">✅ Attribuées</option>
-            <option value="non-attribue">❌ À attribuer</option>
-          </select>
         </div>
+      )}
+
+      {/* Filtres */}
+      <div className="flex flex-wrap gap-4 mb-6">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Rechercher SKU, nom, remarque..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded"
+          />
+        </div>
+
+        <select
+          value={filterMois}
+          onChange={(e) => setFilterMois(e.target.value)}
+          className="border rounded px-3 py-2"
+        >
+          <option value="all">Tous les mois</option>
+          {moisDisponibles.map(m => (
+            <option key={m} value={m}>{formatMois(m)}</option>
+          ))}
+        </select>
+
+        <select
+          value={filterStatut}
+          onChange={(e) => setFilterStatut(e.target.value as any)}
+          className="border rounded px-3 py-2"
+        >
+          <option value="all">Tous statuts</option>
+          <option value="attribue">Attribuées</option>
+          <option value="non-attribue">Non attribuées</option>
+        </select>
       </div>
 
       {/* Liste des ventes */}
       <div className="space-y-2">
+        {/* Header sélection */}
+        <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded">
+          <button onClick={selectAll} className="text-gray-500 hover:text-gray-700">
+            {selectedIds.size === ventesFiltrees.length && ventesFiltrees.length > 0 ? (
+              <CheckSquare size={20} />
+            ) : (
+              <Square size={20} />
+            )}
+          </button>
+          <span className="text-sm text-gray-500">
+            {selectedIds.size === 0 ? 'Tout sélectionner' : `${selectedIds.size} sélectionnée(s)`}
+          </span>
+        </div>
+
         {ventesFiltrees.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            Aucune vente trouvée
+            <p>Aucune vente trouvée</p>
           </div>
         ) : (
-          ventesFiltrees.map(vente => (
+          ventesFiltrees.map((vente) => (
             <div
               key={vente.id}
-              className={`flex items-center gap-4 p-4 rounded-lg border-l-4 bg-white ${
-                vente.isAttribue 
-                  ? 'border-l-green-500' 
-                  : 'border-l-red-500'
-              }`}
+              className={`flex items-center gap-4 p-4 bg-white border rounded-lg ${
+                vente.isAttribue ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-amber-500'
+              } ${selectedIds.has(vente.id) ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}
             >
+              {/* Checkbox */}
+              <button 
+                onClick={() => toggleSelect(vente.id)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                {selectedIds.has(vente.id) ? (
+                  <CheckSquare size={20} className="text-blue-500" />
+                ) : (
+                  <Square size={20} />
+                )}
+              </button>
+
               {/* Icône statut */}
               <div className={`flex-shrink-0 ${vente.isAttribue ? 'text-green-500' : 'text-red-500'}`}>
                 {vente.isAttribue ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
@@ -492,6 +588,48 @@ export default function AdminNosVentesPage() {
           ))
         )}
       </div>
+
+      {/* Modal Suppression groupée */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="font-semibold text-lg mb-4">Supprimer {selectedIds.size} vente{selectedIds.size > 1 ? 's' : ''} ?</h3>
+            
+            <p className="text-gray-600 mb-4">
+              Cette action est irréversible. Les ventes seront définitivement supprimées.
+            </p>
+
+            {deletingBatch && (
+              <div className="mb-4">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-red-500 transition-all"
+                    style={{ width: `${(deleteProgress.done / deleteProgress.total) * 100}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{deleteProgress.done} / {deleteProgress.total}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button 
+                onClick={() => setShowDeleteModal(false)} 
+                disabled={deletingBatch}
+                className="px-4 py-2 border rounded disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteBatch}
+                disabled={deletingBatch}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+              >
+                {deletingBatch ? `Suppression...` : 'Confirmer la suppression'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Ajout */}
       {showModalAjout && (

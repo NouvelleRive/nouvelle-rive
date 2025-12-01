@@ -149,12 +149,39 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * DELETE - Supprimer une vente
- * Body: { venteId: string, remettreEnStock?: boolean }
+ * DELETE - Supprimer une ou plusieurs ventes
+ * Body: { venteId: string, remettreEnStock?: boolean } OU { venteIds: string[] }
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const { venteId, remettreEnStock } = await req.json()
+    const body = await req.json()
+    
+    // Mode batch : plusieurs ventes
+    if (body.venteIds && Array.isArray(body.venteIds)) {
+      const BATCH_SIZE = 500
+      let deleted = 0
+      
+      for (let i = 0; i < body.venteIds.length; i += BATCH_SIZE) {
+        const batch = adminDb.batch()
+        const chunk = body.venteIds.slice(i, i + BATCH_SIZE)
+        
+        for (const id of chunk) {
+          batch.delete(adminDb.collection('ventes').doc(id))
+        }
+        
+        await batch.commit()
+        deleted += chunk.length
+      }
+      
+      return NextResponse.json({
+        success: true,
+        message: `${deleted} ventes supprimées`,
+        deleted,
+      })
+    }
+    
+    // Mode single
+    const { venteId, remettreEnStock } = body
 
     if (!venteId) {
       return NextResponse.json(
