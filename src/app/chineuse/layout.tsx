@@ -10,16 +10,26 @@ import Link from 'next/link'
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 
+// Emails des animatrices ateliers - à ajuster selon vrais emails
+const ANIMATRICES_EMAILS = [
+  'ines@nouvellerive.fr',      // INES PINEAU
+  'tetedorange@gmail.com',     // TÊTE D'ORANGE
+  'archives@gmail.com',        // ARCHIVE.S
+  'gigi@gigiparis.com',        // GIGI PARIS
+]
+
 function ChineuseNavbar() {
   const pathname = usePathname()
   const [isAdmin, setIsAdmin] = useState(false)
   const [isVendeuse, setIsVendeuse] = useState(false)
+  const [isAnimatrice, setIsAnimatrice] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAdmin(user?.email === ADMIN_EMAIL)
       setIsVendeuse(user?.email === VENDEUSE_EMAIL)
+      setIsAnimatrice(ANIMATRICES_EMAILS.includes(user?.email || ''))
     })
     return () => unsubscribe()
   }, [])
@@ -36,14 +46,19 @@ function ChineuseNavbar() {
     { href: '/chineuse/profil', label: 'Mon profil' },
   ]
 
+  // Ajouter Ateliers pour admin ET animatrices
+  if (isAdmin || isAnimatrice) {
+    links.push({ href: '/chineuse/ateliers', label: 'Ateliers' })
+  }
+
   // Ajouter Commandes pour admin ET vendeuse
   if (isAdmin || isVendeuse) {
-    links.unshift({ href: '/admin/nos-commandes', label: '📦 Commandes' })
+    links.unshift({ href: '/admin/nos-commandes', label: 'Commandes' })
   }
 
   // Ajouter Admin seulement pour admin
   if (isAdmin) {
-    links.push({ href: '/admin/nos-produits', label: '🔧 Admin' })
+    links.push({ href: '/admin/nos-produits', label: 'Admin' })
   }
 
   const isActive = (href: string) => pathname === href
