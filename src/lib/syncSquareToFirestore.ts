@@ -1,5 +1,6 @@
 import { Client, Environment } from 'square'
-import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import { adminDb } from '@/lib/firebaseAdmin'
+import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 
 const accessToken = process.env.SQUARE_ACCESS_TOKEN
 const locationId = process.env.SQUARE_LOCATION_ID
@@ -21,8 +22,6 @@ export async function syncVentesDepuisSquare(
 ) {
   console.log('🔄 Sync ventes pour', chineurNom)
 
-  const adminDb = getFirestore()
-  
   const chineuseSnap = await adminDb.collection('chineuse').doc(uid).get()
   if (!chineuseSnap.exists) {
     throw new Error(`Chineuse ${uid} non trouvée`)
@@ -109,7 +108,6 @@ export async function syncVentesDepuisSquare(
   const catalogIdsArray = Array.from(catalogIdsToFetch)
   
   if (catalogIdsArray.length > 0) {
-    // Batch par groupes de 100
     for (let i = 0; i < catalogIdsArray.length; i += 100) {
       const batch = catalogIdsArray.slice(i, i + 100)
       try {
@@ -129,10 +127,13 @@ export async function syncVentesDepuisSquare(
     }
   }
 
-  // 6. Traiter les commandes
+  // 6. Traiter les commandes et collecter les opérations batch
   let nbSync = 0
   let nbNonAttribuees = 0
   let nbNotFound = 0
+
+  const ventesToAdd: any[] = []
+  const produitsToUpdate: { ref: FirebaseFirestore.DocumentReference; data: any }[] = []
 
   for (const order of orders) {
     for (const item of order.lineItems || []) {
@@ -152,7 +153,6 @@ export async function syncVentesDepuisSquare(
       let sku: string | null = null
 
       if (isMontantPerso) {
-        // Vérifier si la remarque concerne cette chineuse
         const noteLower = itemNote.toLowerCase()
         const belongsToChineuse = 
           noteLower.includes(trigramme.toLowerCase()) ||
@@ -160,7 +160,6 @@ export async function syncVentesDepuisSquare(
         
         if (!belongsToChineuse) continue
 
-        // Essayer de trouver le SKU dans la remarque
         const skuMatch = noteLower.match(/\b([a-z]{2,4})(\d{1,4})\b/i)
         if (skuMatch) {
           const potentialSku = skuMatch[0].toLowerCase()
@@ -176,16 +175,13 @@ export async function syncVentesDepuisSquare(
           }
         }
       } else {
-        // Vente normale - chercher par catalogObjectId ou SKU
         produitDoc = produitsByCatalogId.get(catalogObjectId!) || null
         
         if (!produitDoc) {
-          // Essayer avec le SKU du catalogue
           const skuFromCatalog = catalogIdToSku.get(catalogObjectId!)
           if (skuFromCatalog) {
             produitDoc = produitsBySku.get(skuFromCatalog.toLowerCase()) || null
             
-            // Essayer avec trigramme si SKU numérique
             if (!produitDoc && /^\d+$/.test(skuFromCatalog) && trigramme) {
               const skuAvecTri = `${trigramme.toLowerCase()}${skuFromCatalog}`
               produitDoc = produitsBySku.get(skuAvecTri) || null
@@ -209,12 +205,11 @@ export async function syncVentesDepuisSquare(
       ventesExistantes.add(dedupeKey)
 
       if (produitDoc) {
-        // Vente attribuée
         const produitData = produitDoc.data()
         const quantiteActuelle = produitData.quantite || 1
         const nouvQuantite = Math.max(0, quantiteActuelle - quantityVendue)
 
-        await adminDb.collection('ventes').add({
+        ventesToAdd.push({
           produitId: produitDoc.id,
           nom: produitData.nom,
           sku: produitData.sku,
@@ -234,19 +229,17 @@ export async function syncVentesDepuisSquare(
           createdAt: Timestamp.now(),
         })
 
-        // Update produit
         const updateData: any = { quantite: nouvQuantite }
         if (nouvQuantite === 0) {
           updateData.vendu = true
           updateData.dateVente = Timestamp.fromDate(new Date(order.closedAt!))
           updateData.prixVenteReel = prixReel
         }
-        await produitDoc.ref.update(updateData)
+        produitsToUpdate.push({ ref: produitDoc.ref, data: updateData })
         
         nbSync++
       } else if (isMontantPerso) {
-        // Vente non attribuée
-        await adminDb.collection('ventes').add({
+        ventesToAdd.push({
           produitId: null,
           nom: itemNote || 'Vente non attribuée',
           sku: null,
@@ -271,6 +264,34 @@ export async function syncVentesDepuisSquare(
         nbNotFound++
       }
     }
+  }
+
+  // 7. Batch write Firestore (max 500 par batch)
+  const BATCH_SIZE = 500
+  
+  // Écrire les ventes
+  for (let i = 0; i < ventesToAdd.length; i += BATCH_SIZE) {
+    const batch = adminDb.batch()
+    const ventesChunk = ventesToAdd.slice(i, i + BATCH_SIZE)
+    
+    for (const vente of ventesChunk) {
+      const ref = adminDb.collection('ventes').doc()
+      batch.set(ref, vente)
+    }
+    
+    await batch.commit()
+  }
+
+  // Mettre à jour les produits
+  for (let i = 0; i < produitsToUpdate.length; i += BATCH_SIZE) {
+    const batch = adminDb.batch()
+    const produitsChunk = produitsToUpdate.slice(i, i + BATCH_SIZE)
+    
+    for (const { ref, data } of produitsChunk) {
+      batch.update(ref, data)
+    }
+    
+    await batch.commit()
   }
 
   console.log(`✅ ${chineurNom}: ${nbSync} sync, ${nbNonAttribuees} non attribuées`)
