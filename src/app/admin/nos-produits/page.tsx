@@ -113,7 +113,7 @@ export default function AdminProduitsPage() {
     finally { setDeleting(false) }
   }
 
-  // Suppression groupée
+  // Suppression groupée (optimisée batch)
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0 || !bulkDeleteReason) return
     setBulkDeleting(true)
@@ -125,28 +125,19 @@ export default function AdminProduitsPage() {
         return
       }
 
-      let successCount = 0
-      let errorCount = 0
+      const res = await fetch('/api/delete-produits-batch', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          productIds: Array.from(selectedIds), 
+          reason: bulkDeleteReason 
+        }),
+      })
 
-      for (const productId of selectedIds) {
-        try {
-          const res = await fetch('/api/delete-produits', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ productId, reason: bulkDeleteReason }),
-          })
-          if (res.ok) {
-            successCount++
-          } else {
-            errorCount++
-          }
-        } catch {
-          errorCount++
-        }
-      }
+      const data = await res.json()
 
       setShowBulkDeleteModal(false)
       setBulkDeleteReason(null)
@@ -154,7 +145,11 @@ export default function AdminProduitsPage() {
       setSelectionMode(false)
       await loadData()
       
-      alert(`${successCount} produit(s) supprimé(s)${errorCount > 0 ? `, ${errorCount} erreur(s)` : ''}`)
+      if (res.ok) {
+        alert(`${data.count} produit(s) supprimé(s)`)
+      } else {
+        alert(data.error || 'Erreur suppression')
+      }
     } catch {
       alert('Erreur suppression groupée')
     } finally {

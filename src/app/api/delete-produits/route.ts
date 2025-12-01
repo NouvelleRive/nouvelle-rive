@@ -1,22 +1,32 @@
-// app/api/delete-produits/route.ts
+// app/api/delete-produits-batch/route.ts
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth } from '@/lib/firebaseAdmin'
-import { getFirestore, FieldValue } from 'firebase-admin/firestore'
-import { archiveOrDeleteByVariation } from '@/lib/square/archiveOrDeleteByVariation'
+import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
+import { FieldValue } from 'firebase-admin/firestore'
+import { Client, Environment } from 'square'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
+
+const squareClient = new Client({
+  accessToken: process.env.SQUARE_ACCESS_TOKEN,
+  environment: Environment.Production,
+})
 
 type Reason = 'erreur' | 'produit_recupere'
 
 export async function POST(req: NextRequest) {
   try {
-    const { productId, reason } = await req.json()
+    const { productIds, reason } = await req.json()
     const justif: Reason = reason === 'produit_recupere' ? 'produit_recupere' : 'erreur'
 
-    if (!productId) {
-      return NextResponse.json({ success: false, error: 'productId manquant' }, { status: 400 })
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return NextResponse.json({ success: false, error: 'productIds manquant ou vide' }, { status: 400 })
+    }
+
+    // Limite à 100 produits par requête
+    if (productIds.length > 100) {
+      return NextResponse.json({ success: false, error: 'Maximum 100 produits par requête' }, { status: 400 })
     }
 
     // --- Auth Bearer ---
@@ -34,108 +44,85 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Token invalide' }, { status: 401 })
     }
 
-    const adminDb = getFirestore()
-
-    // --- Récup produit ---
-    const ref = adminDb.collection('produits').doc(String(productId))
-    const snap = await ref.get()
-    if (!snap.exists) {
-      return NextResponse.json({ success: false, error: 'Produit introuvable' }, { status: 404 })
-    }
-    const data = snap.data() as any
-
-    // --- Sécurité : Admin OU propriétaire ---
     const userEmail = String(decoded?.email || '')
-    const userUid = String(decoded?.uid || '')
-    
-    // ✅ L'admin peut tout supprimer
     const isAdmin = userEmail === ADMIN_EMAIL
-    
-    // Vérification propriétaire pour les non-admins
-    const chineur = String(data?.chineur || '')
-    const chineurUid = String(data?.chineurUid || '')
-    const ownerUid = String(data?.ownerUid || '')
-    const ownerEmail = String(data?.ownerEmail || '')
 
-    const isOwner =
-      (chineur && (chineur === userEmail || chineur === userUid)) ||
-      (chineurUid && chineurUid === userUid) ||
-      (ownerUid && ownerUid === userUid) ||
-      (ownerEmail && ownerEmail === userEmail)
-
-    if (!isAdmin && !isOwner) {
-      return NextResponse.json({ success: false, error: 'Interdit' }, { status: 403 })
+    if (!isAdmin) {
+      return NextResponse.json({ success: false, error: 'Accès admin requis pour suppression en masse' }, { status: 403 })
     }
 
-    // ========================================================================
-    // SQUARE : supprimer variation OU fallback archive (via helper)
-    // ========================================================================
-    const squareIds = Array.from(
-      new Set([data?.variationId, data?.catalogObjectId, data?.itemId].filter(Boolean).map(String))
-    )
+    // --- Récupérer tous les produits en parallèle ---
+    const refs = productIds.map(id => adminDb.collection('produits').doc(String(id)))
+    const snapshots = await adminDb.getAll(...refs)
 
-    let squareAttempted = false
-    const deletedIds: string[] = []
-    const notFoundIds: string[] = []
-    const failedIds: { id: string; error: string }[] = []
+    // Collecter tous les IDs Square à supprimer
+    const allSquareIds = new Set<string>()
+    const validProducts: { ref: FirebaseFirestore.DocumentReference; data: any }[] = []
 
-    if (squareIds.length > 0) {
-      squareAttempted = true
-
-      for (const id of squareIds) {
-        try {
-          const res = await archiveOrDeleteByVariation(id)
-          if (res.ok) {
-            deletedIds.push(id)
-          } else if (res.error?.match(/NOT_FOUND|OBJECT_NOT_FOUND/i)) {
-            notFoundIds.push(id)
-          } else {
-            failedIds.push({ id, error: res.error || 'Unknown error' })
-          }
-        } catch (sqErr: any) {
-          // Erreur Square non bloquante - on continue avec Firestore
-          failedIds.push({ id, error: sqErr?.message || 'Square error' })
-        }
+    for (let i = 0; i < snapshots.length; i++) {
+      const snap = snapshots[i]
+      if (snap.exists) {
+        const data = snap.data() as any
+        validProducts.push({ ref: refs[i], data })
+        
+        // Collecter IDs Square
+        if (data?.variationId) allSquareIds.add(String(data.variationId))
+        if (data?.catalogObjectId) allSquareIds.add(String(data.catalogObjectId))
+        if (data?.itemId) allSquareIds.add(String(data.itemId))
       }
-
-      // ✅ On ne bloque plus si Square échoue - on continue avec Firestore
-      // L'important c'est que le produit soit marqué/supprimé dans Firestore
     }
 
-    // ================================
-    // FIRESTORE : retour ou suppression
-    // ================================
-    if (justif === 'produit_recupere') {
-      await ref.set(
-        {
+    if (validProducts.length === 0) {
+      return NextResponse.json({ success: false, error: 'Aucun produit trouvé' }, { status: 404 })
+    }
+
+    // --- Square : suppression batch ---
+    const squareResults = { deleted: 0, notFound: 0, failed: 0 }
+    
+    if (allSquareIds.size > 0) {
+      const idsArray = Array.from(allSquareIds)
+      
+      // Square batch delete (max 200 par appel)
+      try {
+        const { result } = await squareClient.catalogApi.batchDeleteCatalogObjects({
+          objectIds: idsArray,
+        })
+        
+        squareResults.deleted = result.deletedObjectIds?.length || 0
+        squareResults.notFound = idsArray.length - squareResults.deleted
+      } catch (squareError: any) {
+        console.error('Square batch delete error:', squareError?.message)
+        // On continue avec Firestore même si Square échoue
+        squareResults.failed = idsArray.length
+      }
+    }
+
+    // --- Firestore : batch write ---
+    const batch = adminDb.batch()
+
+    for (const { ref, data } of validProducts) {
+      if (justif === 'produit_recupere') {
+        batch.update(ref, {
           statut: 'retour',
           dateRetour: FieldValue.serverTimestamp(),
           derniereAction: 'retour',
-          squareDeletedIds: deletedIds,
-        },
-        { merge: true }
-      )
-      return NextResponse.json({
-        success: true,
-        action: 'retour',
-        squareAttempted,
-        deletedIds,
-        notFoundIds,
-        failedIds,
-      })
-    } else {
-      await ref.delete()
-      return NextResponse.json({
-        success: true,
-        action: 'delete',
-        squareAttempted,
-        deletedIds,
-        notFoundIds,
-        failedIds,
-      })
+        })
+      } else {
+        batch.delete(ref)
+      }
     }
+
+    await batch.commit()
+
+    return NextResponse.json({
+      success: true,
+      action: justif === 'produit_recupere' ? 'retour' : 'delete',
+      count: validProducts.length,
+      square: squareResults,
+    })
+
   } catch (e: any) {
-    console.error('❌ [API DELETE PRODUITS]', e?.message || e)
+    console.error('❌ [API DELETE PRODUITS BATCH]', e?.message || e)
     return NextResponse.json(
       { success: false, error: e?.message || 'Erreur serveur' },
       { status: 500 }
