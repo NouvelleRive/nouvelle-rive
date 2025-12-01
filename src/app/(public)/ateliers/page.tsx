@@ -310,8 +310,8 @@ export default function AteliersPage() {
       {/* Modal réservation */}
       {selectedCreneau && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md border border-black">
-            <div className="flex justify-between items-center p-6 border-b border-black">
+          <div className="bg-white w-full max-w-md border border-black max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-black sticky top-0 bg-white">
               <h3 className="text-sm tracking-widest">RÉSERVER</h3>
               <button 
                 onClick={() => setSelectedCreneau(null)}
@@ -384,9 +384,7 @@ export default function AteliersPage() {
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Déduit du prix de votre bijou</p>
               </div>
-            </div>
-            
-            <div className="p-6 border-t border-black">
+              
               <button
                 onClick={handleSubmit}
                 disabled={!formData.nom || !formData.email || !formData.telephone || submitting}

@@ -44,10 +44,10 @@ const ANIMATRICES: Animatrice[] = [
 
 // Mapping email -> animatrice
 const EMAIL_TO_ANIMATRICE: Record<string, Animatrice> = {
-  'ines@nouvellerive.fr': 'INES PINEAU',
-  'tetedorange@gmail.com': 'TÊTE D\'ORANGE',
-  'archives@gmail.com': 'ARCHIVE.S',
-  'gigi@gigiparis.com': 'GIGI PARIS',
+  'studio.inespineau@gmail.com': 'INES PINEAU',
+  'contact@tete-dorange.com': 'TÊTE D\'ORANGE',
+  'justine.salvado@gmail.com': 'ARCHIVE.S',
+  'contactgigiparis@gmail.com': 'GIGI PARIS',
   'nouvelleriveparis@gmail.com': 'INES PINEAU', // Admin peut choisir
 }
 

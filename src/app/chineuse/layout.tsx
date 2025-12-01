@@ -10,12 +10,12 @@ import Link from 'next/link'
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 
-// Emails des animatrices ateliers - à ajuster selon vrais emails
+// Emails des animatrices ateliers
 const ANIMATRICES_EMAILS = [
-  'ines@nouvellerive.fr',      // INES PINEAU
-  'tetedorange@gmail.com',     // TÊTE D'ORANGE
-  'archives@gmail.com',        // ARCHIVE.S
-  'gigi@gigiparis.com',        // GIGI PARIS
+  'studio.inespineau@gmail.com',   // INES PINEAU
+  'contact@tete-dorange.com',      // TÊTE D'ORANGE
+  'justine.salvado@gmail.com',     // ARCHIVE.S
+  'contactgigiparis@gmail.com',    // GIGI PARIS
 ]
 
 function ChineuseNavbar() {
