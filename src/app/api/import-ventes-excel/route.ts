@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         let sku = ''
         for (const key of Object.keys(row)) {
           if (key.toLowerCase() === 'sku') {
-            sku = row[key] || ''
+            sku = row[key] ? String(row[key]) : ''
             break
           }
         }
@@ -56,8 +56,9 @@ export async function POST(req: NextRequest) {
         // Prix - chercher toutes les variantes
         let prixStr = ''
         for (const key of Object.keys(row)) {
-          if (key.toLowerCase().includes('ventes brutes') || key.toLowerCase().includes('ventes nettes')) {
-            prixStr = row[key] || ''
+          const keyLower = key.toLowerCase()
+          if (keyLower.includes('ventes brutes') || keyLower.includes('ventes nettes')) {
+            prixStr = row[key] ? String(row[key]) : ''
             break
           }
         }
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
         let remarques = ''
         for (const key of Object.keys(row)) {
           if (key.toLowerCase() === 'remarques') {
-            remarques = row[key] || ''
+            remarques = row[key] ? String(row[key]) : ''
             break
           }
         }
@@ -75,8 +76,9 @@ export async function POST(req: NextRequest) {
         // Catégorie
         let categorie = ''
         for (const key of Object.keys(row)) {
-          if (key.toLowerCase().includes('catégorie') || key.toLowerCase() === 'categorie') {
-            categorie = row[key] || ''
+          const keyLower = key.toLowerCase()
+          if (keyLower.includes('catégorie') || keyLower === 'categorie') {
+            categorie = row[key] ? String(row[key]) : ''
             break
           }
         }
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
         let transactionId = ''
         for (const key of Object.keys(row)) {
           if (key.toLowerCase().includes('transaction')) {
-            transactionId = row[key] || ''
+            transactionId = row[key] ? String(row[key]) : ''
             break
           }
         }
