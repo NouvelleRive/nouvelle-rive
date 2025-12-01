@@ -22,10 +22,15 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    const { uid: uidFromBody, startDateStr, endDateStr, all } = await req.json().catch(() => ({}))
+    const body = await req.json().catch(() => ({}))
+    const { uid: uidFromBody, startDate, endDate, startDateStr, endDateStr, all } = body
+    
+    // Utiliser startDate/endDate ou startDateStr/endDateStr
+    const finalStartDate = startDate || startDateStr
+    const finalEndDate = endDate || endDateStr
 
-    // MODE GLOBAL : sync toutes les chineuses
-    if (all === true) {
+    // MODE GLOBAL : sync toutes les chineuses (si all=true OU si pas d'UID fourni)
+    if (all === true || (!uidFromBody && !decoded?.uid)) {
       const chineusesSnap = await adminDb.collection('chineuse').get()
       
       if (chineusesSnap.empty) {
@@ -45,7 +50,7 @@ export async function POST(req: NextRequest) {
         const nom = chineuseData.nom || chineuseData.trigramme || uid
 
         try {
-          const result = await syncVentesDepuisSquare(uid, nom, startDateStr, endDateStr)
+          const result = await syncVentesDepuisSquare(uid, nom, finalStartDate, finalEndDate)
           totalSync += result.nbSync || 0
           totalNonAttribuees += result.nbNonAttribuees || 0
           totalNotFound += result.nbNotFound || 0
@@ -57,6 +62,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: `${totalSync} ventes sync, ${totalNonAttribuees} à attribuer`,
+        imported: totalSync,
+        nonAttribuees: totalNonAttribuees,
       })
     }
 
@@ -87,7 +94,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const result = await syncVentesDepuisSquare(uid, chineurNom, startDateStr, endDateStr)
+    const result = await syncVentesDepuisSquare(uid, chineurNom, finalStartDate, finalEndDate)
 
     // Cleanup produits qty <= 0
     const prodQuery = adminDb.collection('produits').where('chineurUid', '==', uid)
@@ -125,6 +132,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: result?.message ?? 'Sync OK',
+      imported: result.nbSync,
+      nonAttribuees: result.nbNonAttribuees,
       cleanup: { deletedCount },
     })
   } catch (err: any) {
