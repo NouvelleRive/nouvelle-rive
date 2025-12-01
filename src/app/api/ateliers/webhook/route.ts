@@ -4,6 +4,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { sendReservationEmailToAnimatrice, sendConfirmationEmailToClient } from '@/lib/emails/ateliers'
 import crypto from 'crypto'
 
 const SQUARE_WEBHOOK_SIGNATURE_KEY = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY
@@ -61,7 +62,30 @@ export async function POST(req: NextRequest) {
             placesReservees: FieldValue.increment(resaData.participants),
           })
 
-          console.log(`✅ Réservation ${resaDoc.id} confirmée - ${resaData.participants} participant(s)`)
+          // Récupérer les infos du créneau pour les emails
+          const creneauSnap = await creneauRef.get()
+          const creneauData = creneauSnap.data()
+
+          if (creneauData) {
+            const emailParams = {
+              nom: resaData.nom,
+              email: resaData.email,
+              telephone: resaData.telephone,
+              participants: resaData.participants,
+              date: creneauData.date,
+              heure: creneauData.heure,
+              lieu: creneauData.lieu,
+              animatrice: creneauData.animatrice || 'Non assignée',
+            }
+
+            // Envoyer email à l'animatrice
+            await sendReservationEmailToAnimatrice(emailParams)
+
+            // Envoyer confirmation au client
+            await sendConfirmationEmailToClient(emailParams)
+          }
+
+          console.log(`✅ Réservation ${resaDoc.id} confirmée - ${resaData.participants} participant(s) - Emails envoyés`)
         }
       }
     }
