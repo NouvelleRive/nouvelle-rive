@@ -52,19 +52,26 @@ export async function syncVentesDepuisSquare(
     }
   }
 
-  // 2. Pré-charger les ventes existantes pour éviter les doublons
+  // 2. Pré-charger les ventes existantes GLOBALEMENT pour éviter les doublons
+  // On vérifie par orderId + itemName/sku car une vente Square ne doit exister qu'une fois
   const ventesExistantes = new Set<string>()
   const ventesSnap = await adminDb.collection('ventes')
-    .where('chineurUid', '==', uid)
+    .where('orderId', '!=', null)
     .get()
   
   for (const doc of ventesSnap.docs) {
     const data = doc.data()
-    if (data.orderId && data.sku) {
-      ventesExistantes.add(`${data.orderId}-${data.sku}`)
-    }
-    if (data.orderId && data.remarque) {
-      ventesExistantes.add(`${data.orderId}-${data.remarque}`)
+    if (data.orderId) {
+      // Clé unique : orderId + sku OU orderId + nom
+      if (data.sku) {
+        ventesExistantes.add(`${data.orderId}-${data.sku}`)
+      }
+      if (data.nom) {
+        ventesExistantes.add(`${data.orderId}-${data.nom}`)
+      }
+      if (data.remarque) {
+        ventesExistantes.add(`${data.orderId}-${data.remarque}`)
+      }
     }
   }
 
@@ -194,15 +201,20 @@ export async function syncVentesDepuisSquare(
         }
       }
 
-      // Vérifier doublon
-      const dedupeKey = sku 
-        ? `${order.id}-${sku}` 
-        : `${order.id}-${itemNote}`
+      // Vérifier doublon - clé globale unique
+      const dedupeKeys = [
+        sku ? `${order.id}-${sku}` : null,
+        `${order.id}-${itemName}`,
+        itemNote ? `${order.id}-${itemNote}` : null,
+      ].filter(Boolean) as string[]
       
-      if (ventesExistantes.has(dedupeKey)) {
+      const isDuplicate = dedupeKeys.some(key => ventesExistantes.has(key))
+      if (isDuplicate) {
         continue
       }
-      ventesExistantes.add(dedupeKey)
+      
+      // Ajouter toutes les clés pour éviter les doublons futurs dans ce batch
+      dedupeKeys.forEach(key => ventesExistantes.add(key))
 
       if (produitDoc) {
         const produitData = produitDoc.data()
