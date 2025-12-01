@@ -5,7 +5,6 @@ import { useState, useMemo } from 'react'
 import { updateDoc, doc } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebaseConfig'
 import { useAdmin } from '@/lib/admin/context'
-import ProductList from '@/components/ProductList'
 import ProductForm from '@/components/ProductForm'
 import { X, Trash2, CheckSquare, Square } from 'lucide-react'
 import { uploadToCloudinary, canUseFashnAI } from '@/lib/admin/helpers'
@@ -43,6 +42,7 @@ export default function AdminProduitsPage() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
   const [bulkDeleteReason, setBulkDeleteReason] = useState<'erreur' | 'produit_recupere' | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 })
 
   // Génération IA
   const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
@@ -113,10 +113,11 @@ export default function AdminProduitsPage() {
     finally { setDeleting(false) }
   }
 
-  // Suppression groupée (optimisée batch)
+  // Suppression groupée - utilise /api/delete-produits en boucle
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0 || !bulkDeleteReason) return
     setBulkDeleting(true)
+    setBulkProgress({ done: 0, total: selectedIds.size })
     
     try {
       const token = await getAuthToken()
@@ -125,19 +126,30 @@ export default function AdminProduitsPage() {
         return
       }
 
-      const res = await fetch('/api/delete-produits-batch', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          productIds: Array.from(selectedIds), 
-          reason: bulkDeleteReason 
-        }),
-      })
+      const ids = Array.from(selectedIds)
+      let deleted = 0
+      let errors = 0
 
-      const data = await res.json()
+      for (const id of ids) {
+        try {
+          const res = await fetch('/api/delete-produits', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ productId: id, reason: bulkDeleteReason }),
+          })
+          if (res.ok) {
+            deleted++
+          } else {
+            errors++
+          }
+        } catch {
+          errors++
+        }
+        setBulkProgress({ done: deleted + errors, total: ids.length })
+      }
 
       setShowBulkDeleteModal(false)
       setBulkDeleteReason(null)
@@ -145,15 +157,16 @@ export default function AdminProduitsPage() {
       setSelectionMode(false)
       await loadData()
       
-      if (res.ok) {
-        alert(`${data.count} produit(s) supprimé(s)`)
+      if (errors > 0) {
+        alert(`${deleted} produit(s) supprimé(s), ${errors} erreur(s)`)
       } else {
-        alert(data.error || 'Erreur suppression')
+        alert(`${deleted} produit(s) supprimé(s)`)
       }
     } catch {
       alert('Erreur suppression groupée')
     } finally {
       setBulkDeleting(false)
+      setBulkProgress({ done: 0, total: 0 })
     }
   }
 
@@ -457,6 +470,7 @@ export default function AdminProduitsPage() {
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="font-semibold mb-3">Supprimer {selectedIds.size} produit(s) ?</h3>
             <p className="text-sm text-gray-600 mb-4">Cette action est irréversible.</p>
+            
             <div className="space-y-2 mb-4">
               <label className="flex items-center gap-2">
                 <input type="radio" name="bulkJustif" checked={bulkDeleteReason === 'erreur'} onChange={() => setBulkDeleteReason('erreur')} />
@@ -467,10 +481,24 @@ export default function AdminProduitsPage() {
                 <span>Produits récupérés</span>
               </label>
             </div>
+
+            {bulkDeleting && bulkProgress.total > 0 && (
+              <div className="mb-4">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-red-500 transition-all"
+                    style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{bulkProgress.done} / {bulkProgress.total}</p>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <button 
                 onClick={() => { setShowBulkDeleteModal(false); setBulkDeleteReason(null) }} 
-                className="px-4 py-2 border rounded"
+                disabled={bulkDeleting}
+                className="px-4 py-2 border rounded disabled:opacity-50"
               >
                 Annuler
               </button>
