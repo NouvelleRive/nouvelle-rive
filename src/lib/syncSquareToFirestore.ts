@@ -90,15 +90,37 @@ export async function syncVentesDepuisSquare(
   const catalogIdToSku = new Map<string, string>()
   const catalogIdsArray = Array.from(catalogIds)
   
+  console.log(`🔍 ${catalogIdsArray.length} catalogObjectIds à récupérer`)
+  
   for (let i = 0; i < catalogIdsArray.length; i += 100) {
     const batch = catalogIdsArray.slice(i, i + 100)
     try {
       const { result } = await client.catalogApi.batchRetrieveCatalogObjects({
         objectIds: batch,
+        includeRelatedObjects: true,
       })
+      
+      // Récupérer SKU depuis les objets principaux
       for (const obj of result.objects || []) {
+        let sku: string | null = null
+        
+        if (obj.type === 'ITEM_VARIATION' && obj.itemVariationData?.sku) {
+          sku = obj.itemVariationData.sku
+        } else if (obj.type === 'ITEM' && obj.itemData?.variations?.[0]?.itemVariationData?.sku) {
+          sku = obj.itemData.variations[0].itemVariationData.sku
+        }
+        
+        if (sku) {
+          catalogIdToSku.set(obj.id!, sku)
+          console.log(`  ✅ ${obj.id} (${obj.type}) → SKU: ${sku}`)
+        }
+      }
+      
+      // Récupérer SKU depuis les objets liés (variations)
+      for (const obj of result.relatedObjects || []) {
         if (obj.type === 'ITEM_VARIATION' && obj.itemVariationData?.sku) {
           catalogIdToSku.set(obj.id!, obj.itemVariationData.sku)
+          console.log(`  ✅ ${obj.id} (related) → SKU: ${obj.itemVariationData.sku}`)
         }
       }
     } catch (err) {
