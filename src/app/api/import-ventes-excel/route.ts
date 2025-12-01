@@ -29,18 +29,7 @@ export async function POST(req: NextRequest) {
     }
     console.log(`📦 ${produitsBySku.size} produits indexés`)
 
-    // Charger ventes existantes pour déduplication
-    const ventesExistantes = new Set<string>()
-    const ventesSnap = await adminDb.collection('ventes').get()
-    for (const doc of ventesSnap.docs) {
-      const data = doc.data()
-      // Clé: transactionId + article + prix
-      if (data.transactionId) {
-        ventesExistantes.add(`${data.transactionId}-${data.nomSquare || data.nom || ''}-${data.prixVenteReel || ''}`)
-      }
-    }
-    
-    console.log(`📋 ${ventesExistantes.size} ventes existantes`)
+    console.log(`📋 Import sans déduplication - toutes les lignes seront importées`)
 
     let imported = 0
     let errors = 0
@@ -116,40 +105,34 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        // Parser la date
+        // Parser la date - xlsx renvoie souvent des objets Date ou des strings ISO
         let dateVente: Date | null = null
         if (dateStr) {
-          if (typeof dateStr === 'string') {
-            if (dateStr.includes('/')) {
-              const [day, month, year] = dateStr.split('/')
-              dateVente = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-            } else if (dateStr.includes('-')) {
+          try {
+            if (dateStr instanceof Date) {
+              dateVente = dateStr
+            } else if (typeof dateStr === 'string') {
+              // Essayer plusieurs formats
               dateVente = new Date(dateStr)
-            } else {
-              dateVente = new Date(dateStr)
+            } else if (typeof dateStr === 'number') {
+              // Excel serial date
+              dateVente = new Date((dateStr - 25569) * 86400 * 1000)
+            } else if (dateStr && typeof dateStr === 'object') {
+              // Peut être un objet avec toISOString
+              dateVente = new Date(dateStr.toString())
             }
-          } else if (dateStr instanceof Date) {
-            dateVente = dateStr
-          } else if (typeof dateStr === 'number') {
-            // Excel date number
-            dateVente = new Date((dateStr - 25569) * 86400 * 1000)
+          } catch (e) {
+            console.warn(`⚠️ Erreur parsing date: ${dateStr}`, e)
           }
         }
 
         if (!dateVente || isNaN(dateVente.getTime())) {
-          console.warn(`⚠️ Date invalide: ${dateStr} (type: ${typeof dateStr}) | Article: ${article}`)
+          console.warn(`⚠️ Date invalide: "${dateStr}" (type: ${typeof dateStr}) | Article: ${article}`)
           errors++
           continue
         }
 
-        // Vérifier doublon - clé unique = transactionId + article + prix
-        const dedupeKey = transactionId ? `${transactionId}-${article}-${prix}` : `${dateVente.toISOString().split('T')[0]}-${article}-${prix}-${imported}`
-        if (ventesExistantes.has(dedupeKey)) {
-          console.log(`⏭️ Doublon base: ${dedupeKey.substring(0, 50)}`)
-          skipped++
-          continue
-        }
-        ventesExistantes.add(dedupeKey)
+        // Pas de déduplication - on importe tout
 
         // Chercher le produit par SKU
         let produitDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null
@@ -217,7 +200,7 @@ export async function POST(req: NextRequest) {
         ventesToAdd.push(venteData)
         imported++
       } catch (err) {
-        console.error('Erreur ligne:', err)
+        console.error(`❌ Erreur ligne: Article="${row['Article']}" | Erreur:`, err)
         errors++
       }
     }
