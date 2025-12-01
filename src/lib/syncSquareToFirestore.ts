@@ -79,7 +79,9 @@ export async function syncVentesDepuisSquare(
 
   // 🔍 DEBUG: Log la première commande pour voir la structure
   if (allOrders.length > 0) {
-    console.log('📋 STRUCTURE COMMANDE:', JSON.stringify(allOrders[0], null, 2))
+    console.log('📋 STRUCTURE COMMANDE:', JSON.stringify(allOrders[0], (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    , 2))
   }
 
   // 4. Récupérer les SKUs depuis Square Catalog pour les articles avec catalogObjectId
