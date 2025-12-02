@@ -1470,7 +1470,7 @@ export default function ProductForm({
           )}
           <button
             type="submit"
-            disabled={loading || (isAdmin && !selectedChineuse)}
+            disabled={loading || (isAdmin && chineuses.length > 0 && !selectedChineuse)}
             className={`${onCancel ? 'flex-1' : 'w-full'} bg-[#22209C] text-white py-2.5 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition`}
           >
             {loading ? '⏳ En cours...' : (submitLabel || defaultSubmitLabel)}
