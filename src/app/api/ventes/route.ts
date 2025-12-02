@@ -2,8 +2,24 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebaseAdmin'
+import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { Timestamp } from 'firebase-admin/firestore'
+
+const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
+
+// Vérifier si l'utilisateur est admin
+async function isAdmin(req: NextRequest): Promise<boolean> {
+  const authHeader = req.headers.get('authorization') || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) return false
+  
+  try {
+    const decoded = await adminAuth.verifyIdToken(token)
+    return decoded?.email === ADMIN_EMAIL
+  } catch {
+    return false
+  }
+}
 
 // GET - Récupérer les ventes
 export async function GET() {
@@ -40,9 +56,14 @@ export async function GET() {
   }
 }
 
-// POST - Attribuer une vente à un produit
+// POST - Attribuer une vente à un produit (ADMIN ONLY)
 export async function POST(req: NextRequest) {
   try {
+    // Vérifier admin
+    if (!await isAdmin(req)) {
+      return NextResponse.json({ success: false, error: 'Accès admin requis' }, { status: 403 })
+    }
+
     const { venteId, produitId, prixVenteReel } = await req.json()
 
     if (!venteId || !produitId) {
@@ -66,14 +87,16 @@ export async function POST(req: NextRequest) {
     
     const updateVente: any = {
       produitId,
-      nom: p.nom,
-      sku: p.sku,
-      chineur: p.chineur,
-      chineurUid: p.chineurUid,
-      trigramme: p.trigramme,
-      prixInitial: p.prix,
+      nom: p.nom || '',
+      sku: p.sku || '',
       attribue: true,
     }
+    
+    // Ajouter seulement les champs définis
+    if (p.chineur) updateVente.chineur = p.chineur
+    if (p.chineurUid) updateVente.chineurUid = p.chineurUid
+    if (p.trigramme) updateVente.trigramme = p.trigramme
+    if (p.prix) updateVente.prixInitial = p.prix
     
     // Si nouveau prix fourni, le mettre à jour
     if (prixVenteReel !== undefined) {
@@ -100,9 +123,14 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE - Supprimer une ou plusieurs ventes
+// DELETE - Supprimer une ou plusieurs ventes (ADMIN ONLY)
 export async function DELETE(req: NextRequest) {
   try {
+    // Vérifier admin
+    if (!await isAdmin(req)) {
+      return NextResponse.json({ success: false, error: 'Accès admin requis' }, { status: 403 })
+    }
+
     const body = await req.json()
     const { venteId, venteIds, remettreEnStock } = body
 
@@ -168,9 +196,14 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// PUT - Attribuer une vente à un produit
+// PUT - Attribuer une vente à un produit (ADMIN ONLY)
 export async function PUT(req: NextRequest) {
   try {
+    // Vérifier admin
+    if (!await isAdmin(req)) {
+      return NextResponse.json({ success: false, error: 'Accès admin requis' }, { status: 403 })
+    }
+
     const { venteId, produitId, prixVenteReel } = await req.json()
 
     if (!venteId || !produitId) {
@@ -194,14 +227,16 @@ export async function PUT(req: NextRequest) {
     
     const updateVente: any = {
       produitId,
-      nom: p.nom,
-      sku: p.sku,
-      chineur: p.chineur,
-      chineurUid: p.chineurUid,
-      trigramme: p.trigramme,
-      prixInitial: p.prix,
+      nom: p.nom || '',
+      sku: p.sku || '',
       attribue: true,
     }
+    
+    // Ajouter seulement les champs définis
+    if (p.chineur) updateVente.chineur = p.chineur
+    if (p.chineurUid) updateVente.chineurUid = p.chineurUid
+    if (p.trigramme) updateVente.trigramme = p.trigramme
+    if (p.prix) updateVente.prixInitial = p.prix
     
     // Si nouveau prix fourni, le mettre à jour
     if (prixVenteReel !== undefined) {

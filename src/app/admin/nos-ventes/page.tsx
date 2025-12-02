@@ -3,9 +3,17 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useAdmin } from '@/lib/admin/context'
+import { auth } from '@/lib/firebaseConfig'
 import SyncVentesButton from '@/components/SyncVentesButton'
 import { Plus, X, Search, Download, Link, Trash2, CheckCircle, AlertCircle, RefreshCw, CheckSquare, Square, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
+
+// Helper pour récupérer le token
+const getAuthToken = async () => {
+  const user = auth.currentUser
+  if (!user) return null
+  return user.getIdToken()
+}
 
 interface Vente {
   id: string
@@ -364,10 +372,19 @@ export default function AdminNosVentesPage() {
     setDeleteProgress({ done: 0, total: selectedIds.size })
     
     try {
+      const token = await getAuthToken()
+      if (!token) {
+        alert('Non authentifié')
+        return
+      }
+
       // Utiliser l'API batch pour supprimer toutes les ventes d'un coup
       const res = await fetch('/api/ventes', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ venteIds: Array.from(selectedIds) })
       })
       
@@ -426,9 +443,18 @@ export default function AdminNosVentesPage() {
 
     setAttribuerLoading(true)
     try {
+      const token = await getAuthToken()
+      if (!token) {
+        alert('Non authentifié')
+        return
+      }
+
       const res = await fetch('/api/ventes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           venteId: venteSelectionnee.id,
           produitId: selectedProduitId,
@@ -459,9 +485,18 @@ export default function AdminNosVentesPage() {
 
     setSupprimerLoading(true)
     try {
+      const token = await getAuthToken()
+      if (!token) {
+        alert('Non authentifié')
+        return
+      }
+
       const res = await fetch('/api/ventes', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           venteId: venteSelectionnee.id,
           remettreEnStock
