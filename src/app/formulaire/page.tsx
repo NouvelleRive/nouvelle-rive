@@ -283,11 +283,11 @@ export default function FormulairePage() {
 
       const docRef = await addDoc(collection(db, 'produits'), payload)
 
-      // Send to Square if ready
+      // Send to Square - même sans photo !
       const match = categories.find((c) => c?.label === formData.categorie)
       const idsquare = match?.idsquare
 
-      if (idsquare && photosReady) {
+      if (idsquare) {
         try {
           const res = await fetch('/api/import-square-produits', {
             method: 'POST',
@@ -324,10 +324,15 @@ export default function FormulairePage() {
             if (Object.keys(update).length > 0) {
               await updateDoc(doc(db, 'produits', docRef.id), update)
             }
+            console.log('✅ Produit envoyé à Square:', data)
+          } else {
+            console.warn('⚠️ Square non OK:', data?.error || raw)
           }
         } catch (sqErr) {
           console.error('Erreur Square :', sqErr)
         }
+      } else {
+        console.warn('⚠️ Pas de idsquare pour la catégorie:', formData.categorie)
       }
 
       alert('✅ Produit ajouté avec succès !')
@@ -387,7 +392,7 @@ export default function FormulairePage() {
         
         const docRef = await addDoc(collection(db, 'produits'), payload)
         
-        // Sync Square si catégorie a un idsquare
+        // Sync Square si catégorie a un idsquare (même sans photo)
         const match = categories.find((c) => c?.label === produit.categorie)
         if (match?.idsquare) {
           try {
