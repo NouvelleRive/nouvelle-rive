@@ -993,7 +993,7 @@ export default function ProductList({
                 categories={categories}
                 sku={editingProduct?.sku}
                 initialData={editingProduct ? {
-                  nom: editingProduct.nom,
+                  nom: (editingProduct.nom || '').replace(new RegExp(`^${editingProduct.sku}\\s*-\\s*`, 'i'), ''),
                   sku: editingProduct.sku,
                   description: editingProduct.description,
                   categorie: typeof editingProduct.categorie === 'object' ? editingProduct.categorie?.label : editingProduct.categorie,

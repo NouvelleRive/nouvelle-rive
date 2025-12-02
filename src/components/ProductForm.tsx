@@ -243,7 +243,7 @@ export default function ProductForm({
     material: initialData?.material || '',
     color: initialData?.color || '',
     madeIn: initialData?.madeIn || '',
-    sku: '',
+    sku: initialData?.sku || ''
     photoFace: null,
     photoDos: null,
     photosDetails: [],
@@ -270,6 +270,7 @@ export default function ProductForm({
         material: initialData.material || '',
         color: initialData.color || '',
         madeIn: initialData.madeIn || '',
+        sku: initialData.sku || '',
         photoFace: null,
         photoDos: null,
         photosDetails: [],
@@ -971,22 +972,19 @@ export default function ProductForm({
           <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Obligatoire</h3>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Nom avec SKU */}
-            <div className="col-span-2 md:col-span-3">
-              <label className="block text-sm font-medium mb-1">Nom de la pièce</label>
+            
+            {/* Nom de la pièce */}
+            <div className="col-span-3">
+              <label className="...">Nom de la pièce *</label>
               <div className="flex">
-                {sku && (
-                  <span className="inline-flex items-center px-2 border border-r-0 rounded-l bg-gray-100 text-gray-600 text-sm">
+                {mode === 'create' && sku && (
+                  <span className="...px-3 py-1.5 bg-gray-100 border border-r-0 rounded-l text-sm text-gray-600">
                     {sku} -
                   </span>
                 )}
                 <input
-                  type="text"
-                  value={formData.nom}
-                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                  required
-                  className={`flex-1 border px-2 py-1.5 text-sm ${sku ? 'rounded-r' : 'rounded'}`}
-                  placeholder="Nom du produit"
+                  ...
+                  className={`... ${mode === 'create' && sku ? 'rounded-l-none' : ''}`}
                 />
               </div>
             </div>
