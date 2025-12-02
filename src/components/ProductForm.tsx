@@ -1020,7 +1020,7 @@ export default function ProductForm({
                 value={formData.categorie}
                 onChange={(e) => setFormData({ ...formData, categorie: e.target.value, taille: '' })}
                 required
-                disabled={isAdmin && !selectedChineuse}
+                disabled={isAdmin && chineuses.length > 0 && !selectedChineuse}
                 className="w-full border rounded px-2 py-1.5 text-sm disabled:bg-gray-100"
               >
                 <option value="">Choisir...</option>
