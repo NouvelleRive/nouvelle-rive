@@ -1,6 +1,6 @@
 // app/mes-produits/page.tsx
 // =============================
-// VERSION CLOUDINARY + MARQUE + TAILLE + FASHN.AI + PHOTOS EXPANDABLE
+// VERSION REFACTORISÉE AVEC PRODUCTFORM EN MODAL
 // =============================
 
 'use client'
@@ -20,128 +20,30 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import { uploadToCloudinary } from '@/lib/cloudinary'
-import { MoreHorizontal, Trash2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { MoreHorizontal, Trash2, ChevronDown, Sparkles, X } from 'lucide-react'
 import { format } from 'date-fns'
+import ProductForm, { ProductFormData, Cat } from '@/components/ProductForm'
 
 // =====================
-// TAILLES
+// HELPERS
 // =====================
-const TAILLES = {
-  adulte: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL'],
-  enfant: ['0-3M', '3-6M', '6-12M', '12-18M', '18-24M', '2A', '3A', '4A', '5A', '6A', '8A', '10A', '12A', '14A', '16A'],
-  chaussures: ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'],
-  aucune: [],
-}
-
-type TypeTaille = keyof typeof TAILLES
-
-function detectTypeTaille(categorie: string, chineur?: string): TypeTaille {
-  const cat = (categorie || '').toLowerCase()
-  
-  if (
-    cat.includes('bague') || 
-    cat.includes('broche') || 
-    cat.includes('collier') || 
-    cat.includes('bracelet') || 
-    cat.includes('boucle') || 
-    cat.includes('bijou') ||
-    cat.includes('sac') || 
-    cat.includes('ceinture') || 
-    cat.includes('foulard') ||
-    cat.includes('écharpe') ||
-    cat.includes('lunettes') || 
-    cat.includes('chapeau') ||
-    cat.includes('bonnet') ||
-    cat.includes('gant') ||
-    cat.includes('montre') ||
-    cat.includes('porte') ||
-    cat.includes('accessoire')
-  ) {
-    return 'aucune'
-  }
-  
-  if (
-    cat.includes('chaussure') || 
-    cat.includes('basket') || 
-    cat.includes('botte') ||
-    cat.includes('bottine') ||
-    cat.includes('sandale') || 
-    cat.includes('escarpin') || 
-    cat.includes('mocassin') ||
-    cat.includes('derby') ||
-    cat.includes('loafer') ||
-    cat.includes('sneaker') ||
-    cat.includes('talon')
-  ) {
-    return 'chaussures'
-  }
-  
-  if (
-    cat.includes('enfant') || 
-    cat.includes('bébé') || 
-    cat.includes('bebe') ||
-    cat.includes('kid') ||
-    cat.includes('baby') ||
-    (chineur && chineur.toUpperCase() === 'BONAGE')
-  ) {
-    return 'enfant'
-  }
-  
-  return 'adulte'
-}
-
-// ✨ NOUVEAU : Vérifier si FASHN.ai peut traiter cette catégorie
 function canUseFashnAI(categorie: string): boolean {
   const cat = (categorie || '').toLowerCase()
   
-  // Bijoux - FASHN.ai ne peut pas traiter
   if (
-    cat.includes('bague') ||
-    cat.includes('boucle') ||  // Boucles d'oreilles
-    cat.includes('collier') ||
-    cat.includes('bracelet') ||
-    cat.includes('broche')
-  ) {
-    return false
-  }
-  
-  // Chaussures - FASHN.ai ne peut pas traiter
-  if (
-    cat.includes('chaussure') ||
-    cat.includes('basket') ||
-    cat.includes('botte') ||
-    cat.includes('bottine') ||
-    cat.includes('sandale') ||
-    cat.includes('escarpin') ||
-    cat.includes('mocassin') ||
-    cat.includes('derby') ||
-    cat.includes('loafer') ||
-    cat.includes('sneaker') ||
-    cat.includes('talon')
-  ) {
-    return false
-  }
-  
-  // Ceintures - FASHN.ai ne peut pas traiter
-  if (cat.includes('ceinture')) {
-    return false
-  }
-  
-  // Accessoires divers - FASHN.ai ne peut pas traiter
-  if (
-    cat.includes('sac') ||
-    cat.includes('foulard') ||
-    cat.includes('écharpe') ||
-    cat.includes('lunettes') ||
-    cat.includes('chapeau') ||
-    cat.includes('bonnet') ||
-    cat.includes('gant') ||
+    cat.includes('bague') || cat.includes('boucle') || cat.includes('collier') ||
+    cat.includes('bracelet') || cat.includes('broche') || cat.includes('chaussure') ||
+    cat.includes('basket') || cat.includes('botte') || cat.includes('bottine') ||
+    cat.includes('sandale') || cat.includes('escarpin') || cat.includes('mocassin') ||
+    cat.includes('derby') || cat.includes('loafer') || cat.includes('sneaker') ||
+    cat.includes('talon') || cat.includes('ceinture') || cat.includes('sac') ||
+    cat.includes('foulard') || cat.includes('écharpe') || cat.includes('lunettes') ||
+    cat.includes('chapeau') || cat.includes('bonnet') || cat.includes('gant') ||
     cat.includes('montre')
   ) {
     return false
   }
   
-  // Vêtements = OK pour FASHN.ai
   return true
 }
 
@@ -157,6 +59,7 @@ type Produit = {
   taille?: string
   material?: string
   color?: string
+  madeIn?: string
   ebayListingId?: string
   ebayOfferId?: string
   photos?: {
@@ -183,9 +86,7 @@ export default function MesProduitsPage() {
   const [user, setUser] = useState<User | null>(null)
 
   const [produits, setProduits] = useState<Produit[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [categories, setCategories] = useState<Cat[]>([])
   const [filtreCategorie, setFiltreCategorie] = useState<string>('')
   const [recherche, setRecherche] = useState<string>('')
 
@@ -193,12 +94,16 @@ export default function MesProduitsPage() {
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set())
   const [menuOuvert, setMenuOuvert] = useState(false)
 
+  // Modal édition
+  const [editingProduct, setEditingProduct] = useState<Produit | null>(null)
+  const [editingLoading, setEditingLoading] = useState(false)
+
+  // Modal suppression
   const [confirmIds, setConfirmIds] = useState<string[] | null>(null)
   const [justif, setJustif] = useState<'erreur' | 'produit_recupere' | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // ✨ NOUVEAU : États pour photos expandable et génération
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  // Génération IA
   const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
 
   // Chargement initial
@@ -228,14 +133,19 @@ export default function MesProduitsPage() {
         const cd = chineuseSnap.data() as any
         const raw = cd['Catégorie'] ?? []
 
-        const cats = Array.isArray(raw)
+        const cats: Cat[] = Array.isArray(raw)
           ? raw
-              .map((c: any) =>
-                typeof c === 'string'
-                  ? c
-                  : String(c?.label ?? c?.value ?? '')
-              )
-              .filter(Boolean)
+              .map((c: any) => {
+                if (!c) return null
+                if (typeof c === 'string') return { label: c }
+                const label = (c.label ?? c.value ?? c.nom ?? '').toString().trim()
+                if (!label) return null
+                return {
+                  label,
+                  idsquare: c.idsquare ?? c.idSquare ?? c.squareId ?? c.id ?? undefined,
+                }
+              })
+              .filter((c): c is Cat => !!c)
           : []
 
         setCategories(cats)
@@ -277,22 +187,30 @@ export default function MesProduitsPage() {
     [produitsFiltres]
   )
 
-  // Produits récupérés = statut retour OU quantité <= 0
+  // Produits récupérés = statut retour
   const produitsRecuperes = useMemo(
     () => produitsFiltres.filter((p) => p.statut === 'retour'),
     [produitsFiltres]
   )
 
-  // ✨ NOUVEAU : Toggle expandable photos
-  const toggleExpanded = (id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+  // Helper pour obtenir toutes les images
+  const getAllImages = (p: Produit): string[] => {
+    if (p.photos) {
+      const imgs: string[] = []
+      if (p.photos.face) imgs.push(p.photos.face)
+      if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
+      if (p.photos.dos) imgs.push(p.photos.dos)
+      if (p.photos.details) imgs.push(...p.photos.details)
+      return imgs
+    }
+    
+    if (Array.isArray(p.imageUrls) && p.imageUrls.length > 0) return p.imageUrls
+    if (p.imageUrl) return [p.imageUrl]
+    if (p.photo) return [p.photo]
+    return []
   }
 
-  // ✨ NOUVEAU : Générer photo portée
+  // Générer photo portée
   const handleGenerateTryon = async (p: Produit) => {
     const faceUrl = p.photos?.face || (Array.isArray(p.imageUrls) ? p.imageUrls[0] : p.imageUrl)
     
@@ -304,8 +222,6 @@ export default function MesProduitsPage() {
     setGeneratingTryonId(p.id)
 
     try {
-      console.log('🤖 Génération photo portée pour:', p.nom)
-      
       const res = await fetch('/api/generate-tryon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -323,14 +239,12 @@ export default function MesProduitsPage() {
       const data = await res.json()
 
       if (data.success && data.onModelUrl) {
-        // Mise à jour Firebase avec nouvelle structure
         const updatedPhotos = {
           ...(p.photos || { details: [] }),
           face: faceUrl,
           faceOnModel: data.onModelUrl
         }
 
-        // Reconstruire imageUrls : face, portée, dos, détails
         const newImageUrls = [
           faceUrl,
           data.onModelUrl,
@@ -363,24 +277,6 @@ export default function MesProduitsPage() {
     } finally {
       setGeneratingTryonId(null)
     }
-  }
-
-  // ✨ NOUVEAU : Helper pour obtenir toutes les images
-  const getAllImages = (p: Produit): string[] => {
-    if (p.photos) {
-      const imgs: string[] = []
-      if (p.photos.face) imgs.push(p.photos.face)
-      if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
-      if (p.photos.dos) imgs.push(p.photos.dos)
-      if (p.photos.details) imgs.push(...p.photos.details)
-      return imgs
-    }
-    
-    // Fallback ancien format
-    if (Array.isArray(p.imageUrls) && p.imageUrls.length > 0) return p.imageUrls
-    if (p.imageUrl) return [p.imageUrl]
-    if (p.photo) return [p.photo]
-    return []
   }
 
   // Sélection
@@ -493,17 +389,17 @@ export default function MesProduitsPage() {
           })
 
           const text = await res.text()
-          let data: any = {}
-          try { data = JSON.parse(text) } catch {}
-          if (!res.ok || !data?.success) {
+          let resData: any = {}
+          try { resData = JSON.parse(text) } catch {}
+          if (!res.ok || !resData?.success) {
             alert(`Square: création échouée pour « ${produit.nom} »`)
             continue
           }
 
           const update: Record<string, any> = {}
-          if (data.catalogObjectId) update.catalogObjectId = data.catalogObjectId
-          if (data.variationId) update.variationId = data.variationId
-          if (data.itemId) update.itemId = data.itemId
+          if (resData.catalogObjectId) update.catalogObjectId = resData.catalogObjectId
+          if (resData.variationId) update.variationId = resData.variationId
+          if (resData.itemId) update.itemId = resData.itemId
           if (Object.keys(update).length > 0) {
             await updateDoc(doc(db, 'produits', produit.id), update)
             setProduits((prev) => prev.map((p) => (p.id === produit.id ? { ...p, ...update } : p)))
@@ -530,11 +426,11 @@ export default function MesProduitsPage() {
           })
 
           const text = await res.text()
-          let data: any = {}
-          try { data = JSON.parse(text) } catch {}
+          let resData: any = {}
+          try { resData = JSON.parse(text) } catch {}
           
-          if (!res.ok || !data?.success) {
-            alert(`Square: mise à jour échouée pour « ${produit.nom} »\n${data?.error || 'Erreur inconnue'}`)
+          if (!res.ok || !resData?.success) {
+            alert(`Square: mise à jour échouée pour « ${produit.nom} »\n${resData?.error || 'Erreur inconnue'}`)
             continue
           }
         }
@@ -631,80 +527,103 @@ export default function MesProduitsPage() {
     }
   }
 
-  // Sauvegarde d'un produit en mode édition
-  const handleSaveEdit = async (p: Produit) => {
-    const changes = { ...(formData[p.id] || {}) }
+  // =====================
+  // ÉDITION VIA PRODUCTFORM
+  // =====================
+  const getInitialDataForEdit = (p: Produit) => ({
+    nom: p.nom?.replace(/^[A-Z]{2,4}\d+\s*-\s*/, '') || '',
+    description: p.description || '',
+    categorie: typeof p.categorie === 'object' ? p.categorie?.label : p.categorie || '',
+    prix: p.prix?.toString() || '',
+    quantite: p.quantite?.toString() || '1',
+    marque: p.marque || '',
+    taille: p.taille || '',
+    material: p.material || '',
+    color: p.color || '',
+    madeIn: p.madeIn || '',
+    photos: p.photos || { face: p.imageUrls?.[0], details: p.imageUrls?.slice(1) || [] },
+  })
 
-    if ('prix' in changes) {
-      const v = changes.prix
-      if (v === '' || v === null || Number.isNaN(v)) delete changes.prix
-      else changes.prix = Number(v)
-    }
-    if ('quantite' in changes) {
-      const v = changes.quantite
-      if (v === '' || v === null || Number.isNaN(v)) delete changes.quantite
-      else changes.quantite = parseInt(v as any, 10)
-    }
+  const handleEditProduit = async (data: ProductFormData) => {
+    if (!editingProduct) return
+    setEditingLoading(true)
+    try {
+      let newFaceUrl = data.deletedPhotos?.face ? undefined : data.existingPhotos?.face
+      let newFaceOnModelUrl = data.deletedPhotos?.faceOnModel ? undefined : data.existingPhotos?.faceOnModel
+      let newDosUrl = data.deletedPhotos?.dos ? undefined : data.existingPhotos?.dos
+      let newDetails = (data.existingPhotos?.details || []).filter((_: any, i: number) => !data.deletedPhotos?.detailsIndexes?.includes(i))
 
-    if (changes.newImageFiles && changes.newImageFiles.length > 0) {
-      try {
-        const files: File[] = changes.newImageFiles
-        const newUrls = await Promise.all(files.map((file) => uploadToCloudinary(file)))
-        
-        const existingUrls = changes.imageUrls !== undefined 
-          ? (Array.isArray(changes.imageUrls) ? changes.imageUrls : [])
-          : (Array.isArray(p.imageUrls) ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []))
-        
-        changes.imageUrls = [...existingUrls, ...newUrls]
-        
-        if (changes.imageUrls.length > 0) {
-          changes.imageUrl = changes.imageUrls[0]
+      if (data.photoFace) {
+        newFaceUrl = await uploadToCloudinary(data.photoFace)
+        if (canUseFashnAI(data.categorie)) {
+          try {
+            const tryonRes = await fetch('/api/generate-tryon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl: newFaceUrl, productName: editingProduct.nom }) })
+            if (tryonRes.ok) { const tryonData = await tryonRes.json(); if (tryonData.success && tryonData.onModelUrl) newFaceOnModelUrl = tryonData.onModelUrl }
+          } catch {}
         }
-      } catch (err) {
-        alert('Erreur upload image : ' + (err as any)?.message)
-        return
       }
-      delete changes.newImageFiles
+      if (data.photoDos) newDosUrl = await uploadToCloudinary(data.photoDos)
+      if (data.photosDetails?.length > 0) { const uploaded = await Promise.all(data.photosDetails.map((f: File) => uploadToCloudinary(f))); newDetails = [...newDetails, ...uploaded] }
+
+      const photos = { face: newFaceUrl, faceOnModel: newFaceOnModelUrl, dos: newDosUrl, details: newDetails }
+      const imageUrls: string[] = []
+      if (photos.face) imageUrls.push(photos.face)
+      if (photos.faceOnModel) imageUrls.push(photos.faceOnModel)
+      if (photos.dos) imageUrls.push(photos.dos)
+      imageUrls.push(...(photos.details || []))
+
+      await updateDoc(doc(db, 'produits', editingProduct.id), {
+        nom: `${editingProduct.sku} - ${data.nom}`,
+        description: data.description, 
+        categorie: data.categorie,
+        prix: parseFloat(data.prix), 
+        quantite: parseInt(data.quantite),
+        marque: data.marque?.trim(), 
+        taille: data.taille?.trim(),
+        material: data.material?.trim() || null, 
+        color: data.color?.trim() || null,
+        madeIn: data.madeIn || null, 
+        photos, 
+        imageUrls,
+        imageUrl: imageUrls[0] || '', 
+        photosReady: Boolean(photos.face),
+      })
+
+      // MAJ locale
+      setProduits((prev) => prev.map((p) => 
+        p.id === editingProduct.id 
+          ? { 
+              ...p, 
+              nom: `${editingProduct.sku} - ${data.nom}`,
+              description: data.description,
+              categorie: data.categorie,
+              prix: parseFloat(data.prix),
+              quantite: parseInt(data.quantite),
+              marque: data.marque?.trim(),
+              taille: data.taille?.trim(),
+              material: data.material?.trim() || undefined,
+              color: data.color?.trim() || undefined,
+              madeIn: data.madeIn || undefined,
+              photos,
+              imageUrls,
+              imageUrl: imageUrls[0] || '',
+              photosReady: Boolean(photos.face),
+            } 
+          : p
+      ))
+
+      setDirtyIds((prev) => new Set(prev).add(editingProduct.id))
+      alert('Produit modifié !')
+      setEditingProduct(null)
+    } catch (error) { 
+      alert('Erreur : ' + (error as any)?.message) 
+    } finally { 
+      setEditingLoading(false) 
     }
-
-    if (changes.imageUrls) {
-      if (changes.imageUrls.length > 0) {
-        changes.imageUrl = changes.imageUrls[0]
-      } else {
-        changes.imageUrl = ''
-        changes.imageUrls = []
-      }
-    }
-
-    if (Object.keys(changes).length === 0) {
-      setEditingId(null)
-      return
-    }
-
-    await updateDoc(doc(db, 'produits', p.id), changes)
-
-    if (Object.prototype.hasOwnProperty.call(changes, 'quantite') && Number(changes.quantite) <= 0) {
-      try {
-        await deleteEverywhere(p.id, 'erreur')
-        setEditingId(null)
-        return
-      } catch (e) {
-        console.warn('Suppression auto à 0 échouée pour', p.id, e)
-      }
-    }
-
-    setProduits((prev) => prev.map((it) => (it.id === p.id ? { ...it, ...changes } : it)))
-    setDirtyIds((prev) => new Set(prev).add(p.id))
-    setEditingId(null)
   }
 
-  const markDirty = (id: string) => setDirtyIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)))
-
-  const getTaillesForProduct = (productId: string, currentCategorie: string) => {
-    const cat = formData[productId]?.categorie ?? currentCategorie
-    const typeTaille = detectTypeTaille(cat)
-    return TAILLES[typeTaille]
-  }
+  // Catégories pour le filtre (labels uniquement)
+  const categoriesLabels = useMemo(() => categories.map(c => c.label), [categories])
 
   return (
     <>
@@ -723,7 +642,7 @@ export default function MesProduitsPage() {
               className="border px-2 py-2 rounded w-full"
             >
               <option value="">Toutes</option>
-              {categories.map((cat, idx) => (
+              {categoriesLabels.map((cat, idx) => (
                 <option key={idx} value={cat}>{cat}</option>
               ))}
             </select>
@@ -771,13 +690,13 @@ export default function MesProduitsPage() {
                 </button>
                 <button
                   onClick={() => {
-                    if (categories.length === 0) {
+                    if (categoriesLabels.length === 0) {
                       alert("Aucune catégorie configurée.")
                       return
                     }
-                    const cat = prompt('Catégorie :\n' + categories.join(' | '))
+                    const cat = prompt('Catégorie :\n' + categoriesLabels.join(' | '))
                     if (!cat) return
-                    if (!categories.includes(cat)) {
+                    if (!categoriesLabels.includes(cat)) {
                       alert('Catégorie invalide')
                       return
                     }
@@ -826,14 +745,6 @@ export default function MesProduitsPage() {
           {produitsActifs.map((p) => {
             const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
             const allImages = getAllImages(p)
-            const isExpanded = expandedIds.has(p.id)
-            const displayImages = isExpanded ? allImages : allImages.slice(0, 3)
-            const hasMoreImages = allImages.length > 3
-            const taillesDisponibles = getTaillesForProduct(p.id, cat || '')
-            const typeTaille = detectTypeTaille(formData[p.id]?.categorie ?? cat ?? '')
-
-            // Vérifier si on peut générer une photo portée
-            // Conditions : 1) Catégorie compatible FASHN.ai, 2) Photo face existe, 3) Pas déjà de photo portée
             const canGenerateTryon = canUseFashnAI(cat || '') && (p.photos?.face || allImages[0]) && !p.photos?.faceOnModel
 
             return (
@@ -850,357 +761,96 @@ export default function MesProduitsPage() {
                   />
                 </div>
 
-                {editingId === p.id ? (
-                  /* ========== MODE ÉDITION ========== */
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {/* Photos */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-500">Photos</label>
-                      <div className="flex flex-wrap gap-2">
-                        {(() => {
-                          const currentImages = formData[p.id]?.imageUrls ?? 
-                            (Array.isArray(p.imageUrls) ? p.imageUrls : 
-                            (p.imageUrl ? [p.imageUrl] : []))
-                          
-                          return currentImages.length > 0 ? (
-                            currentImages.map((url: string, idx: number) => (
-                              <div key={idx} className="relative">
-                                <img src={url} alt="" className="w-16 h-16 object-cover rounded" />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = currentImages.filter((_: any, i: number) => i !== idx)
-                                    setFormData({
-                                      ...formData,
-                                      [p.id]: { ...formData[p.id], imageUrls: updated },
-                                    })
-                                    markDirty(p.id)
-                                  }}
-                                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
-                              —
-                            </div>
-                          )
-                        })()}
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files || [])
-                          setFormData((prev) => ({
-                            ...prev,
-                            [p.id]: { ...(prev[p.id] || {}), newImageFiles: files },
-                          }))
-                          markDirty(p.id)
-                        }}
-                        className="text-xs w-full"
-                      />
-                    </div>
-
-                    {/* Nom / Description */}
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Nom</label>
-                        <input
-                          type="text"
-                          value={formData[p.id]?.nom ?? p.nom ?? ''}
-                          onChange={(e) => {
-                            setFormData({ ...formData, [p.id]: { ...formData[p.id], nom: e.target.value } })
-                            markDirty(p.id)
-                          }}
-                          className="w-full border px-2 py-1 rounded text-sm"
+                {/* Photos - max 3 */}
+                <div className="flex-shrink-0">
+                  <div className="flex gap-2 items-center flex-wrap">
+                    {allImages.slice(0, 3).length > 0 ? (
+                      allImages.slice(0, 3).map((url, idx) => (
+                        <img 
+                          key={idx} 
+                          src={url} 
+                          alt={`${p.nom} ${idx + 1}`} 
+                          className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80"
+                          onClick={() => window.open(url, '_blank')}
+                          title="Cliquer pour agrandir"
                         />
+                      ))
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
+                        Pas de photo
                       </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Description</label>
-                        <input
-                          type="text"
-                          value={formData[p.id]?.description ?? p.description ?? ''}
-                          onChange={(e) => {
-                            setFormData({ ...formData, [p.id]: { ...formData[p.id], description: e.target.value } })
-                            markDirty(p.id)
-                          }}
-                          className="w-full border px-2 py-1 rounded text-sm"
-                        />
+                    )}
+                    
+                    {allImages.length > 3 && (
+                      <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-600 text-sm">
+                        +{allImages.length - 3}
                       </div>
-                    </div>
-
-                    {/* Catégorie / Marque / Taille */}
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Catégorie</label>
-                        <select
-                          value={formData[p.id]?.categorie ?? cat ?? ''}
-                          onChange={(e) => {
-                            setFormData({ ...formData, [p.id]: { ...formData[p.id], categorie: e.target.value, taille: '' } })
-                            markDirty(p.id)
-                          }}
-                          className="w-full border px-2 py-1 rounded text-sm"
-                        >
-                          <option value="">—</option>
-                          {categories.map((c, idx) => (
-                            <option key={idx} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">Marque</label>
-                        <input
-                          type="text"
-                          value={formData[p.id]?.marque ?? p.marque ?? ''}
-                          onChange={(e) => {
-                            setFormData({ ...formData, [p.id]: { ...formData[p.id], marque: e.target.value } })
-                            markDirty(p.id)
-                          }}
-                          className="w-full border px-2 py-1 rounded text-sm"
-                        />
-                      </div>
-                      {taillesDisponibles.length > 0 && (
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">
-                            {typeTaille === 'chaussures' ? 'Pointure' : 'Taille'}
-                          </label>
-                          <select
-                            value={formData[p.id]?.taille ?? p.taille ?? ''}
-                            onChange={(e) => {
-                              setFormData({ ...formData, [p.id]: { ...formData[p.id], taille: e.target.value } })
-                              markDirty(p.id)
-                            }}
-                            className="w-full border px-2 py-1 rounded text-sm"
-                          >
-                            <option value="">—</option>
-                            {taillesDisponibles.map((t) => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {/* Matière */}
-<div>
-  <label className="text-xs font-medium text-gray-500">Matière</label>
-  <input
-    type="text"
-    value={formData[p.id]?.material ?? p.material ?? ''}
-    onChange={(e) => {
-      setFormData({ ...formData, [p.id]: { ...formData[p.id], material: e.target.value } })
-      markDirty(p.id)
-    }}
-    placeholder="Cuir, Soie..."
-    className="w-full border px-2 py-1 rounded text-sm"
-  />
-</div>
-
-{/* Couleur */}
-<div>
-  <label className="text-xs font-medium text-gray-500">Couleur</label>
-  <input
-    type="text"
-    value={formData[p.id]?.color ?? p.color ?? ''}
-    onChange={(e) => {
-      setFormData({ ...formData, [p.id]: { ...formData[p.id], color: e.target.value } })
-      markDirty(p.id)
-    }}
-    placeholder="Noir, Bleu..."
-    className="w-full border px-2 py-1 rounded text-sm"
-  />
-</div>
-                    </div>
-
-                    {/* SKU / Prix / Quantité + Actions */}
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-xs font-medium text-gray-500">SKU</label>
-                        <input
-                          type="text"
-                          value={formData[p.id]?.sku ?? p.sku ?? ''}
-                          onChange={(e) => {
-                            setFormData({ ...formData, [p.id]: { ...formData[p.id], sku: e.target.value } })
-                            markDirty(p.id)
-                          }}
-                          className="w-full border px-2 py-1 rounded text-sm"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <label className="text-xs font-medium text-gray-500">Prix €</label>
-                          <input
-                            type="number"
-                            value={formData[p.id]?.prix ?? p.prix ?? ''}
-                            onChange={(e) => {
-                              const v = e.target.value
-                              setFormData({ ...formData, [p.id]: { ...formData[p.id], prix: v === '' ? '' : parseFloat(v) } })
-                              markDirty(p.id)
-                            }}
-                            className="w-full border px-2 py-1 rounded text-sm"
-                          />
-                        </div>
-                        <div className="w-16">
-                          <label className="text-xs font-medium text-gray-500">Qté</label>
-                          <input
-                            type="number"
-                            value={formData[p.id]?.quantite ?? p.quantite ?? ''}
-                            onChange={(e) => {
-                              const v = e.target.value
-                              setFormData({ ...formData, [p.id]: { ...formData[p.id], quantite: v === '' ? '' : parseInt(v) } })
-                              markDirty(p.id)
-                            }}
-                            className="w-full border px-2 py-1 rounded text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={() => handleSaveEdit(p)}
-                          className="flex-1 bg-blue-600 text-white px-3 py-1 rounded text-sm"
-                        >
-                          Enregistrer
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="px-3 py-1 border rounded text-sm"
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                ) : (
-                  /* ========== MODE AFFICHAGE ========== */
-                  <>
-                    {/* ✨ Photos - 3 max avec expandable */}
-                    <div className="flex-shrink-0">
-                      <div className="flex gap-2 items-center flex-wrap">
-                        {displayImages.length > 0 ? (
-                          displayImages.map((url, idx) => (
-                            <img 
-                              key={idx} 
-                              src={url} 
-                              alt={`${p.nom} ${idx + 1}`} 
-                              className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80"
-                              onClick={() => window.open(url, '_blank')}
-                              title="Cliquer pour agrandir"
-                            />
-                          ))
-                        ) : (
-                          <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
-                            Pas de photo
-                          </div>
-                        )}
-                        
-                        {hasMoreImages && !isExpanded && (
-                          <button
-                            onClick={() => toggleExpanded(p.id)}
-                            className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-600 text-sm hover:bg-gray-200 transition"
-                            title="Voir toutes les photos"
-                          >
-                            +{allImages.length - 3}
-                          </button>
-                        )}
-                      </div>
+                </div>
 
-                      {/* Bouton réduire si expandé */}
-                      {isExpanded && allImages.length > 3 && (
-                        <button
-                          onClick={() => toggleExpanded(p.id)}
-                          className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-2"
-                        >
-                          <ChevronUp size={14} /> Réduire
-                        </button>
+                {/* Nom / Description / Date */}
+                <div className="flex-1 min-w-[180px]">
+                  <p className="font-semibold text-sm">{p.nom}</p>
+                  {p.description && (
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{p.description}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    {p.createdAt instanceof Timestamp
+                      ? format(p.createdAt.toDate(), 'dd/MM/yyyy')
+                      : '—'}
+                  </p>
+                </div>
+
+                {/* Catégorie / Marque / Taille */}
+                <div className="w-32 text-xs space-y-1 hidden md:block">
+                  <p><span className="text-gray-500">Cat:</span> {cat ?? '—'}</p>
+                  <p><span className="text-gray-500">Marque:</span> {p.marque ?? '—'}</p>
+                  <p><span className="text-gray-500">Taille:</span> {p.taille ?? '—'}</p>
+                  {p.material && <p><span className="text-gray-500">Matière:</span> {p.material}</p>}
+                  {p.color && <p><span className="text-gray-500">Couleur:</span> {p.color}</p>}
+                </div>
+
+                {/* SKU / Prix / Quantité */}
+                <div className="w-28 text-xs space-y-1">
+                  <p><span className="text-gray-500">SKU:</span> {p.sku ?? '—'}</p>
+                  <p><span className="text-gray-500">Prix:</span> {typeof p.prix === 'number' ? `${p.prix} €` : '—'}</p>
+                  <p><span className="text-gray-500">Qté:</span> {p.quantite ?? 1}</p>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-1">
+                  {/* Bouton génération photo portée */}
+                  {canGenerateTryon && (
+                    <button
+                      onClick={() => handleGenerateTryon(p)}
+                      disabled={generatingTryonId === p.id}
+                      className="p-1 text-purple-600 hover:bg-purple-50 rounded disabled:opacity-50 transition"
+                      title="Générer photo portée avec IA"
+                    >
+                      {generatingTryonId === p.id ? (
+                        <span className="text-xs animate-pulse">⏳</span>
+                      ) : (
+                        <Sparkles size={18} />
                       )}
-                    </div>
+                    </button>
+                  )}
 
-                    {/* Nom / Description / Date */}
-                    <div className="flex-1 min-w-[180px]">
-                      <p className="font-semibold text-sm">{p.nom}</p>
-                      {p.description && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{p.description}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        {p.createdAt instanceof Timestamp
-                          ? format(p.createdAt.toDate(), 'dd/MM/yyyy')
-                          : '—'}
-                      </p>
-                    </div>
-
-                    {/* Catégorie / Marque / Taille */}
-                    <div className="w-32 text-xs space-y-1">
-                      <p><span className="text-gra-y-500">Cat:</span> {cat ?? '—'}</p>
-                      <p><span className="text-gray-500">Marque:</span> {p.marque ?? '—'}</p>
-                      <p><span className="text-gray-500">Taille:</span> {p.taille ?? '—'}</p>
-                      {p.material && <p><span className="text-gray-500">Matière:</span> {p.material}</p>}
-                      {p.color && <p><span className="text-gray-500">Couleur:</span> {p.color}</p>}
-                    </div>
-
-                    {/* SKU / Prix / Quantité */}
-                    <div className="w-28 text-xs space-y-1">
-                      <p><span className="text-gray-500">SKU:</span> {p.sku ?? '—'}</p>
-                      <p><span className="text-gray-500">Prix:</span> {typeof p.prix === 'number' ? `${p.prix} €` : '—'}</p>
-                      <p><span className="text-gray-500">Qté:</span> {p.quantite ?? 1}</p>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-1">
-                      {/* ✨ Bouton génération photo portée */}
-                      {canGenerateTryon && (
-                        <button
-                          onClick={() => handleGenerateTryon(p)}
-                          disabled={generatingTryonId === p.id}
-                          className="p-1 text-purple-600 hover:bg-purple-50 rounded disabled:opacity-50 transition"
-                          title="Générer photo portée avec IA"
-                        >
-                          {generatingTryonId === p.id ? (
-                            <span className="text-xs animate-pulse">⏳</span>
-                          ) : (
-                            <Sparkles size={18} />
-                          )}
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          setEditingId(p.id)
-                          const currentImages = Array.isArray(p.imageUrls) ? p.imageUrls : 
-                            (p.imageUrl ? [p.imageUrl] : [])
-                          
-                          setFormData((prev) => ({
-                            ...prev,
-                            [p.id]: {
-                              nom: p.nom,
-                              description: p.description ?? '',
-                              marque: p.marque ?? '',
-                              taille: p.taille ?? '',
-                              prix: p.prix ?? '',
-                              quantite: p.quantite ?? '',
-                              categorie: typeof p.categorie === 'object' ? p.categorie?.label : p.categorie ?? '',
-                              sku: p.sku ?? '',
-                              imageUrls: currentImages,
-                              newImageFiles: [],
-                            },
-                          }))
-                        }}
-                        className="p-1 text-gray-500 hover:text-black"
-                        title="Modifier"
-                      >
-                        <MoreHorizontal size={18} />
-                      </button>
-                      <button
-                        onClick={() => openDeleteSingle(p.id)}
-                        className="p-1 text-red-400 hover:text-red-600"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </>
-                )}
+                  <button
+                    onClick={() => setEditingProduct(p)}
+                    className="p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded"
+                    title="Modifier"
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
+                  <button
+                    onClick={() => openDeleteSingle(p.id)}
+                    className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                    title="Supprimer"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
             )
           })}
@@ -1278,7 +928,34 @@ export default function MesProduitsPage() {
         )}
       </main>
 
-      {/* Modal justification */}
+      {/* Modal Édition avec ProductForm */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Modifier : {editingProduct.sku}</h2>
+              <button onClick={() => setEditingProduct(null)} className="p-2 hover:bg-gray-100 rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <ProductForm 
+                mode="edit" 
+                isAdmin={false} 
+                categories={categories} 
+                sku={editingProduct.sku || ''} 
+                initialData={getInitialDataForEdit(editingProduct)} 
+                onSubmit={handleEditProduit} 
+                onCancel={() => setEditingProduct(null)} 
+                loading={editingLoading}
+                showExcelImport={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal justification suppression */}
       {confirmIds && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-5 w-full max-w-md shadow-lg">

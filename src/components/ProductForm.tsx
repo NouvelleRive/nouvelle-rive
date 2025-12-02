@@ -1,8 +1,8 @@
 // components/ProductForm.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, Image as ImageIcon, Upload, RefreshCw, FileSpreadsheet, Download } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, Image as ImageIcon, Upload, RefreshCw, FileSpreadsheet, Download, Camera } from 'lucide-react'
 import ExcelJS from 'exceljs'
 import * as XLSX from 'xlsx'
 
@@ -224,6 +224,11 @@ export default function ProductForm({
   showExcelImport = true,
 }: ProductFormProps) {
   
+  // Refs pour les inputs caméra
+  const cameraFaceRef = useRef<HTMLInputElement>(null)
+  const cameraDosRef = useRef<HTMLInputElement>(null)
+  const cameraDetailsRef = useRef<HTMLInputElement>(null)
+  
   // État du formulaire
   const [formData, setFormData] = useState<ProductFormData>({
     nom: initialData?.nom || '',
@@ -290,6 +295,19 @@ export default function ProductForm({
   const displayCategories = isAdmin && selectedChineuse 
     ? selectedChineuse.categories 
     : categories
+
+  // =====================
+  // CAMERA HANDLERS
+  // =====================
+  const handleCameraCapture = (type: 'face' | 'dos' | 'details', file: File) => {
+    if (type === 'face') {
+      setFormData(prev => ({ ...prev, photoFace: file }))
+    } else if (type === 'dos') {
+      setFormData(prev => ({ ...prev, photoDos: file }))
+    } else if (type === 'details') {
+      setFormData(prev => ({ ...prev, photosDetails: [...prev.photosDetails, file] }))
+    }
+  }
 
   // =====================
   // EXCEL TEMPLATE GENERATION
@@ -787,13 +805,12 @@ export default function ProductForm({
   const isDetailDeleted = (index: number) => formData.deletedPhotos.detailsIndexes?.includes(index) || false
   const existingDetails = (formData.existingPhotos.details || []).filter((_, i) => !isDetailDeleted(i))
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     await onSubmit(formData)
   }
 
   const defaultSubmitLabel = mode === 'create' ? '✓ Ajouter le produit' : '✓ Enregistrer'
-  const photoRequired = mode === 'create' && !formData.existingPhotos.face
 
   // =====================
   // RENDER
@@ -901,7 +918,7 @@ export default function ProductForm({
       )}
 
       {/* === FORMULAIRE === */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleFormSubmit} className="space-y-4">
         
         {/* SÉLECTION CHINEUSE (Admin only) */}
         {isAdmin && chineuses.length > 0 && (
@@ -1138,50 +1155,74 @@ export default function ProductForm({
                 </div>
               )}
               
-              {/* Zone Drag & Drop - Photo Face */}
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                  const file = e.dataTransfer.files[0]
-                  if (file && file.type.startsWith('image/')) {
-                    setFormData({ ...formData, photoFace: file })
-                  } else {
-                    alert('Veuillez déposer une image')
-                  }
-                }}
-                className={`border-2 border-dashed rounded p-3 text-center transition-colors ${formData.existingPhotos.face && !formData.deletedPhotos.face ? 'border-gray-200' : 'border-blue-300 bg-blue-50'}`}
-              >
-                {formData.photoFace ? (
-                  <div className="flex items-center justify-center gap-2 text-green-600">
-                    <RefreshCw size={16} />
-                    <span className="text-xs truncate max-w-[120px]">{formData.photoFace.name}</span>
-                    <button type="button" onClick={() => setFormData({ ...formData, photoFace: null })} className="text-red-500 hover:text-red-700">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer block">
-                    <div className="flex flex-col items-center gap-1 text-gray-500">
-                      <Upload size={20} />
-                      <span className="text-xs">{formData.existingPhotos.face ? 'Remplacer' : 'Ajouter'}</span>
+              {/* Zone photo avec boutons Caméra + Upload */}
+              <div className="flex gap-2">
+                {/* Bouton Caméra */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={cameraFaceRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleCameraCapture('face', file)
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => cameraFaceRef.current?.click()}
+                  className="w-16 h-16 bg-blue-50 border-2 border-dashed border-blue-300 rounded flex items-center justify-center text-blue-600 hover:bg-blue-100 transition"
+                  title="Prendre une photo"
+                >
+                  <Camera size={20} />
+                </button>
+                
+                {/* Zone Drag & Drop */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                    const file = e.dataTransfer.files[0]
+                    if (file && file.type.startsWith('image/')) {
+                      setFormData({ ...formData, photoFace: file })
+                    } else {
+                      alert('Veuillez déposer une image')
+                    }
+                  }}
+                  className={`flex-1 border-2 border-dashed rounded p-2 text-center transition-colors ${formData.existingPhotos.face && !formData.deletedPhotos.face ? 'border-gray-200' : 'border-blue-300 bg-blue-50'}`}
+                >
+                  {formData.photoFace ? (
+                    <div className="flex items-center justify-center gap-2 text-green-600 h-12">
+                      <RefreshCw size={16} />
+                      <span className="text-xs truncate max-w-[80px]">{formData.photoFace.name}</span>
+                      <button type="button" onClick={() => setFormData({ ...formData, photoFace: null })} className="text-red-500 hover:text-red-700">
+                        <X size={14} />
+                      </button>
                     </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => setFormData({ ...formData, photoFace: e.target.files?.[0] || null })}
-                      className="hidden"
-                    />
-                  </label>
-                )}
+                  ) : (
+                    <label className="cursor-pointer block h-12 flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Upload size={16} />
+                        <span className="text-xs">{formData.existingPhotos.face ? 'Remplacer' : 'Fichier'}</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setFormData({ ...formData, photoFace: e.target.files?.[0] || null })}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1201,50 +1242,74 @@ export default function ProductForm({
                 </div>
               )}
               
-              {/* Zone Drag & Drop - Photo Dos */}
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                  const file = e.dataTransfer.files[0]
-                  if (file && file.type.startsWith('image/')) {
-                    setFormData({ ...formData, photoDos: file })
-                  } else {
-                    alert('Veuillez déposer une image')
-                  }
-                }}
-                className="border-2 border-dashed border-gray-200 rounded p-3 text-center transition-colors"
-              >
-                {formData.photoDos ? (
-                  <div className="flex items-center justify-center gap-2 text-green-600">
-                    <RefreshCw size={16} />
-                    <span className="text-xs truncate max-w-[120px]">{formData.photoDos.name}</span>
-                    <button type="button" onClick={() => setFormData({ ...formData, photoDos: null })} className="text-red-500 hover:text-red-700">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer block">
-                    <div className="flex flex-col items-center gap-1 text-gray-500">
-                      <Upload size={20} />
-                      <span className="text-xs">{formData.existingPhotos.dos ? 'Remplacer' : 'Ajouter'}</span>
+              {/* Zone photo avec boutons Caméra + Upload */}
+              <div className="flex gap-2">
+                {/* Bouton Caméra */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={cameraDosRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleCameraCapture('dos', file)
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => cameraDosRef.current?.click()}
+                  className="w-16 h-16 bg-gray-50 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+                  title="Prendre une photo"
+                >
+                  <Camera size={20} />
+                </button>
+                
+                {/* Zone Drag & Drop */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                    const file = e.dataTransfer.files[0]
+                    if (file && file.type.startsWith('image/')) {
+                      setFormData({ ...formData, photoDos: file })
+                    } else {
+                      alert('Veuillez déposer une image')
+                    }
+                  }}
+                  className="flex-1 border-2 border-dashed border-gray-200 rounded p-2 text-center transition-colors"
+                >
+                  {formData.photoDos ? (
+                    <div className="flex items-center justify-center gap-2 text-green-600 h-12">
+                      <RefreshCw size={16} />
+                      <span className="text-xs truncate max-w-[80px]">{formData.photoDos.name}</span>
+                      <button type="button" onClick={() => setFormData({ ...formData, photoDos: null })} className="text-red-500 hover:text-red-700">
+                        <X size={14} />
+                      </button>
                     </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => setFormData({ ...formData, photoDos: e.target.files?.[0] || null })}
-                      className="hidden"
-                    />
-                  </label>
-                )}
+                  ) : (
+                    <label className="cursor-pointer block h-12 flex items-center justify-center">
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Upload size={16} />
+                        <span className="text-xs">{formData.existingPhotos.dos ? 'Remplacer' : 'Fichier'}</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setFormData({ ...formData, photoDos: e.target.files?.[0] || null })}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1267,51 +1332,86 @@ export default function ProductForm({
                 </div>
               )}
               
-              {/* Zone Drag & Drop - Photos Détails */}
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
-                }}
-                onDragLeave={(e) => {
-                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                }}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
-                  if (files.length > 0) {
-                    setFormData({ ...formData, photosDetails: [...formData.photosDetails, ...files] })
-                  } else {
-                    alert('Veuillez déposer des images')
-                  }
-                }}
-                className="border-2 border-dashed border-gray-200 rounded p-3 text-center transition-colors"
-              >
-                {formData.photosDetails.length > 0 ? (
-                  <div className="flex items-center justify-center gap-2 text-green-600">
-                    <ImageIcon size={16} />
-                    <span className="text-xs">{formData.photosDetails.length} nouvelle(s)</span>
-                    <button type="button" onClick={() => setFormData({ ...formData, photosDetails: [] })} className="text-red-500 hover:text-red-700">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer block">
-                    <div className="flex flex-col items-center gap-1 text-gray-500">
-                      <Upload size={20} />
-                      <span className="text-xs">Ajouter</span>
+              {/* Nouvelles photos détails */}
+              {formData.photosDetails.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.photosDetails.map((file, i) => (
+                    <div key={i} className="relative group w-14 h-14">
+                      <img src={URL.createObjectURL(file)} alt={`Nouveau ${i + 1}`} className="w-full h-full object-cover rounded border" />
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData(prev => ({ 
+                          ...prev, 
+                          photosDetails: prev.photosDetails.filter((_, idx) => idx !== i) 
+                        }))} 
+                        className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Zone photo avec boutons Caméra + Upload */}
+              <div className="flex gap-2">
+                {/* Bouton Caméra */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  ref={cameraDetailsRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleCameraCapture('details', file)
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => cameraDetailsRef.current?.click()}
+                  className="w-16 h-16 bg-gray-50 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+                  title="Prendre une photo"
+                >
+                  <Camera size={20} />
+                </button>
+                
+                {/* Zone Drag & Drop */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
+                    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+                    if (files.length > 0) {
+                      setFormData({ ...formData, photosDetails: [...formData.photosDetails, ...files] })
+                    } else {
+                      alert('Veuillez déposer des images')
+                    }
+                  }}
+                  className="flex-1 border-2 border-dashed border-gray-200 rounded p-2 text-center transition-colors"
+                >
+                  <label className="cursor-pointer block h-12 flex items-center justify-center">
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Upload size={16} />
+                      <span className="text-xs">Fichiers</span>
                     </div>
                     <input
                       type="file"
                       accept="image/*"
-                      capture="environment"
                       multiple
-                      onChange={(e) => setFormData({ ...formData, photosDetails: Array.from(e.target.files || []) })}
+                      onChange={(e) => setFormData({ ...formData, photosDetails: [...formData.photosDetails, ...Array.from(e.target.files || [])] })}
                       className="hidden"
                     />
                   </label>
-                )}
+                </div>
               </div>
             </div>
           </div>
