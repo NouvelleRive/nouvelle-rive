@@ -1171,7 +1171,7 @@ export default function ProductForm({
             {/* Photo Face */}
             <div className="space-y-2">
               <label className="block text-xs font-medium text-blue-700">
-                Face {mode === 'create' && '*'}
+                Face
               </label>
               
               {formData.existingPhotos.face && !formData.deletedPhotos.face && (
