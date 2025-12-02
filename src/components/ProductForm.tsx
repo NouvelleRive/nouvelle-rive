@@ -692,6 +692,13 @@ export default function ProductForm({
               continue
             }
             
+            // Vérifier que la catégorie a un idsquare
+            const catMatch = displayCategories.find(c => c.label.toLowerCase().trim() === categorie.toLowerCase().trim())
+            if (!catMatch?.idsquare) {
+              erreurs.push(`Ligne ${rowNum}: Catégorie "${categorie}" non configurée dans Square`)
+              continue
+            }
+            
             // Vérifier prix
             if (isNaN(prix) || prix <= 0) {
               erreurs.push(`Ligne ${rowNum}: Prix invalide`)
@@ -807,6 +814,16 @@ export default function ProductForm({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // En mode création, vérifier que la catégorie a un idsquare
+    if (mode === 'create') {
+      const match = displayCategories.find((c) => c?.label === formData.categorie)
+      if (!match?.idsquare) {
+        alert('❌ Catégorie non définie dans Square.\n\nContactez NOUVELLE RIVE pour configurer cette catégorie.')
+        return
+      }
+    }
+    
     await onSubmit(formData)
   }
 
