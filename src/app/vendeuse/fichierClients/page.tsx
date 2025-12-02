@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged, User } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
-import Navbar from '@/components/Navbar'
 import CommandesPanel from '@/components/CommandesPanel'
 import ClientsPanel from '@/components/ClientsPanel'
 import { Package, Users } from 'lucide-react'
@@ -38,7 +37,6 @@ export default function VendeusePage() {
 
   return (
     <>
-      <Navbar />
       <main className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-white border-b">
