@@ -799,7 +799,7 @@ export default function ProductList({
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 text-base">
                     {p.sku && <span className="text-[#22209C]">{p.sku} - </span>}
-                    {p.nom}
+                    {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                   </h3>
                   {p.description && (
                     <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>
@@ -955,7 +955,7 @@ export default function ProductList({
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-700 text-base">
                         {p.sku && <span className="text-gray-500">{p.sku} - </span>}
-                        {p.nom}
+                        {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                       </h3>
                       <p className="text-sm text-amber-600 mt-1">
                         Récupéré le {retourDate ? format(retourDate, 'dd/MM/yyyy') : '—'}
