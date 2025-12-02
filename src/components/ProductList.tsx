@@ -3,7 +3,8 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { doc, updateDoc, onSnapshot, Timestamp, writeBatch } from 'firebase/firestore'
+import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField } from 'firebase/firestore'
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { 
@@ -13,7 +14,7 @@ import {
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import ProductForm from '@/components/ProductForm'
+import ProductForm, { ProductFormData } from '@/components/ProductForm'
 
 // =====================
 // TYPES
@@ -109,7 +110,7 @@ export default function ProductList({
   const [filtreDeposant, setFiltreDeposant] = useState('')
   const [filtreMois, setFiltreMois] = useState('')
 
-  // Sélection et modifications
+  // Sélection interne
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set())
 
@@ -411,11 +412,94 @@ export default function ProductList({
     }
   }
 
-  const handleFormSuccess = (productId?: string) => {
-    setShowForm(false)
-    setEditingProduct(null)
-    if (productId) {
+  // Sauvegarde produit (modification)
+  const handleSaveProduct = async (data: ProductFormData) => {
+    if (!editingProduct) return
+    
+    try {
+      const storage = getStorage()
+      const productId = editingProduct.id
+      
+      // Upload des nouvelles photos
+      const uploadPhoto = async (file: File, path: string): Promise<string> => {
+        const storageRef = ref(storage, path)
+        await uploadBytes(storageRef, file)
+        return getDownloadURL(storageRef)
+      }
+      
+      // Préparer les URLs des photos
+      let faceUrl: string | undefined = editingProduct.photos?.face
+      let dosUrl: string | undefined = editingProduct.photos?.dos
+      let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
+      
+      // Gérer les photos détails existantes (filtrer les supprimées)
+      let detailsUrls = [...(editingProduct.photos?.details || [])]
+      if (data.deletedPhotos.detailsIndexes && data.deletedPhotos.detailsIndexes.length > 0) {
+        detailsUrls = detailsUrls.filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
+      }
+      
+      // Upload nouvelle photo face
+      if (data.photoFace) {
+        faceUrl = await uploadPhoto(data.photoFace, `produits/${productId}/face_${Date.now()}`)
+      }
+      
+      // Upload nouvelle photo dos
+      if (data.photoDos) {
+        dosUrl = await uploadPhoto(data.photoDos, `produits/${productId}/dos_${Date.now()}`)
+      }
+      
+      // Upload nouvelles photos détails
+      for (const file of data.photosDetails) {
+        const url = await uploadPhoto(file, `produits/${productId}/detail_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+        detailsUrls.push(url)
+      }
+      
+      // Gérer les suppressions de face/dos/faceOnModel
+      if (data.deletedPhotos.face) faceUrl = undefined
+      if (data.deletedPhotos.dos) dosUrl = undefined
+      if (data.deletedPhotos.faceOnModel) faceOnModelUrl = undefined
+      
+      // Trouver la catégorie avec idsquare
+      const catObj = categories.find((c) => c.label === data.categorie)
+      
+      // Mise à jour Firestore avec dot notation
+      const updateData: Record<string, any> = {
+        nom: data.nom,
+        description: data.description || '',
+        categorie: catObj || { label: data.categorie },
+        prix: parseFloat(data.prix) || 0,
+        quantite: parseInt(data.quantite) || 1,
+        marque: data.marque || '',
+        taille: data.taille || '',
+        material: data.material || '',
+        color: data.color || '',
+        madeIn: data.madeIn || '',
+        updatedAt: Timestamp.now(),
+      }
+      
+      // Photos - utiliser dot notation
+      if (faceUrl) updateData['photos.face'] = faceUrl
+      else updateData['photos.face'] = deleteField()
+      
+      if (dosUrl) updateData['photos.dos'] = dosUrl
+      else updateData['photos.dos'] = deleteField()
+      
+      if (faceOnModelUrl) updateData['photos.faceOnModel'] = faceOnModelUrl
+      else updateData['photos.faceOnModel'] = deleteField()
+      
+      if (detailsUrls.length > 0) updateData['photos.details'] = detailsUrls
+      else updateData['photos.details'] = deleteField()
+      
+      await updateDoc(doc(db, 'produits', productId), updateData)
+      
+      setShowForm(false)
+      setEditingProduct(null)
       setDirtyIds((prev) => new Set(prev).add(productId))
+      alert('Produit mis à jour !')
+      
+    } catch (err: any) {
+      console.error('Erreur sauvegarde:', err)
+      alert('Erreur: ' + (err.message || 'Impossible de sauvegarder'))
     }
   }
 
@@ -505,6 +589,7 @@ export default function ProductList({
       {/* Filtres */}
       <div className="bg-white rounded-lg border p-4 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Recherche */}
           <div className="relative sm:col-span-2 lg:col-span-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -516,6 +601,7 @@ export default function ProductList({
             />
           </div>
 
+          {/* Filtre chineuse (admin only) */}
           {isAdmin && (
             <select
               value={filtreDeposant}
@@ -529,6 +615,7 @@ export default function ProductList({
             </select>
           )}
 
+          {/* Filtre catégorie */}
           <select
             value={filtreCategorie}
             onChange={(e) => setFiltreCategorie(e.target.value)}
@@ -540,6 +627,7 @@ export default function ProductList({
             ))}
           </select>
 
+          {/* Filtre mois */}
           <select
             value={filtreMois}
             onChange={(e) => setFiltreMois(e.target.value)}
@@ -552,8 +640,11 @@ export default function ProductList({
           </select>
         </div>
 
+        {/* Compteur et actions */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm text-gray-600">{produitsFiltres.length} produit(s)</span>
+          <span className="text-sm text-gray-600">
+            {produitsFiltres.length} produit(s)
+          </span>
           <div className="flex gap-2 flex-wrap">
             {hasActiveFilters && (
               <button onClick={resetFilters} className="text-sm text-[#22209C] flex items-center gap-1">
@@ -570,8 +661,9 @@ export default function ProductList({
         </div>
       </div>
 
-      {/* Barre d'actions */}
+      {/* Barre d'actions : Sync Square + Actions groupées */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
+        {/* Bouton Mettre à jour en caisse */}
         <button
           onClick={handleUpdateSquare}
           disabled={!hasChangesToSync || updatingSquare}
@@ -581,6 +673,7 @@ export default function ProductList({
           {updatingSquare ? 'Sync...' : 'Mettre à jour en caisse'}
         </button>
 
+        {/* Menu actions groupées */}
         {selectedIds.size > 0 && (
           <div className="relative">
             <button
@@ -648,6 +741,7 @@ export default function ProductList({
           </div>
         )}
 
+        {/* Sélection globale */}
         <label className="flex items-center gap-2 text-sm text-gray-600">
           <input
             type="checkbox"
@@ -680,7 +774,9 @@ export default function ProductList({
               key={p.id}
               className={`border rounded-lg p-3 shadow-sm bg-white ${isSelected ? 'ring-2 ring-[#22209C] bg-blue-50' : ''} ${isDirty ? 'border-l-4 border-l-amber-400' : ''}`}
             >
+              {/* Layout principal */}
               <div className="flex gap-3">
+                {/* Checkbox */}
                 <div className="pt-1 flex-shrink-0">
                   <input
                     type="checkbox"
@@ -690,6 +786,7 @@ export default function ProductList({
                   />
                 </div>
 
+                {/* Photo principale */}
                 <div className="flex-shrink-0">
                   {allImages.length > 0 ? (
                     <img
@@ -699,24 +796,33 @@ export default function ProductList({
                       onClick={() => window.open(allImages[0], '_blank')}
                     />
                   ) : (
-                    <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">Ø</div>
+                    <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
+                      Ø
+                    </div>
                   )}
                 </div>
 
+                {/* Infos principales */}
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">{p.nom}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {isAdmin && <span className="text-gray-600">{getChineurName(p.chineur)} • </span>}
-                    {p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}
+                    {p.createdAt instanceof Timestamp
+                      ? format(p.createdAt.toDate(), 'dd/MM/yyyy')
+                      : '—'}
                   </p>
                   
+                  {/* Infos compactes */}
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
                     <span><span className="text-gray-500">SKU:</span> {p.sku ?? '—'}</span>
-                    <span><span className="text-gray-500">Prix:</span> {typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span>
+                    <span>
+                      <span className="text-gray-500">Prix:</span> {typeof p.prix === 'number' ? `${p.prix} €` : '—'}
+                    </span>
                     <span><span className="text-gray-500">Qté:</span> {p.quantite ?? 1}</span>
                   </div>
                 </div>
 
+                {/* Actions */}
                 <div className="flex flex-col gap-1 flex-shrink-0">
                   {canGenerateTryon && (
                     <button
@@ -725,7 +831,11 @@ export default function ProductList({
                       className="p-2 text-purple-600 hover:bg-purple-50 rounded disabled:opacity-50 transition"
                       title="Générer photo portée avec IA"
                     >
-                      {generatingTryonId === p.id ? <span className="text-xs animate-pulse">⏳</span> : <Sparkles size={18} />}
+                      {generatingTryonId === p.id ? (
+                        <span className="text-xs animate-pulse">⏳</span>
+                      ) : (
+                        <Sparkles size={18} />
+                      )}
                     </button>
                   )}
 
@@ -747,9 +857,12 @@ export default function ProductList({
                 </div>
               </div>
 
+              {/* Détails desktop */}
               <div className="hidden md:flex gap-4 mt-3 pt-3 border-t text-xs">
                 <div className="flex-1">
-                  {p.description && <p className="text-gray-500 line-clamp-2">{p.description}</p>}
+                  {p.description && (
+                    <p className="text-gray-500 line-clamp-2">{p.description}</p>
+                  )}
                 </div>
                 <div className="flex gap-6">
                   <div className="space-y-1">
@@ -763,6 +876,7 @@ export default function ProductList({
                 </div>
               </div>
 
+              {/* Photos supplémentaires */}
               {allImages.length > 1 && (
                 <div className="mt-3 pt-3 border-t">
                   <div className="flex gap-2 items-center flex-wrap">
@@ -813,21 +927,35 @@ export default function ProductList({
             {produitsRecuperes.map((p) => {
               const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
               const allImages = getAllImages(p)
-              const retourDate = p.dateRetour instanceof Timestamp ? p.dateRetour.toDate() : p.dateRetour ? new Date(p.dateRetour as any) : null
+              const retourDate =
+                p.dateRetour instanceof Timestamp
+                  ? p.dateRetour.toDate()
+                  : p.dateRetour
+                  ? new Date(p.dateRetour as any)
+                  : null
 
               return (
-                <div key={p.id} className="border rounded-lg p-3 shadow-sm bg-gray-50 flex gap-3">
+                <div
+                  key={p.id}
+                  className="border rounded-lg p-3 shadow-sm bg-gray-50 flex gap-3"
+                >
                   <div className="w-5 flex-shrink-0" />
+
                   <div className="flex-shrink-0">
                     {allImages.length > 0 ? (
                       <img src={allImages[0]} alt={p.nom} className="w-16 h-16 object-cover rounded" />
                     ) : (
-                      <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">—</div>
+                      <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center text-gray-400 text-xs">
+                        —
+                      </div>
                     )}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{p.nom}</p>
-                    <p className="text-xs text-amber-600 mt-1">Récupéré le {retourDate ? format(retourDate, 'dd/MM/yyyy') : '—'}</p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      Récupéré le {retourDate ? format(retourDate, 'dd/MM/yyyy') : '—'}
+                    </p>
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
                       <span><span className="text-gray-500">SKU:</span> {p.sku ?? '—'}</span>
                       <span><span className="text-gray-500">Prix:</span> {typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span>
@@ -851,9 +979,26 @@ export default function ProductList({
             </div>
             <div className="p-4">
               <ProductForm
-                produit={editingProduct || undefined}
-                onSuccess={handleFormSuccess}
+                mode={editingProduct ? 'edit' : 'create'}
+                isAdmin={isAdmin}
+                categories={categories}
+                sku={editingProduct?.sku}
+                initialData={editingProduct ? {
+                  nom: editingProduct.nom,
+                  description: editingProduct.description,
+                  categorie: typeof editingProduct.categorie === 'object' ? editingProduct.categorie?.label : editingProduct.categorie,
+                  prix: editingProduct.prix?.toString(),
+                  quantite: editingProduct.quantite?.toString(),
+                  marque: editingProduct.marque,
+                  taille: editingProduct.taille,
+                  material: editingProduct.material,
+                  color: editingProduct.color,
+                  madeIn: editingProduct.madeIn,
+                  photos: editingProduct.photos,
+                } : undefined}
+                onSubmit={handleSaveProduct}
                 onCancel={() => { setShowForm(false); setEditingProduct(null) }}
+                showExcelImport={false}
               />
             </div>
           </div>
