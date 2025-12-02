@@ -243,7 +243,7 @@ export default function ProductForm({
     material: initialData?.material || '',
     color: initialData?.color || '',
     madeIn: initialData?.madeIn || '',
-    sku: initialData?.sku || ''
+    sku: initialData?.sku || '',
     photoFace: null,
     photoDos: null,
     photosDetails: [],
