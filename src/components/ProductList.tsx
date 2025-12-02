@@ -9,7 +9,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { 
   MoreHorizontal, Trash2, ChevronUp, Sparkles, 
-  Search, X, FileSpreadsheet, Download, ChevronDown, RefreshCw, Plus, ImageIcon
+  Search, X, FileSpreadsheet, Download, ChevronDown, RefreshCw, ImageIcon
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -571,19 +571,10 @@ export default function ProductList({
   }
 
   return (
-    <div className="p-4 max-w-6xl mx-auto bg-gray-50 min-h-screen">
+    <div className="p-4 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-[#22209C]">{titre}</h1>
-        <button
-          onClick={() => {
-            setEditingProduct(null)
-            setShowForm(true)
-          }}
-          className="bg-[#22209C] text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm hover:bg-[#1a1875] transition-colors"
-        >
-          <Plus size={18} /> Ajouter un produit
-        </button>
       </div>
 
       {/* Filtres */}
@@ -772,10 +763,19 @@ export default function ProductList({
           return (
             <div
               key={p.id}
-              onClick={() => toggleSelection(p.id)}
-              className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} p-4 shadow-sm hover:shadow-md transition-all cursor-pointer`}
+              className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} p-4 shadow-sm hover:shadow-md transition-all`}
             >
               <div className="flex items-start gap-4">
+                {/* Checkbox */}
+                <div className="flex-shrink-0 pt-1">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelection(p.id)}
+                    className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+                  />
+                </div>
+
                 {/* Image */}
                 <div className="flex-shrink-0">
                   {allImages.length > 0 ? (
@@ -783,10 +783,7 @@ export default function ProductList({
                       src={allImages[0]}
                       alt={p.nom}
                       className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        window.open(allImages[0], '_blank')
-                      }}
+                      onClick={() => window.open(allImages[0], '_blank')}
                     />
                   ) : (
                     <div className="w-20 h-20 bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400 gap-1">
@@ -817,7 +814,15 @@ export default function ProductList({
                   )}
                 </div>
 
-                {/* Infos droite (SKU, Prix, Qté) */}
+                {/* Colonne Taille/Marque/Matière/Couleur - DESKTOP */}
+                <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[140px]">
+                  <p><span className="text-gray-400">Taille:</span> <span className="font-medium text-gray-700">{p.taille || '—'}</span></p>
+                  <p><span className="text-gray-400">Marque:</span> <span className="font-medium text-gray-700">{p.marque || '—'}</span></p>
+                  <p><span className="text-gray-400">Matière:</span> <span className="font-medium text-gray-700">{p.material || '—'}</span></p>
+                  <p><span className="text-gray-400">Couleur:</span> <span className="font-medium text-gray-700">{p.color || '—'}</span></p>
+                </div>
+
+                {/* Colonne SKU/Prix/Qté - DESKTOP */}
                 <div className="hidden sm:flex flex-col items-end text-sm text-gray-600 space-y-1 min-w-[120px]">
                   <p><span className="text-gray-400">SKU:</span> <span className="font-medium text-gray-700">{p.sku || '—'}</span></p>
                   <p><span className="text-gray-400">Prix:</span> <span className="font-medium text-gray-700">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></p>
@@ -828,10 +833,7 @@ export default function ProductList({
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {canGenerateTryon && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleGenerateTryon(p)
-                      }}
+                      onClick={() => handleGenerateTryon(p)}
                       disabled={generatingTryonId === p.id}
                       className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50 transition-colors"
                       title="Générer photo portée avec IA"
@@ -845,10 +847,7 @@ export default function ProductList({
                   )}
 
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleEdit(p)
-                    }}
+                    onClick={() => handleEdit(p)}
                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                     title="Modifier"
                   >
@@ -856,10 +855,7 @@ export default function ProductList({
                   </button>
 
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDelete(p.id)
-                    }}
+                    onClick={() => handleDelete(p.id)}
                     className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Supprimer"
                   >
@@ -885,19 +881,13 @@ export default function ProductList({
                         src={url}
                         alt={`${p.nom} ${idx + 2}`}
                         className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          window.open(url, '_blank')
-                        }}
+                        onClick={() => window.open(url, '_blank')}
                       />
                     ))}
 
                     {hasMoreImages && !isExpanded && (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleExpanded(p.id)
-                        }}
+                        onClick={() => toggleExpanded(p.id)}
                         className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 text-xs font-medium hover:bg-gray-200 transition-colors"
                       >
                         +{allImages.length - 2}
@@ -906,10 +896,7 @@ export default function ProductList({
 
                     {isExpanded && allImages.length > 2 && (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleExpanded(p.id)
-                        }}
+                        onClick={() => toggleExpanded(p.id)}
                         className="text-xs text-[#22209C] hover:underline flex items-center gap-1"
                       >
                         <ChevronUp size={14} /> Réduire
