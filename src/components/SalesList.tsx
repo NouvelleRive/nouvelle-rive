@@ -865,7 +865,7 @@ export default function SalesList({
                       )}
                       <p className="font-semibold text-gray-900">
                         {vente.sku && <span className="text-[#22209C]">{vente.sku} - </span>}
-                        {vente.nom || vente.remarque || 'Vente sans nom'}
+                        {(vente.nom || vente.remarque || 'Vente sans nom').replace(new RegExp(`^${vente.sku}\\s*-\\s*`, 'i'), '')}
                       </p>
                     </div>
                     {vente.description && (
