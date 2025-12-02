@@ -109,6 +109,7 @@ export default function ProductList({
   const [filtreCategorie, setFiltreCategorie] = useState('')
   const [filtreDeposant, setFiltreDeposant] = useState('')
   const [filtreMois, setFiltreMois] = useState('')
+  const [triPrix, setTriPrix] = useState<'' | 'asc' | 'desc'>('')
 
   // Sélection interne
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -213,7 +214,17 @@ export default function ProductList({
 
       return true
     })
-  }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois])
+  }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, triPrix])
+
+  // Appliquer le tri
+  const produitsTriés = useMemo(() => {
+    if (!triPrix) return produitsFiltres
+    return [...produitsFiltres].sort((a, b) => {
+      const prixA = a.prix ?? 0
+      const prixB = b.prix ?? 0
+      return triPrix === 'asc' ? prixA - prixB : prixB - prixA
+    })
+  }, [produitsFiltres, triPrix])
 
   // Produits récupérés
   const produitsRecuperes = useMemo(() => {
@@ -556,6 +567,7 @@ export default function ProductList({
     setFiltreCategorie('')
     setFiltreDeposant('')
     setFiltreMois('')
+    setTriPrix('')
   }
 
   const hasActiveFilters = recherche || filtreCategorie || filtreDeposant || filtreMois
@@ -631,12 +643,23 @@ export default function ProductList({
               <option key={m} value={m}>{format(new Date(m + '-01'), 'MMM yyyy', { locale: fr })}</option>
             ))}
           </select>
+
+          {/* Tri prix */}
+          <select
+            value={triPrix}
+            onChange={(e) => setTriPrix(e.target.value as '' | 'asc' | 'desc')}
+            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
+          >
+            <option value="">Tri par prix</option>
+            <option value="asc">Prix croissant ↑</option>
+            <option value="desc">Prix décroissant ↓</option>
+          </select>
         </div>
 
         {/* Compteur et actions */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm text-gray-500">
-            {produitsFiltres.length} produit(s)
+            {produitsTriés.length} produit(s)
           </span>
           <div className="flex gap-2 flex-wrap">
             {hasActiveFilters && (
@@ -739,16 +762,16 @@ export default function ProductList({
           <input
             type="checkbox"
             checked={selectedIds.size === produitsFiltres.length && produitsFiltres.length > 0}
-            onChange={(e) => toggleAll(e.target.checked, produitsFiltres)}
+            onChange={(e) => toggleAll(e.target.checked, produitsTriés)}
             className="rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
           />
-          Tout sélectionner ({selectedIds.size}/{produitsFiltres.length})
+          Tout sélectionner ({selectedIds.size}/{produitsTriés.length})
         </label>
       </div>
 
       {/* Liste produits - Nouveau Design */}
       <div className="space-y-3">
-        {produitsFiltres.map((p) => {
+        {produitsTriés.map((p) => {
           const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
           const allImages = getAllImages(p)
           const isExpanded = expandedIds.has(p.id)
