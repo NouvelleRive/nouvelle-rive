@@ -287,7 +287,7 @@ export default function FormulairePage() {
       const match = categories.find((c) => c?.label === formData.categorie)
       const idsquare = match?.idsquare
 
-      if (idsquare && photosReady) {
+      if (idsquare) {
         try {
           const res = await fetch('/api/import-square-produits', {
             method: 'POST',
