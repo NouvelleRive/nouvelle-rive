@@ -52,7 +52,7 @@ export default function NosProduits() {
       titre={titre}
       produits={produitsFiltres}
       deposants={deposants}
-      isAdmin={!selectedChineuse}
+      isAdmin={true}
       loading={loading}
     />
   )
