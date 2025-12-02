@@ -7,7 +7,6 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
-  fetchSignInMethodsForEmail,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 
@@ -67,6 +66,11 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      // Forcer la sélection du compte Google
+      googleProvider.setCustomParameters({
+        prompt: 'select_account'
+      })
+      
       const result = await signInWithPopup(auth, googleProvider)
       redirectByRole(result.user.email)
     } catch (err: any) {
@@ -76,57 +80,67 @@ export default function LoginPage() {
         setError("Connexion annulée.")
       } else if (err.code === 'auth/popup-blocked') {
         setError("Popup bloquée. Autorise les popups pour ce site.")
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("Ce domaine n'est pas autorisé. Contacte l'admin.")
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        // Ignore - l'utilisateur a cliqué plusieurs fois
       } else {
-        setError("Échec de la connexion Google.")
+        setError("Échec de la connexion Google. Réessaye.")
       }
     } finally {
       setLoading(false)
     }
   }
 
-  // Reset mot de passe
+  // Reset mot de passe - SIMPLIFIÉ (sans fetchSignInMethodsForEmail)
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setResetMessage('')
+    setLoading(true)
+    
     try {
-      const methods = await fetchSignInMethodsForEmail(auth, email)
-      if (methods.length === 0) {
-        setError("Aucun compte trouvé avec cet email.")
-        return
-      }
-      if (!methods.includes('password')) {
-        setError("Ce compte utilise Google. Connecte-toi avec le bouton Google.")
-        return
-      }
       await sendPasswordResetEmail(auth, email, {
-        url: `${window.location.origin}/login?reset=ok`,
+        url: `${window.location.origin}/login`,
         handleCodeInApp: false,
       })
-      setResetMessage("Email de réinitialisation envoyé ✅ (vérifie tes spams)")
-      setShowReset(false)
+      setResetMessage("Si un compte existe avec cet email, tu recevras un lien de réinitialisation. Vérifie aussi tes spams !")
+      // Ne pas fermer le modal pour que l'utilisateur voie le message
     } catch (err: any) {
       console.error('Reset error:', err.code, err.message)
-      setError("Impossible d'envoyer l'email de réinitialisation.")
+      
+      if (err.code === 'auth/invalid-email') {
+        setError("Format d'email invalide.")
+      } else if (err.code === 'auth/too-many-requests') {
+        setError("Trop de demandes. Attends quelques minutes.")
+      } else {
+        // Message générique pour ne pas révéler si l'email existe
+        setResetMessage("Si un compte existe avec cet email, tu recevras un lien. Vérifie tes spams !")
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-white px-4">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4">
       <div className="w-full max-w-md space-y-6">
-        <h1 className="text-3xl font-bold text-center" style={{ color: '#22209C' }}>
-          NOUVELLE RIVE
-        </h1>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold" style={{ color: '#22209C' }}>
+            NOUVELLE RIVE
+          </h1>
+          <p className="text-gray-500 text-sm mt-2">Espace chineuses & admin</p>
+        </div>
 
-        <div className="border rounded-lg shadow p-6 space-y-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
           {!showReset ? (
             <>
-              {/* Bouton Google */}
+              {/* Bouton Google - Principal */}
               <button
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 border border-gray-300 bg-white text-gray-700 py-2.5 rounded hover:bg-gray-50 disabled:opacity-50 transition"
+                className="w-full flex items-center justify-center gap-3 border-2 border-gray-200 bg-white text-gray-700 py-3 rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition font-medium"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -134,47 +148,51 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                Continuer avec Google
+                {loading ? 'Connexion...' : 'Continuer avec Google'}
               </button>
 
+              <p className="text-xs text-center text-gray-400">
+                Recommandé pour les chineuses
+              </p>
+
               {/* Séparateur */}
-              <div className="relative">
+              <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+                  <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">ou</span>
+                  <span className="px-3 bg-white text-gray-400 text-xs">ou avec email</span>
                 </div>
               </div>
 
               {/* Formulaire email/password */}
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full mt-1 border px-3 py-2 rounded"
+                    className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition"
                     placeholder="ton@email.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">Mot de passe</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full mt-1 border px-3 py-2 rounded pr-10"
+                      className="w-full border border-gray-200 px-4 py-2.5 rounded-lg pr-10 focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition"
                       placeholder="••••••••"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5 text-gray-500 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showPassword ? (
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -191,15 +209,23 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {error && <p className="text-red-600 text-sm">{error}</p>}
-                {resetMessage && <p className="text-green-600 text-sm">{resetMessage}</p>}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg">
+                    {error}
+                  </div>
+                )}
+                {resetMessage && (
+                  <div className="bg-green-50 border border-green-200 text-green-600 text-sm p-3 rounded-lg">
+                    {resetMessage}
+                  </div>
+                )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#22209C] text-white py-2 rounded hover:opacity-90 disabled:opacity-50"
+                  className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium"
                 >
-                  {loading ? '...' : 'Se connecter'}
+                  {loading ? 'Connexion...' : 'Se connecter'}
                 </button>
 
                 <p className="text-sm text-center">
@@ -219,42 +245,55 @@ export default function LoginPage() {
             </>
           ) : (
             <form onSubmit={handlePasswordReset} className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Entre ton email pour recevoir un lien de réinitialisation.
-              </p>
+              <div className="text-center mb-2">
+                <h2 className="text-lg font-semibold text-gray-900">Réinitialiser le mot de passe</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Entre ton email pour recevoir un lien de réinitialisation.
+                </p>
+              </div>
+              
               <div>
-                <label className="block text-sm font-medium">Ton email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ton email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full mt-1 border px-3 py-2 rounded"
+                  className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition"
+                  placeholder="ton@email.com"
                 />
               </div>
 
-              {resetMessage && <p className="text-green-600 text-sm">{resetMessage}</p>}
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {resetMessage && (
+                <div className="bg-green-50 border border-green-200 text-green-600 text-sm p-3 rounded-lg">
+                  ✅ {resetMessage}
+                </div>
+              )}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg">
+                  {error}
+                </div>
+              )}
 
               <button
                 type="submit"
-                className="w-full bg-[#22209C] text-white py-2 rounded hover:opacity-90"
+                disabled={loading}
+                className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium"
               >
-                Envoyer le lien
+                {loading ? 'Envoi...' : 'Envoyer le lien'}
               </button>
 
-              <p className="text-sm text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowReset(false)
-                    setError('')
-                  }}
-                  className="text-gray-600 hover:underline"
-                >
-                  ← Retour
-                </button>
-              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReset(false)
+                  setError('')
+                  setResetMessage('')
+                }}
+                className="w-full text-gray-500 hover:text-gray-700 text-sm py-2"
+              >
+                ← Retour à la connexion
+              </button>
             </form>
           )}
         </div>
