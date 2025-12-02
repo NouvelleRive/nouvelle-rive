@@ -104,6 +104,7 @@ type ProductFormProps = {
     material?: string
     color?: string
     madeIn?: string
+    sku?: string
     photos?: ExistingPhotos
   }
   

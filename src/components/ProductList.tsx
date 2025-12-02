@@ -463,8 +463,10 @@ export default function ProductList({
       const catObj = categories.find((c) => c.label === data.categorie)
       
       // Mise à jour Firestore avec dot notation
+      const finalSku = data.sku?.trim() || editingProduct.sku || ''
       const updateData: Record<string, any> = {
-        nom: data.nom,
+        nom: finalSku ? `${finalSku} - ${data.nom}` : data.nom,
+        sku: finalSku,
         description: data.description || '',
         categorie: catObj || { label: data.categorie },
         prix: parseFloat(data.prix) || 0,
@@ -992,6 +994,7 @@ export default function ProductList({
                 sku={editingProduct?.sku}
                 initialData={editingProduct ? {
                   nom: editingProduct.nom,
+                  sku: editingProduct.sku,
                   description: editingProduct.description,
                   categorie: typeof editingProduct.categorie === 'object' ? editingProduct.categorie?.label : editingProduct.categorie,
                   prix: editingProduct.prix?.toString(),
