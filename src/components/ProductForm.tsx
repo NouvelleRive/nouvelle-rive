@@ -975,16 +975,20 @@ export default function ProductForm({
             
             {/* Nom de la pièce */}
             <div className="col-span-3">
-              <label className="...">Nom de la pièce *</label>
+              <label className="block text-sm font-medium mb-1">Nom de la pièce *</label>
               <div className="flex">
                 {mode === 'create' && sku && (
-                  <span className="...px-3 py-1.5 bg-gray-100 border border-r-0 rounded-l text-sm text-gray-600">
+                  <span className="px-3 py-1.5 bg-gray-100 border border-r-0 rounded-l text-sm text-gray-600">
                     {sku} -
                   </span>
                 )}
                 <input
-                  ...
-                  className={`... ${mode === 'create' && sku ? 'rounded-l-none' : ''}`}
+                  type="text"
+                  value={formData.nom}
+                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                  required
+                  className={`w-full border rounded px-2 py-1.5 text-sm ${mode === 'create' && sku ? 'rounded-l-none' : ''}`}
+                  placeholder="Marque + type de vêtement"
                 />
               </div>
             </div>
