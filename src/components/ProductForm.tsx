@@ -39,6 +39,7 @@ type ProductFormData = {
   material: string
   color: string
   madeIn: string
+  sku?: string
   // Nouvelles photos (File)
   photoFace: File | null
   photoDos: File | null
@@ -241,6 +242,7 @@ export default function ProductForm({
     material: initialData?.material || '',
     color: initialData?.color || '',
     madeIn: initialData?.madeIn || '',
+    sku: '',
     photoFace: null,
     photoDos: null,
     photosDetails: [],
@@ -990,13 +992,25 @@ export default function ProductForm({
 
             {/* SKU */}
             <div>
-              <label className="block text-sm font-medium mb-1">SKU</label>
-              <input
-                type="text"
-                value={sku || '—'}
-                readOnly
-                className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-gray-600"
-              />
+              <label className="block text-sm font-medium mb-1">
+                SKU {isAdmin && <span className="text-orange-500 text-xs">(modifiable)</span>}
+              </label>
+              {isAdmin ? (
+                <input
+                  type="text"
+                  value={formData.sku || sku || ''}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+                  className="w-full border border-orange-300 rounded px-2 py-1.5 text-sm bg-orange-50"
+                  placeholder={sku || 'SKU'}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={sku || '—'}
+                  readOnly
+                  className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-gray-600"
+                />
+              )}
             </div>
 
             {/* Catégorie */}

@@ -46,10 +46,15 @@ export default function AdminAjouterPage() {
 
   // Création produit
   const handleCreateProduit = async (data: ProductFormData) => {
-    if (!selectedChineuse?.trigramme || !autoSku) { alert('Chineuse ou SKU manquant'); return }
+    if (!selectedChineuse?.trigramme) { alert('Chineuse manquante'); return }
+    
+    // Utiliser le SKU forcé ou l'auto-SKU
+    const finalSku = data.sku?.trim() || autoSku
+    if (!finalSku) { alert('SKU manquant'); return }
+    
     setCreatingProduct(true)
     try {
-      const fullName = `${autoSku} - ${data.nom.trim()}`
+      const fullName = `${finalSku} - ${data.nom.trim()}`
       const deposantOriginal = deposants.find((d: any) => d.id === selectedChineuse.uid)
       const categorieRapport = readCategorieRapportLabel(deposantOriginal)
 
@@ -78,7 +83,7 @@ export default function AdminAjouterPage() {
         prix: parseFloat(data.prix), quantite: parseInt(data.quantite),
         marque: data.marque.trim(), taille: data.taille.trim(),
         material: data.material.trim() || null, color: data.color.trim() || null,
-        madeIn: data.madeIn || null, sku: autoSku,
+        madeIn: data.madeIn || null, sku: finalSku,
         chineurUid: selectedChineuse.uid, categorieRapport,
         trigramme: selectedChineuse.trigramme, photos, imageUrls,
         imageUrl: imageUrls[0] || '', photosReady: Boolean(photos.face),
@@ -96,7 +101,7 @@ export default function AdminAjouterPage() {
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ 
               nom: fullName, productId: docRef.id, prix: parseFloat(data.prix), 
-              description: data.description, sku: autoSku, categorie: match.idsquare, 
+              description: data.description, sku: finalSku, categorie: match.idsquare, 
               chineurNom: selectedChineuse.uid, chineurEmail: selectedChineuse.email, 
               trigramme: selectedChineuse.trigramme, stock: parseInt(data.quantite) || 1, 
               marque: data.marque.trim(), taille: data.taille.trim(), 
@@ -253,10 +258,10 @@ export default function AdminAjouterPage() {
       
       {selectedChineuse && (
         <div className="bg-white rounded border p-6">
-          {autoSku && <p className="text-sm text-green-600 mb-4">Prochain SKU : <strong>{autoSku}</strong></p>}
+          {autoSku && <p className="text-sm text-green-600 mb-4">Prochain SKU suggéré : <strong>{autoSku}</strong> <span className="text-gray-400">(modifiable)</span></p>}
           <ProductForm 
             mode="create" 
-            isAdmin={false} 
+            isAdmin={true}
             categories={chineuseCategories} 
             sku={autoSku} 
             userName={selectedChineuse.nom || selectedChineuse.email}
