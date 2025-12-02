@@ -1,12 +1,14 @@
 // app/admin/nos-produits/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot } from 'firebase/firestore'
 import ProductList, { Produit, Deposant } from '@/components/ProductList'
+import { useAdmin } from '@/lib/admin/context'
 
 export default function NosProduits() {
+  const { selectedChineuse } = useAdmin()
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,12 +33,26 @@ export default function NosProduits() {
     }
   }, [])
 
+  // Filtrer les produits selon la chineuse sélectionnée
+  const produitsFiltres = useMemo(() => {
+    if (!selectedChineuse) return produits
+    return produits.filter(p => 
+      p.chineur === selectedChineuse.email || 
+      p.chineurUid === selectedChineuse.uid
+    )
+  }, [produits, selectedChineuse])
+
+  // Titre dynamique
+  const titre = selectedChineuse 
+    ? `PRODUITS DE ${(selectedChineuse.nom || selectedChineuse.email?.split('@')[0] || '').toUpperCase()}`
+    : "TOUS LES PRODUITS"
+
   return (
     <ProductList
-      titre="TOUS LES PRODUITS"
-      produits={produits}
+      titre={titre}
+      produits={produitsFiltres}
       deposants={deposants}
-      isAdmin={true}
+      isAdmin={!selectedChineuse}
       loading={loading}
     />
   )
