@@ -686,6 +686,21 @@ export default function InventaireList({
           <div className="bg-white rounded-xl max-w-sm w-full p-5">
             <h3 className="text-lg font-semibold mb-4 text-gray-900">Modifier</h3>
 
+            {/* Photos du produit */}
+            {getAllImages(editTarget).length > 0 && (
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                {getAllImages(editTarget).map((url, idx) => (
+                  <img
+                    key={idx}
+                    src={url}
+                    alt={`Photo ${idx + 1}`}
+                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0 cursor-pointer hover:opacity-80"
+                    onClick={() => window.open(url, '_blank')}
+                  />
+                ))}
+              </div>
+            )}
+
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Prix (€)</label>
