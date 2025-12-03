@@ -87,6 +87,13 @@ const getAllImages = (p: Produit): string[] => {
   return []
 }
 
+// Extraire le numéro du SKU pour tri (MIS1 → 1, CAM47 → 47)
+const extractSkuNumber = (sku: string | undefined): number => {
+  if (!sku) return 999999
+  const match = sku.match(/(\d+)$/)
+  return match ? parseInt(match[1], 10) : 999999
+}
+
 // Upload Cloudinary
 async function uploadToCloudinary(file: File): Promise<string> {
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
@@ -130,6 +137,7 @@ export default function InventaireList({
   const [recherche, setRecherche] = useState('')
   const [filtreCategorie, setFiltreCategorie] = useState('')
   const [filtreDeposant, setFiltreDeposant] = useState('')
+  const [filtreStatut, setFiltreStatut] = useState<'tous' | 'trouves' | 'nonTrouves'>('tous')
   const [showFilters, setShowFilters] = useState(false)
   const [showSignalModal, setShowSignalModal] = useState(false)
   const [signalTarget, setSignalTarget] = useState<Produit | null>(null)
@@ -157,9 +165,13 @@ export default function InventaireList({
     )
   )
 
+  // Helper pour savoir si un produit est trouvé dans cet inventaire
+  const isProductFound = (p: Produit) => p.enBoutique && p.inventaireId === inventaireId
+
   const produitsFiltres = useMemo(() => {
     const needle = recherche.trim().toLowerCase()
-    return produits.filter((p) => {
+    
+    let filtered = produits.filter((p) => {
       if (p.statut === 'supprime') return false
       
       if (mode === 'inventaire') {
@@ -174,6 +186,13 @@ export default function InventaireList({
       if (filtreCategorie && cat !== filtreCategorie) return false
       if (filtreDeposant && p.chineur !== filtreDeposant) return false
 
+      // Filtre par statut trouvé/non trouvé
+      if (mode === 'inventaire' && filtreStatut !== 'tous') {
+        const found = isProductFound(p)
+        if (filtreStatut === 'trouves' && !found) return false
+        if (filtreStatut === 'nonTrouves' && found) return false
+      }
+
       if (needle) {
         const hay = [p.nom, p.sku, p.marque, p.taille, p.description, cat, p.chineur, getChineurName(p.chineur)]
           .filter(Boolean)
@@ -184,7 +203,25 @@ export default function InventaireList({
 
       return true
     })
-  }, [produits, recherche, filtreCategorie, filtreDeposant, mode])
+
+    // Tri : non trouvés en premier, puis par SKU croissant
+    if (mode === 'inventaire') {
+      filtered.sort((a, b) => {
+        const aFound = isProductFound(a)
+        const bFound = isProductFound(b)
+        
+        // Non trouvés en premier
+        if (aFound !== bFound) {
+          return aFound ? 1 : -1
+        }
+        
+        // Puis tri par SKU croissant
+        return extractSkuNumber(a.sku) - extractSkuNumber(b.sku)
+      })
+    }
+
+    return filtered
+  }, [produits, recherche, filtreCategorie, filtreDeposant, filtreStatut, mode, inventaireId])
 
   const produitsParChineuse = useMemo(() => {
     if (mode !== 'inventaire') return null
@@ -194,16 +231,43 @@ export default function InventaireList({
       if (!grouped[key]) grouped[key] = []
       grouped[key].push(p)
     }
+    
+    // Trier chaque groupe : non trouvés en premier, puis par SKU
+    for (const key in grouped) {
+      grouped[key].sort((a, b) => {
+        const aFound = isProductFound(a)
+        const bFound = isProductFound(b)
+        
+        if (aFound !== bFound) {
+          return aFound ? 1 : -1
+        }
+        
+        return extractSkuNumber(a.sku) - extractSkuNumber(b.sku)
+      })
+    }
+    
     return grouped
-  }, [produitsFiltres, mode])
+  }, [produitsFiltres, mode, inventaireId])
 
   const stats = useMemo(() => {
     if (mode === 'inventaire') {
       const total = produitsFiltres.length
-      const trouves = produitsFiltres.filter((p) => p.enBoutique && p.inventaireId === inventaireId).length
-      return { total, trouves, restants: total - trouves }
+      const trouves = produitsFiltres.filter((p) => isProductFound(p)).length
+      const restants = total - trouves
+      
+      // Calculer la somme des restants
+      const sommeRestants = produitsFiltres
+        .filter((p) => !isProductFound(p))
+        .reduce((sum, p) => sum + (p.prix || 0), 0)
+      
+      // Calculer la somme des trouvés
+      const sommeTrouves = produitsFiltres
+        .filter((p) => isProductFound(p))
+        .reduce((sum, p) => sum + (p.prix || 0), 0)
+      
+      return { total, trouves, restants, sommeRestants, sommeTrouves }
     }
-    return { total: produitsFiltres.length }
+    return { total: produitsFiltres.length, trouves: 0, restants: 0, sommeRestants: 0, sommeTrouves: 0 }
   }, [produitsFiltres, mode, inventaireId])
 
   const handleMarkFound = async (p: Produit) => {
@@ -353,31 +417,26 @@ export default function InventaireList({
 
         // Mettre à jour selon le format existant
         if (editTarget.photos) {
-          // Format photos structuré
           const currentDetails = editTarget.photos.details || []
           
           if (!editTarget.photos.face && newUrls.length > 0) {
-            // Pas de photo face → la première devient face
             updates.photos = {
               ...editTarget.photos,
               face: newUrls[0],
               details: [...currentDetails, ...newUrls.slice(1)]
             }
           } else {
-            // Ajouter aux détails
             updates.photos = {
               ...editTarget.photos,
               details: [...currentDetails, ...newUrls]
             }
           }
           
-          // Mettre à jour imageUrls aussi
           const existingUrls = getAllImages(editTarget)
           updates.imageUrls = [...existingUrls, ...newUrls]
           updates.imageUrl = updates.imageUrls[0] || ''
           
         } else {
-          // Format imageUrls simple
           const existingUrls = editTarget.imageUrls || (editTarget.imageUrl ? [editTarget.imageUrl] : [])
           updates.imageUrls = [...existingUrls, ...newUrls]
           updates.imageUrl = updates.imageUrls[0] || ''
@@ -427,7 +486,7 @@ export default function InventaireList({
     const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
     const allImages = getAllImages(p)
     const isProcessing = processingIds.has(p.id)
-    const isFound = mode === 'inventaire' && p.enBoutique && p.inventaireId === inventaireId
+    const isFound = isProductFound(p)
 
     return (
       <div
@@ -577,6 +636,7 @@ export default function InventaireList({
         </p>
       </div>
 
+      {/* Stats avec sommes en € */}
       {mode === 'inventaire' && (
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
           <div className="grid grid-cols-3 gap-4 text-center">
@@ -584,18 +644,42 @@ export default function InventaireList({
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               <p className="text-xs text-gray-500">Total</p>
             </div>
-            <div>
+            <div
+              className={`cursor-pointer rounded-lg p-2 -m-2 transition-colors ${filtreStatut === 'trouves' ? 'bg-green-100' : 'hover:bg-green-50'}`}
+              onClick={() => setFiltreStatut(filtreStatut === 'trouves' ? 'tous' : 'trouves')}
+            >
               <p className="text-2xl font-bold text-green-600">{stats.trouves}</p>
               <p className="text-xs text-gray-500">Trouvés</p>
+              <p className="text-xs text-green-600 font-medium">{stats.sommeTrouves.toLocaleString('fr-FR')} €</p>
             </div>
-            <div>
+            <div
+              className={`cursor-pointer rounded-lg p-2 -m-2 transition-colors ${filtreStatut === 'nonTrouves' ? 'bg-amber-100' : 'hover:bg-amber-50'}`}
+              onClick={() => setFiltreStatut(filtreStatut === 'nonTrouves' ? 'tous' : 'nonTrouves')}
+            >
               <p className="text-2xl font-bold text-amber-600">{stats.restants}</p>
               <p className="text-xs text-gray-500">Restants</p>
+              <p className="text-xs text-amber-600 font-medium">{stats.sommeRestants.toLocaleString('fr-FR')} €</p>
             </div>
           </div>
+          
+          {/* Indicateur filtre actif */}
+          {filtreStatut !== 'tous' && (
+            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-center gap-2">
+              <span className="text-xs text-gray-500">
+                Filtre actif : <span className="font-medium">{filtreStatut === 'trouves' ? 'Trouvés' : 'Non trouvés'}</span>
+              </span>
+              <button
+                onClick={() => setFiltreStatut('tous')}
+                className="text-xs text-[#22209C] hover:underline"
+              >
+                Voir tous
+              </button>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Recherche et filtres */}
       <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4 shadow-sm">
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -662,23 +746,34 @@ export default function InventaireList({
         </p>
       </div>
 
+      {/* Liste des produits */}
       {mode === 'inventaire' && produitsParChineuse ? (
         <div className="space-y-6">
           {Object.entries(produitsParChineuse)
             .sort(([a], [b]) => a.localeCompare(b))
-            .map(([chineur, prods]) => (
-              <div key={chineur}>
-                <h2 className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-2">
-                  <span>{getChineurName(chineur)}</span>
-                  <span className="text-xs font-normal text-gray-400">
-                    ({prods.filter((p) => p.enBoutique && p.inventaireId === inventaireId).length}/{prods.length})
-                  </span>
-                </h2>
-                <div className="space-y-2">
-                  {prods.map((p) => renderProductCard(p, false))}
+            .map(([chineur, prods]) => {
+              const chineuseNonTrouves = prods.filter(p => !isProductFound(p)).length
+              const chineuseTrouves = prods.filter(p => isProductFound(p)).length
+              
+              return (
+                <div key={chineur}>
+                  <h2 className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-2">
+                    <span>{getChineurName(chineur)}</span>
+                    <span className="text-xs font-normal text-gray-400">
+                      ({chineuseTrouves}/{prods.length})
+                    </span>
+                    {chineuseNonTrouves > 0 && (
+                      <span className="text-xs font-normal text-amber-600">
+                        • {chineuseNonTrouves} restant{chineuseNonTrouves > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </h2>
+                  <div className="space-y-2">
+                    {prods.map((p) => renderProductCard(p, false))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
         </div>
       ) : (
         <div className="space-y-2">
@@ -691,7 +786,9 @@ export default function InventaireList({
           <p className="text-gray-400">
             {mode === 'reception' && 'Aucun produit en attente de réception'}
             {mode === 'destock' && 'Aucun produit à récupérer'}
-            {mode === 'inventaire' && 'Aucun produit trouvé'}
+            {mode === 'inventaire' && filtreStatut === 'nonTrouves' && '🎉 Tous les produits ont été trouvés !'}
+            {mode === 'inventaire' && filtreStatut === 'trouves' && 'Aucun produit trouvé pour le moment'}
+            {mode === 'inventaire' && filtreStatut === 'tous' && 'Aucun produit trouvé'}
           </p>
         </div>
       )}
