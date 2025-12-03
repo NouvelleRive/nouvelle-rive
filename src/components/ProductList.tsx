@@ -8,9 +8,10 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { 
-  MoreHorizontal, Trash2, ChevronUp, Sparkles, 
+  MoreHorizontal, Trash2, ChevronUp, Sparkles, Clock,
   Search, X, FileSpreadsheet, Download, ChevronDown, RefreshCw, ImageIcon
 } from 'lucide-react'
+
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -53,6 +54,8 @@ export type Produit = {
   variationId?: string
   itemId?: string
   trigramme?: string
+  recu?: boolean
+  statutRecuperation?: 'aRecuperer' | 'vole' | null
 }
 
 export type Deposant = {
@@ -229,6 +232,11 @@ export default function ProductList({
   // Produits récupérés
   const produitsRecuperes = useMemo(() => {
     return produits.filter((p) => p.statut === 'retour')
+  }, [produits])
+
+  // Produits à récupérer
+  const produitsARecuperer = useMemo(() => {
+    return produits.filter((p) => p.statutRecuperation === 'aRecuperer' && p.statut !== 'supprime')
   }, [produits])
 
   // Options de filtres
@@ -788,7 +796,7 @@ export default function ProductList({
           return (
             <div
               key={p.id}
-              className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} p-4 shadow-sm hover:shadow-md transition-all`}
+              className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false ? 'opacity-50 bg-gray-50' : ''} p-4 shadow-sm hover:shadow-md transition-all`}
             >
               <div className="flex items-start gap-4">
                 {/* Checkbox */}
@@ -837,6 +845,11 @@ export default function ProductList({
                   {isAdmin && (
                     <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>
                   )}
+                  {p.recu === false && (
+                  <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1">
+                    <Clock size={12} /> En attente de réception
+                  </span>
+                )}
                 </div>
 
                 {/* Colonne Taille/Marque/Matière/Couleur - DESKTOP */}
@@ -940,6 +953,42 @@ export default function ProductList({
           <p className="text-gray-400">Aucun produit</p>
         </div>
       )}
+
+    {/* Produits à récupérer */}
+          {produitsARecuperer.length > 0 && (
+            <div className="mt-8 bg-amber-50 rounded-xl border border-amber-200 p-4">
+              <h3 className="text-lg font-semibold mb-4 text-amber-700">
+                ⚠️ À récupérer ({produitsARecuperer.length})
+              </h3>
+              <p className="text-sm text-amber-600 mb-4">
+                Ces produits ont été signalés par la vendeuse. Merci de les récupérer en boutique.
+              </p>
+              <div className="space-y-3">
+                {produitsARecuperer.map((p) => {
+                  const allImages = getAllImages(p)
+                  return (
+                    <div key={p.id} className="bg-white rounded-lg border border-amber-200 p-3 flex items-center gap-3">
+                      {allImages.length > 0 ? (
+                        <img src={allImages[0]} alt={p.nom} className="w-16 h-16 object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <ImageIcon size={20} className="text-gray-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 truncate">
+                          {p.sku && <span className="text-amber-600">{p.sku}</span>}
+                          {p.sku && ' - '}
+                          {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
+                        </h4>
+                        <p className="text-sm text-gray-500">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
       {/* Produits récupérés */}
       {produitsRecuperes.length > 0 && (
