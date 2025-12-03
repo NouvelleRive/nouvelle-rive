@@ -31,14 +31,15 @@ function AdminNavbar() {
   }
 
   const tabs = [
-    { key: 'ajouter', label: 'Ajouter produit', href: '/admin/ajouter-produits' },  
-    { key: 'produits', label: 'Nos produits', href: '/admin/nos-produits' },
-    { key: 'ventes', label: 'Nos ventes', href: '/admin/nos-ventes' },
-    { key: 'commandes', label: 'Nos commandes', href: '/admin/nos-commandes' },
+    { key: 'ajouter', label: 'Ajouter', href: '/admin/ajouter-produits' },  
+    { key: 'produits', label: 'Produits', href: '/admin/nos-produits' },
+    { key: 'ventes', label: 'Ventes', href: '/admin/nos-ventes' },
+    { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
+    { key: 'perf', label: 'Performance', href: '/admin/performance', adminOnly: true },
     { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', isEbay: true, adminOnly: true },
     { key: 'deposants', label: 'Déposantes', href: '/admin/deposantes' },
     { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
-  ]
+    ]
 
   // Filtrer les tabs admin-only si chineuse sélectionnée
   const visibleTabs = tabs.filter(tab => !tab.adminOnly || !selectedChineuse)
