@@ -761,7 +761,7 @@ export default function ProductList({
         <label className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer">
           <input
             type="checkbox"
-            checked={selectedIds.size === produitsFiltres.length && produitsFiltres.length > 0}
+            checked={selectedIds.size === produitsTriés.length && produitsTriés.length > 0}
             onChange={(e) => toggleAll(e.target.checked, produitsTriés)}
             className="rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
           />
@@ -935,7 +935,7 @@ export default function ProductList({
         })}
       </div>
 
-      {produitsFiltres.length === 0 && (
+      {produitsTriés.length === 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <p className="text-gray-400">Aucun produit</p>
         </div>
