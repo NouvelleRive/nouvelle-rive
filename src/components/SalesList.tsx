@@ -40,6 +40,7 @@ export interface Vente {
 export interface ChineuseMeta {
   nom?: string
   commissionHT?: number
+  taux?: number
   siret?: string
   adresse1?: string
   adresse2?: string
@@ -368,7 +369,9 @@ export default function SalesList({
     })
 
     const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
-    const tauxHT = typeof chineuse?.commissionHT === 'number' ? chineuse.commissionHT : 0.40
+    const tauxHT = typeof chineuse?.taux === 'number' 
+  ? chineuse.taux / 100 
+  : (typeof chineuse?.commissionHT === 'number' ? chineuse.commissionHT : 0.40)
     const commissionHT = ca * tauxHT
     const commissionTTC = commissionHT * 1.2
     const tva = commissionTTC - commissionHT
@@ -725,7 +728,7 @@ export default function SalesList({
           </div>
           <div className="bg-white border border-blue-200 rounded-xl p-3 sm:p-4">
             <p className="text-xs sm:text-sm text-blue-600">CA</p>
-            <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.ca}€</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.ca.toFixed(2)}€</p>
           </div>
         </div>
       )}

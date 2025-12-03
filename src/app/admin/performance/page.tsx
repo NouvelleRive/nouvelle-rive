@@ -45,7 +45,7 @@ export default function PerformancePage() {
 
   // Charger les déposants
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'deposants'), (snap) => {
+    const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
       setDeposants(snap.docs.map(d => ({ id: d.id, ...d.data() } as Deposant)))
     })
     return () => unsub()
@@ -160,15 +160,18 @@ export default function PerformancePage() {
     })
 
     return Array.from(map.entries())
-      .map(([email, data]) => {
-        const dep = deposants.find(d => d.email === email)
-        return {
-          email,
-          nom: dep?.nom || email.split('@')[0],
-          trigramme: dep?.trigramme || email.substring(0, 3).toUpperCase(),
-          ...data,
-        }
-      })
+        .map(([email, data]) => {
+            const dep = deposants.find(d => d.email === email)
+            // Nom propre : utilise le nom de la déposante, sinon capitalise la première partie de l'email
+            const nomAffiche = dep?.nom || (email !== 'unknown' ? email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) : 'Non attribué')
+            return {
+            email,
+            nom: nomAffiche,
+            trigramme: dep?.trigramme || (email !== 'unknown' ? email.substring(0, 3).toUpperCase() : '?'),
+            ...data,
+            }
+        })
+  .filter(c => c.email !== 'unknown') // Optionnel : masquer les ventes non attribuées
       .sort((a, b) => b.ca - a.ca)
   }, [ventesCurrentMonth, deposants])
 
