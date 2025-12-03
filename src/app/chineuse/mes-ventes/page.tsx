@@ -27,7 +27,7 @@ export default function MesVentesPage() {
       // Charger les infos depuis deposants (contient le taux)
       try {
         const deposantsSnap = await getDocs(
-          query(collection(db, 'deposants'), where('email', '==', u.email))
+          query(collection(db, 'chineuse'), where('email', '==', u.email))
         )
         
         if (!deposantsSnap.empty) {
