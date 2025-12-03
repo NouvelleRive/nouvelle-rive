@@ -278,6 +278,7 @@ export default function FormulairePage() {
         imageUrl: imageUrls[0] || '',
         photosReady,
         vendu: false,
+        recu: false,
         createdAt: serverTimestamp(),
       }
 
@@ -385,6 +386,7 @@ export default function FormulairePage() {
           trigramme,
           imageUrls: [],
           vendu: false,
+          recu: false,
           createdAt: serverTimestamp(),
         }
         
