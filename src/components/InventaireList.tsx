@@ -147,7 +147,7 @@ export default function InventaireList({
       if (filtreDeposant && p.chineur !== filtreDeposant) return false
 
       if (needle) {
-        const hay = [p.nom, p.sku, p.marque, p.taille, p.description, cat]
+        const hay = [p.nom, p.sku, p.marque, p.taille, p.description, cat, p.chineur, getChineurName(p.chineur)]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
