@@ -61,6 +61,7 @@ const EMPTY_FORM = {
   categories: [] as CategorieItem[],
   categorieRapportLabel: '',
   categorieRapportIdsquare: '',
+  taux: 40,
   siret: '',
   tva: '',
   iban: '',
@@ -117,6 +118,7 @@ export default function AdminDeposantesPage() {
       categories: cats,
       categorieRapportLabel: catRapport.label || '',
       categorieRapportIdsquare: catRapport.idsquare || '',
+      taux: catRapport.taux || 40,
       siret: catRapport.siret || '',
       tva: catRapport.tva || '',
       iban: catRapport.iban || '',
@@ -222,6 +224,7 @@ export default function AdminDeposantesPage() {
           idsquare: formData.categorieRapportIdsquare.trim(),
           nom: formData.nom.trim(),
           emailCompta: formData.email.trim(),
+          taux: formData.taux,
           siret: formData.siret.trim(),
           tva: formData.tva.trim(),
           iban: formData.iban.trim(),
@@ -666,6 +669,18 @@ export default function AdminDeposantesPage() {
               <div className="border-t pt-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations comptables</h3>
                 
+              <div className="mt-4">
+                <label className="block text-xs text-gray-500 mb-1">Paramètre</label>
+                <input
+                  type="number"
+                  value={formData.taux}
+                  onChange={(e) => setFormData({ ...formData, taux: parseInt(e.target.value) || 70 })}
+                  min={0}
+                  max={100}
+                  className="w-24 border rounded px-3 py-2 text-sm"
+                />
+              </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">

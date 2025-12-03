@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
-import { collection, getDocs, getDoc, doc, query, where, Timestamp } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import SalesList, { Vente, ChineuseMeta } from '@/components/SalesList'
 
@@ -24,9 +24,32 @@ export default function MesVentesPage() {
       }
       setUser(u)
 
-      // Charger les infos chineuse
-      const chineuseSnap = await getDoc(doc(db, 'chineuse', u.uid))
-      setChineuse(chineuseSnap.exists() ? (chineuseSnap.data() as ChineuseMeta) : null)
+      // Charger les infos depuis deposants (contient le taux)
+      try {
+        const deposantsSnap = await getDocs(
+          query(collection(db, 'deposants'), where('email', '==', u.email))
+        )
+        
+        if (!deposantsSnap.empty) {
+          const depData = deposantsSnap.docs[0].data()
+          const catRapport = (depData['Catégorie de rapport'] || [])[0] || {}
+          
+          setChineuse({
+            nom: depData.nom,
+            siret: catRapport.siret,
+            adresse1: catRapport.adresse1,
+            adresse2: catRapport.adresse2,
+            tva: catRapport.tva,
+            iban: catRapport.iban,
+            bic: catRapport.bic,
+            banqueAdresse: catRapport.banqueAdresse,
+            taux: catRapport.taux,
+            codeChineuse: depData.trigramme,
+          })
+        }
+      } catch (err) {
+        console.error('Erreur chargement deposant:', err)
+      }
 
       // Charger les ventes
       await fetchVentes(u.uid, u.email!)

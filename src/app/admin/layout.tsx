@@ -35,7 +35,7 @@ function AdminNavbar() {
     { key: 'produits', label: 'Produits', href: '/admin/nos-produits' },
     { key: 'ventes', label: 'Ventes', href: '/admin/nos-ventes' },
     { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
-    { key: 'perf', label: 'Performance', href: '/admin/performance', adminOnly: true },
+    { key: 'perf', label: 'Perf', href: '/admin/performance', adminOnly: true },
     { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', isEbay: true, adminOnly: true },
     { key: 'deposants', label: 'Déposantes', href: '/admin/deposantes' },
     { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
