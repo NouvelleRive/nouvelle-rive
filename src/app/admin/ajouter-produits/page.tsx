@@ -88,6 +88,7 @@ export default function AdminAjouterPage() {
         trigramme: selectedChineuse.trigramme, photos, imageUrls,
         imageUrl: imageUrls[0] || '', photosReady: Boolean(photos.face),
         vendu: false, createdAt: serverTimestamp(),
+        recu: false,
       }
       if (selectedChineuse.email) payload.chineur = selectedChineuse.email
 
@@ -182,6 +183,7 @@ export default function AdminAjouterPage() {
           trigramme: tri,
           imageUrls: [],
           vendu: false,
+          recu: false,
           createdAt: serverTimestamp(),
         }
         if (selectedChineuse.email) payload.chineur = selectedChineuse.email

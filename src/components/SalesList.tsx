@@ -123,8 +123,11 @@ export default function SalesList({
   // =====================
   // HELPERS
   // =====================
+
   const getDateFromVente = (v: Vente): Date => {
-    if (v.dateVente instanceof Timestamp) return v.dateVente.toDate()
+    if (v.dateVente && typeof (v.dateVente as any).toDate === 'function') {
+      return (v.dateVente as any).toDate()
+    }
     if (typeof v.dateVente === 'string') return new Date(v.dateVente)
     return new Date()
   }
@@ -358,6 +361,7 @@ export default function SalesList({
   }
 
   const generateInvoiceFor = (monthValue: string) => {
+    console.log('🔥 generateInvoiceFor appelé avec:', monthValue)
     if (!chineuse && !userEmail) return
     const [m, y] = monthValue.split('-').map(Number)
     const start = new Date(y, m - 1, 1)

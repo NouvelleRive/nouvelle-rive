@@ -372,6 +372,10 @@ export default function AdminNosVentesPage() {
       <SalesList
         titre={titre}
         ventes={ventesFiltrees}
+        chineuse={selectedChineuse ? {
+          nom: selectedChineuse.nom,
+          codeChineuse: selectedChineuse.trigramme,
+        } : null}
         isAdmin={true}
         loading={loading || loadingVentes}
         onAttribuer={handleAttribuer}
