@@ -1,14 +1,12 @@
 // components/InventaireList.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { doc, updateDoc, Timestamp } from 'firebase/firestore'
-import { format } from 'date-fns'
-import { fr } from 'date-fns/locale'
 import {
   Search, X, Check, AlertTriangle, Package, PackageCheck,
-  ChevronDown, ChevronUp, ImageIcon, Edit3, Filter
+  ImageIcon, Edit3, Filter, Camera, Upload
 } from 'lucide-react'
 
 // =====================
@@ -89,6 +87,33 @@ const getAllImages = (p: Produit): string[] => {
   return []
 }
 
+// Upload Cloudinary
+async function uploadToCloudinary(file: File): Promise<string> {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+
+  if (!cloudName || !uploadPreset) {
+    throw new Error('Configuration Cloudinary manquante')
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('upload_preset', uploadPreset)
+  formData.append('folder', 'produits')
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    { method: 'POST', body: formData }
+  )
+
+  if (!response.ok) {
+    throw new Error('Erreur upload Cloudinary')
+  }
+
+  const data = await response.json()
+  return data.secure_url
+}
+
 // =====================
 // COMPONENT
 // =====================
@@ -113,6 +138,9 @@ export default function InventaireList({
   const [editTarget, setEditTarget] = useState<Produit | null>(null)
   const [editValues, setEditValues] = useState<{ prix?: string; taille?: string; marque?: string }>({})
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
+  const [newPhotos, setNewPhotos] = useState<File[]>([])
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  const cameraRef = useRef<HTMLInputElement>(null)
 
   const getChineurName = (email: string | undefined) => {
     if (!email) return '—'
@@ -300,6 +328,7 @@ export default function InventaireList({
   const handleQuickEdit = async () => {
     if (!editTarget) return
     setProcessingIds((prev) => new Set(prev).add(editTarget.id))
+    setUploadingPhotos(newPhotos.length > 0)
 
     try {
       const updates: Record<string, any> = {}
@@ -313,6 +342,48 @@ export default function InventaireList({
         updates.marque = editValues.marque
       }
 
+      // Upload nouvelles photos vers Cloudinary
+      if (newPhotos.length > 0) {
+        const newUrls: string[] = []
+
+        for (const file of newPhotos) {
+          const url = await uploadToCloudinary(file)
+          newUrls.push(url)
+        }
+
+        // Mettre à jour selon le format existant
+        if (editTarget.photos) {
+          // Format photos structuré
+          const currentDetails = editTarget.photos.details || []
+          
+          if (!editTarget.photos.face && newUrls.length > 0) {
+            // Pas de photo face → la première devient face
+            updates.photos = {
+              ...editTarget.photos,
+              face: newUrls[0],
+              details: [...currentDetails, ...newUrls.slice(1)]
+            }
+          } else {
+            // Ajouter aux détails
+            updates.photos = {
+              ...editTarget.photos,
+              details: [...currentDetails, ...newUrls]
+            }
+          }
+          
+          // Mettre à jour imageUrls aussi
+          const existingUrls = getAllImages(editTarget)
+          updates.imageUrls = [...existingUrls, ...newUrls]
+          updates.imageUrl = updates.imageUrls[0] || ''
+          
+        } else {
+          // Format imageUrls simple
+          const existingUrls = editTarget.imageUrls || (editTarget.imageUrl ? [editTarget.imageUrl] : [])
+          updates.imageUrls = [...existingUrls, ...newUrls]
+          updates.imageUrl = updates.imageUrls[0] || ''
+        }
+      }
+
       if (Object.keys(updates).length > 0) {
         await updateDoc(doc(db, 'produits', editTarget.id), updates)
       }
@@ -320,6 +391,7 @@ export default function InventaireList({
       setShowEditModal(false)
       setEditTarget(null)
       setEditValues({})
+      setNewPhotos([])
       onProductUpdate?.()
     } catch (err) {
       console.error('Erreur édition:', err)
@@ -330,6 +402,7 @@ export default function InventaireList({
         next.delete(editTarget?.id || '')
         return next
       })
+      setUploadingPhotos(false)
     }
   }
 
@@ -340,6 +413,7 @@ export default function InventaireList({
       taille: p.taille || '',
       marque: p.marque || '',
     })
+    setNewPhotos([])
     setShowEditModal(true)
   }
 
@@ -622,6 +696,7 @@ export default function InventaireList({
         </div>
       )}
 
+      {/* Modal Signaler */}
       {showSignalModal && signalTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-sm w-full p-5">
@@ -681,25 +756,87 @@ export default function InventaireList({
         </div>
       )}
 
+      {/* Modal Édition */}
       {showEditModal && editTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-sm w-full p-5">
+          <div className="bg-white rounded-xl max-w-sm w-full p-5 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4 text-gray-900">Modifier</h3>
 
-            {/* Photos du produit */}
+            {/* Photos existantes */}
             {getAllImages(editTarget).length > 0 && (
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+              <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
                 {getAllImages(editTarget).map((url, idx) => (
                   <img
                     key={idx}
                     src={url}
                     alt={`Photo ${idx + 1}`}
-                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0 cursor-pointer hover:opacity-80"
+                    className="w-16 h-16 object-cover rounded-lg flex-shrink-0 cursor-pointer hover:opacity-80 border"
                     onClick={() => window.open(url, '_blank')}
                   />
                 ))}
               </div>
             )}
+
+            {/* Nouvelles photos à ajouter */}
+            {newPhotos.length > 0 && (
+              <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+                {newPhotos.map((file, idx) => (
+                  <div key={idx} className="relative">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Nouvelle ${idx + 1}`}
+                      className="w-16 h-16 object-cover rounded-lg border-2 border-green-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewPhotos(prev => prev.filter((_, i) => i !== idx))}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Boutons ajout photo */}
+            <div className="flex gap-2 mb-4">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={cameraRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) setNewPhotos(prev => [...prev, file])
+                  e.target.value = ''
+                }}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => cameraRef.current?.click()}
+                className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg text-blue-600 hover:bg-blue-100 transition text-sm"
+              >
+                <Camera size={18} />
+                Photo
+              </button>
+              <label className="flex-1 flex items-center justify-center gap-2 py-2 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition cursor-pointer text-sm">
+                <Upload size={18} />
+                Fichier
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || [])
+                    if (files.length > 0) setNewPhotos(prev => [...prev, ...files])
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                />
+              </label>
+            </div>
 
             <div className="space-y-3">
               <div>
@@ -740,17 +877,19 @@ export default function InventaireList({
                   setShowEditModal(false)
                   setEditTarget(null)
                   setEditValues({})
+                  setNewPhotos([])
                 }}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                disabled={uploadingPhotos}
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Annuler
               </button>
               <button
                 onClick={handleQuickEdit}
-                disabled={processingIds.has(editTarget.id)}
+                disabled={processingIds.has(editTarget.id) || uploadingPhotos}
                 className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878] disabled:opacity-50 transition-colors"
               >
-                Enregistrer
+                {uploadingPhotos ? '📤 Upload...' : processingIds.has(editTarget.id) ? '...' : 'Enregistrer'}
               </button>
             </div>
           </div>
