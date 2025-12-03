@@ -137,16 +137,6 @@ export default function ProductList({
   const [updatingSquare, setUpdatingSquare] = useState(false)
   const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
 
-  // Chargement catégories
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'categories'), (snap) => {
-      if (snap.exists()) {
-        setCategories(snap.data().list || [])
-      }
-    })
-    return () => unsub()
-  }, [])
-
   const categoriesLabels = categories.map((c) => c.label)
 
   // Helpers
