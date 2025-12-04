@@ -137,7 +137,7 @@ export default function InventaireList({
   const [recherche, setRecherche] = useState('')
   const [filtreCategorie, setFiltreCategorie] = useState('')
   const [filtreDeposant, setFiltreDeposant] = useState('')
-  const [filtrePrix, setFiltrePrix] = useState<'tous' | '0-50' | '50-100' | '100-200' | '200+'>('tous')
+  const [filtrePrix, setFiltrePrix] = useState<string>('')
   const [filtreStatut, setFiltreStatut] = useState<'tous' | 'trouves' | 'nonTrouves'>('tous')
   const [showFilters, setShowFilters] = useState(false)
   const [showSignalModal, setShowSignalModal] = useState(false)
@@ -195,13 +195,10 @@ export default function InventaireList({
         if (filtreStatut === 'nonTrouves' && found) return false
       }
 
-      // Filtre par prix
-      if (filtrePrix !== 'tous') {
-        const prix = p.prix || 0
-        if (filtrePrix === '0-50' && prix > 50) return false
-        if (filtrePrix === '50-100' && (prix <= 50 || prix > 100)) return false
-        if (filtrePrix === '100-200' && (prix <= 100 || prix > 200)) return false
-        if (filtrePrix === '200+' && prix <= 200) return false
+      // Filtre par prix exact
+      if (filtrePrix !== '') {
+        const prixRecherche = parseFloat(filtrePrix)
+        if (!isNaN(prixRecherche) && p.prix !== prixRecherche) return false
       }
 
       if (needle) {
@@ -733,7 +730,7 @@ export default function InventaireList({
               <option value="">Toutes chineuses</option>
               {deposantsUniques.map((email, i) => (
                 <option key={i} value={email}>
-                  {getChineurName(email)}
+                  {getChineurName(email).toUpperCase()}
                 </option>
               ))}
             </select>
@@ -749,17 +746,13 @@ export default function InventaireList({
                 </option>
               ))}
             </select>
-            <select
+            <input
+              type="number"
               value={filtrePrix}
-              onChange={(e) => setFiltrePrix(e.target.value as any)}
+              onChange={(e) => setFiltrePrix(e.target.value)}
+              placeholder="Prix exact"
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
-            >
-              <option value="tous">Tous prix</option>
-              <option value="0-50">0 - 50 €</option>
-              <option value="50-100">50 - 100 €</option>
-              <option value="100-200">100 - 200 €</option>
-              <option value="200+">200+ €</option>
-            </select>
+/>
           </div>
         )}
 
