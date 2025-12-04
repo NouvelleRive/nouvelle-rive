@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
         nom: categorieRapport.nom?.trim() || nom?.trim() || '',
         email: categorieRapport.emailCompta?.trim() || email?.trim() || '',
         trigramme: trigramme?.trim().toUpperCase() || '',
+        taux: categorieRapport.taux ?? 40,
         siret: categorieRapport.siret?.trim() || '',
         tva: categorieRapport.tva?.trim() || '',
         iban: categorieRapport.iban?.trim() || '',
