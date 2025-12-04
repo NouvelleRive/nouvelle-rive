@@ -762,32 +762,6 @@ export default function InventaireList({
             </select>
           </div>
         )}
-            <select
-              value={filtreDeposant}
-              onChange={(e) => setFiltreDeposant(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
-            >
-              <option value="">Toutes chineuses</option>
-              {deposantsUniques.map((email, i) => (
-                <option key={i} value={email}>
-                  {getChineurName(email)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filtreCategorie}
-              onChange={(e) => setFiltreCategorie(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
-            >
-              <option value="">Toutes catégories</option>
-              {categoriesUniques.map((c, i) => (
-                <option key={i} value={c as string}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         <p className="text-xs text-gray-400 mt-2">
           {produitsFiltres.length} produit(s)
