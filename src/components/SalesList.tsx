@@ -373,6 +373,7 @@ export default function SalesList({
     })
 
     const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
+    console.log('🔍 DEBUG taux:', chineuse?.taux, typeof chineuse?.taux)
     const tauxHT = typeof chineuse?.taux === 'number' 
   ? chineuse.taux / 100 
   : (typeof chineuse?.commissionHT === 'number' ? chineuse.commissionHT : 0.40)
