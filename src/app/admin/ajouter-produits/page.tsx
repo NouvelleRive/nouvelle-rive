@@ -11,7 +11,8 @@ import {
   canUseFashnAI, 
   computeNextSkuForTrigram, 
   readCategorieRapportLabel,
-  extractSkuNumFromSkuOrName 
+  extractSkuNumFromSkuOrName, 
+  checkSkuUnique
 } from '@/lib/admin/helpers'
 
 type Cat = { label: string; idsquare?: string }
@@ -55,6 +56,15 @@ export default function AdminAjouterPage() {
     setCreatingProduct(true)
     try {
       const fullName = `${finalSku} - ${data.nom.trim()}`
+
+      // ✅ VÉRIFICATION UNICITÉ SKU
+        const isUnique = await checkSkuUnique(finalSku)
+        if (!isUnique) {
+          alert(`❌ Le SKU "${finalSku}" est déjà utilisé par un autre produit.`)
+          setCreatingProduct(false)
+          return
+        }
+
       const deposantOriginal = deposants.find((d: any) => d.id === selectedChineuse.uid)
       const categorieRapport = readCategorieRapportLabel(deposantOriginal)
 
@@ -162,6 +172,13 @@ export default function AdminAjouterPage() {
           currentSkuNum++
           rowSku = `${tri}${currentSkuNum}`
         }
+
+        // ✅ VÉRIFICATION UNICITÉ SKU
+        const isUnique = await checkSkuUnique(rowSku)
+        if (!isUnique) {
+          console.warn(`SKU "${rowSku}" existe déjà, ignoré`)
+          continue
+}
         
         const fullName = `${rowSku} - ${produit.nom}`
         

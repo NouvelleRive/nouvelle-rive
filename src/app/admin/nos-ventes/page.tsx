@@ -15,7 +15,7 @@ const getAuthToken = async () => {
 }
 
 export default function AdminNosVentesPage() {
-  const { selectedChineuse, produitsFiltres, loading, loadData } = useAdmin()
+  const { selectedChineuse, produitsFiltres, loading, loadData, deposants  } = useAdmin()
 
   // Ventes
   const [ventes, setVentes] = useState<Vente[]>([])
@@ -376,6 +376,7 @@ export default function AdminNosVentesPage() {
           nom: selectedChineuse.nom,
           codeChineuse: selectedChineuse.trigramme,
         } : null}
+        deposants={deposants}
         isAdmin={true}
         loading={loading || loadingVentes}
         onAttribuer={handleAttribuer}

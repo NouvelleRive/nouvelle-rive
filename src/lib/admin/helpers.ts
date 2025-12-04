@@ -3,6 +3,25 @@
 import { collection, getDocs, query, where, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
+// Vérifier que le SKU n'existe pas déjà (ou appartient au produit en cours d'édition)
+export async function checkSkuUnique(sku: string, currentProduitId?: string): Promise<boolean> {
+  if (!sku?.trim()) return true // SKU vide = pas de vérification
+  
+  const q = query(collection(db, 'produits'), where('sku', '==', sku.trim()))
+  const snap = await getDocs(q)
+  
+  // Si aucun résultat → SKU disponible
+  if (snap.empty) return true
+  
+  // Si on édite un produit existant, vérifier que c'est bien le même
+  if (currentProduitId) {
+    return snap.docs.every(doc => doc.id === currentProduitId)
+  }
+  
+  // Sinon → doublon !
+  return false
+}
+
 // =====================
 // HELPERS
 // =====================

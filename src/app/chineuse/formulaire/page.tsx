@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import ProductForm, { ProductFormData, Cat, ExcelImportData } from '@/components/ProductForm'
+import { checkSkuUnique } from '@/lib/admin/helpers'
 
 // =====================
 // HELPERS
@@ -209,6 +210,13 @@ export default function FormulairePage() {
     
     setLoading(true)
     try {
+      // ✅ VÉRIFICATION UNICITÉ SKU
+      const isUnique = await checkSkuUnique(sku)
+      if (!isUnique) {
+        alert(`❌ Le SKU "${sku}" est déjà utilisé par un autre produit.`)
+        setLoading(false)
+        return
+  }
       const fullName = `${sku} - ${formData.nom.trim()}`
 
       // Upload photos
@@ -363,6 +371,13 @@ export default function FormulairePage() {
         if (!rowSku) {
           currentSkuNum++
           rowSku = `${trigramme}${currentSkuNum}`
+        }
+
+        // ✅ VÉRIFICATION UNICITÉ SKU
+        const isUnique = await checkSkuUnique(rowSku)
+        if (!isUnique) {
+          console.warn(`SKU "${rowSku}" existe déjà, ignoré`)
+          continue
         }
         
         const fullName = `${rowSku} - ${produit.nom}`

@@ -711,7 +711,7 @@ export default function InventaireList({
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`p-2.5 border rounded-lg transition-colors ${
-              showFilters || filtreCategorie || filtreDeposant || filtrePrix !== 'tous'
+              showFilters || filtreCategorie || filtreDeposant || filtrePrix !== ''
                 ? 'border-[#22209C] bg-[#22209C]/5 text-[#22209C]'
                 : 'border-gray-200 text-gray-400 hover:text-gray-600'
             }`}

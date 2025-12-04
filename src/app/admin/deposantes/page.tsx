@@ -118,7 +118,7 @@ export default function AdminDeposantesPage() {
       categories: cats,
       categorieRapportLabel: catRapport.label || '',
       categorieRapportIdsquare: catRapport.idsquare || '',
-      taux: catRapport.taux || 40,
+      taux: catRapport.taux ?? 40,
       siret: catRapport.siret || '',
       tva: catRapport.tva || '',
       iban: catRapport.iban || '',
@@ -672,13 +672,16 @@ export default function AdminDeposantesPage() {
               <div className="mt-4">
                 <label className="block text-xs text-gray-500 mb-1">Paramètre</label>
                 <input
-                  type="number"
-                  value={formData.taux}
-                  onChange={(e) => setFormData({ ...formData, taux: parseInt(e.target.value) || 70 })}
-                  min={0}
-                  max={100}
-                  className="w-24 border rounded px-3 py-2 text-sm"
-                />
+                type="number"
+                value={formData.taux}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setFormData({ ...formData, taux: val === '' ? 40 : parseInt(val) })
+                }}
+                min={0}
+                max={100}
+                className="w-24 border rounded px-3 py-2 text-sm"
+              /> %
               </div>
 
                 <div className="grid grid-cols-2 gap-4">
