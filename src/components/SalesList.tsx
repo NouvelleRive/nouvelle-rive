@@ -56,6 +56,7 @@ interface SalesListProps {
   titre: string
   ventes: Vente[]
   chineuse?: ChineuseMeta | null
+  deposants?: any[]
   userEmail?: string
   isAdmin?: boolean
   loading?: boolean
@@ -83,6 +84,7 @@ export default function SalesList({
   titre,
   ventes,
   chineuse,
+  deposants = [],
   userEmail,
   isAdmin = false,
   loading = false,
@@ -361,8 +363,29 @@ export default function SalesList({
   }
 
   const generateInvoiceFor = (monthValue: string) => {
-    console.log('🔥 generateInvoiceFor appelé avec:', monthValue)
-    if (!chineuse && !userEmail) return
+  console.log('🔥 generateInvoiceFor appelé avec:', monthValue)
+  if (!chineuse && !userEmail) return
+
+  // Chercher les infos complètes dans deposants
+  const dep = deposants.find((d: any) => 
+    d.email === userEmail || d.email === chineuse?.nom || d.nom === chineuse?.nom
+  )
+  const catRapport = dep ? (dep['Catégorie de rapport'] || [])[0] || {} : {}
+  
+  // Fusionner avec les infos passées en props
+  const chineuseComplete = {
+    ...chineuse,
+    taux: chineuse?.taux ?? catRapport.taux,
+    siret: chineuse?.siret || catRapport.siret,
+    adresse1: chineuse?.adresse1 || catRapport.adresse1,
+    adresse2: chineuse?.adresse2 || catRapport.adresse2,
+    tva: chineuse?.tva || catRapport.tva,
+    iban: chineuse?.iban || catRapport.iban,
+    bic: chineuse?.bic || catRapport.bic,
+    banqueAdresse: chineuse?.banqueAdresse || catRapport.banqueAdresse,
+  }
+  
+  console.log('🔍 chineuseComplete:', chineuseComplete)
     const [m, y] = monthValue.split('-').map(Number)
     const start = new Date(y, m - 1, 1)
     const end = new Date(y, m, 0, 23, 59, 59, 999)
