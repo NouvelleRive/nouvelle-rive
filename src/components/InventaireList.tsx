@@ -137,6 +137,7 @@ export default function InventaireList({
   const [recherche, setRecherche] = useState('')
   const [filtreCategorie, setFiltreCategorie] = useState('')
   const [filtreDeposant, setFiltreDeposant] = useState('')
+  const [filtrePrix, setFiltrePrix] = useState<'tous' | '0-50' | '50-100' | '100-200' | '200+'>('tous')
   const [filtreStatut, setFiltreStatut] = useState<'tous' | 'trouves' | 'nonTrouves'>('tous')
   const [showFilters, setShowFilters] = useState(false)
   const [showSignalModal, setShowSignalModal] = useState(false)
@@ -157,13 +158,14 @@ export default function InventaireList({
   }
 
   const deposantsUniques = Array.from(new Set(produits.map((p) => p.chineur).filter(Boolean)))
-  const categoriesUniques = Array.from(
-    new Set(
-      produits
-        .map((p) => (typeof p.categorie === 'object' ? p.categorie?.label : p.categorie))
-        .filter(Boolean)
-    )
-  )
+    .sort((a, b) => getChineurName(a).localeCompare(getChineurName(b), 'fr'))
+    const categoriesUniques = Array.from(
+      new Set(
+        produits
+          .map((p) => (typeof p.categorie === 'object' ? p.categorie?.label : p.categorie))
+          .filter(Boolean)
+      )
+    ).sort((a, b) => (a as string).localeCompare(b as string, 'fr'))
 
   // Helper pour savoir si un produit est trouvé dans cet inventaire
   const isProductFound = (p: Produit) => p.enBoutique && p.inventaireId === inventaireId
@@ -191,6 +193,15 @@ export default function InventaireList({
         const found = isProductFound(p)
         if (filtreStatut === 'trouves' && !found) return false
         if (filtreStatut === 'nonTrouves' && found) return false
+      }
+
+      // Filtre par prix
+      if (filtrePrix !== 'tous') {
+        const prix = p.prix || 0
+        if (filtrePrix === '0-50' && prix > 50) return false
+        if (filtrePrix === '50-100' && (prix <= 50 || prix > 100)) return false
+        if (filtrePrix === '100-200' && (prix <= 100 || prix > 200)) return false
+        if (filtrePrix === '200+' && prix <= 200) return false
       }
 
       if (needle) {
@@ -221,7 +232,7 @@ export default function InventaireList({
     }
 
     return filtered
-  }, [produits, recherche, filtreCategorie, filtreDeposant, filtreStatut, mode, inventaireId])
+  }, [produits, recherche, filtreCategorie, filtreDeposant, filtreStatut, filtrePrix, mode, inventaireId])
 
   const produitsParChineuse = useMemo(() => {
     if (mode !== 'inventaire') return null
@@ -703,7 +714,7 @@ export default function InventaireList({
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`p-2.5 border rounded-lg transition-colors ${
-              showFilters || filtreCategorie || filtreDeposant
+              showFilters || filtreCategorie || filtreDeposant || filtrePrix !== 'tous'
                 ? 'border-[#22209C] bg-[#22209C]/5 text-[#22209C]'
                 : 'border-gray-200 text-gray-400 hover:text-gray-600'
             }`}
@@ -713,7 +724,44 @@ export default function InventaireList({
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
+          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100">
+            <select
+              value={filtreDeposant}
+              onChange={(e) => setFiltreDeposant(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
+            >
+              <option value="">Toutes chineuses</option>
+              {deposantsUniques.map((email, i) => (
+                <option key={i} value={email}>
+                  {getChineurName(email)}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filtreCategorie}
+              onChange={(e) => setFiltreCategorie(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
+            >
+              <option value="">Toutes catégories</option>
+              {categoriesUniques.map((c, i) => (
+                <option key={i} value={c as string}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filtrePrix}
+              onChange={(e) => setFiltrePrix(e.target.value as any)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
+            >
+              <option value="tous">Tous prix</option>
+              <option value="0-50">0 - 50 €</option>
+              <option value="50-100">50 - 100 €</option>
+              <option value="100-200">100 - 200 €</option>
+              <option value="200+">200+ €</option>
+            </select>
+          </div>
+        )}
             <select
               value={filtreDeposant}
               onChange={(e) => setFiltreDeposant(e.target.value)}
