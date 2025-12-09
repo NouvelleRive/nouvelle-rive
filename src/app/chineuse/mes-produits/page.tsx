@@ -14,6 +14,7 @@ export default function MesProduits() {
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (!user?.email) {
+        console.log('Email connecté:', user.email)
         setLoading(false)
         return
       }
