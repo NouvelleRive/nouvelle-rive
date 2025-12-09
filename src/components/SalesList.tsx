@@ -62,6 +62,7 @@
     loading?: boolean
     // Callbacks admin
     onAttribuer?: (vente: Vente) => void
+    onModifierPrix?: (vente: Vente) => void  
     onSupprimer?: (vente: Vente) => void
     onSupprimerBatch?: (ids: string[]) => void
     onAjouterVente?: () => void
@@ -89,6 +90,7 @@
     isAdmin = false,
     loading = false,
     onAttribuer,
+    onModifierPrix, 
     onSupprimer,
     onSupprimerBatch,
     onAjouterVente,
@@ -937,6 +939,15 @@
                             title={vente.isAttribue ? 'Réattribuer' : 'Attribuer'}
                           >
                             <Link size={16} />
+                          </button>
+                        )}
+                        {onModifierPrix && (
+                          <button
+                            onClick={() => onModifierPrix(vente)}
+                            className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                            title="Modifier le prix"
+                          >
+                            <span className="text-xs font-medium">€</span>
                           </button>
                         )}
                         {onSupprimer && (

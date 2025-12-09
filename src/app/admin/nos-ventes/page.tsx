@@ -266,8 +266,8 @@ export default function AdminNosVentesPage() {
         return
       }
 
-      const res = await fetch('/api/ventes/modifier-prix', {
-        method: 'POST',
+      const res = await fetch('/api/ventes', {
+       method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`

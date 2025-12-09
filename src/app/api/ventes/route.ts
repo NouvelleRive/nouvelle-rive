@@ -279,3 +279,35 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: false, error: err?.message }, { status: 500 })
   }
 }
+
+// PATCH - Modifier le prix d'une vente (ADMIN ONLY)
+export async function PATCH(req: NextRequest) {
+  try {
+    if (!await isAdmin(req)) {
+      return NextResponse.json({ success: false, error: 'Accès admin requis' }, { status: 403 })
+    }
+
+    const { venteId, prixVenteReel } = await req.json()
+
+    if (!venteId || prixVenteReel === undefined) {
+      return NextResponse.json({ success: false, error: 'venteId et prixVenteReel requis' }, { status: 400 })
+    }
+
+    const venteRef = adminDb.collection('ventes').doc(venteId)
+    await venteRef.update({ prixVenteReel })
+
+    const venteDoc = await venteRef.get()
+    const venteData = venteDoc.data()
+    
+    if (venteData?.produitId) {
+      const produitRef = adminDb.collection('produits').doc(venteData.produitId)
+      await produitRef.update({ prixVenteReel })
+    }
+
+    console.log(`✅ Prix vente ${venteId} modifié: ${prixVenteReel}€`)
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('[API VENTES PATCH]', err)
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 })
+  }
+}
