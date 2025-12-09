@@ -10,7 +10,7 @@
   import { 
     Search, X, Download, FileSpreadsheet, RefreshCw, 
     Plus, Trash2, Link, CheckCircle, AlertCircle, 
-    CheckSquare, Square, Upload, ChevronDown, ChevronUp
+    CheckSquare, Square, Upload, ChevronDown, ChevronUp, Pencil
   } from 'lucide-react'
 
   // =====================
@@ -942,14 +942,14 @@
                           </button>
                         )}
                         {onModifierPrix && (
-                          <button
-                            onClick={() => onModifierPrix(vente)}
-                            className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
-                            title="Modifier le prix"
-                          >
-                            <span className="text-xs font-medium">€</span>
-                          </button>
-                        )}
+                        <button
+                          onClick={() => onModifierPrix(vente)}
+                          className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200"
+                          title="Modifier"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
                         {onSupprimer && (
                           <button
                             onClick={() => onSupprimer(vente)}
