@@ -22,11 +22,22 @@ async function isAdmin(req: NextRequest): Promise<boolean> {
 }
 
 // GET - Récupérer les ventes
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const snapshot = await adminDb.collection('ventes')
+    const { searchParams } = new URL(req.url)
+    const chineurUid = searchParams.get('chineurUid')
+
+    let query: FirebaseFirestore.Query = adminDb.collection('ventes')
       .orderBy('dateVente', 'desc')
-      .get()
+
+    // Filtrer par chineuse si spécifié
+    if (chineurUid) {
+      query = adminDb.collection('ventes')
+        .where('chineurUid', '==', chineurUid)
+        .orderBy('dateVente', 'desc')
+    }
+
+    const snapshot = await query.get()
 
     const ventes = snapshot.docs.map(doc => {
       const d = doc.data()
@@ -48,7 +59,7 @@ export async function GET() {
       }
     })
 
-    console.log(`✅ ${ventes.length} ventes chargées`)
+    console.log(`✅ ${ventes.length} ventes chargées${chineurUid ? ` pour ${chineurUid}` : ''}`)
     return NextResponse.json({ success: true, ventes })
   } catch (err: any) {
     console.error('[API VENTES GET]', err)

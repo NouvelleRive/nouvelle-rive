@@ -51,23 +51,21 @@ export default function MesVentesPage() {
         console.error('Erreur chargement deposant:', err)
       }
 
-      // Charger les ventes
-      await fetchVentes(u.uid, u.email!)
+      // Charger les ventes via l'API
+      await fetchVentes(u.uid)
     })
     return () => unsub()
   }, [router])
 
-  async function fetchVentes(uid: string, email: string) {
+  // ✅ Même source que l'admin, filtrée par chineurUid
+  async function fetchVentes(uid: string) {
     setLoading(true)
     try {
-      const q = query(
-        collection(db, 'produits'),
-        where('chineur', '==', email),
-        where('vendu', '==', true)
-      )
-      const snap = await getDocs(q)
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Vente[]
-      setVentes(data)
+      const res = await fetch(`/api/ventes?chineurUid=${uid}`)
+      const data = await res.json()
+      if (data.success) {
+        setVentes(data.ventes || [])
+      }
     } catch (err) {
       console.error('Erreur chargement ventes:', err)
     } finally {
@@ -92,7 +90,7 @@ export default function MesVentesPage() {
       const data = await res.json()
       if (data.success) {
         alert(`${data.imported || 0} vente(s) synchronisée(s)`)
-        await fetchVentes(user.uid, user.email!)
+        await fetchVentes(user.uid)
       } else {
         alert(data.error || 'Erreur de synchronisation')
       }

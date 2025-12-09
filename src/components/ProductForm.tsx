@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, Image as ImageIcon, Upload, RefreshCw, FileSpreadsheet, Download, Camera } from 'lucide-react'
 import ExcelJS from 'exceljs'
 import * as XLSX from 'xlsx'
+import { checkSkuUnique } from '@/lib/admin/helpers'
 
 // =====================
 // TYPES
@@ -74,6 +75,7 @@ type ProductFormProps = {
   // Mode
   mode: 'create' | 'edit'
   isAdmin?: boolean
+  productId?: string  // Pour édition, permet de garder le même SKU
   
   // Pour admin : liste des chineuses
   chineuses?: Chineuse[]
@@ -210,6 +212,7 @@ const getAliasKey = (key: string): string | null => {
 export default function ProductForm({
   mode,
   isAdmin = false,
+  productId,
   chineuses = [],
   selectedChineuse,
   onChineuseChange,
@@ -255,6 +258,9 @@ export default function ProductForm({
   const [showExcelSection, setShowExcelSection] = useState(false)
   const [excelFile, setExcelFile] = useState<File | null>(null)
   const [importLoading, setImportLoading] = useState(false)
+  
+  // État validation SKU
+  const [skuValidating, setSkuValidating] = useState(false)
 
   // Réinitialiser le formulaire quand initialData change
   useEffect(() => {
@@ -340,24 +346,21 @@ export default function ProductForm({
     
     // Définir les colonnes - AJOUT SKU EN PREMIÈRE POSITION
     wsProduits.columns = [
-      { key: 'sku', width: 15 },        // A - SKU (optionnel)
-      { key: 'nom', width: 35 },        // B - Nom
-      { key: 'categorie', width: 25 },  // C - Catégorie
-      { key: 'prix', width: 12 },       // D - Prix
-      { key: 'quantite', width: 12 },   // E - Quantité
-      { key: 'marque', width: 20 },     // F - Marque
-      { key: 'taille', width: 12 },     // G - Taille
-      { key: 'matiere', width: 18 },    // H - Matière
-      { key: 'couleur', width: 15 },    // I - Couleur
-      { key: 'madein', width: 18 },     // J - Made in
-      { key: 'description', width: 45 }, // K - Description
+      { key: 'sku', width: 15 },
+      { key: 'nom', width: 35 },
+      { key: 'categorie', width: 25 },
+      { key: 'prix', width: 12 },
+      { key: 'quantite', width: 12 },
+      { key: 'marque', width: 20 },
+      { key: 'taille', width: 12 },
+      { key: 'matiere', width: 18 },
+      { key: 'couleur', width: 15 },
+      { key: 'madein', width: 18 },
+      { key: 'description', width: 45 },
     ]
     
     // === HEADER ===
-    // Ligne 1: vide
     wsProduits.addRow([])
-    
-    // Ligne 2: NOUVELLE RIVE (titre)
     wsProduits.addRow(['', '', 'NOUVELLE RIVE'])
     wsProduits.mergeCells('C2:F2')
     const titleCell = wsProduits.getCell('C2')
@@ -365,7 +368,6 @@ export default function ProductForm({
     titleCell.alignment = { horizontal: 'left', vertical: 'middle' }
     wsProduits.getRow(2).height = 35
     
-    // Ligne 3: Sous-titre
     const displayName = userName || (isAdmin && selectedChineuse ? selectedChineuse.nom : 'Chineuse')
     wsProduits.addRow(['', '', `Template d'import · ${displayName}`])
     wsProduits.mergeCells('C3:F3')
@@ -373,26 +375,20 @@ export default function ProductForm({
     subtitleCell.font = { name: 'Helvetica', size: 11, italic: true, color: { argb: GRAY_TEXT } }
     subtitleCell.alignment = { horizontal: 'left', vertical: 'middle' }
     
-    // Ligne 4: vide
     wsProduits.addRow([])
-    
-    // Ligne 5: Instructions
     wsProduits.addRow(['', '', '⚠️ Les champs avec * sont obligatoires. SKU est optionnel (généré auto si vide).'])
     wsProduits.mergeCells('C5:K5')
     const instructionCell = wsProduits.getCell('C5')
     instructionCell.font = { name: 'Helvetica', size: 10, color: { argb: RED } }
     instructionCell.alignment = { horizontal: 'left', vertical: 'middle' }
     
-    // Ligne 6: vide
     wsProduits.addRow([])
     
-    // === LIGNE D'EN-TÊTE (ligne 7) ===
     const headers = ['SKU', 'Nom *', 'Catégorie *', 'Prix € *', 'Quantité', 'Marque', 'Taille', 'Matière', 'Couleur', 'Made in', 'Description']
     const headerRow = wsProduits.addRow(headers)
     headerRow.height = 28
     
     headerRow.eachCell((cell, colNumber) => {
-      // SKU en orange (optionnel), le reste en bleu
       const isSkuCol = colNumber === 1
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isSkuCol ? ORANGE : NR_BLUE } }
       cell.font = { name: 'Helvetica', size: 11, bold: true, color: { argb: WHITE } }
@@ -405,7 +401,6 @@ export default function ProductForm({
       }
     })
     
-    // === LIGNES DE DONNÉES (lignes 8-57 = 50 lignes) ===
     const DATA_START_ROW = 8
     const DATA_END_ROW = 57
     
@@ -414,7 +409,6 @@ export default function ProductForm({
       dataRow.height = 24
       
       dataRow.eachCell((cell, colNumber) => {
-        // Alternance de couleurs
         cell.fill = {
           type: 'pattern',
           pattern: 'solid',
@@ -426,7 +420,6 @@ export default function ProductForm({
           bottom: { style: 'hair', color: { argb: 'DDDDDD' } },
         }
         
-        // SKU en fond orange clair
         if (colNumber === 1) {
           cell.fill = {
             type: 'pattern',
@@ -434,7 +427,6 @@ export default function ProductForm({
             fgColor: { argb: i % 2 === 0 ? 'FEF3C7' : 'FDE68A' }
           }
         }
-        // Colonnes obligatoires (Nom, Catégorie, Prix) en fond bleu clair
         else if (colNumber >= 2 && colNumber <= 4) {
           cell.fill = {
             type: 'pattern',
@@ -445,9 +437,6 @@ export default function ProductForm({
       })
     }
     
-    // === DATA VALIDATION ===
-    
-    // Catégories (colonne C)
     if (categoriesAutorisees.length > 0) {
       for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
         wsProduits.getCell(`C${row}`).dataValidation = {
@@ -464,7 +453,6 @@ export default function ProductForm({
       }
     }
     
-    // Tailles (colonne G)
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
       wsProduits.getCell(`G${row}`).dataValidation = {
         type: 'list',
@@ -476,7 +464,6 @@ export default function ProductForm({
       }
     }
     
-    // Made in (colonne J)
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
       wsProduits.getCell(`J${row}`).dataValidation = {
         type: 'list',
@@ -485,7 +472,6 @@ export default function ProductForm({
       }
     }
     
-    // Prix (colonne D) - validation numérique
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
       wsProduits.getCell(`D${row}`).dataValidation = {
         type: 'decimal',
@@ -499,7 +485,6 @@ export default function ProductForm({
       wsProduits.getCell(`D${row}`).numFmt = '#,##0.00 €'
     }
     
-    // Quantité (colonne E) - validation entier
     for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
       wsProduits.getCell(`E${row}`).dataValidation = {
         type: 'whole',
@@ -512,28 +497,23 @@ export default function ProductForm({
       }
     }
     
-    // === FEUILLE LISTES (cachée avec les données de validation) ===
     const wsListes = workbook.addWorksheet('Listes', { state: 'veryHidden' })
     
-    // Colonne A: Catégories
     wsListes.getCell('A1').value = 'Catégories'
     categoriesAutorisees.forEach((cat, i) => {
       wsListes.getCell(`A${i + 2}`).value = cat
     })
     
-    // Colonne B: Tailles
     wsListes.getCell('B1').value = 'Tailles'
     ALL_TAILLES.forEach((taille, i) => {
       wsListes.getCell(`B${i + 2}`).value = taille
     })
     
-    // Colonne C: Made in
     wsListes.getCell('C1').value = 'Made in'
     MADE_IN_OPTIONS.forEach((opt, i) => {
       wsListes.getCell(`C${i + 2}`).value = opt
     })
     
-    // === FEUILLE AIDE ===
     const wsAide = workbook.addWorksheet('Aide', { 
       views: [{ showGridLines: false }],
       properties: { tabColor: { argb: NR_BLUE } }
@@ -573,7 +553,6 @@ export default function ProductForm({
           }
         })
       } else if (i === 1) {
-        // SKU en orange
         r.getCell(2).font = { name: 'Helvetica', size: 10, bold: true, color: { argb: ORANGE } }
         r.getCell(3).font = { name: 'Helvetica', size: 10 }
       } else {
@@ -591,7 +570,6 @@ export default function ProductForm({
       r.getCell(2).font = { name: 'Helvetica', size: 10 }
     })
     
-    // === EXPORT ===
     const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     const url = URL.createObjectURL(blob)
@@ -623,7 +601,6 @@ export default function ProductForm({
           const sheet = workbook.Sheets[workbook.SheetNames[0]]
           const raw = XLSX.utils.sheet_to_json(sheet, { header: 1 })
           
-          // Trouver la ligne d'en-tête
           let headersIndex = -1
           let mapping: Record<string, number> = {}
           
@@ -638,7 +615,6 @@ export default function ProductForm({
               if (key) map[key] = index
             })
             
-            // On a trouvé les colonnes obligatoires
             if (map.nom !== undefined && map.categorie !== undefined && map.prix !== undefined) {
               headersIndex = i
               mapping = map
@@ -667,12 +643,10 @@ export default function ProductForm({
               rec[key] = row[mapping[key]]
             }
             
-            // Ligne vide - on skip
             if (!rec.nom && !rec.categorie && !rec.prix) continue
             
             const rowNum = idx + headersIndex + 2
             
-            // Validation
             if (!rec.nom || !String(rec.nom).trim()) {
               erreurs.push(`Ligne ${rowNum}: Nom manquant`)
               continue
@@ -690,36 +664,30 @@ export default function ProductForm({
             const categorie = String(rec.categorie).trim()
             const prix = parseFloat(String(rec.prix).toString().replace(',', '.').replace(/[^\d.]/g, ''))
             
-            // Vérifier catégorie
             if (!categoriesAutorisees.includes(categorie.toLowerCase().trim())) {
               erreurs.push(`Ligne ${rowNum}: Catégorie "${categorie}" non autorisée`)
               continue
             }
             
-            // Vérifier que la catégorie a un idsquare
             const catMatch = displayCategories.find(c => c.label.toLowerCase().trim() === categorie.toLowerCase().trim())
             if (!catMatch?.idsquare) {
               erreurs.push(`Ligne ${rowNum}: Catégorie "${categorie}" non configurée dans Square`)
               continue
             }
             
-            // Vérifier prix
             if (isNaN(prix) || prix <= 0) {
               erreurs.push(`Ligne ${rowNum}: Prix invalide`)
               continue
             }
             
-            // SKU - récupérer tel quel s'il existe
             let skuValue: string | undefined = undefined
             if (rec.sku !== undefined && rec.sku !== null && rec.sku !== '') {
               const skuRaw = rec.sku
-              // Gérer le cas où c'est un nombre (Excel peut convertir "5" en 5)
               if (typeof skuRaw === 'number') {
                 skuValue = String(skuRaw)
               } else {
                 skuValue = String(skuRaw).trim()
               }
-              // Si vide après trim, c'est undefined
               if (!skuValue) skuValue = undefined
             }
             
@@ -753,10 +721,34 @@ export default function ProductForm({
             return
           }
           
-          // Résumé avec SKU
-          const withSku = produits.filter(p => p.sku).length
-          const withoutSku = produits.length - withSku
-          let confirmMsg = `📦 ${produits.length} produit(s) à importer.`
+          // ✅ VÉRIFICATION UNICITÉ DES SKU FOURNIS
+          const skusToCheck = produits.filter(p => p.sku).map(p => p.sku!)
+          const skuDoublons: string[] = []
+
+          for (const skuToCheck of skusToCheck) {
+            const isUnique = await checkSkuUnique(skuToCheck)
+            if (!isUnique) {
+              skuDoublons.push(skuToCheck)
+            }
+          }
+
+          // Filtrer les produits avec SKU doublon
+          const produitsValides = produits.filter(p => !p.sku || !skuDoublons.includes(p.sku))
+
+          if (skuDoublons.length > 0) {
+            const msg = `⚠️ ${skuDoublons.length} SKU déjà existant(s) :\n${skuDoublons.join(', ')}\n\nCes lignes seront ignorées.`
+            alert(msg)
+          }
+
+          if (produitsValides.length === 0) {
+            alert('❌ Aucun produit valide à importer (tous les SKU existent déjà).')
+            setImportLoading(false)
+            return
+          }
+          
+          const withSku = produitsValides.filter(p => p.sku).length
+          const withoutSku = produitsValides.length - withSku
+          let confirmMsg = `📦 ${produitsValides.length} produit(s) à importer.`
           if (withSku > 0) confirmMsg += `\n\n• ${withSku} avec SKU personnalisé`
           if (withoutSku > 0) confirmMsg += `\n• ${withoutSku} avec SKU auto-généré`
           confirmMsg += '\n\nContinuer ?'
@@ -766,7 +758,7 @@ export default function ProductForm({
             return
           }
           
-          await onExcelImport(produits)
+          await onExcelImport(produitsValides)
           
           setExcelFile(null)
           setShowExcelSection(false)
@@ -828,6 +820,18 @@ export default function ProductForm({
       }
     }
     
+    // ✅ VÉRIFICATION UNICITÉ SKU
+    const finalSku = formData.sku || sku
+    if (finalSku) {
+      setSkuValidating(true)
+      const isUnique = await checkSkuUnique(finalSku, productId)
+      setSkuValidating(false)
+      if (!isUnique) {
+        alert(`❌ Le SKU "${finalSku}" est déjà utilisé par un autre produit.`)
+        return
+      }
+    }
+    
     await onSubmit(formData)
   }
 
@@ -870,7 +874,6 @@ export default function ProductForm({
                   Télécharger le template
                 </button>
                 
-                {/* Zone Drag & Drop */}
                 <div
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -1173,9 +1176,7 @@ export default function ProductForm({
             
             {/* Photo Face */}
             <div className="space-y-2">
-              <label className="block text-xs font-medium text-blue-700">
-                Face
-              </label>
+              <label className="block text-xs font-medium text-blue-700">Face</label>
               
               {formData.existingPhotos.face && !formData.deletedPhotos.face && (
                 <div className="relative group">
@@ -1189,9 +1190,7 @@ export default function ProductForm({
                 </div>
               )}
               
-              {/* Zone photo avec boutons Caméra + Upload */}
               <div className="flex gap-2">
-                {/* Bouton Caméra */}
                 <input
                   type="file"
                   accept="image/*"
@@ -1213,7 +1212,6 @@ export default function ProductForm({
                   <Camera size={20} />
                 </button>
                 
-                {/* Zone Drag & Drop */}
                 <div
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -1276,9 +1274,7 @@ export default function ProductForm({
                 </div>
               )}
               
-              {/* Zone photo avec boutons Caméra + Upload */}
               <div className="flex gap-2">
-                {/* Bouton Caméra */}
                 <input
                   type="file"
                   accept="image/*"
@@ -1300,7 +1296,6 @@ export default function ProductForm({
                   <Camera size={20} />
                 </button>
                 
-                {/* Zone Drag & Drop */}
                 <div
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -1366,7 +1361,6 @@ export default function ProductForm({
                 </div>
               )}
               
-              {/* Nouvelles photos détails */}
               {formData.photosDetails.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {formData.photosDetails.map((file, i) => (
@@ -1387,9 +1381,7 @@ export default function ProductForm({
                 </div>
               )}
               
-              {/* Zone photo avec boutons Caméra + Upload */}
               <div className="flex gap-2">
-                {/* Bouton Caméra */}
                 <input
                   type="file"
                   accept="image/*"
@@ -1411,7 +1403,6 @@ export default function ProductForm({
                   <Camera size={20} />
                 </button>
                 
-                {/* Zone Drag & Drop */}
                 <div
                   onDragOver={(e) => {
                     e.preventDefault()
@@ -1450,7 +1441,6 @@ export default function ProductForm({
             </div>
           </div>
 
-          {/* Photo portée */}
           {formData.existingPhotos.faceOnModel && !formData.deletedPhotos.faceOnModel && (
             <div className="mt-4 pt-4 border-t">
               <label className="block text-xs font-medium text-purple-600 mb-2">📷 Photo portée (générée automatiquement)</label>
@@ -1473,10 +1463,10 @@ export default function ProductForm({
           )}
           <button
             type="submit"
-            disabled={loading || (isAdmin && chineuses.length > 0 && !selectedChineuse)}
+            disabled={loading || skuValidating || (isAdmin && chineuses.length > 0 && !selectedChineuse)}
             className={`${onCancel ? 'flex-1' : 'w-full'} bg-[#22209C] text-white py-2.5 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition`}
           >
-            {loading ? '⏳ En cours...' : (submitLabel || defaultSubmitLabel)}
+            {loading || skuValidating ? '⏳ En cours...' : (submitLabel || defaultSubmitLabel)}
           </button>
         </div>
       </form>
