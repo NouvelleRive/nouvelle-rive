@@ -15,7 +15,7 @@ const getAuthToken = async () => {
 }
 
 export default function AdminNosVentesPage() {
-  const { selectedChineuse, produitsFiltres, loading, loadData, deposants  } = useAdmin()
+  const { selectedChineuse, produitsFiltres, loading, loadData, deposants } = useAdmin()
 
   // Ventes
   const [ventes, setVentes] = useState<Vente[]>([])
@@ -31,6 +31,7 @@ export default function AdminNosVentesPage() {
   const [showModalAttribuer, setShowModalAttribuer] = useState(false)
   const [showModalSupprimer, setShowModalSupprimer] = useState(false)
   const [showModalAjout, setShowModalAjout] = useState(false)
+  const [showModalModifier, setShowModalModifier] = useState(false)
   const [venteSelectionnee, setVenteSelectionnee] = useState<Vente | null>(null)
 
   // Form attribuer
@@ -42,6 +43,9 @@ export default function AdminNosVentesPage() {
   // Form supprimer
   const [remettreEnStock, setRemettreEnStock] = useState(false)
   const [supprimerLoading, setSupprimerLoading] = useState(false)
+
+  // Form modifier prix
+  const [modifierPrixLoading, setModifierPrixLoading] = useState(false)
 
   // Form ajout
   const [selectedSku, setSelectedSku] = useState('')
@@ -243,6 +247,51 @@ export default function AdminNosVentesPage() {
     }
   }
 
+  // Ouvrir modal modification prix
+  const handleModifierPrix = (vente: Vente) => {
+    setVenteSelectionnee(vente)
+    setEditPrixVente(vente.prixVenteReel?.toString() || '')
+    setShowModalModifier(true)
+  }
+
+  // Confirmer modification prix
+  const handleConfirmModifierPrix = async () => {
+    if (!venteSelectionnee || !editPrixVente) return
+
+    setModifierPrixLoading(true)
+    try {
+      const token = await getAuthToken()
+      if (!token) {
+        alert('Non authentifié')
+        return
+      }
+
+      const res = await fetch('/api/ventes/modifier-prix', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          venteId: venteSelectionnee.id,
+          prixVenteReel: parseFloat(editPrixVente)
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setShowModalModifier(false)
+        setVenteSelectionnee(null)
+        await loadVentes()
+      } else {
+        alert(data.error || 'Erreur')
+      }
+    } catch {
+      alert('Erreur')
+    } finally {
+      setModifierPrixLoading(false)
+    }
+  }
+
   // Ouvrir modal suppression
   const handleSupprimer = (vente: Vente) => {
     setVenteSelectionnee(vente)
@@ -380,6 +429,7 @@ export default function AdminNosVentesPage() {
         isAdmin={true}
         loading={loading || loadingVentes}
         onAttribuer={handleAttribuer}
+        onModifierPrix={handleModifierPrix}
         onSupprimer={handleSupprimer}
         onSupprimerBatch={handleSupprimerBatch}
         onAjouterVente={() => setShowModalAjout(true)}
@@ -457,20 +507,7 @@ export default function AdminNosVentesPage() {
 
             <div className="bg-amber-50 p-3 rounded-lg mb-4">
               <p className="font-medium">{venteSelectionnee.remarque || venteSelectionnee.nom || 'Vente sans nom'}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm text-gray-600">{formatDate(venteSelectionnee.dateVente as string)}</span>
-              </div>
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Prix de vente (€)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={editPrixVente}
-                  onChange={(e) => setEditPrixVente(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-amber-400 rounded-lg text-lg font-bold focus:outline-none focus:border-amber-600 bg-white"
-                  placeholder="Entrer le prix"
-                />
-              </div>
+              <p className="text-sm text-gray-600 mt-1">{formatDate(venteSelectionnee.dateVente as string)} • {venteSelectionnee.prixVenteReel}€</p>
             </div>
 
             <div className="space-y-4">
@@ -545,6 +582,48 @@ export default function AdminNosVentesPage() {
                 className="px-4 py-2 bg-amber-500 text-white rounded-lg disabled:opacity-50 hover:bg-amber-600"
               >
                 {attribuerLoading ? '...' : 'Attribuer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Modifier Prix */}
+      {showModalModifier && venteSelectionnee && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-lg">Modifier le prix</h3>
+              <button onClick={() => { setShowModalModifier(false); setVenteSelectionnee(null) }}><X size={20} /></button>
+            </div>
+
+            <div className="mb-4">
+              <p className="font-medium">{venteSelectionnee.sku ? `${venteSelectionnee.sku} - ` : ''}{venteSelectionnee.nom || venteSelectionnee.remarque}</p>
+              <p className="text-sm text-gray-500">{formatDate(venteSelectionnee.dateVente as string)}</p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau prix de vente (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={editPrixVente}
+                onChange={(e) => setEditPrixVente(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-blue-400 rounded-lg text-lg font-bold focus:outline-none focus:border-blue-600"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => { setShowModalModifier(false); setVenteSelectionnee(null) }} className="px-4 py-2 border rounded-lg">
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmModifierPrix}
+                disabled={!editPrixVente || modifierPrixLoading}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50 hover:bg-blue-600"
+              >
+                {modifierPrixLoading ? '...' : 'Enregistrer'}
               </button>
             </div>
           </div>

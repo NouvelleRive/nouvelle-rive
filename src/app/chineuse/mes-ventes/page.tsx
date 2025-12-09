@@ -85,7 +85,7 @@ export default function MesVentesPage() {
       const data = await res.json()
       if (data.success) {
         alert(`${data.imported || 0} vente(s) synchronisée(s)`)
-        await fetchVentes(user.uid)
+        await fetchVentes(user.email!)
       } else {
         alert(data.error || 'Erreur de synchronisation')
       }
