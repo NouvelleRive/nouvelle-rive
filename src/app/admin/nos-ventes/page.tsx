@@ -458,18 +458,18 @@ export default function AdminNosVentesPage() {
             <div className="bg-amber-50 p-3 rounded-lg mb-4">
               <p className="font-medium">{venteSelectionnee.remarque || venteSelectionnee.nom || 'Vente sans nom'}</p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm text-gray-600">{formatDate(venteSelectionnee.dateVente as string)} •</span>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editPrixVente}
-                    onChange={(e) => setEditPrixVente(e.target.value)}
-                    className="w-24 px-3 py-2 border-2 border-amber-300 rounded-lg text-base font-bold focus:outline-none focus:border-amber-500"
-                    placeholder="Prix"
-                  />
-                  <span className="text-base font-bold">€</span>
-                </div>
+                <span className="text-sm text-gray-600">{formatDate(venteSelectionnee.dateVente as string)}</span>
+              </div>
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Prix de vente (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editPrixVente}
+                  onChange={(e) => setEditPrixVente(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-amber-400 rounded-lg text-lg font-bold focus:outline-none focus:border-amber-600 bg-white"
+                  placeholder="Entrer le prix"
+                />
               </div>
             </div>
 
