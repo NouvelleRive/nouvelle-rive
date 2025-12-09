@@ -183,7 +183,7 @@ export default function ProductList({
     const needle = recherche.trim().toLowerCase()
     return produits.filter((p) => {
       if (p.statut === 'supprime') return false
-      if (p.vendu || (p.quantite ?? 1) <= 0 || p.statut === 'retour') return false
+      if ((p.quantite ?? 1) <= 0 || p.statut === 'retour') return false
 
       const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
       if (filtreCategorie && cat !== filtreCategorie) return false
