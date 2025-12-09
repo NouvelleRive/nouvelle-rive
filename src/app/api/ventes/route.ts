@@ -26,12 +26,18 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const chineurUid = searchParams.get('chineurUid')
+    const chineurEmail = searchParams.get('chineurEmail')
 
+    // D'abord déclarer la query par défaut
     let query: FirebaseFirestore.Query = adminDb.collection('ventes')
       .orderBy('dateVente', 'desc')
 
-    // Filtrer par chineuse si spécifié
-    if (chineurUid) {
+    // Ensuite filtrer si nécessaire
+    if (chineurEmail) {
+      query = adminDb.collection('ventes')
+        .where('chineur', '==', chineurEmail)
+        .orderBy('dateVente', 'desc')
+    } else if (chineurUid) {
       query = adminDb.collection('ventes')
         .where('chineurUid', '==', chineurUid)
         .orderBy('dateVente', 'desc')
@@ -59,7 +65,7 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    console.log(`✅ ${ventes.length} ventes chargées${chineurUid ? ` pour ${chineurUid}` : ''}`)
+    console.log(`✅ ${ventes.length} ventes chargées${chineurEmail ? ` pour ${chineurEmail}` : chineurUid ? ` pour ${chineurUid}` : ''}`)
     return NextResponse.json({ success: true, ventes })
   } catch (err: any) {
     console.error('[API VENTES GET]', err)

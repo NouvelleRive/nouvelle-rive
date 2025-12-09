@@ -24,7 +24,7 @@ export default function MesVentesPage() {
       }
       setUser(u)
 
-      // Charger les infos depuis deposants (contient le taux)
+      // Charger les infos chineuse
       try {
         const deposantsSnap = await getDocs(
           query(collection(db, 'chineuse'), where('email', '==', u.email))
@@ -51,17 +51,17 @@ export default function MesVentesPage() {
         console.error('Erreur chargement deposant:', err)
       }
 
-      // Charger les ventes via l'API
-      await fetchVentes(u.uid)
+      // ✅ UTILISER LA MÊME API QUE L'ADMIN
+      await fetchVentes(u.email!)
     })
     return () => unsub()
   }, [router])
 
   // ✅ Même source que l'admin, filtrée par chineurUid
-  async function fetchVentes(uid: string) {
+  async function fetchVentes(email: string) {
     setLoading(true)
     try {
-      const res = await fetch(`/api/ventes?chineurUid=${uid}`)
+      const res = await fetch(`/api/ventes?chineurEmail=${encodeURIComponent(email)}`)
       const data = await res.json()
       if (data.success) {
         setVentes(data.ventes || [])
@@ -73,7 +73,6 @@ export default function MesVentesPage() {
     }
   }
 
-  // Sync avec Square
   const handleSync = async (startDate: string, endDate: string) => {
     if (!user) return
     setSyncLoading(true)
@@ -81,11 +80,7 @@ export default function MesVentesPage() {
       const res = await fetch('/api/sync-ventes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate,
-          endDate,
-          chineurUid: user.uid
-        })
+        body: JSON.stringify({ startDate, endDate, chineurUid: user.uid })
       })
       const data = await res.json()
       if (data.success) {
@@ -95,7 +90,6 @@ export default function MesVentesPage() {
         alert(data.error || 'Erreur de synchronisation')
       }
     } catch (err) {
-      console.error('Erreur sync:', err)
       alert('Erreur de synchronisation')
     } finally {
       setSyncLoading(false)
