@@ -20,3 +20,6 @@ if (!getApps().length) {
 
 export const adminDb = getFirestore()
 export const adminAuth = getAuth()
+
+// ✅ Ignorer les valeurs undefined lors de l'écriture dans Firestore
+adminDb.settings({ ignoreUndefinedProperties: true })
