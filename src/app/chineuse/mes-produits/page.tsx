@@ -13,11 +13,14 @@ export default function MesProduits() {
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state:', user?.email || 'non connecté')
+
       if (!user?.email) {
-        console.log('Email connecté:', user.email)
         setLoading(false)
         return
       }
+
+      console.log('Email connecté:', user.email)
 
       const q = query(
         collection(db, 'produits'),
@@ -25,6 +28,7 @@ export default function MesProduits() {
       )
 
       const unsubProduits = onSnapshot(q, (snap) => {
+        console.log('Produits trouvés:', snap.docs.length)
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
         setProduits(data)
         setLoading(false)
