@@ -414,8 +414,8 @@
       const code = getVendorCode(chineuse, ventesDuMois)
       const ref = `NR${String(m).padStart(2, '0')}${String(y).slice(-2)}-${code}`
 
-      const fmt = (n: number) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n).replace(/\u00A0/g, ' ')
-      const fmtEUR = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n).replace(/\u00A0/g, ' ')
+      const fmt = (n: number) => n.toFixed(2).replace('.', ',')
+      const fmtEUR = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
 
       const docPDF = new jsPDF({ unit: 'pt', format: 'a4' })
       const pageW = docPDF.internal.pageSize.getWidth()
