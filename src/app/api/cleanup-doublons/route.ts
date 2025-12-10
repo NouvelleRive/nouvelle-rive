@@ -85,6 +85,72 @@ export async function POST(req: NextRequest) {
     const dejaSupprimes = new Set<string>() // Éviter de supprimer deux fois
     const details: Array<{ garde: any; supprime: any; prix: number; raison: string }> = []
 
+    // Table de correspondance nom chineuse → trigrammes possibles
+    const chineuseToTrigrammes: Record<string, string[]> = {
+      'aerea': ['AE'],
+      'age': ['AGE'],
+      'aime': ['AIM'],
+      'alisa': ['ACAY'],
+      'cayoo': ['ACAY'],
+      'anashi': ['ANA', 'AN'],
+      'archive': ['ARC'],
+      'bonage': ['BON'],
+      'brillante': ['BRI'],
+      'brujas': ['BRU'],
+      'cameleon': ['CAM'],
+      'cent-neuf': ['CN'],
+      'equine': ['EQU'],
+      'cozines': ['COZ'],
+      'coz': ['COZ'],
+      'dark': ['DV'],
+      'vintage': ['DV', 'MV', 'PV', 'TPV'], // Attention: vintage peut être plusieurs
+      'diabolo': ['DM'],
+      'menthe': ['DM'],
+      'frusques': ['FRU'],
+      'ines': ['IP'],
+      'pineau': ['IP'],
+      'maison': ['MB'],
+      'beguin': ['MB'],
+      'maki': ['MAK'],
+      'mission': ['MV', 'MIS'],
+      'muse': ['MUS', 'MR'],
+      'rebelle': ['MUS', 'MR'],
+      'nan': ['NG'],
+      'goldies': ['NG'],
+      'nouvelle': ['NR'],
+      'rive': ['NR'],
+      'pardon': ['PP'],
+      'personal': ['PS'],
+      'seller': ['PS'],
+      'porte': ['POR'],
+      'prestanx': ['PRE'],
+      'pristini': ['PRI'],
+      'rashhiiid': ['RAS'],
+      'sergio': ['ST'],
+      'tacchineur': ['ST'],
+      'soir': ['SOI'],
+      'strass': ['STRC'],
+      'chronique': ['STRC'],
+      'tete': ['TDO'],
+      'orange': ['TDO'],
+      'dorange': ['TDO'],
+      'parisian': ['PV', 'TPV'],
+    }
+
+    // Fonction pour extraire les trigrammes possibles d'un nom
+    const extractTrigrammesFromName = (nom: string): string[] => {
+      const nomLower = nom.toLowerCase()
+      const trigrammes: string[] = []
+      
+      for (const [keyword, tris] of Object.entries(chineuseToTrigrammes)) {
+        if (nomLower.includes(keyword)) {
+          trigrammes.push(...tris)
+        }
+      }
+      
+      return [...new Set(trigrammes)] // Dédupliquer
+    }
+
     // Fonction pour vérifier si le nom de la vente non attribuée correspond à la vente attribuée
     const isRealDoublon = (attribuee: any, nonAttribuee: any): boolean => {
       const nomNonAttribuee = (nonAttribuee.nom || nonAttribuee.remarque || '').toLowerCase()
@@ -96,6 +162,14 @@ export async function POST(req: NextRequest) {
       // Vérifier si les SKUs se contiennent mutuellement (ex: AN109 dans ANA109)
       if (skuAttribuee && skuNonAttribuee) {
         if (skuAttribuee.includes(skuNonAttribuee) || skuNonAttribuee.includes(skuAttribuee)) {
+          return true
+        }
+      }
+      
+      // Vérifier via la table de correspondance chineuse → trigramme
+      const trigrammesFromNom = extractTrigrammesFromName(nomNonAttribuee)
+      if (trigrammeAttribuee && trigrammesFromNom.length > 0) {
+        if (trigrammesFromNom.some(t => t.toLowerCase() === trigrammeAttribuee)) {
           return true
         }
       }
