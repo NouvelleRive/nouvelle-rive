@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import ProductForm, { ProductFormData } from '@/components/ProductForm'
+import FilterBox from '@/components/FilterBox'
 
 // =====================
 // TYPES
@@ -568,7 +569,7 @@ export default function ProductList({
     setTriPrix('')
   }
 
-  const hasActiveFilters = recherche || filtreCategorie || filtreDeposant || filtreMois
+  const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois)
   const hasChangesToSync = selectedIds.size > 0 || dirtyIds.size > 0
 
   // =====================
@@ -586,93 +587,78 @@ export default function ProductList({
     <div className="p-4 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl md:text-2xl font-bold text-[#22209C]">{titre}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
       </div>
 
-      {/* Filtres */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Recherche */}
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              placeholder="nom, SKU, marque..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
-            />
-          </div>
+      {/* Filtres - UTILISE FILTERBOX */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <FilterBox
+          className="lg:col-span-2"
+          hasActiveFilters={hasActiveFilters}
+          onReset={resetFilters}
+          filters={{
+            recherche: {
+              value: recherche,
+              onChange: setRecherche,
+              placeholder: 'nom, SKU, marque...'
+            },
+            mois: {
+              value: filtreMois,
+              onChange: setFiltreMois,
+              options: moisUniques.map(m => ({
+                value: m,
+                label: format(new Date(m + '-01'), 'MMM yyyy', { locale: fr })
+              }))
+            },
+            ...(isAdmin && {
+              chineuse: {
+                value: filtreDeposant,
+                onChange: setFiltreDeposant,
+                options: deposantsUniques.map(email => ({
+                  value: email!,
+                  label: getChineurName(email)
+                }))
+              }
+            }),
+            categorie: {
+              value: filtreCategorie,
+              onChange: setFiltreCategorie,
+              options: categoriesUniques.map(c => ({
+                value: c as string,
+                label: c as string
+              }))
+            },
+            tri: {
+              value: triPrix,
+              onChange: (v) => setTriPrix(v as '' | 'asc' | 'desc'),
+              options: [
+                { value: '', label: 'Par défaut' },
+                { value: 'asc', label: 'Prix croissant ↑' },
+                { value: 'desc', label: 'Prix décroissant ↓' },
+              ]
+            },
+          }}
+        />
 
-          {/* Filtre chineuse (admin only) */}
-          {isAdmin && (
-            <select
-              value={filtreDeposant}
-              onChange={(e) => setFiltreDeposant(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
-            >
-              <option value="">Toutes chineuses</option>
-              {deposantsUniques.map((email, i) => (
-                <option key={i} value={email}>{getChineurName(email)}</option>
-              ))}
-            </select>
-          )}
-
-          {/* Filtre catégorie */}
-          <select
-            value={filtreCategorie}
-            onChange={(e) => setFiltreCategorie(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
-          >
-            <option value="">Toutes catégories</option>
-            {categoriesUniques.map((c, i) => (
-              <option key={i} value={c as string}>{c}</option>
-            ))}
-          </select>
-
-          {/* Filtre mois */}
-          <select
-            value={filtreMois}
-            onChange={(e) => setFiltreMois(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
-          >
-            <option value="">Tous mois</option>
-            {moisUniques.map((m) => (
-              <option key={m} value={m}>{format(new Date(m + '-01'), 'MMM yyyy', { locale: fr })}</option>
-            ))}
-          </select>
-
-          {/* Tri prix */}
-          <select
-            value={triPrix}
-            onChange={(e) => setTriPrix(e.target.value as '' | 'asc' | 'desc')}
-            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
-          >
-            <option value="">Tri par prix</option>
-            <option value="asc">Prix croissant ↑</option>
-            <option value="desc">Prix décroissant ↓</option>
-          </select>
-        </div>
-
-        {/* Compteur et actions */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm text-gray-500">
-            {produitsTriés.length} produit(s)
-          </span>
-          <div className="flex gap-2 flex-wrap">
-            {hasActiveFilters && (
-              <button onClick={resetFilters} className="text-sm text-[#22209C] flex items-center gap-1 hover:underline">
-                <X size={14} /> Reset
-              </button>
-            )}
-            <button onClick={exportToExcel} className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm flex items-center gap-1 hover:bg-green-700 transition-colors">
+        {/* Exporter */}
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4">Exporter</h2>
+          <div className="flex flex-col gap-3">
+            <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
               <FileSpreadsheet size={14} /> Excel
             </button>
-            <button onClick={exportToPDF} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm flex items-center gap-1 hover:bg-red-700 transition-colors">
+            <button onClick={exportToPDF} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors">
               <Download size={14} /> PDF
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Compteur */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-sm text-gray-500">
+          {produitsTriés.length} produit(s)
+        </span>
       </div>
 
       {/* Barre d'actions : Sync Square + Actions groupées */}

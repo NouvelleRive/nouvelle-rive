@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx'
+import FilterBox from '@/components/FilterBox'
 import { 
   Search, X, Download, FileSpreadsheet, RefreshCw, 
   Plus, Trash2, Link, CheckCircle, AlertCircle, 
@@ -608,7 +609,7 @@ export default function SalesList({
       
       {/* Header : Titre */}
       <div className="mb-4">
-        <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center">{titre}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
       </div>
 
       {/* Ligne : Sync/Actualiser + Stats */}
