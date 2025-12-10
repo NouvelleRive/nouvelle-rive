@@ -88,10 +88,27 @@ export async function POST(req: NextRequest) {
     // Fonction pour vérifier si le nom de la vente non attribuée correspond à la vente attribuée
     const isRealDoublon = (attribuee: any, nonAttribuee: any): boolean => {
       const nomNonAttribuee = (nonAttribuee.nom || nonAttribuee.remarque || '').toLowerCase()
+      const skuNonAttribuee = (nonAttribuee.sku || '').toLowerCase()
       const skuAttribuee = (attribuee.sku || '').toLowerCase()
       const trigrammeAttribuee = (attribuee.trigramme || '').toLowerCase()
+      const nomAttribuee = (attribuee.nom || '').toLowerCase()
       
-      // Extraire le code du SKU (lettres + chiffres, ex: "ANA104" -> "ana104")
+      // Vérifier si les SKUs se contiennent mutuellement (ex: AN109 dans ANA109)
+      if (skuAttribuee && skuNonAttribuee) {
+        if (skuAttribuee.includes(skuNonAttribuee) || skuNonAttribuee.includes(skuAttribuee)) {
+          return true
+        }
+      }
+      
+      // Vérifier si les noms (après le SKU) sont identiques ou très similaires
+      // Ex: "BRI2 - Briquet CRAMEUSE DE FAF" vs "Briquet - Briquet CRAMEUSE DE FAF"
+      const nomSansSkuAttribuee = nomAttribuee.replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
+      const nomSansSkuNonAttribuee = nomNonAttribuee.replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
+      if (nomSansSkuAttribuee && nomSansSkuNonAttribuee && nomSansSkuAttribuee === nomSansSkuNonAttribuee) {
+        return true
+      }
+      
+      // Extraire le code du SKU (lettres + chiffres, ex: "ANA104" -> "ana", "104")
       const skuMatch = skuAttribuee.match(/^([a-z]+)(\d+)/i)
       const skuLetters = skuMatch ? skuMatch[1].toLowerCase() : ''
       const skuNumbers = skuMatch ? skuMatch[2] : ''
@@ -101,13 +118,34 @@ export async function POST(req: NextRequest) {
       
       // Vérifier si le nom contient le trigramme + numéro (ex: "an104" dans "anashi an104")
       if (skuLetters && skuNumbers) {
-        const pattern = new RegExp(`${skuLetters}\\s*${skuNumbers}`, 'i')
+        // Pattern plus souple : lettres (2-4) suivies des chiffres
+        const pattern = new RegExp(`\\b${skuLetters.substring(0, 2)}\\w*\\s*${skuNumbers}\\b`, 'i')
         if (pattern.test(nomNonAttribuee)) return true
+        
+        // Aussi vérifier le SKU de la vente non attribuée
+        if (skuNonAttribuee) {
+          const skuNonMatch = skuNonAttribuee.match(/^([a-z]+)(\d+)/i)
+          if (skuNonMatch && skuNonMatch[2] === skuNumbers) {
+            // Même numéro, lettres similaires (ex: AN vs ANA)
+            const nonLetters = skuNonMatch[1].toLowerCase()
+            if (skuLetters.startsWith(nonLetters) || nonLetters.startsWith(skuLetters)) {
+              return true
+            }
+          }
+        }
       }
       
-      // Vérifier si le nom contient le trigramme au début (ex: "nr trench" pour NR1)
+      // Vérifier si le nom contient le trigramme (ex: "pristini" contient "pri")
       if (trigrammeAttribuee && trigrammeAttribuee.length >= 2) {
+        // Au début du nom
         if (nomNonAttribuee.startsWith(trigrammeAttribuee + ' ')) return true
+        // Ou dans un mot du nom (ex: "fourrure pristini" contient "pri" dans "pristini")
+        const words = nomNonAttribuee.split(/\s+/)
+        for (const word of words) {
+          if (word.includes(trigrammeAttribuee) && word.length <= trigrammeAttribuee.length + 5) {
+            return true
+          }
+        }
       }
       
       // Vérifier descriptions génériques qui matchent souvent
