@@ -75,6 +75,42 @@ const extractTrigrammesFromName = (nom: string): string[] => {
   return [...new Set(trigrammes)]
 }
 
+// Extraire les mots significatifs d'un texte (pour comparaison)
+const extractSignificantWords = (text: string): Set<string> => {
+  const stopWords = new Set(['le', 'la', 'les', 'de', 'du', 'des', 'un', 'une', 'et', 'en', 'au', 'aux', 'avec', 'pour', 'par', 'sur', 'sous', 'dans', 'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'noir', 'blanc', 'bleu', 'rouge', 'vert', 'gris', 'beige', 'rose', 'marron', 'black', 'white', 'blue', 'red', 'green', 'grey', 'gray', 'brown', 'pink', 'taille', 'size', 'small', 'medium', 'large'])
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-zàâäéèêëïîôùûüç0-9\s]/gi, ' ')
+      .split(/\s+/)
+      .filter(w => w.length >= 4 && !stopWords.has(w))
+  )
+}
+
+// Mots génériques à ne pas considérer comme "uniques"
+const motsGeneriques = new Set(['veste', 'jupe', 'robe', 'pantalon', 'chemise', 'pull', 'manteau', 'blouson', 'jacket', 'coat', 'dress', 'shirt', 'pants', 'skirt', 'top', 'jean', 'jeans', 'blazer', 'cardigan', 'sweater', 'leather', 'cuir', 'vintage'])
+
+// Vérifier si deux noms correspondent (mots significatifs en commun)
+const hasSignificantWordsInCommon = (nom1: string, nom2: string): boolean => {
+  const mots1 = extractSignificantWords(nom1)
+  const mots2 = extractSignificantWords(nom2)
+  
+  let motsEnCommun = 0
+  let motUniqueEnCommun = false
+  
+  for (const mot of mots1) {
+    if (mots2.has(mot)) {
+      motsEnCommun++
+      if (!motsGeneriques.has(mot) && mot.length >= 5) {
+        motUniqueEnCommun = true
+      }
+    }
+  }
+  
+  // 2+ mots en commun OU 1 mot unique/rare en commun
+  return motsEnCommun >= 2 || motUniqueEnCommun
+}
+
 /**
  * Sync TOUTES les ventes Square d'une période
  * Match par SKU uniquement
@@ -265,6 +301,7 @@ export async function syncVentesDepuisSquare(
         for (const venteExistante of ventesMemePrixDate) {
           // Si même SKU → doublon
           const skuExistant = venteExistante.sku?.toLowerCase() || ''
+          const nomExistant = venteExistante.nom || ''
           
           // Si la vente existante est attribuée, vérifier correspondance
           if (venteExistante.attribue) {
@@ -283,9 +320,16 @@ export async function syncVentesDepuisSquare(
             }
             
             // Match par nom similaire (sans le SKU)
-            const nomExistantSansSku = (venteExistante.nom || '').toLowerCase().replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
+            const nomExistantSansSku = nomExistant.toLowerCase().replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
             const nomSquareSansSku = nomSquare.replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
             if (nomExistantSansSku && nomSquareSansSku && nomExistantSansSku === nomSquareSansSku) {
+              estDoublon = true
+              break
+            }
+            
+            // NOUVEAU: Match par mots significatifs en commun
+            // Ex: "blazer amadora gris" vs "AGE35 - BLAZER AMADORA GRIS S/M"
+            if (hasSignificantWordsInCommon(nomSquare, nomExistant)) {
               estDoublon = true
               break
             }
@@ -302,6 +346,12 @@ export async function syncVentesDepuisSquare(
                 break
               }
             }
+          }
+          
+          // NOUVEAU: Match par mots significatifs même si pas attribuée
+          if (hasSignificantWordsInCommon(nomSquare, nomExistant)) {
+            estDoublon = true
+            break
           }
         }
         
