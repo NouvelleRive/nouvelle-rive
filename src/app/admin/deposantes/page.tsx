@@ -24,6 +24,7 @@ type CategorieRapportItem = {
   banqueAdresse?: string
   adresse1?: string
   adresse2?: string
+  taux?: number  // ← AJOUTÉ
 }
 
 type Deposante = {
@@ -291,6 +292,27 @@ export default function AdminDeposantesPage() {
     }
   }
 
+  const handleMigration = async () => {
+    if (!confirm('Lancer la migration des infos comptables vers la racine des documents ?')) return
+    try {
+      const auth = getAuth()
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/migrate-chineuse', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(`✅ ${data.message}\n\nErreurs: ${data.results.errors.length > 0 ? data.results.errors.join('\n') : 'Aucune'}`)
+        window.location.reload()
+      } else {
+        alert('❌ Erreur: ' + data.error)
+      }
+    } catch (err: any) {
+      alert('❌ Erreur: ' + err.message)
+    }
+  }
+
   // Helper pour afficher si un champ est vide
   const fieldStatus = (value: string | undefined) => {
     if (!value || value.trim() === '') {
@@ -328,6 +350,12 @@ export default function AdminDeposantesPage() {
         >
           <Plus size={18} />
           <span className="hidden sm:inline">Ajouter</span>
+        </button>
+        <button
+          onClick={handleMigration}
+          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90"
+        >
+          🔄 <span className="hidden sm:inline">Migrer données</span>
         </button>
       </div>
 
@@ -669,20 +697,23 @@ export default function AdminDeposantesPage() {
               <div className="border-t pt-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations comptables</h3>
                 
-              <div className="mt-4">
-                <label className="block text-xs text-gray-500 mb-1">Paramètre</label>
-                <input
-                type="number"
-                value={formData.taux}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setFormData({ ...formData, taux: val === '' ? 40 : parseInt(val) })
-                }}
-                min={0}
-                max={100}
-                className="w-24 border rounded px-3 py-2 text-sm"
-              /> %
-              </div>
+                <div className="mb-4">
+                  <label className="block text-xs text-gray-500 mb-1">Paramètre</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={formData.taux}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setFormData({ ...formData, taux: val === '' ? 40 : parseInt(val) })
+                      }}
+                      min={0}
+                      max={100}
+                      className="w-24 border rounded px-3 py-2 text-sm"
+                    />
+                    <span className="text-sm text-gray-500">%</span>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
