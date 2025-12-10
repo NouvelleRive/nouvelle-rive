@@ -48,12 +48,12 @@ export async function syncVentesDepuisSquare(
       ventesExistantes.add(`order-${data.orderId}-${data.lineItemUid}`)
     }
     
-    // Clé 2: prix + date arrondie à la minute (pour montant_perso et ventes attribuées)
+    // Clé 2: prix + date arrondie à la JOURNÉE (pour montant_perso et ventes attribuées)
     // Ceci évite les doublons même si le nom a changé après attribution
     if (data.prixVenteReel && data.dateVente) {
       const dateObj = data.dateVente.toDate ? data.dateVente.toDate() : new Date(data.dateVente)
-      const dateMin = Math.floor(dateObj.getTime() / 60000) // Arrondi à la minute
-      ventesExistantes.add(`prix-${data.prixVenteReel}-${dateMin}`)
+      const dateJour = `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`
+      ventesExistantes.add(`prix-${data.prixVenteReel}-${dateJour}`)
     }
   }
   console.log(`📋 ${ventesExistantes.size} clés de déduplication (ventes existantes)`)
@@ -166,9 +166,9 @@ export async function syncVentesDepuisSquare(
       // Clé de déduplication 1: orderId + lineItemUid
       const dedupeKeyOrder = `order-${order.id}-${lineItemUid}`
       
-      // Clé de déduplication 2: prix + date arrondie à la minute
-      const dateMin = Math.floor(orderDate.getTime() / 60000)
-      const dedupeKeyPrix = `prix-${prix}-${dateMin}`
+      // Clé de déduplication 2: prix + date arrondie à la JOURNÉE
+      const dateJour = `${orderDate.getFullYear()}-${orderDate.getMonth()}-${orderDate.getDate()}`
+      const dedupeKeyPrix = `prix-${prix}-${dateJour}`
 
       // Skip si déjà importé (par l'une ou l'autre clé)
       if (ventesExistantes.has(dedupeKeyOrder) || ventesExistantes.has(dedupeKeyPrix)) {

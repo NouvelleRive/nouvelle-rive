@@ -68,8 +68,9 @@ export async function POST(req: NextRequest) {
         dateObj = new Date(vente.dateVente)
       }
       
-      const dateMin = Math.floor(dateObj.getTime() / 60000)
-      const key = `${vente.prixVenteReel}-${dateMin}`
+      // Arrondir à la JOURNÉE (pas la minute) pour détecter les doublons
+      const dateJour = `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`
+      const key = `${vente.prixVenteReel}-${dateJour}`
 
       if (!groupes.has(key)) {
         groupes.set(key, [])
