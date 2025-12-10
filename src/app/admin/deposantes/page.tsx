@@ -45,6 +45,13 @@ type Deposante = {
   updatedAt?: any
   'Catégorie'?: CategorieItem[]
   'Catégorie de rapport'?: CategorieRapportItem[]
+  siret?: string
+  tva?: string
+  iban?: string
+  bic?: string
+  banqueAdresse?: string
+  adresse1?: string
+  adresse2?: string
 }
 
 const EMPTY_FORM = {
@@ -120,13 +127,13 @@ export default function AdminDeposantesPage() {
       categorieRapportLabel: catRapport.label || '',
       categorieRapportIdsquare: catRapport.idsquare || '',
       taux: catRapport.taux ?? 40,
-      siret: catRapport.siret || '',
-      tva: catRapport.tva || '',
-      iban: catRapport.iban || '',
-      bic: catRapport.bic || '',
-      banqueAdresse: catRapport.banqueAdresse || '',
-      adresse1: catRapport.adresse1 || '',
-      adresse2: catRapport.adresse2 || '',
+      siret: d.siret || '',
+      tva: d.tva || '',
+      iban: d.iban || '',
+      bic: d.bic || '',
+      banqueAdresse: d.banqueAdresse || '',
+      adresse1: d.adresse1 || '',
+      adresse2: d.adresse2 || '',
     })
     setImageFile(null)
     setImagePreview(d.imageUrl || null)
@@ -380,8 +387,8 @@ export default function AdminDeposantesPage() {
             !d.specialite,
             !d.lien,
             !d.imageUrl,
-            !catRapport.siret,
-            !catRapport.iban,
+            !d.siret,
+            !d.iban,  
           ].filter(Boolean).length
 
           return (
