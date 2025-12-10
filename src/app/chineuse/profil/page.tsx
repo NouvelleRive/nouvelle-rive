@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
 
 export default function ProfilFacturationPage() {
   const [loaded, setLoaded] = useState(false)
@@ -18,14 +18,18 @@ export default function ProfilFacturationPage() {
   const [iban, setIban] = useState('')
   const [bic, setBic] = useState('')
   const [banqueAdresse, setBanqueAdresse] = useState('')
+  const [docId, setDocId] = useState<string | null>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) return
-      const ref = doc(db, 'chineuse', u.uid)
-      const snap = await getDoc(ref)
-      if (snap.exists()) {
-        const d = snap.data() as any
+      const snap = await getDocs(
+        query(collection(db, 'chineuse'), where('authUid', '==', u.uid))
+      )
+      if (!snap.empty) {
+        const docSnap = snap.docs[0]
+        setDocId(docSnap.id)
+        const d = docSnap.data()
         setRaisonSociale(d?.nom || '')
         setSiret(d?.siret || '')
         setAdresse1(d?.adresse1 || '')
@@ -42,25 +46,30 @@ export default function ProfilFacturationPage() {
     return () => unsub()
   }, [])
 
+  
   async function save() {
-    setSaving(true); setMsg('')
-    const u = auth.currentUser
-    if (!u) return
-    const ref = doc(db, 'chineuse', u.uid)
-    const payload = {
-      nom: raisonSociale, // utilisé comme “nom de la chineuse” sur la facture
-      siret, adresse1, adresse2, tva,
-      iban, bic, banqueAdresse,
-      email: u.email || null,
-    }
-    // crée si absent, sinon met à jour
-    const snap = await getDoc(ref)
-    if (!snap.exists()) await setDoc(ref, payload, { merge: true })
-    else await updateDoc(ref, payload as any)
-
-    setMsg('Enregistré ✅')
-    setSaving(false)
+  if (!docId) {
+    setMsg('❌ Profil introuvable')
+    return
   }
+  setSaving(true)
+  setMsg('')
+  
+  const ref = doc(db, 'chineuse', docId)
+  await updateDoc(ref, {
+    nom: raisonSociale,
+    siret,
+    adresse1,
+    adresse2,
+    tva,
+    iban,
+    bic,
+    banqueAdresse,
+  })
+
+  setMsg('Enregistré ✅')
+  setSaving(false)
+}
 
   if (!loaded) return null
 
