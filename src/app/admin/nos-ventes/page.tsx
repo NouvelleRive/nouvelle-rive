@@ -559,9 +559,10 @@ export default function AdminNosVentesPage() {
                     <div className="max-h-48 overflow-y-auto border rounded-lg">
                       {cleanupResult.details.map((d: any, i: number) => (
                         <div key={i} className="p-2 border-b last:border-b-0 text-xs">
-                          <p className="text-green-600">✓ Garde : {d.garde.sku || d.garde.nom} (attribué ✓)</p>
-                          <p className="text-red-600">✗ Supprime : {d.supprime.nom || 'Vente inconnue'} (non attribué)</p>
-                          <p className="text-gray-500">Prix : {d.prix}€</p>
+                          <p className="text-gray-500 font-medium">{d.raison || 'Doublon'}</p>
+                          <p className="text-green-600">✓ Garde : {d.garde.sku || d.garde.nom}</p>
+                          <p className="text-red-600">✗ Supprime : {d.supprime.sku || d.supprime.nom}</p>
+                          <p className="text-gray-400">Prix : {d.prix}€</p>
                         </div>
                       ))}
                     </div>

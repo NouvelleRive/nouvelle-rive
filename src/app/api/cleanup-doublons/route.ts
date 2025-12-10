@@ -79,10 +79,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Identifier les doublons à supprimer
-    // RÈGLE : Ne supprimer QUE les ventes NON attribuées qui ont un doublon ATTRIBUÉ
-    // ET dont le nom/remarque correspond au SKU ou trigramme de la vente attribuée
+    // RÈGLE 1 : Ventes avec MÊME SKU + même prix + même jour = doublon (garder 1)
+    // RÈGLE 2 : Vente NON attribuée avec doublon ATTRIBUÉ correspondant
     const aSupprimer: string[] = []
-    const details: Array<{ garde: any; supprime: any; prix: number }> = []
+    const dejaSupprimes = new Set<string>() // Éviter de supprimer deux fois
+    const details: Array<{ garde: any; supprime: any; prix: number; raison: string }> = []
 
     // Fonction pour vérifier si le nom de la vente non attribuée correspond à la vente attribuée
     const isRealDoublon = (attribuee: any, nonAttribuee: any): boolean => {
@@ -100,7 +101,6 @@ export async function POST(req: NextRequest) {
       
       // Vérifier si le nom contient le trigramme + numéro (ex: "an104" dans "anashi an104")
       if (skuLetters && skuNumbers) {
-        // Chercher pattern: lettres suivies des chiffres (avec ou sans espace)
         const pattern = new RegExp(`${skuLetters}\\s*${skuNumbers}`, 'i')
         if (pattern.test(nomNonAttribuee)) return true
       }
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
         if (nomNonAttribuee.startsWith(trigrammeAttribuee + ' ')) return true
       }
       
-      // Vérifier descriptions génériques qui matchent souvent (ex: "PIECE UNIQUE DIVERS")
+      // Vérifier descriptions génériques qui matchent souvent
       if (nomNonAttribuee.includes('piece unique') || nomNonAttribuee.includes('divers')) return true
       
       return false
@@ -119,22 +119,54 @@ export async function POST(req: NextRequest) {
     for (const [, groupe] of groupes) {
       if (groupe.length <= 1) continue // Pas de doublon possible
 
-      // Séparer attribuées et non attribuées
-      const attribuees = groupe.filter(v => v.attribue === true)
-      const nonAttribuees = groupe.filter(v => v.attribue !== true)
+      // ÉTAPE 1 : Chercher les doublons avec MÊME SKU (le plus évident)
+      const parSku = new Map<string, any[]>()
+      for (const v of groupe) {
+        if (v.sku) {
+          const skuNorm = v.sku.toLowerCase().trim()
+          if (!parSku.has(skuNorm)) parSku.set(skuNorm, [])
+          parSku.get(skuNorm)!.push(v)
+        }
+      }
+      
+      for (const [sku, ventesMemeSku] of parSku) {
+        if (ventesMemeSku.length > 1) {
+          // Garder la première, supprimer les autres
+          const aGarder = ventesMemeSku[0]
+          for (let i = 1; i < ventesMemeSku.length; i++) {
+            const doublon = ventesMemeSku[i]
+            if (!dejaSupprimes.has(doublon.id)) {
+              aSupprimer.push(doublon.id)
+              dejaSupprimes.add(doublon.id)
+              details.push({
+                garde: { id: aGarder.id, nom: aGarder.nom, sku: aGarder.sku, attribue: aGarder.attribue },
+                supprime: { id: doublon.id, nom: doublon.nom, sku: doublon.sku, attribue: doublon.attribue },
+                prix: doublon.prixVenteReel,
+                raison: `Même SKU: ${sku.toUpperCase()}`,
+              })
+            }
+          }
+        }
+      }
 
-      // Si on a au moins une attribuée ET au moins une non attribuée
+      // ÉTAPE 2 : Chercher les ventes non attribuées qui matchent une attribuée
+      const attribuees = groupe.filter(v => v.attribue === true && !dejaSupprimes.has(v.id))
+      const nonAttribuees = groupe.filter(v => v.attribue !== true && !dejaSupprimes.has(v.id))
+
       if (attribuees.length > 0 && nonAttribuees.length > 0) {
         for (const nonAttribuee of nonAttribuees) {
-          // Chercher une vente attribuée qui correspond vraiment
+          if (dejaSupprimes.has(nonAttribuee.id)) continue
+          
           const matchingAttribuee = attribuees.find(a => isRealDoublon(a, nonAttribuee))
           
           if (matchingAttribuee) {
             aSupprimer.push(nonAttribuee.id)
+            dejaSupprimes.add(nonAttribuee.id)
             details.push({
               garde: { id: matchingAttribuee.id, nom: matchingAttribuee.nom, sku: matchingAttribuee.sku, attribue: true },
               supprime: { id: nonAttribuee.id, nom: nonAttribuee.nom, sku: nonAttribuee.sku, attribue: false },
               prix: nonAttribuee.prixVenteReel,
+              raison: 'Non attribué → Attribué',
             })
           }
         }
