@@ -225,6 +225,43 @@ export async function POST(req: NextRequest) {
       // Vérifier descriptions génériques qui matchent souvent
       if (nomNonAttribuee.includes('piece unique') || nomNonAttribuee.includes('divers')) return true
       
+      // NOUVEAU : Comparer les mots significatifs entre les deux noms
+      // Ex: "blazer amadora gris" vs "AGE35 - BLAZER AMADORA GRIS S/M"
+      const extractSignificantWords = (text: string): Set<string> => {
+        const stopWords = new Set(['le', 'la', 'les', 'de', 'du', 'des', 'un', 'une', 'et', 'en', 'au', 'aux', 'avec', 'pour', 'par', 'sur', 'sous', 'dans', 'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'noir', 'blanc', 'bleu', 'rouge', 'vert', 'gris', 'beige', 'rose', 'marron', 'black', 'white', 'blue', 'red', 'green', 'grey', 'gray', 'brown', 'pink', 'taille', 'size', 'small', 'medium', 'large'])
+        return new Set(
+          text
+            .toLowerCase()
+            .replace(/[^a-zàâäéèêëïîôùûüç0-9\s]/gi, ' ') // Enlever la ponctuation
+            .split(/\s+/)
+            .filter(w => w.length >= 4 && !stopWords.has(w)) // Mots de 4+ caractères, pas de stop words
+        )
+      }
+      
+      const motsAttribuee = extractSignificantWords(nomAttribuee)
+      const motsNonAttribuee = extractSignificantWords(nomNonAttribuee)
+      
+      // Compter les mots en commun
+      let motsEnCommun = 0
+      for (const mot of motsNonAttribuee) {
+        if (motsAttribuee.has(mot)) {
+          motsEnCommun++
+        }
+      }
+      
+      // Si au moins 2 mots significatifs en commun, c'est probablement un doublon
+      if (motsEnCommun >= 2) return true
+      
+      // Si 1 mot en commun ET c'est un mot rare/unique (pas générique comme "veste", "jupe")
+      const motsGeneriques = new Set(['veste', 'jupe', 'robe', 'pantalon', 'chemise', 'pull', 'manteau', 'blouson', 'jacket', 'coat', 'dress', 'shirt', 'pants', 'skirt', 'top', 'jean', 'jeans', 'blazer', 'cardigan', 'sweater', 'leather', 'cuir', 'vintage'])
+      if (motsEnCommun === 1) {
+        for (const mot of motsNonAttribuee) {
+          if (motsAttribuee.has(mot) && !motsGeneriques.has(mot) && mot.length >= 5) {
+            return true // Mot rare/unique en commun (ex: "amadora", "pristini")
+          }
+        }
+      }
+      
       return false
     }
 
