@@ -590,7 +590,7 @@ export default function SalesList({
     setTri('date')
   }
 
-  const hasActiveFilters = recherche || filtreMois || filtreChineuse || filtrePrix || filtreStatut !== 'all'
+  const hasActiveFilters = recherche || filtreMois || (isAdmin && filtreChineuse) || filtrePrix || filtreStatut !== 'all'
 
   // =====================
   // RENDER
@@ -606,50 +606,68 @@ export default function SalesList({
   return (
     <div className="p-4 max-w-6xl mx-auto">
       
-      {/* BOUTON SYNC EN HAUT */}
-      {isAdmin && onSync && (
-        <div className="mb-6">
-          <button
-            onClick={handleSyncRecent}
-            disabled={syncLoading}
-            className="flex items-center gap-2 bg-[#22209C] text-white px-6 py-3 rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-[#1a1a7a] transition-colors"
-          >
-            <RefreshCw size={18} className={syncLoading ? 'animate-spin' : ''} />
-            {syncLoading ? 'Synchronisation...' : 'Recevoir de la caisse'}
-          </button>
-          {derniereVenteDate && (
-            <p className="text-xs text-gray-500 mt-2">
-              Dernière vente reçue : {format(derniereVenteDate, 'dd/MM/yyyy', { locale: fr })}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="mb-6">
+      {/* Header : Titre */}
+      <div className="mb-4">
         <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center">{titre}</h1>
       </div>
 
-      {/* Stats (admin) */}
-      {isAdmin && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white border rounded-xl p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-gray-500">Total</p>
-            <p className="text-xl sm:text-2xl font-bold">{stats.nb}</p>
+      {/* Ligne : Sync/Actualiser + Stats */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        {/* Bouton Sync (admin) */}
+        {isAdmin && onSync && (
+          <button
+            onClick={handleSyncRecent}
+            disabled={syncLoading}
+            className="flex items-center gap-2 bg-[#22209C] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-[#1a1a7a] transition-colors"
+          >
+            <RefreshCw size={16} className={syncLoading ? 'animate-spin' : ''} />
+            {syncLoading ? 'Sync...' : 'Synchroniser'}
+          </button>
+        )}
+
+        {/* Bouton Actualiser (chineuse) */}
+        {!isAdmin && onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="flex items-center gap-2 bg-[#22209C] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1a1a7a] transition-colors"
+          >
+            <RefreshCw size={16} />
+            Actualiser
+          </button>
+        )}
+
+        {/* Stats */}
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2">
+            <span className="text-xs text-gray-500">Total</span>
+            <span className="font-bold">{stats.nb}</span>
           </div>
-          <div className="bg-white border border-green-200 rounded-xl p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-green-600">Attribuées</p>
-            <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.attribuees}</p>
-          </div>
-          <div className="bg-white border border-amber-200 rounded-xl p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-amber-600">À attribuer</p>
-            <p className="text-xl sm:text-2xl font-bold text-amber-600">{stats.nonAttribuees}</p>
-          </div>
-          <div className="bg-white border border-blue-200 rounded-xl p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-blue-600">CA</p>
-            <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.ca.toFixed(2)}€</p>
+          
+          {isAdmin && (
+            <>
+              <div className="bg-white border border-green-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                <span className="text-xs text-green-600">Attribuées</span>
+                <span className="font-bold text-green-600">{stats.attribuees}</span>
+              </div>
+              <div className="bg-white border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                <span className="text-xs text-amber-600">À attribuer</span>
+                <span className="font-bold text-amber-600">{stats.nonAttribuees}</span>
+              </div>
+            </>
+          )}
+          
+          <div className="bg-white border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
+            <span className="text-xs text-blue-600">CA</span>
+            <span className="font-bold text-blue-600">{stats.ca.toFixed(2)}€</span>
           </div>
         </div>
+      </div>
+
+      {/* Info dernière sync (admin) */}
+      {isAdmin && derniereVenteDate && (
+        <p className="text-xs text-gray-500 -mt-4 mb-4">
+          Dernière vente : {format(derniereVenteDate, 'dd/MM/yyyy', { locale: fr })}
+        </p>
       )}
 
       {/* Section Filtres + Télécharger */}
@@ -667,7 +685,7 @@ export default function SalesList({
 
           <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
             {/* Filtres principaux */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
               <div>
                 <label className="block text-sm font-medium mb-1">Mois</label>
                 <select
@@ -684,24 +702,27 @@ export default function SalesList({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Chineuse</label>
-                <select
-                  value={filtreChineuse}
-                  onChange={(e) => setFiltreChineuse(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">Toutes</option>
-                  {chineusesDisponibles.map(c => (
-                    <option key={c.trigramme} value={c.trigramme}>
-                      {c.trigramme} - {c.nom}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Filtre Chineuse (admin seulement) */}
+              {isAdmin && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Chineuse</label>
+                  <select
+                    value={filtreChineuse}
+                    onChange={(e) => setFiltreChineuse(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Toutes</option>
+                    {chineusesDisponibles.map(c => (
+                      <option key={c.trigramme} value={c.trigramme}>
+                        {c.trigramme} - {c.nom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
-                <label className="block text-sm font-medium mb-1">Prix exact</label>
+                <label className="block text-sm font-medium mb-1">Prix</label>
                 <input
                   type="text"
                   value={filtrePrix}
@@ -817,20 +838,6 @@ export default function SalesList({
               </span>
             </div>
           </label>
-        </div>
-      )}
-
-      {/* Résumé (chineuse) */}
-      {!isAdmin && (
-        <div className="bg-white border rounded-xl p-4 mb-6">
-          <h2 className="text-lg font-semibold">Ventes</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Total CA :{' '}
-            <span className="font-semibold">
-              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(stats.ca)}
-            </span>{' '}
-            — {stats.nb} pièce{stats.nb > 1 ? 's' : ''}
-          </p>
         </div>
       )}
 
