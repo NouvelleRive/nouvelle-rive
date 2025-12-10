@@ -121,9 +121,6 @@ export default function SalesList({
   // Import Excel drag & drop
   const [isDragging, setIsDragging] = useState(false)
 
-  // Mobile: section collapsible
-  const [showFilters, setShowFilters] = useState(false)
-
   // =====================
   // HELPERS
   // =====================
@@ -436,20 +433,19 @@ export default function SalesList({
       d.nom === chineuse?.nom ||
       d.trigramme === chineuse?.codeChineuse
     )
-    const catRapport = dep ? (dep['Catégorie de rapport'] || [])[0] || {} : {}
-    
-    const chineuseComplete = {
+
+   const chineuseComplete = {
       ...chineuse,
-      taux: chineuse?.taux ?? catRapport.taux,
-      siret: chineuse?.siret || catRapport.siret,
-      adresse1: chineuse?.adresse1 || catRapport.adresse1,
-      adresse2: chineuse?.adresse2 || catRapport.adresse2,
-      tva: chineuse?.tva || catRapport.tva,
-      iban: chineuse?.iban || catRapport.iban,
-      bic: chineuse?.bic || catRapport.bic,
-      banqueAdresse: chineuse?.banqueAdresse || catRapport.banqueAdresse,
+      taux: chineuse?.taux ?? dep?.taux,
+      siret: chineuse?.siret || dep?.siret,
+      adresse1: chineuse?.adresse1 || dep?.adresse1,
+      adresse2: chineuse?.adresse2 || dep?.adresse2,
+      tva: chineuse?.tva || dep?.tva,
+      iban: chineuse?.iban || dep?.iban,
+      bic: chineuse?.bic || dep?.bic,
+      banqueAdresse: chineuse?.banqueAdresse || dep?.banqueAdresse,
     }
-    
+      
     const [m, y] = monthValue.split('-').map(Number)
     const start = new Date(y, m - 1, 1)
     const end = new Date(y, m, 0, 23, 59, 59, 999)
@@ -591,7 +587,7 @@ export default function SalesList({
     setTri('date')
   }
 
-  const hasActiveFilters = recherche || filtreMois || (isAdmin && filtreChineuse) || filtrePrix || filtreStatut !== 'all'
+  const hasActiveFilters = !!(recherche || filtreMois || (isAdmin && filtreChineuse) || filtrePrix || filtreStatut !== 'all')
 
   // =====================
   // RENDER
@@ -673,97 +669,57 @@ export default function SalesList({
 
       {/* Section Filtres + Télécharger */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        
         {/* FILTRER */}
-        <div className="lg:col-span-2 bg-white border rounded-xl p-4 shadow-sm">
-          <button
-            className="lg:hidden flex items-center justify-between w-full mb-2"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <h2 className="text-lg font-semibold">Filtrer</h2>
-            {showFilters ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          <h2 className="hidden lg:block text-lg font-semibold mb-4">Filtrer</h2>
-
-          <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
-            {/* Filtres principaux */}
-            <div className={`grid grid-cols-1 sm:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
-              <div>
-                <label className="block text-sm font-medium mb-1">Mois</label>
-                <select
-                  value={filtreMois}
-                  onChange={(e) => setFiltreMois(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">Tous</option>
-                  {moisDisponibles.map(({ value, label }) => (
-                    <option key={value} value={value}>
-                      {label.charAt(0).toUpperCase() + label.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Filtre Chineuse (admin seulement) */}
-              {isAdmin && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Chineuse</label>
-                  <select
-                    value={filtreChineuse}
-                    onChange={(e) => setFiltreChineuse(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value="">Toutes</option>
-                    {chineusesDisponibles.map(c => (
-                      <option key={c.trigramme} value={c.trigramme}>
-                        {c.trigramme} - {c.nom}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Prix</label>
-                <input
-                  type="text"
-                  value={filtrePrix}
-                  onChange={(e) => setFiltrePrix(e.target.value)}
-                  placeholder="Ex: 95"
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Trier par</label>
-                <select
-                  value={tri}
-                  onChange={(e) => setTri(e.target.value as any)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="date">Date</option>
-                  <option value="nom">Nom</option>
-                  <option value="prix">Prix</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Filtre statut (admin) */}
-            {isAdmin && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Statut</label>
-                <select
-                  value={filtreStatut}
-                  onChange={(e) => setFiltreStatut(e.target.value as any)}
-                  className="w-full sm:w-auto border rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="all">Tous statuts</option>
-                  <option value="attribue">Attribuées</option>
-                  <option value="non-attribue">Non attribuées</option>
-                </select>
-              </div>
-            )}
-          </div>
-        </div>
+        <FilterBox
+          className="lg:col-span-2"
+          hasActiveFilters={hasActiveFilters}
+          onReset={resetFilters}
+          filters={{
+            mois: {
+              value: filtreMois,
+              onChange: setFiltreMois,
+              options: moisDisponibles.map(({ value, label }) => ({
+                value,
+                label: label.charAt(0).toUpperCase() + label.slice(1)
+              }))
+            },
+            ...(isAdmin && {
+              chineuse: {
+                value: filtreChineuse,
+                onChange: setFiltreChineuse,
+                options: chineusesDisponibles.map(c => ({
+                  value: c.trigramme,
+                  label: `${c.trigramme} - ${c.nom}`
+                }))
+              }
+            }),
+            prix: {
+              value: filtrePrix,
+              onChange: setFiltrePrix,
+            },
+            tri: {
+              value: tri,
+              onChange: (v) => setTri(v as 'date' | 'nom' | 'prix'),
+              options: [
+                { value: 'date', label: 'Date' },
+                { value: 'nom', label: 'Nom' },
+                { value: 'prix', label: 'Prix' },
+              ]
+            },
+            ...(isAdmin && {
+              statut: {
+                value: filtreStatut,
+                onChange: (v) => setFiltreStatut(v as 'all' | 'attribue' | 'non-attribue'),
+                options: [
+                  { value: 'all', label: 'Tous statuts' },
+                  { value: 'attribue', label: 'Attribuées' },
+                  { value: 'non-attribue', label: 'Non attribuées' },
+                ]
+              }
+            }),
+          }}
+        />
 
         {/* TÉLÉCHARGER */}
         <div className="bg-white border rounded-xl p-4 shadow-sm">
@@ -854,6 +810,8 @@ export default function SalesList({
             className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
           />
         </div>
+
+        
 
         {hasActiveFilters && (
           <button onClick={resetFilters} className="text-sm text-[#22209C] flex items-center gap-1">
