@@ -80,8 +80,41 @@ export async function POST(req: NextRequest) {
 
     // 3. Identifier les doublons à supprimer
     // RÈGLE : Ne supprimer QUE les ventes NON attribuées qui ont un doublon ATTRIBUÉ
+    // ET dont le nom/remarque correspond au SKU ou trigramme de la vente attribuée
     const aSupprimer: string[] = []
     const details: Array<{ garde: any; supprime: any; prix: number }> = []
+
+    // Fonction pour vérifier si le nom de la vente non attribuée correspond à la vente attribuée
+    const isRealDoublon = (attribuee: any, nonAttribuee: any): boolean => {
+      const nomNonAttribuee = (nonAttribuee.nom || nonAttribuee.remarque || '').toLowerCase()
+      const skuAttribuee = (attribuee.sku || '').toLowerCase()
+      const trigrammeAttribuee = (attribuee.trigramme || '').toLowerCase()
+      
+      // Extraire le code du SKU (lettres + chiffres, ex: "ANA104" -> "ana104")
+      const skuMatch = skuAttribuee.match(/^([a-z]+)(\d+)/i)
+      const skuLetters = skuMatch ? skuMatch[1].toLowerCase() : ''
+      const skuNumbers = skuMatch ? skuMatch[2] : ''
+      
+      // Vérifier si le nom contient le SKU complet
+      if (skuAttribuee && nomNonAttribuee.includes(skuAttribuee)) return true
+      
+      // Vérifier si le nom contient le trigramme + numéro (ex: "an104" dans "anashi an104")
+      if (skuLetters && skuNumbers) {
+        // Chercher pattern: lettres suivies des chiffres (avec ou sans espace)
+        const pattern = new RegExp(`${skuLetters}\\s*${skuNumbers}`, 'i')
+        if (pattern.test(nomNonAttribuee)) return true
+      }
+      
+      // Vérifier si le nom contient le trigramme au début (ex: "nr trench" pour NR1)
+      if (trigrammeAttribuee && trigrammeAttribuee.length >= 2) {
+        if (nomNonAttribuee.startsWith(trigrammeAttribuee + ' ')) return true
+      }
+      
+      // Vérifier descriptions génériques qui matchent souvent (ex: "PIECE UNIQUE DIVERS")
+      if (nomNonAttribuee.includes('piece unique') || nomNonAttribuee.includes('divers')) return true
+      
+      return false
+    }
 
     for (const [, groupe] of groupes) {
       if (groupe.length <= 1) continue // Pas de doublon possible
@@ -91,20 +124,21 @@ export async function POST(req: NextRequest) {
       const nonAttribuees = groupe.filter(v => v.attribue !== true)
 
       // Si on a au moins une attribuée ET au moins une non attribuée
-      // → Les non attribuées sont des doublons à supprimer
       if (attribuees.length > 0 && nonAttribuees.length > 0) {
-        const aGarder = attribuees[0] // On garde l'attribuée
-
-        for (const doublon of nonAttribuees) {
-          aSupprimer.push(doublon.id)
-          details.push({
-            garde: { id: aGarder.id, nom: aGarder.nom, sku: aGarder.sku, attribue: true },
-            supprime: { id: doublon.id, nom: doublon.nom, sku: doublon.sku, attribue: false },
-            prix: doublon.prixVenteReel,
-          })
+        for (const nonAttribuee of nonAttribuees) {
+          // Chercher une vente attribuée qui correspond vraiment
+          const matchingAttribuee = attribuees.find(a => isRealDoublon(a, nonAttribuee))
+          
+          if (matchingAttribuee) {
+            aSupprimer.push(nonAttribuee.id)
+            details.push({
+              garde: { id: matchingAttribuee.id, nom: matchingAttribuee.nom, sku: matchingAttribuee.sku, attribue: true },
+              supprime: { id: nonAttribuee.id, nom: nonAttribuee.nom, sku: nonAttribuee.sku, attribue: false },
+              prix: nonAttribuee.prixVenteReel,
+            })
+          }
         }
       }
-      // Si toutes sont attribuées ou toutes non attribuées → pas de doublon à supprimer
     }
 
     console.log(`🗑️ ${aSupprimer.length} doublons identifiés (ventes non attribuées avec doublon attribué)`)
