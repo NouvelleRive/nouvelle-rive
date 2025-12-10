@@ -13,6 +13,7 @@ const locationId = process.env.SQUARE_LOCATION_ID!
 /**
  * Sync TOUTES les ventes Square d'une période
  * Match par SKU uniquement
+ * Déduplication par orderId+lineItemUid ET par prix+date
  */
 export async function syncVentesDepuisSquare(
   startDateStr?: string,
@@ -35,16 +36,27 @@ export async function syncVentesDepuisSquare(
   }
   console.log(`📦 ${produitsBySku.size} produits indexés par SKU`)
 
-  // 2. Charger ventes existantes pour déduplication
+  // 2. Charger ventes existantes pour déduplication AMÉLIORÉE
   const ventesExistantes = new Set<string>()
   const ventesSnap = await adminDb.collection('ventes').get()
+  
   for (const doc of ventesSnap.docs) {
     const data = doc.data()
+    
+    // Clé 1: orderId + lineItemUid (pour ventes Square avec catalogObjectId)
     if (data.orderId && data.lineItemUid) {
-      ventesExistantes.add(`${data.orderId}-${data.lineItemUid}`)
+      ventesExistantes.add(`order-${data.orderId}-${data.lineItemUid}`)
+    }
+    
+    // Clé 2: prix + date arrondie à la minute (pour montant_perso et ventes attribuées)
+    // Ceci évite les doublons même si le nom a changé après attribution
+    if (data.prixVenteReel && data.dateVente) {
+      const dateObj = data.dateVente.toDate ? data.dateVente.toDate() : new Date(data.dateVente)
+      const dateMin = Math.floor(dateObj.getTime() / 60000) // Arrondi à la minute
+      ventesExistantes.add(`prix-${data.prixVenteReel}-${dateMin}`)
     }
   }
-  console.log(`📋 ${ventesExistantes.size} ventes existantes`)
+  console.log(`📋 ${ventesExistantes.size} clés de déduplication (ventes existantes)`)
 
   // 3. Récupérer commandes Square
   const startDate = startDateStr ? new Date(startDateStr) : undefined
@@ -148,21 +160,30 @@ export async function syncVentesDepuisSquare(
 
     for (const item of order.lineItems || []) {
       const lineItemUid = item.uid
-      const dedupeKey = `${order.id}-${lineItemUid}`
+      const prixCents = item.totalMoney?.amount
+      const prix = prixCents ? Number(prixCents) / 100 : null
 
-      // Skip si déjà importé
-      if (ventesExistantes.has(dedupeKey)) {
+      // Clé de déduplication 1: orderId + lineItemUid
+      const dedupeKeyOrder = `order-${order.id}-${lineItemUid}`
+      
+      // Clé de déduplication 2: prix + date arrondie à la minute
+      const dateMin = Math.floor(orderDate.getTime() / 60000)
+      const dedupeKeyPrix = `prix-${prix}-${dateMin}`
+
+      // Skip si déjà importé (par l'une ou l'autre clé)
+      if (ventesExistantes.has(dedupeKeyOrder) || ventesExistantes.has(dedupeKeyPrix)) {
         nbSkipped++
         continue
       }
-      ventesExistantes.add(dedupeKey)
+      
+      // Ajouter les deux clés pour éviter les doublons dans le même batch
+      ventesExistantes.add(dedupeKeyOrder)
+      ventesExistantes.add(dedupeKeyPrix)
 
       const itemName = item.name || ''
       const itemNote = item.note || ''
       const itemVariationName = item.variationName || ''
       const quantity = parseInt(item.quantity) || 1
-      const prixCents = item.totalMoney?.amount
-      const prix = prixCents ? Number(prixCents) / 100 : null
 
       // Combiner TOUTES les sources possibles de SKU/remarques
       const allText = `${itemName} ${itemNote} ${orderNote} ${itemVariationName} ${orderSource} ${orderReferenceId} ${orderTicketName}`.toLowerCase()
@@ -293,7 +314,7 @@ export async function syncVentesDepuisSquare(
     await batch.commit()
   }
 
-  console.log(`✅ ${nbImported} importées, ${nbAttribuees} attribuées, ${nbNonAttribuees} à attribuer, ${nbSkipped} doublons`)
+  console.log(`✅ ${nbImported} importées, ${nbAttribuees} attribuées, ${nbNonAttribuees} à attribuer, ${nbSkipped} doublons évités`)
 
   return {
     success: true,
