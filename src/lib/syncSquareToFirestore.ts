@@ -10,10 +10,75 @@ const client = new Client({
 
 const locationId = process.env.SQUARE_LOCATION_ID!
 
+// Table de correspondance nom chineuse → trigrammes possibles
+const chineuseToTrigrammes: Record<string, string[]> = {
+  'aerea': ['AE'],
+  'age': ['AGE'],
+  'aime': ['AIM'],
+  'alisa': ['ACAY'],
+  'cayoo': ['ACAY'],
+  'anashi': ['ANA', 'AN'],
+  'archive': ['ARC'],
+  'bonage': ['BON'],
+  'brillante': ['BRI'],
+  'brujas': ['BRU'],
+  'cameleon': ['CAM'],
+  'cent-neuf': ['CN'],
+  'equine': ['EQU'],
+  'cozines': ['COZ'],
+  'coz': ['COZ'],
+  'dark': ['DV'],
+  'diabolo': ['DM'],
+  'menthe': ['DM'],
+  'frusques': ['FRU'],
+  'ines': ['IP'],
+  'pineau': ['IP'],
+  'maison': ['MB'],
+  'beguin': ['MB'],
+  'maki': ['MAK'],
+  'mission': ['MV', 'MIS'],
+  'muse': ['MUS', 'MR'],
+  'rebelle': ['MUS', 'MR'],
+  'nan': ['NG'],
+  'goldies': ['NG'],
+  'nouvelle': ['NR'],
+  'rive': ['NR'],
+  'pardon': ['PP'],
+  'personal': ['PS'],
+  'seller': ['PS'],
+  'porte': ['POR'],
+  'prestanx': ['PRE'],
+  'pristini': ['PRI'],
+  'rashhiiid': ['RAS'],
+  'sergio': ['ST'],
+  'tacchineur': ['ST'],
+  'soir': ['SOI'],
+  'strass': ['STRC'],
+  'chronique': ['STRC'],
+  'tete': ['TDO'],
+  'orange': ['TDO'],
+  'dorange': ['TDO'],
+  'parisian': ['PV', 'TPV'],
+}
+
+// Extraire les trigrammes possibles d'un nom
+const extractTrigrammesFromName = (nom: string): string[] => {
+  const nomLower = nom.toLowerCase()
+  const trigrammes: string[] = []
+  
+  for (const [keyword, tris] of Object.entries(chineuseToTrigrammes)) {
+    if (nomLower.includes(keyword)) {
+      trigrammes.push(...tris)
+    }
+  }
+  
+  return [...new Set(trigrammes)]
+}
+
 /**
  * Sync TOUTES les ventes Square d'une période
  * Match par SKU uniquement
- * Déduplication par orderId+lineItemUid ET par prix+date
+ * Déduplication intelligente par orderId+lineItemUid, SKU, et correspondance nom/trigramme
  */
 export async function syncVentesDepuisSquare(
   startDateStr?: string,
@@ -37,7 +102,8 @@ export async function syncVentesDepuisSquare(
   console.log(`📦 ${produitsBySku.size} produits indexés par SKU`)
 
   // 2. Charger ventes existantes pour déduplication AMÉLIORÉE
-  const ventesExistantes = new Set<string>()
+  const ventesExistantesParOrder = new Set<string>()
+  const ventesExistantesParJour = new Map<string, any[]>() // clé: "prix-dateJour", valeur: array de ventes
   const ventesSnap = await adminDb.collection('ventes').get()
   
   for (const doc of ventesSnap.docs) {
@@ -45,18 +111,27 @@ export async function syncVentesDepuisSquare(
     
     // Clé 1: orderId + lineItemUid (pour ventes Square avec catalogObjectId)
     if (data.orderId && data.lineItemUid) {
-      ventesExistantes.add(`order-${data.orderId}-${data.lineItemUid}`)
+      ventesExistantesParOrder.add(`order-${data.orderId}-${data.lineItemUid}`)
     }
     
-    // Clé 2: prix + date arrondie à la JOURNÉE (pour montant_perso et ventes attribuées)
-    // Ceci évite les doublons même si le nom a changé après attribution
+    // Clé 2: prix + date arrondie à la JOURNÉE - stocker les détails pour comparaison intelligente
     if (data.prixVenteReel && data.dateVente) {
       const dateObj = data.dateVente.toDate ? data.dateVente.toDate() : new Date(data.dateVente)
       const dateJour = `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`
-      ventesExistantes.add(`prix-${data.prixVenteReel}-${dateJour}`)
+      const key = `${data.prixVenteReel}-${dateJour}`
+      
+      if (!ventesExistantesParJour.has(key)) {
+        ventesExistantesParJour.set(key, [])
+      }
+      ventesExistantesParJour.get(key)!.push({
+        nom: data.nom || '',
+        sku: data.sku || '',
+        trigramme: data.trigramme || '',
+        attribue: data.attribue || false,
+      })
     }
   }
-  console.log(`📋 ${ventesExistantes.size} clés de déduplication (ventes existantes)`)
+  console.log(`📋 ${ventesExistantesParOrder.size} ventes par orderId, ${ventesExistantesParJour.size} groupes prix/date`)
 
   // 3. Récupérer commandes Square
   const startDate = startDateStr ? new Date(startDateStr) : undefined
@@ -166,22 +241,83 @@ export async function syncVentesDepuisSquare(
       // Clé de déduplication 1: orderId + lineItemUid
       const dedupeKeyOrder = `order-${order.id}-${lineItemUid}`
       
-      // Clé de déduplication 2: prix + date arrondie à la JOURNÉE
-      const dateJour = `${orderDate.getFullYear()}-${orderDate.getMonth()}-${orderDate.getDate()}`
-      const dedupeKeyPrix = `prix-${prix}-${dateJour}`
-
-      // Skip si déjà importé (par l'une ou l'autre clé)
-      if (ventesExistantes.has(dedupeKeyOrder) || ventesExistantes.has(dedupeKeyPrix)) {
+      // Skip si déjà importé par orderId
+      if (ventesExistantesParOrder.has(dedupeKeyOrder)) {
         nbSkipped++
         continue
       }
       
-      // Ajouter les deux clés pour éviter les doublons dans le même batch
-      ventesExistantes.add(dedupeKeyOrder)
-      ventesExistantes.add(dedupeKeyPrix)
-
+      // Clé de déduplication 2: prix + date arrondie à la JOURNÉE
+      const dateJour = `${orderDate.getFullYear()}-${orderDate.getMonth()}-${orderDate.getDate()}`
+      const keyPrixDate = `${prix}-${dateJour}`
+      
       const itemName = item.name || ''
       const itemNote = item.note || ''
+      
+      // Vérifier si une vente similaire existe déjà pour ce prix/date
+      const ventesMemePrixDate = ventesExistantesParJour.get(keyPrixDate) || []
+      if (ventesMemePrixDate.length > 0) {
+        // Vérifier si c'est un vrai doublon avec la logique intelligente
+        const nomSquare = `${itemName} ${itemNote}`.toLowerCase()
+        const trigrammesFromSquare = extractTrigrammesFromName(nomSquare)
+        
+        let estDoublon = false
+        for (const venteExistante of ventesMemePrixDate) {
+          // Si même SKU → doublon
+          const skuExistant = venteExistante.sku?.toLowerCase() || ''
+          
+          // Si la vente existante est attribuée, vérifier correspondance
+          if (venteExistante.attribue) {
+            const trigrammeExistant = venteExistante.trigramme?.toLowerCase() || ''
+            
+            // Match par trigramme extrait du nom Square
+            if (trigrammeExistant && trigrammesFromSquare.some(t => t.toLowerCase() === trigrammeExistant)) {
+              estDoublon = true
+              break
+            }
+            
+            // Match par SKU dans le nom
+            if (skuExistant && nomSquare.includes(skuExistant)) {
+              estDoublon = true
+              break
+            }
+            
+            // Match par nom similaire (sans le SKU)
+            const nomExistantSansSku = (venteExistante.nom || '').toLowerCase().replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
+            const nomSquareSansSku = nomSquare.replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
+            if (nomExistantSansSku && nomSquareSansSku && nomExistantSansSku === nomSquareSansSku) {
+              estDoublon = true
+              break
+            }
+          }
+          
+          // Vérifier correspondance SKU même si pas attribuée
+          if (skuExistant) {
+            // Extraire SKU potentiel du nom Square (ex: "AN104" dans "anashi an104")
+            const skuMatch = nomSquare.match(/\b([a-z]{2,4})(\d{1,4})\b/i)
+            if (skuMatch) {
+              const skuSquare = (skuMatch[1] + skuMatch[2]).toLowerCase()
+              if (skuExistant === skuSquare || skuExistant.includes(skuSquare) || skuSquare.includes(skuExistant)) {
+                estDoublon = true
+                break
+              }
+            }
+          }
+        }
+        
+        if (estDoublon) {
+          nbSkipped++
+          continue
+        }
+      }
+      
+      // Ajouter les clés pour éviter les doublons dans le même batch
+      ventesExistantesParOrder.add(dedupeKeyOrder)
+      if (!ventesExistantesParJour.has(keyPrixDate)) {
+        ventesExistantesParJour.set(keyPrixDate, [])
+      }
+      ventesExistantesParJour.get(keyPrixDate)!.push({ nom: itemName, sku: '', trigramme: '', attribue: false })
+
       const itemVariationName = item.variationName || ''
       const quantity = parseInt(item.quantity) || 1
 
