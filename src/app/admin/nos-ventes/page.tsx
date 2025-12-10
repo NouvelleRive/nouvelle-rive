@@ -31,6 +31,7 @@ export default function AdminNosVentesPage() {
   const [cleanupLoading, setCleanupLoading] = useState(false)
   const [cleanupResult, setCleanupResult] = useState<any>(null)
   const [showCleanupModal, setShowCleanupModal] = useState(false)
+  const [cleanupMois, setCleanupMois] = useState('11-2025') // Par défaut novembre
 
   // Modals
   const [showModalAttribuer, setShowModalAttribuer] = useState(false)
@@ -172,7 +173,7 @@ export default function AdminNosVentesPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ dryRun })
+        body: JSON.stringify({ dryRun, mois: cleanupMois || null })
       })
       const data = await res.json()
       setCleanupResult(data)
@@ -504,16 +505,30 @@ export default function AdminNosVentesPage() {
             </div>
 
             <p className="text-gray-600 text-sm mb-4">
-              Cet outil détecte et supprime les ventes en doublon (même prix + même date).
-              Il garde la version attribuée et supprime la version non attribuée.
+              Cet outil détecte les ventes NON attribuées qui ont un doublon ATTRIBUÉ 
+              (même prix + même date). Seules les non attribuées seront supprimées.
             </p>
 
             {!cleanupResult && (
-              <div className="flex gap-2">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Mois à analyser</label>
+                  <select
+                    value={cleanupMois}
+                    onChange={(e) => setCleanupMois(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2"
+                  >
+                    <option value="">Tous les mois</option>
+                    <option value="12-2025">Décembre 2025</option>
+                    <option value="11-2025">Novembre 2025</option>
+                    <option value="10-2025">Octobre 2025</option>
+                    <option value="9-2025">Septembre 2025</option>
+                  </select>
+                </div>
                 <button
                   onClick={() => handleCleanupDoublons(true)}
                   disabled={cleanupLoading}
-                  className="flex-1 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50"
+                  className="w-full px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50"
                 >
                   {cleanupLoading ? '...' : '1. Analyser (sans supprimer)'}
                 </button>
@@ -544,8 +559,8 @@ export default function AdminNosVentesPage() {
                     <div className="max-h-48 overflow-y-auto border rounded-lg">
                       {cleanupResult.details.map((d: any, i: number) => (
                         <div key={i} className="p-2 border-b last:border-b-0 text-xs">
-                          <p className="text-green-600">✓ Garde : {d.garde.sku || d.garde.nom} (attribué: {d.garde.attribue ? 'oui' : 'non'})</p>
-                          <p className="text-red-600">✗ Supprime : {d.supprime.sku || d.supprime.nom} (attribué: {d.supprime.attribue ? 'oui' : 'non'})</p>
+                          <p className="text-green-600">✓ Garde : {d.garde.sku || d.garde.nom} (attribué ✓)</p>
+                          <p className="text-red-600">✗ Supprime : {d.supprime.nom || 'Vente inconnue'} (non attribué)</p>
                           <p className="text-gray-500">Prix : {d.prix}€</p>
                         </div>
                       ))}

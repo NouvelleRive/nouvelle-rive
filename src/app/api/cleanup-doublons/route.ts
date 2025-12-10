@@ -30,17 +30,29 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}))
     const dryRun = body.dryRun !== false // Par défaut true
+    const mois = body.mois || null // Format: "11-2025" pour novembre 2025
 
-    console.log(`🧹 Nettoyage des doublons (dryRun: ${dryRun})`)
+    console.log(`🧹 Nettoyage des doublons (dryRun: ${dryRun}, mois: ${mois || 'tous'})`)
 
     // 1. Charger toutes les ventes
     const ventesSnap = await adminDb.collection('ventes').get()
-    const ventes: Array<{ id: string; [key: string]: any }> = ventesSnap.docs.map(doc => ({
+    let ventes: Array<{ id: string; [key: string]: any }> = ventesSnap.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }))
 
     console.log(`📋 ${ventes.length} ventes chargées`)
+
+    // Filtrer par mois si spécifié
+    if (mois) {
+      const [m, y] = mois.split('-').map(Number)
+      ventes = ventes.filter(v => {
+        if (!v.dateVente) return false
+        const dateObj = v.dateVente.toDate ? v.dateVente.toDate() : new Date(v.dateVente)
+        return dateObj.getMonth() + 1 === m && dateObj.getFullYear() === y
+      })
+      console.log(`📅 ${ventes.length} ventes pour ${mois}`)
+    }
 
     // 2. Grouper par clé prix + date (arrondie à la minute)
     const groupes = new Map<string, Array<{ id: string; [key: string]: any }>>()
@@ -66,41 +78,35 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Identifier les doublons à supprimer
+    // RÈGLE : Ne supprimer QUE les ventes NON attribuées qui ont un doublon ATTRIBUÉ
     const aSupprimer: string[] = []
     const details: Array<{ garde: any; supprime: any; prix: number }> = []
 
     for (const [, groupe] of groupes) {
-      if (groupe.length <= 1) continue // Pas de doublon
+      if (groupe.length <= 1) continue // Pas de doublon possible
 
-      // Trier : priorité à isAttribue=true, puis à celles avec produitId
-      groupe.sort((a, b) => {
-        // Priorité 1: attribue = true
-        if (a.attribue === true && b.attribue !== true) return -1
-        if (b.attribue === true && a.attribue !== true) return 1
-        // Priorité 2: a un produitId
-        if (a.produitId && !b.produitId) return -1
-        if (b.produitId && !a.produitId) return 1
-        // Priorité 3: a un SKU
-        if (a.sku && !b.sku) return -1
-        if (b.sku && !a.sku) return 1
-        return 0
-      })
+      // Séparer attribuées et non attribuées
+      const attribuees = groupe.filter(v => v.attribue === true)
+      const nonAttribuees = groupe.filter(v => v.attribue !== true)
 
-      // Garder le premier, supprimer les autres
-      const aGarder = groupe[0]
-      const doublons = groupe.slice(1)
+      // Si on a au moins une attribuée ET au moins une non attribuée
+      // → Les non attribuées sont des doublons à supprimer
+      if (attribuees.length > 0 && nonAttribuees.length > 0) {
+        const aGarder = attribuees[0] // On garde l'attribuée
 
-      for (const doublon of doublons) {
-        aSupprimer.push(doublon.id)
-        details.push({
-          garde: { id: aGarder.id, nom: aGarder.nom, sku: aGarder.sku, attribue: aGarder.attribue },
-          supprime: { id: doublon.id, nom: doublon.nom, sku: doublon.sku, attribue: doublon.attribue },
-          prix: doublon.prixVenteReel,
-        })
+        for (const doublon of nonAttribuees) {
+          aSupprimer.push(doublon.id)
+          details.push({
+            garde: { id: aGarder.id, nom: aGarder.nom, sku: aGarder.sku, attribue: true },
+            supprime: { id: doublon.id, nom: doublon.nom, sku: doublon.sku, attribue: false },
+            prix: doublon.prixVenteReel,
+          })
+        }
       }
+      // Si toutes sont attribuées ou toutes non attribuées → pas de doublon à supprimer
     }
 
-    console.log(`🗑️ ${aSupprimer.length} doublons identifiés`)
+    console.log(`🗑️ ${aSupprimer.length} doublons identifiés (ventes non attribuées avec doublon attribué)`)
 
     // 4. Supprimer si pas en mode dryRun
     let deleted = 0
@@ -120,6 +126,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       dryRun,
+      mois: mois || 'tous',
       totalVentes: ventes.length,
       doublonsIdentifies: aSupprimer.length,
       doublonsSupprimes: deleted,
