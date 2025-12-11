@@ -676,6 +676,11 @@ export default function SalesList({
           hasActiveFilters={hasActiveFilters}
           onReset={resetFilters}
           filters={{
+            recherche: {
+              value: recherche,
+              onChange: setRecherche,
+              placeholder: 'SKU, nom, remarque...'
+            },
             mois: {
               value: filtreMois,
               onChange: setFiltreMois,
