@@ -1,5 +1,5 @@
 // lib/imageProcessing.ts
-// Traitement d'images centralisé : détourage, fond blanc, redressement, lumière, netteté
+// Traitement d'images centralisé : amélioration lumière, recadrage carré
 
 /**
  * Configuration Cloudinary
@@ -42,22 +42,14 @@ async function uploadRaw(file: File): Promise<{ secure_url: string; public_id: s
 }
 
 /**
- * Construit l'URL avec transformations e-commerce PRO
+ * Construit l'URL avec transformations e-commerce (GRATUITES)
  * 
  * Transformations appliquées :
- * - e_background_removal : Détourage IA (supprime le fond)
- * - b_white : Fond blanc propre
- * - a_auto : Redresse automatiquement le vêtement
- * - e_trim : Centre le produit (supprime bords vides)
- * - e_improve : Amélioration globale IA
- * - e_auto_brightness : Luminosité optimale
- * - e_auto_contrast : Contraste équilibré
- * - e_vibrance:15 : Couleurs naturellement vives
- * - e_sharpen:80 : Netteté
- * - e_shadow:40 : Ombre légère (donne du relief)
- * - c_pad,ar_1:1 : Format carré avec padding
+ * - c_fill : Remplissage intelligent
+ * - g_auto : Focus auto sur le sujet
+ * - ar_1:1 : Format carré
  * - w_1200,h_1200 : Dimensions e-commerce standard
- * - q_auto:best : Qualité maximale
+ * - q_auto:good : Bonne qualité
  * - f_auto : Format optimal (WebP/AVIF)
  */
 function buildProcessedUrl(baseUrl: string): string {
@@ -69,21 +61,12 @@ function buildProcessedUrl(baseUrl: string): string {
   }
 
   const transformations = [
-    'e_background_removal',   // Détourage IA
-    'b_white',                // Fond blanc
-    'a_auto',                 // Redresse le vêtement
-    'e_trim',                 // Centre le produit
-    'e_improve',              // Amélioration globale IA
-    'e_auto_brightness',      // Luminosité optimale
-    'e_auto_contrast',        // Contraste équilibré
-    'e_vibrance:15',          // Couleurs vives naturelles
-    'e_sharpen:80',           // Netteté
-    'e_shadow:40',            // Ombre légère pour le relief
-    'c_pad',                  // Padding (garde le produit entier)
+    'c_fill',                 // Remplissage intelligent
+    'g_auto',                 // Focus auto sur le sujet
     'ar_1:1',                 // Ratio carré
     'w_1200',                 // Largeur
     'h_1200',                 // Hauteur
-    'q_auto:best',            // Qualité maximale
+    'q_auto:good',            // Bonne qualité
     'f_auto'                  // Format auto (WebP si supporté)
   ].join(',')
 
@@ -92,7 +75,6 @@ function buildProcessedUrl(baseUrl: string): string {
 
 /**
  * Construit l'URL avec transformations légères (pour photos détails)
- * Pas de détourage, juste amélioration lumière + recadrage
  */
 function buildSimpleUrl(baseUrl: string): string {
   const urlParts = baseUrl.split('/upload/')
@@ -100,10 +82,6 @@ function buildSimpleUrl(baseUrl: string): string {
   if (urlParts.length !== 2) return baseUrl
 
   const transformations = [
-    'e_improve',              // Amélioration globale
-    'e_auto_brightness',      // Luminosité
-    'e_auto_contrast',        // Contraste
-    'e_sharpen:60',           // Netteté légère
     'c_fill',                 // Remplissage
     'g_auto',                 // Focus auto sur le sujet
     'ar_1:1',                 // Carré
@@ -121,7 +99,7 @@ function buildSimpleUrl(baseUrl: string): string {
  * Retourne l'URL originale ET l'URL traitée
  * 
  * @param file - Le fichier image à uploader
- * @returns { original: URL photo chineuse, processed: URL fond blanc }
+ * @returns { original: URL photo chineuse, processed: URL recadrée }
  */
 export async function processAndUploadProductPhoto(file: File): Promise<{
   original: string
@@ -135,13 +113,13 @@ export async function processAndUploadProductPhoto(file: File): Promise<{
   const processed = buildProcessedUrl(original)
   
   console.log('✅ Photo originale:', original)
-  console.log('✅ Photo traitée (fond blanc + lumière + netteté):', processed)
+  console.log('✅ Photo traitée:', processed)
   
   return { original, processed }
 }
 
 /**
- * Upload simple pour photos détails (sans détourage)
+ * Upload simple pour photos détails
  * Retourne original + version améliorée
  * 
  * @param file - Le fichier image à uploader
@@ -174,7 +152,6 @@ export async function uploadMultiplePhotos(files: File[]): Promise<string[]> {
   
   const results = await Promise.all(files.map(f => uploadPhotoSimple(f)))
   
-  // Pour les détails, on retourne les versions traitées
   return results.map(r => r.processed)
 }
 
@@ -199,10 +176,6 @@ export function canUseFashnAI(categorie: string): boolean {
 
 /**
  * Génère une photo portée via FASHN.ai (appelé manuellement via bouton ✨)
- * 
- * @param imageUrl - URL de l'image du vêtement
- * @param productName - Nom du produit (pour les logs)
- * @returns URL de la photo portée ou null si échec
  */
 export async function generateTryonPhoto(
   imageUrl: string, 
@@ -242,22 +215,15 @@ export async function generateTryonPhoto(
  * Type de retour pour processProductPhotos
  */
 export type ProcessedPhotos = {
-  face?: string           // URL traitée (fond blanc)
-  faceOriginal?: string   // URL originale (photo chineuse)
-  dos?: string            // URL traitée
-  dosOriginal?: string    // URL originale
-  details: string[]       // URLs traitées
+  face?: string
+  faceOriginal?: string
+  dos?: string
+  dosOriginal?: string
+  details: string[]
 }
 
 /**
  * Traite toutes les photos d'un produit
- * - Face/Dos : détourage + fond blanc + lumière (garde aussi l'original)
- * - Détails : amélioration lumière sans détourage
- * 
- * ⚠️ FASHN.ai n'est PAS appelé ici - utiliser le bouton ✨ manuellement
- * 
- * @param photos - Objet contenant les fichiers photos
- * @returns Objet avec les URLs originales et traitées
  */
 export async function processProductPhotos(
   photos: {
@@ -268,21 +234,18 @@ export async function processProductPhotos(
 ): Promise<ProcessedPhotos> {
   const result: ProcessedPhotos = { details: [] }
 
-  // Photo Face - traitement complet + conservation original
   if (photos.face) {
     const { original, processed } = await processAndUploadProductPhoto(photos.face)
     result.face = processed
     result.faceOriginal = original
   }
 
-  // Photo Dos - traitement complet + conservation original
   if (photos.dos) {
     const { original, processed } = await processAndUploadProductPhoto(photos.dos)
     result.dos = processed
     result.dosOriginal = original
   }
 
-  // Photos Détails - amélioration sans détourage
   if (photos.details && photos.details.length > 0) {
     result.details = await uploadMultiplePhotos(photos.details)
   }
