@@ -1055,11 +1055,12 @@ const produitsFiltres = useMemo(() => {
             </div>
             <div className="p-4">
               <ProductForm
-                mode={editingProduct ? 'edit' : 'create'}
-                isAdmin={isAdmin}
-                categories={categories.length > 0 ? categories : categoriesUniques.map(c => ({ label: c as string }))}
-                sku={editingProduct?.sku}
-                initialData={editingProduct ? {
+                  mode={editingProduct ? 'edit' : 'create'}
+                  isAdmin={isAdmin}
+                  productId={editingProduct?.id}
+                  categories={categories.length > 0 ? categories : categoriesUniques.map(c => ({ label: c as string }))}
+                  sku={editingProduct?.sku}
+                  initialData={editingProduct ? {
                   nom: (editingProduct.nom || '').replace(new RegExp(`^${editingProduct.sku}\\s*-\\s*`, 'i'), ''),
                   sku: editingProduct.sku,
                   description: editingProduct.description,
