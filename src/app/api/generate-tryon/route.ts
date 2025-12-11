@@ -63,13 +63,14 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${fashnApiKey}`,
         'Content-Type': 'application/json',
       },
+      
       body: JSON.stringify({
-        model_name: 'product-to-model',
-        input: {
-          product_image: imageUrl,
-          mode: 'quality'
-        }
-      }),
+      model_name: 'product-to-model',
+      inputs: {
+        product_image: imageUrl,
+        resolution: '1k'
+      }
+    }),
     })
 
     if (!fashnResponse.ok) {
