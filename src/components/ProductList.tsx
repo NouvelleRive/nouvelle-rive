@@ -113,7 +113,9 @@ export default function ProductList({
   const [filtreCategorie, setFiltreCategorie] = useState('')
   const [filtreDeposant, setFiltreDeposant] = useState('')
   const [filtreMois, setFiltreMois] = useState('')
+  const [filtrePrix, setFiltrePrix] = useState('')
   const [triPrix, setTriPrix] = useState<'' | 'asc' | 'desc'>('')
+  
 
   // Sélection interne
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -180,35 +182,43 @@ export default function ProductList({
   }
 
   // Filtrage
-  const produitsFiltres = useMemo(() => {
-    const needle = recherche.trim().toLowerCase()
-    return produits.filter((p) => {
-      if (p.statut === 'supprime') return false
-      if ((p.quantite ?? 1) <= 0 || p.statut === 'retour') return false
+const produitsFiltres = useMemo(() => {
+  const needle = recherche.trim().toLowerCase()
+  return produits.filter((p) => {
+    if (p.statut === 'supprime') return false
+    if ((p.quantite ?? 1) <= 0 || p.statut === 'retour') return false
 
-      const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-      if (filtreCategorie && cat !== filtreCategorie) return false
-      if (filtreDeposant && p.chineur !== filtreDeposant) return false
+    const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+    if (filtreCategorie && cat !== filtreCategorie) return false
+    if (filtreDeposant && p.chineur !== filtreDeposant) return false
 
-      if (filtreMois) {
-        if (p.createdAt instanceof Timestamp) {
-          if (format(p.createdAt.toDate(), 'yyyy-MM') !== filtreMois) return false
-        } else {
-          return false
-        }
+    if (filtreMois) {
+      if (p.createdAt instanceof Timestamp) {
+        if (format(p.createdAt.toDate(), 'yyyy-MM') !== filtreMois) return false
+      } else {
+        return false
       }
+    }
 
-      if (needle) {
-        const hay = [p.nom, p.sku, p.marque, p.taille, p.description, cat]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-        if (!hay.includes(needle)) return false
+    if (needle) {
+      const hay = [p.nom, p.sku, p.marque, p.taille, p.description, cat]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      if (!hay.includes(needle)) return false
+    }
+
+    // Prix exact
+    if (filtrePrix) {
+      const prixRecherche = parseFloat(filtrePrix.replace(',', '.'))
+      if (!isNaN(prixRecherche)) {
+        if (p.prix !== prixRecherche) return false
       }
+    }
 
       return true
     })
-  }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, triPrix])
+  }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix])
 
   // Appliquer le tri
   const produitsTriés = useMemo(() => {
@@ -562,14 +572,15 @@ export default function ProductList({
   }
 
   const resetFilters = () => {
-    setRecherche('')
-    setFiltreCategorie('')
-    setFiltreDeposant('')
-    setFiltreMois('')
-    setTriPrix('')
-  }
+  setRecherche('')
+  setFiltreCategorie('')
+  setFiltreDeposant('')
+  setFiltreMois('')
+  setFiltrePrix('')
+  setTriPrix('')
+}
 
-  const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois)
+  const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix)
   const hasChangesToSync = selectedIds.size > 0 || dirtyIds.size > 0
 
   // =====================
@@ -627,6 +638,11 @@ export default function ProductList({
                 value: c as string,
                 label: c as string
               }))
+            },
+            prix: {
+              value: filtrePrix,
+              onChange: setFiltrePrix,
+              placeholder: 'Ex: 95'
             },
             tri: {
               value: triPrix,
