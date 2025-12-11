@@ -6,6 +6,7 @@ import { X, Image as ImageIcon, Upload, RefreshCw, FileSpreadsheet, Download, Ca
 import ExcelJS from 'exceljs'
 import * as XLSX from 'xlsx'
 import { checkSkuUnique } from '@/lib/admin/helpers'
+import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
 
 // =====================
 // TYPES
@@ -126,55 +127,7 @@ type ProductFormProps = {
 // =====================
 // TAILLES
 // =====================
-const TAILLES = {
-  adulte: ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL'],
-  enfant: ['0-3M', '3-6M', '6-12M', '12-18M', '18-24M', '2A', '3A', '4A', '5A', '6A', '8A', '10A', '12A', '14A', '16A'],
-  chaussures: ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'],
-  bague: ['48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '62', '64', '66'],
-  aucune: [],
-}
-
 const MADE_IN_OPTIONS = ['', 'Made in France', 'Made in Italy', 'Made in USA', 'Made in UK', 'Made in Spain', 'Made in Germany', 'Made in Japan']
-
-type TypeTaille = keyof typeof TAILLES
-
-function detectTypeTaille(categorie: string): TypeTaille {
-  const cat = (categorie || '').toLowerCase()
-  
-  if (cat.includes('bague')) return 'bague'
-  
-  if (
-    cat.includes('broche') || cat.includes('collier') || 
-    cat.includes('bracelet') || cat.includes('boucle') || cat.includes('bijou') ||
-    cat.includes('sac') || cat.includes('ceinture') || cat.includes('foulard') ||
-    cat.includes('écharpe') || cat.includes('lunettes') || cat.includes('chapeau') ||
-    cat.includes('bonnet') || cat.includes('gant') || cat.includes('montre') ||
-    cat.includes('porte') || cat.includes('accessoire')
-  ) {
-    return 'aucune'
-  }
-  
-  if (
-    cat.includes('chaussure') || cat.includes('basket') || cat.includes('botte') ||
-    cat.includes('bottine') || cat.includes('sandale') || cat.includes('escarpin') || 
-    cat.includes('mocassin') || cat.includes('derby') || cat.includes('loafer') ||
-    cat.includes('sneaker') || cat.includes('talon')
-  ) {
-    return 'chaussures'
-  }
-  
-  if (
-    cat.includes('enfant') || cat.includes('bébé') || cat.includes('bebe') ||
-    cat.includes('kid') || cat.includes('baby')
-  ) {
-    return 'enfant'
-  }
-  
-  return 'adulte'
-}
-
-// Toutes les tailles possibles pour le template Excel
-const ALL_TAILLES = [...new Set([...TAILLES.adulte, ...TAILLES.enfant, ...TAILLES.chaussures, ...TAILLES.bague])]
 
 // =====================
 // EXCEL HELPERS
@@ -299,7 +252,7 @@ export default function ProductForm({
   }, [formData.categorie])
 
   const typeTaille = detectTypeTaille(formData.categorie)
-  const taillesDisponibles = TAILLES[typeTaille]
+  const taillesDisponibles = getTaillesPourCategorie(formData.categorie)
 
   // Catégories à afficher
   const displayCategories = isAdmin && selectedChineuse 
