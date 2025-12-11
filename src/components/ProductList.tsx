@@ -114,7 +114,7 @@ export default function ProductList({
   const [filtreDeposant, setFiltreDeposant] = useState('')
   const [filtreMois, setFiltreMois] = useState('')
   const [filtrePrix, setFiltrePrix] = useState('')
-  const [tri, setTri] = useState<'' | 'prix-asc' | 'prix-desc' | 'alpha'>('')
+  const [tri, setTri] = useState<'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'>('date-desc')
   
 
   // Sélection interne
@@ -220,16 +220,21 @@ const produitsFiltres = useMemo(() => {
     })
   }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix])
 
-  // Appliquer le tri
   const produitsTriés = useMemo(() => {
-  if (!tri) return produitsFiltres
   return [...produitsFiltres].sort((a, b) => {
     if (tri === 'alpha') {
       return (a.nom || '').localeCompare(b.nom || '')
     }
-    const prixA = a.prix ?? 0
-    const prixB = b.prix ?? 0
-    return tri === 'prix-asc' ? prixA - prixB : prixB - prixA
+    if (tri === 'prix-asc') {
+      return (a.prix ?? 0) - (b.prix ?? 0)
+    }
+    if (tri === 'prix-desc') {
+      return (b.prix ?? 0) - (a.prix ?? 0)
+    }
+    // Date (createdAt)
+    const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate().getTime() : 0
+    const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate().getTime() : 0
+    return tri === 'date-asc' ? dateA - dateB : dateB - dateA
   })
 }, [produitsFiltres, tri])
 
@@ -580,7 +585,7 @@ const produitsFiltres = useMemo(() => {
   setFiltreDeposant('')
   setFiltreMois('')
   setFiltrePrix('')
-  setTri('')
+  setTri('date-desc')
 }
 
   const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix)
@@ -649,13 +654,7 @@ const produitsFiltres = useMemo(() => {
             },
             tri: {
               value: tri,
-              onChange: (v) => setTri(v as '' | 'prix-asc' | 'prix-desc' | 'alpha'),
-              options: [
-                { value: '', label: 'Par défaut' },
-                { value: 'alpha', label: 'A → Z' },
-                { value: 'prix-asc', label: 'Prix ↑' },
-                { value: 'prix-desc', label: 'Prix ↓' },
-              ]
+              onChange: (v) => setTri(v as 'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'),
             },
           }}
         />

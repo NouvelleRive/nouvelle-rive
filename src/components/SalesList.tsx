@@ -109,7 +109,7 @@ export default function SalesList({
   const [filtreChineuse, setFiltreChineuse] = useState('')
   const [filtrePrix, setFiltrePrix] = useState('')
   const [filtreStatut, setFiltreStatut] = useState<'all' | 'attribue' | 'non-attribue'>('all')
-  const [tri, setTri] = useState<'date' | 'nom' | 'prix'>('date')
+  const [tri, setTri] = useState<'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'>('date-desc')
 
   // Sélection (admin)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -285,16 +285,22 @@ export default function SalesList({
   // TRI
   // =====================
   const ventesTriees = useMemo(() => {
-    const arr = [...ventesFiltrees]
-    if (tri === 'nom') {
-      arr.sort((a, b) => (a.nom || '').localeCompare(b.nom || ''))
-    } else if (tri === 'prix') {
-      arr.sort((a, b) => getPrix(b) - getPrix(a))
-    } else {
-      arr.sort((a, b) => getDateFromVente(b).getTime() - getDateFromVente(a).getTime())
+  return [...ventesFiltrees].sort((a, b) => {
+    if (tri === 'alpha') {
+      return (a.nom || '').localeCompare(b.nom || '')
     }
-    return arr
-  }, [ventesFiltrees, tri])
+    if (tri === 'prix-asc') {
+      return getPrix(a) - getPrix(b)
+    }
+    if (tri === 'prix-desc') {
+      return getPrix(b) - getPrix(a)
+    }
+    // Date (dateVente)
+    const dateA = getDateFromVente(a).getTime()
+    const dateB = getDateFromVente(b).getTime()
+    return tri === 'date-asc' ? dateA - dateB : dateB - dateA
+  })
+}, [ventesFiltrees, tri])
 
   // =====================
   // STATS
@@ -584,7 +590,7 @@ export default function SalesList({
     setFiltreChineuse('')
     setFiltrePrix('')
     setFiltreStatut('all')
-    setTri('date')
+    setTri('date-desc')
   }
 
   const hasActiveFilters = !!(recherche || filtreMois || (isAdmin && filtreChineuse) || filtrePrix || filtreStatut !== 'all')
@@ -705,12 +711,7 @@ export default function SalesList({
             },
             tri: {
               value: tri,
-              onChange: (v) => setTri(v as 'date' | 'nom' | 'prix'),
-              options: [
-                { value: 'date', label: 'Date' },
-                { value: 'nom', label: 'Nom' },
-                { value: 'prix', label: 'Prix' },
-              ]
+              onChange: (v) => setTri(v as 'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'),
             },
             ...(isAdmin && {
               statut: {
