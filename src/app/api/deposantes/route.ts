@@ -71,6 +71,14 @@ export async function POST(req: NextRequest) {
       ordre,
       categories,
       categorieRapport,
+      // Infos comptables à la racine
+      siret,
+      tva,
+      iban,
+      bic,
+      banqueAdresse,
+      adresse1,
+      adresse2,
     } = body
 
     if (!nom?.trim()) {
@@ -128,6 +136,14 @@ export async function POST(req: NextRequest) {
       ordre: typeof ordre === 'number' ? ordre : 0,
       displayOnWebsite: true,
       slug,
+      // Infos comptables À LA RACINE
+      siret: siret?.trim() || '',
+      tva: tva?.trim() || '',
+      iban: iban?.trim() || '',
+      bic: bic?.trim() || '',
+      banqueAdresse: banqueAdresse?.trim() || '',
+      adresse1: adresse1?.trim() || '',
+      adresse2: adresse2?.trim() || '',
     }
 
     // Ajouter l'UID Auth si on l'a
@@ -147,22 +163,11 @@ export async function POST(req: NextRequest) {
       docData['Catégorie'] = []
     }
 
-    // Catégorie de rapport avec infos comptables
+    // Catégorie de rapport - JUSTE label + idsquare (pour Square)
     if (categorieRapport?.label) {
       docData['Catégorie de rapport'] = [{
         label: categorieRapport.label?.trim() || '',
         idsquare: categorieRapport.idsquare?.trim() || '',
-        nom: categorieRapport.nom?.trim() || nom?.trim() || '',
-        email: categorieRapport.emailCompta?.trim() || email?.trim() || '',
-        trigramme: trigramme?.trim().toUpperCase() || '',
-        taux: categorieRapport.taux ?? 40,
-        siret: categorieRapport.siret?.trim() || '',
-        tva: categorieRapport.tva?.trim() || '',
-        iban: categorieRapport.iban?.trim() || '',
-        bic: categorieRapport.bic?.trim() || '',
-        banqueAdresse: categorieRapport.banqueAdresse?.trim() || '',
-        adresse1: categorieRapport.adresse1?.trim() || '',
-        adresse2: categorieRapport.adresse2?.trim() || '',
       }]
     } else {
       docData['Catégorie de rapport'] = []
@@ -195,6 +200,76 @@ export async function POST(req: NextRequest) {
 
   } catch (e: any) {
     console.error('❌ [API DEPOSANTES]', e?.message || e)
+    return NextResponse.json({ success: false, error: e?.message || 'Erreur serveur' }, { status: 500 })
+  }
+}
+
+// PATCH - Modification infos comptables (chineuse ou admin)
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const {
+      nom,
+      siret,
+      tva,
+      iban,
+      bic,
+      banqueAdresse,
+      adresse1,
+      adresse2,
+    } = body
+
+    const authHeader = req.headers.get('authorization') || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'Non authentifiée' }, { status: 401 })
+    }
+
+    let decoded
+    try {
+      decoded = await adminAuth.verifyIdToken(token)
+    } catch {
+      return NextResponse.json({ success: false, error: 'Token invalide' }, { status: 401 })
+    }
+
+    const adminDb = getFirestore()
+    
+    // Trouver le document par authUid
+    const snapshot = await adminDb.collection('chineuse')
+      .where('authUid', '==', decoded.uid)
+      .limit(1)
+      .get()
+
+    if (snapshot.empty) {
+      return NextResponse.json({ success: false, error: 'Profil introuvable' }, { status: 404 })
+    }
+
+    const docRef = snapshot.docs[0].ref
+
+    // Mise à jour des infos comptables uniquement
+    const updateData: Record<string, any> = {
+      updatedAt: FieldValue.serverTimestamp(),
+    }
+
+    if (nom !== undefined) updateData.nom = nom?.trim() || ''
+    if (siret !== undefined) updateData.siret = siret?.trim() || ''
+    if (tva !== undefined) updateData.tva = tva?.trim() || ''
+    if (iban !== undefined) updateData.iban = iban?.trim() || ''
+    if (bic !== undefined) updateData.bic = bic?.trim() || ''
+    if (banqueAdresse !== undefined) updateData.banqueAdresse = banqueAdresse?.trim() || ''
+    if (adresse1 !== undefined) updateData.adresse1 = adresse1?.trim() || ''
+    if (adresse2 !== undefined) updateData.adresse2 = adresse2?.trim() || ''
+
+    await docRef.update(updateData)
+
+    return NextResponse.json({ 
+      success: true, 
+      action: 'updated', 
+      id: snapshot.docs[0].id 
+    })
+
+  } catch (e: any) {
+    console.error('❌ [API DEPOSANTES PATCH]', e?.message || e)
     return NextResponse.json({ success: false, error: e?.message || 'Erreur serveur' }, { status: 500 })
   }
 }

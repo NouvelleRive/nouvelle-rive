@@ -24,7 +24,7 @@ export default function MesVentesPage() {
       }
       setUser(u)
 
-      // Charger les infos chineuse
+      // Charger les infos chineuse depuis la RACINE du document (après migration)
       try {
         const deposantsSnap = await getDocs(
           query(collection(db, 'chineuse'), where('email', '==', u.email))
@@ -32,18 +32,18 @@ export default function MesVentesPage() {
         
         if (!deposantsSnap.empty) {
           const depData = deposantsSnap.docs[0].data()
-          const catRapport = (depData['Catégorie de rapport'] || [])[0] || {}
           
+          // ✅ Toutes les infos sont maintenant à la racine
           setChineuse({
             nom: depData.nom,
-            siret: catRapport.siret,
-            adresse1: catRapport.adresse1,
-            adresse2: catRapport.adresse2,
-            tva: catRapport.tva,
-            iban: catRapport.iban,
-            bic: catRapport.bic,
-            banqueAdresse: catRapport.banqueAdresse,
-            taux: catRapport.taux,
+            siret: depData.siret,
+            adresse1: depData.adresse1,
+            adresse2: depData.adresse2,
+            tva: depData.tva,
+            iban: depData.iban,
+            bic: depData.bic,
+            banqueAdresse: depData.banqueAdresse,
+            taux: depData.taux,
             codeChineuse: depData.trigramme,
           })
         }
@@ -51,13 +51,11 @@ export default function MesVentesPage() {
         console.error('Erreur chargement deposant:', err)
       }
 
-      // ✅ UTILISER LA MÊME API QUE L'ADMIN
       await fetchVentes(u.email!)
     })
     return () => unsub()
   }, [router])
 
-  // ✅ Même source que l'admin, filtrée par chineurUid
   async function fetchVentes(email: string) {
     setLoading(true)
     try {
@@ -73,26 +71,9 @@ export default function MesVentesPage() {
     }
   }
 
-  const handleSync = async (startDate: string, endDate: string) => {
-    if (!user) return
-    setSyncLoading(true)
-    try {
-      const res = await fetch('/api/sync-ventes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate, chineurUid: user.uid })
-      })
-      const data = await res.json()
-      if (data.success) {
-        alert(`${data.imported || 0} vente(s) synchronisée(s)`)
-        await fetchVentes(user.email!)
-      } else {
-        alert(data.error || 'Erreur de synchronisation')
-      }
-    } catch (err) {
-      alert('Erreur de synchronisation')
-    } finally {
-      setSyncLoading(false)
+  const handleRefresh = async () => {
+    if (user?.email) {
+      await fetchVentes(user.email)
     }
   }
 
@@ -104,8 +85,7 @@ export default function MesVentesPage() {
       userEmail={user?.email || undefined}
       isAdmin={false}
       loading={loading}
-      onSync={handleSync}
-      syncLoading={syncLoading}
+      onRefresh={handleRefresh}
     />
   )
 }

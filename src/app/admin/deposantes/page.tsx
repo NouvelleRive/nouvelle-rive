@@ -227,19 +227,18 @@ export default function AdminDeposantesPage() {
         imageUrl: finalImageUrl,
         ordre: formData.ordre,
         categories: formData.categories,
+        // Infos comptables À LA RACINE
+        siret: formData.siret.trim(),
+        tva: formData.tva.trim(),
+        iban: formData.iban.trim(),
+        bic: formData.bic.trim(),
+        banqueAdresse: formData.banqueAdresse.trim(),
+        adresse1: formData.adresse1.trim(),
+        adresse2: formData.adresse2.trim(),
+        // categorieRapport = JUSTE label + idsquare
         categorieRapport: {
           label: formData.categorieRapportLabel.trim(),
           idsquare: formData.categorieRapportIdsquare.trim(),
-          nom: formData.nom.trim(),
-          emailCompta: formData.email.trim(),
-          taux: formData.taux,
-          siret: formData.siret.trim(),
-          tva: formData.tva.trim(),
-          iban: formData.iban.trim(),
-          bic: formData.bic.trim(),
-          banqueAdresse: formData.banqueAdresse.trim(),
-          adresse1: formData.adresse1.trim(),
-          adresse2: formData.adresse2.trim(),
         },
       }
 

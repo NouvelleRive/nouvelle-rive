@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 
 export default function ProfilFacturationPage() {
   const [loaded, setLoaded] = useState(false)
@@ -18,18 +18,18 @@ export default function ProfilFacturationPage() {
   const [iban, setIban] = useState('')
   const [bic, setBic] = useState('')
   const [banqueAdresse, setBanqueAdresse] = useState('')
-  const [docId, setDocId] = useState<string | null>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) return
+      
+      // Chercher par authUid
       const snap = await getDocs(
         query(collection(db, 'chineuse'), where('authUid', '==', u.uid))
       )
+      
       if (!snap.empty) {
-        const docSnap = snap.docs[0]
-        setDocId(docSnap.id)
-        const d = docSnap.data()
+        const d = snap.docs[0].data()
         setRaisonSociale(d?.nom || '')
         setSiret(d?.siret || '')
         setAdresse1(d?.adresse1 || '')
@@ -38,38 +38,55 @@ export default function ProfilFacturationPage() {
         setIban(d?.iban || '')
         setBic(d?.bic || '')
         setBanqueAdresse(d?.banqueAdresse || '')
-      } else {
-        // si le doc n'existe pas encore, on le crée à l’enregistrement
       }
       setLoaded(true)
     })
     return () => unsub()
   }, [])
 
-  
   async function save() {
-  if (!docId) {
-    setMsg('❌ Profil introuvable')
-    return
-  }
-  setSaving(true)
-  setMsg('')
-  
-  const ref = doc(db, 'chineuse', docId)
-  await updateDoc(ref, {
-    nom: raisonSociale,
-    siret,
-    adresse1,
-    adresse2,
-    tva,
-    iban,
-    bic,
-    banqueAdresse,
-  })
+    setSaving(true)
+    setMsg('')
+    
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) {
+        setMsg('❌ Non connecté')
+        setSaving(false)
+        return
+      }
 
-  setMsg('Enregistré ✅')
-  setSaving(false)
-}
+      const res = await fetch('/api/deposantes', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nom: raisonSociale,
+          siret,
+          adresse1,
+          adresse2,
+          tva,
+          iban,
+          bic,
+          banqueAdresse,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erreur')
+      }
+
+      setMsg('Enregistré ✅')
+    } catch (err: any) {
+      setMsg('❌ ' + (err?.message || 'Erreur'))
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (!loaded) return null
 
