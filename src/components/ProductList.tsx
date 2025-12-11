@@ -114,7 +114,7 @@ export default function ProductList({
   const [filtreDeposant, setFiltreDeposant] = useState('')
   const [filtreMois, setFiltreMois] = useState('')
   const [filtrePrix, setFiltrePrix] = useState('')
-  const [triPrix, setTriPrix] = useState<'' | 'asc' | 'desc'>('')
+  const [tri, setTri] = useState<'' | 'prix-asc' | 'prix-desc' | 'alpha'>('')
   
 
   // Sélection interne
@@ -222,13 +222,16 @@ const produitsFiltres = useMemo(() => {
 
   // Appliquer le tri
   const produitsTriés = useMemo(() => {
-    if (!triPrix) return produitsFiltres
-    return [...produitsFiltres].sort((a, b) => {
-      const prixA = a.prix ?? 0
-      const prixB = b.prix ?? 0
-      return triPrix === 'asc' ? prixA - prixB : prixB - prixA
-    })
-  }, [produitsFiltres, triPrix])
+  if (!tri) return produitsFiltres
+  return [...produitsFiltres].sort((a, b) => {
+    if (tri === 'alpha') {
+      return (a.nom || '').localeCompare(b.nom || '')
+    }
+    const prixA = a.prix ?? 0
+    const prixB = b.prix ?? 0
+    return tri === 'prix-asc' ? prixA - prixB : prixB - prixA
+  })
+}, [produitsFiltres, tri])
 
   // Produits récupérés
   const produitsRecuperes = useMemo(() => {
@@ -577,7 +580,7 @@ const produitsFiltres = useMemo(() => {
   setFiltreDeposant('')
   setFiltreMois('')
   setFiltrePrix('')
-  setTriPrix('')
+  setTri('')
 }
 
   const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix)
@@ -645,12 +648,13 @@ const produitsFiltres = useMemo(() => {
               placeholder: 'Ex: 95'
             },
             tri: {
-              value: triPrix,
-              onChange: (v) => setTriPrix(v as '' | 'asc' | 'desc'),
+              value: tri,
+              onChange: (v) => setTri(v as '' | 'prix-asc' | 'prix-desc' | 'alpha'),
               options: [
                 { value: '', label: 'Par défaut' },
-                { value: 'asc', label: 'Prix croissant ↑' },
-                { value: 'desc', label: 'Prix décroissant ↓' },
+                { value: 'alpha', label: 'A → Z' },
+                { value: 'prix-asc', label: 'Prix ↑' },
+                { value: 'prix-desc', label: 'Prix ↓' },
               ]
             },
           }}
