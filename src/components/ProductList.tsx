@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField } from 'firebase/firestore'
-import { uploadToCloudinary } from '@/lib/cloudinary'
+import { processAndUploadProductPhoto, uploadMultiplePhotos } from '@/lib/imageProcessing'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { 
@@ -441,15 +441,17 @@ const produitsFiltres = useMemo(() => {
   }
 
   // Sauvegarde produit (modification)
-      const handleSaveProduct = async (data: ProductFormData) => {
-      if (!editingProduct) return
-      
-      try {
-        const productId = editingProduct.id
-      
+  const handleSaveProduct = async (data: ProductFormData) => {
+    if (!editingProduct) return
+    
+    try {
+      const productId = editingProduct.id
+    
       // Préparer les URLs des photos
       let faceUrl: string | undefined = editingProduct.photos?.face
+      let faceOriginalUrl: string | undefined = (editingProduct.photos as any)?.faceOriginal
       let dosUrl: string | undefined = editingProduct.photos?.dos
+      let dosOriginalUrl: string | undefined = (editingProduct.photos as any)?.dosOriginal
       let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
       
       // Gérer les photos détails existantes (filtrer les supprimées)
@@ -458,25 +460,35 @@ const produitsFiltres = useMemo(() => {
         detailsUrls = detailsUrls.filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
       }
       
-      // Upload nouvelle photo face
+      // Upload nouvelle photo face (avec traitement complet)
       if (data.photoFace) {
-        faceUrl = await uploadToCloudinary(data.photoFace)
+        const result = await processAndUploadProductPhoto(data.photoFace)
+        faceUrl = result.processed
+        faceOriginalUrl = result.original
       }
 
-      // Upload nouvelle photo dos
+      // Upload nouvelle photo dos (avec traitement complet)
       if (data.photoDos) {
-        dosUrl = await uploadToCloudinary(data.photoDos)
+        const result = await processAndUploadProductPhoto(data.photoDos)
+        dosUrl = result.processed
+        dosOriginalUrl = result.original
       }
 
-      // Upload nouvelles photos détails
-      for (const file of data.photosDetails) {
-        const url = await uploadToCloudinary(file)
-        detailsUrls.push(url)
+      // Upload nouvelles photos détails (traitement léger)
+      if (data.photosDetails.length > 0) {
+        const newDetailsUrls = await uploadMultiplePhotos(data.photosDetails)
+        detailsUrls.push(...newDetailsUrls)
       }
       
       // Gérer les suppressions de face/dos/faceOnModel
-      if (data.deletedPhotos.face) faceUrl = undefined
-      if (data.deletedPhotos.dos) dosUrl = undefined
+      if (data.deletedPhotos.face) {
+        faceUrl = undefined
+        faceOriginalUrl = undefined
+      }
+      if (data.deletedPhotos.dos) {
+        dosUrl = undefined
+        dosOriginalUrl = undefined
+      }
       if (data.deletedPhotos.faceOnModel) faceOnModelUrl = undefined
       
       // Trouver la catégorie avec idsquare
@@ -503,8 +515,14 @@ const produitsFiltres = useMemo(() => {
       if (faceUrl) updateData['photos.face'] = faceUrl
       else updateData['photos.face'] = deleteField()
       
+      if (faceOriginalUrl) updateData['photos.faceOriginal'] = faceOriginalUrl
+      else updateData['photos.faceOriginal'] = deleteField()
+      
       if (dosUrl) updateData['photos.dos'] = dosUrl
       else updateData['photos.dos'] = deleteField()
+      
+      if (dosOriginalUrl) updateData['photos.dosOriginal'] = dosOriginalUrl
+      else updateData['photos.dosOriginal'] = deleteField()
       
       if (faceOnModelUrl) updateData['photos.faceOnModel'] = faceOnModelUrl
       else updateData['photos.faceOnModel'] = deleteField()
