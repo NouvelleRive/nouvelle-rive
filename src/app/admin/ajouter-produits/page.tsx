@@ -7,13 +7,12 @@ import { db } from '@/lib/firebaseConfig'
 import { AdminProvider, useAdmin } from '@/lib/admin/context'
 import ProductForm, { ProductFormData, ExcelImportData } from '@/components/ProductForm'
 import { 
-  uploadToCloudinary, 
-  canUseFashnAI, 
   computeNextSkuForTrigram, 
   readCategorieRapportLabel,
   extractSkuNumFromSkuOrName, 
   checkSkuUnique
 } from '@/lib/admin/helpers'
+import { processProductPhotos } from '@/lib/imageProcessing'
 
 type Cat = { label: string; idsquare?: string }
 
@@ -68,25 +67,18 @@ export default function AdminAjouterPage() {
       const deposantOriginal = deposants.find((d: any) => d.id === selectedChineuse.uid)
       const categorieRapport = readCategorieRapportLabel(deposantOriginal)
 
-      type PhotosStructure = { face?: string; faceOnModel?: string; dos?: string; details: string[] }
-      const photos: PhotosStructure = { details: [] }
-      const imageUrls: string[] = []
+      // ✅ Upload et traitement photos (détourage, fond blanc, lumière, etc.)
+      const photos = await processProductPhotos({
+        face: data.photoFace,
+        dos: data.photoDos,
+        details: data.photosDetails
+      })
 
-      if (data.photoFace) {
-        photos.face = await uploadToCloudinary(data.photoFace)
-        imageUrls.push(photos.face)
-        if (canUseFashnAI(data.categorie)) {
-          try {
-            const tryonRes = await fetch('/api/generate-tryon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl: photos.face, productName: fullName }) })
-            if (tryonRes.ok) {
-              const tryonData = await tryonRes.json()
-              if (tryonData.success && tryonData.onModelUrl) { photos.faceOnModel = tryonData.onModelUrl; imageUrls.push(photos.faceOnModel) }
-            }
-          } catch {}
-        }
-      }
-      if (data.photoDos) { photos.dos = await uploadToCloudinary(data.photoDos); imageUrls.push(photos.dos) }
-      if (data.photosDetails.length > 0) { photos.details = await Promise.all(data.photosDetails.map((f) => uploadToCloudinary(f))); imageUrls.push(...photos.details) }
+      // Build imageUrls array (photos traitées en premier)
+      const imageUrls: string[] = []
+      if (photos.face) imageUrls.push(photos.face)
+      if (photos.dos) imageUrls.push(photos.dos)
+      imageUrls.push(...photos.details)
 
       const payload: any = {
         nom: fullName, description: data.description, categorie: data.categorie,
@@ -95,7 +87,15 @@ export default function AdminAjouterPage() {
         material: data.material.trim() || null, color: data.color.trim() || null,
         madeIn: data.madeIn || null, sku: finalSku,
         chineurUid: selectedChineuse.uid, categorieRapport,
-        trigramme: selectedChineuse.trigramme, photos, imageUrls,
+        trigramme: selectedChineuse.trigramme, 
+        photos: {
+          face: photos.face,
+          faceOriginal: photos.faceOriginal,
+          dos: photos.dos,
+          dosOriginal: photos.dosOriginal,
+          details: photos.details,
+        },
+        imageUrls,
         imageUrl: imageUrls[0] || '', photosReady: Boolean(photos.face),
         vendu: false, createdAt: serverTimestamp(),
         recu: false,
