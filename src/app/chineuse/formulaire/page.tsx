@@ -18,6 +18,7 @@ import {
 import { auth, db } from '@/lib/firebaseConfig'
 import ProductForm, { ProductFormData, Cat, ExcelImportData } from '@/components/ProductForm'
 import { checkSkuUnique } from '@/lib/admin/helpers'
+import { processProductPhotos } from '@/lib/imageProcessing'
 
 // =====================
 // HELPERS
@@ -69,54 +70,6 @@ function readCategorieRapportLabel(data: any) {
   }
   if (!label && typeof data?.categorieRapportLabel === 'string') label = data.categorieRapportLabel.trim()
   return label
-}
-
-// Cloudinary upload
-async function uploadToCloudinary(file: File): Promise<string> {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-
-  if (!cloudName || !uploadPreset) {
-    throw new Error('Configuration Cloudinary manquante')
-  }
-
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('upload_preset', uploadPreset)
-  formData.append('folder', 'produits')
-
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-    { method: 'POST', body: formData }
-  )
-
-  if (!response.ok) {
-    throw new Error('Erreur upload Cloudinary')
-  }
-
-  const data = await response.json()
-  return data.secure_url
-}
-
-// FASHN.ai check
-function canUseFashnAI(categorie: string): boolean {
-  const cat = (categorie || '').toLowerCase()
-  
-  if (
-    cat.includes('bague') || cat.includes('boucle') || cat.includes('collier') ||
-    cat.includes('bracelet') || cat.includes('broche') || cat.includes('chaussure') ||
-    cat.includes('basket') || cat.includes('botte') || cat.includes('bottine') ||
-    cat.includes('sandale') || cat.includes('escarpin') || cat.includes('mocassin') ||
-    cat.includes('derby') || cat.includes('loafer') || cat.includes('sneaker') ||
-    cat.includes('talon') || cat.includes('ceinture') || cat.includes('sac') ||
-    cat.includes('foulard') || cat.includes('écharpe') || cat.includes('lunettes') ||
-    cat.includes('chapeau') || cat.includes('bonnet') || cat.includes('gant') ||
-    cat.includes('montre')
-  ) {
-    return false
-  }
-  
-  return true
 }
 
 // =====================
@@ -216,49 +169,19 @@ export default function FormulairePage() {
         alert(`❌ Le SKU "${sku}" est déjà utilisé par un autre produit.`)
         setLoading(false)
         return
-  }
+      }
       const fullName = `${sku} - ${formData.nom.trim()}`
 
-      // Upload photos
-      type PhotosStructure = { face?: string; faceOnModel?: string; dos?: string; details: string[] }
-      const photos: PhotosStructure = { details: [] }
+      // ✅ Upload et traitement photos (détourage, fond blanc, lumière, etc.)
+      const photos = await processProductPhotos({
+        face: formData.photoFace,
+        dos: formData.photoDos,
+        details: formData.photosDetails
+      })
 
-      if (formData.photoFace) {
-        photos.face = await uploadToCloudinary(formData.photoFace)
-        
-        // Generate try-on if compatible category
-        if (canUseFashnAI(formData.categorie)) {
-          try {
-            const tryonRes = await fetch('/api/generate-tryon', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ imageUrl: photos.face, productName: fullName })
-            })
-
-            if (tryonRes.ok) {
-              const tryonData = await tryonRes.json()
-              if (tryonData.success && tryonData.onModelUrl) {
-                photos.faceOnModel = tryonData.onModelUrl
-              }
-            }
-          } catch (err) {
-            console.warn('⚠️ Erreur génération photo portée:', err)
-          }
-        }
-      }
-
-      if (formData.photoDos) {
-        photos.dos = await uploadToCloudinary(formData.photoDos)
-      }
-
-      if (formData.photosDetails && formData.photosDetails.length > 0) {
-        photos.details = await Promise.all(formData.photosDetails.map((file) => uploadToCloudinary(file)))
-      }
-
-      // Build imageUrls array
+      // Build imageUrls array (photos traitées en premier)
       const imageUrls: string[] = []
       if (photos.face) imageUrls.push(photos.face)
-      if (photos.faceOnModel) imageUrls.push(photos.faceOnModel)
       if (photos.dos) imageUrls.push(photos.dos)
       imageUrls.push(...photos.details)
 
@@ -281,7 +204,13 @@ export default function FormulairePage() {
         chineurUid: user.uid,
         categorieRapport,
         trigramme,
-        photos,
+        photos: {
+          face: photos.face,
+          faceOriginal: photos.faceOriginal,
+          dos: photos.dos,
+          dosOriginal: photos.dosOriginal,
+          details: photos.details,
+        },
         imageUrls,
         imageUrl: imageUrls[0] || '',
         photosReady,

@@ -12,6 +12,12 @@ type Produit = {
   nom: string
   prix: number
   imageUrls: string[]
+  photos?: {
+    face?: string
+    faceOnModel?: string
+    dos?: string
+    details?: string[]
+  }
   categorie: string
   marque?: string
   description?: string
@@ -24,6 +30,25 @@ type Produit = {
 
 // Catégories qui n'ont pas de taille
 const categoriesSansTaille = ['bijoux', 'boucles d\'oreilles', 'colliers', 'bracelets', 'bagues', 'lunettes', 'lunettes de soleil', 'montres', 'accessoires']
+
+function getAllImages(p: Produit): string[] {
+  const imgs: string[] = []
+  
+  // Priorité aux photos structurées
+  if (p.photos) {
+    if (p.photos.face) imgs.push(p.photos.face)
+    if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
+    if (p.photos.dos) imgs.push(p.photos.dos)
+    if (p.photos.details) imgs.push(...p.photos.details)
+  }
+  
+  // Fallback sur imageUrls si pas de photos structurées
+  if (imgs.length === 0 && p.imageUrls?.length > 0) {
+    return p.imageUrls
+  }
+  
+  return imgs
+}
 
 // Composant Section Dépliable
 function AccordionSection({ 
@@ -184,7 +209,7 @@ export default function ProduitPage() {
         className="w-full lg:w-1/2 lg:h-screen lg:overflow-y-auto lg:sticky lg:top-0"
         style={{ borderRight: '1px solid #000' }}
       >
-        {produit.imageUrls && produit.imageUrls.length > 0 ? (
+        {getAllImages(produit).length > 0 ? (
           <div className="flex flex-col">
             {produit.imageUrls.map((url, index) => (
               <div 
