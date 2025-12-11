@@ -348,36 +348,36 @@ const produitsFiltres = useMemo(() => {
   }
 
   const handleGenerateTryon = async (p: Produit) => {
-    const faceUrl = p.photos?.face || p.imageUrls?.[0] || p.imageUrl
-    if (!faceUrl) {
-      alert('Aucune photo face disponible')
-      return
-    }
-
-    setGeneratingTryonId(p.id)
-    try {
-      const res = await fetch('/api/fashn', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ garmentUrl: faceUrl }),
-      })
-      const data = await res.json()
-
-      if (data.resultUrl) {
-        await updateDoc(doc(db, 'produits', p.id), {
-          'photos.faceOnModel': data.resultUrl,
-        })
-        alert('Photo portée générée !')
-      } else {
-        throw new Error(data.error || 'Erreur génération')
-      }
-    } catch (err: any) {
-      console.error('Erreur Fashn:', err)
-      alert(err.message || 'Erreur lors de la génération')
-    } finally {
-      setGeneratingTryonId(null)
-    }
+  const faceUrl = p.photos?.face || p.imageUrls?.[0] || p.imageUrl
+  if (!faceUrl) {
+    alert('Aucune photo face disponible')
+    return
   }
+
+  setGeneratingTryonId(p.id)
+  try {
+    const res = await fetch('/api/generate-tryon', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl: faceUrl, productName: p.nom }),
+    })
+    const data = await res.json()
+
+    if (data.success && data.onModelUrl) {
+      await updateDoc(doc(db, 'produits', p.id), {
+        'photos.faceOnModel': data.onModelUrl,
+      })
+      alert('Photo portée générée !')
+    } else {
+      throw new Error(data.error || 'Erreur génération')
+    }
+  } catch (err: any) {
+    console.error('Erreur génération photo portée:', err)
+    alert(err.message || 'Erreur lors de la génération')
+  } finally {
+    setGeneratingTryonId(null)
+  }
+}
 
   const handleUpdateSquare = async () => {
     const idsToSync = new Set([...selectedIds, ...dirtyIds])
