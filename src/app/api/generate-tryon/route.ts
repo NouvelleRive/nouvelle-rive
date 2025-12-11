@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
       model_name: 'product-to-model',
       inputs: {
         product_image: imageUrl,
-        resolution: '1k'
+        resolution: '1k',
+        prompt: 'plain white studio background'
       }
     }),
     })
