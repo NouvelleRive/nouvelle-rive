@@ -2,7 +2,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, X, Search } from 'lucide-react'
 
 // Types pour les options de filtre
 export interface FilterOption {
@@ -11,6 +11,12 @@ export interface FilterOption {
 }
 
 export interface FilterConfig {
+  // Recherche texte
+  recherche?: {
+    value: string
+    onChange: (value: string) => void
+    placeholder?: string
+  }
   // Filtre Mois
   mois?: {
     value: string
@@ -46,12 +52,6 @@ export interface FilterConfig {
     value: string
     onChange: (value: string) => void
     options: FilterOption[]
-  }
-  // Recherche texte
-  recherche?: {
-    value: string
-    onChange: (value: string) => void
-    placeholder?: string
   }
 }
 
@@ -113,6 +113,21 @@ export default function FilterBox({
 
       {/* Filtres */}
       <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
+        
+        {/* Recherche - pleine largeur */}
+        {filters.recherche && (
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={filters.recherche.value}
+              onChange={(e) => filters.recherche!.onChange(e.target.value)}
+              placeholder={filters.recherche.placeholder || 'Rechercher...'}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+            />
+          </div>
+        )}
+
         <div className={`grid grid-cols-1 sm:grid-cols-2 ${getGridCols()} gap-3`}>
           
           {/* Mois */}
