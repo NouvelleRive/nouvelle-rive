@@ -55,6 +55,12 @@ export interface FilterConfig {
     value: string
     onChange: (value: string) => void
   }
+  // Statut (admin seulement)
+  statut?: {
+    value: string
+    onChange: (value: string) => void
+    options: FilterOption[]
+  }
 }
 
 interface FilterBoxProps {
@@ -79,6 +85,7 @@ export default function FilterBox({
     filters.categorie,
     filters.prix,
     filters.tri,
+    filters.statut,
   ].filter(Boolean).length
 
   // Déterminer le nombre de colonnes selon le nombre de filtres
@@ -206,6 +213,22 @@ export default function FilterBox({
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 {TRI_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Statut (admin) */}
+          {filters.statut && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Statut</label>
+              <select
+                value={filters.statut.value}
+                onChange={(e) => filters.statut!.onChange(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+              >
+                {filters.statut.options.map(({ value, label }) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>

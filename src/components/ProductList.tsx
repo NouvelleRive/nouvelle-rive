@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField } from 'firebase/firestore'
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { uploadToCloudinary } from '@/lib/cloudinary'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { 
@@ -441,19 +441,11 @@ const produitsFiltres = useMemo(() => {
   }
 
   // Sauvegarde produit (modification)
-  const handleSaveProduct = async (data: ProductFormData) => {
-    if (!editingProduct) return
-    
-    try {
-      const storage = getStorage()
-      const productId = editingProduct.id
+      const handleSaveProduct = async (data: ProductFormData) => {
+      if (!editingProduct) return
       
-      // Upload des nouvelles photos
-      const uploadPhoto = async (file: File, path: string): Promise<string> => {
-        const storageRef = ref(storage, path)
-        await uploadBytes(storageRef, file)
-        return getDownloadURL(storageRef)
-      }
+      try {
+        const productId = editingProduct.id
       
       // Préparer les URLs des photos
       let faceUrl: string | undefined = editingProduct.photos?.face
@@ -468,17 +460,17 @@ const produitsFiltres = useMemo(() => {
       
       // Upload nouvelle photo face
       if (data.photoFace) {
-        faceUrl = await uploadPhoto(data.photoFace, `produits/${productId}/face_${Date.now()}`)
+        faceUrl = await uploadToCloudinary(data.photoFace)
       }
-      
+
       // Upload nouvelle photo dos
       if (data.photoDos) {
-        dosUrl = await uploadPhoto(data.photoDos, `produits/${productId}/dos_${Date.now()}`)
+        dosUrl = await uploadToCloudinary(data.photoDos)
       }
-      
+
       // Upload nouvelles photos détails
       for (const file of data.photosDetails) {
-        const url = await uploadPhoto(file, `produits/${productId}/detail_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+        const url = await uploadToCloudinary(file)
         detailsUrls.push(url)
       }
       
