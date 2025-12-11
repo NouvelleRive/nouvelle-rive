@@ -1,5 +1,5 @@
 // lib/imageProcessing.ts
-// Traitement d'images centralisé : amélioration lumière, recadrage carré
+// Traitement d'images : upload Cloudinary + détourage Replicate
 
 /**
  * Configuration Cloudinary
@@ -17,9 +17,8 @@ function getCloudinaryConfig() {
 
 /**
  * Upload une image vers Cloudinary (sans transformation)
- * @returns URL originale
  */
-async function uploadRaw(file: File): Promise<{ secure_url: string; public_id: string }> {
+async function uploadRaw(file: File): Promise<string> {
   const { cloudName, uploadPreset } = getCloudinaryConfig()
 
   const formData = new FormData()
@@ -33,97 +32,106 @@ async function uploadRaw(file: File): Promise<{ secure_url: string; public_id: s
   )
 
   if (!response.ok) {
-    const errorText = await response.text()
-    console.error('❌ Erreur Cloudinary upload:', errorText)
     throw new Error(`Erreur upload Cloudinary: ${response.status}`)
   }
 
-  return response.json()
+  const data = await response.json()
+  return data.secure_url
 }
 
 /**
- * Construit l'URL avec transformations e-commerce (GRATUITES)
- * 
- * Transformations appliquées :
- * - c_fill : Remplissage intelligent
- * - g_auto : Focus auto sur le sujet
- * - ar_1:1 : Format carré
- * - w_1200,h_1200 : Dimensions e-commerce standard
- * - q_auto:good : Bonne qualité
- * - f_auto : Format optimal (WebP/AVIF)
+ * Upload une image depuis une URL vers Cloudinary
  */
-function buildProcessedUrl(baseUrl: string): string {
-  const urlParts = baseUrl.split('/upload/')
-  
-  if (urlParts.length !== 2) {
-    console.warn('⚠️ Format URL inattendu')
-    return baseUrl
+async function uploadFromUrl(imageUrl: string): Promise<string> {
+  const { cloudName, uploadPreset } = getCloudinaryConfig()
+
+  const formData = new FormData()
+  formData.append('file', imageUrl)
+  formData.append('upload_preset', uploadPreset)
+  formData.append('folder', 'produits-detoures')
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    { method: 'POST', body: formData }
+  )
+
+  if (!response.ok) {
+    throw new Error(`Erreur upload Cloudinary: ${response.status}`)
   }
 
-  const transformations = [
-    'c_fill',                 // Remplissage intelligent
-    'g_auto',                 // Focus auto sur le sujet
-    'ar_1:1',                 // Ratio carré
-    'w_1200',                 // Largeur
-    'h_1200',                 // Hauteur
-    'q_auto:good',            // Bonne qualité
-    'f_auto'                  // Format auto (WebP si supporté)
-  ].join(',')
-
-  return `${urlParts[0]}/upload/${transformations}/${urlParts[1]}`
+  const data = await response.json()
+  
+  // Ajouter fond blanc + recadrage carré
+  const baseUrl = data.secure_url
+  const urlParts = baseUrl.split('/upload/')
+  if (urlParts.length === 2) {
+    return `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200,q_auto:good,f_auto/${urlParts[1]}`
+  }
+  return baseUrl
 }
 
 /**
- * Construit l'URL avec transformations légères (pour photos détails)
+ * Appelle l'API de détourage (Replicate rembg)
  */
-function buildSimpleUrl(baseUrl: string): string {
-  const urlParts = baseUrl.split('/upload/')
-  
-  if (urlParts.length !== 2) return baseUrl
+async function removeBackground(imageUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch('/api/remove-background', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl })
+    })
 
-  const transformations = [
-    'c_fill',                 // Remplissage
-    'g_auto',                 // Focus auto sur le sujet
-    'ar_1:1',                 // Carré
-    'w_1200',                 // Largeur
-    'h_1200',                 // Hauteur
-    'q_auto:good',            // Bonne qualité
-    'f_auto'                  // Format auto
-  ].join(',')
+    if (!response.ok) {
+      console.warn('⚠️ Détourage échoué:', response.status)
+      return null
+    }
 
-  return `${urlParts[0]}/upload/${transformations}/${urlParts[1]}`
+    const data = await response.json()
+    return data.removedBgUrl || null
+  } catch (error) {
+    console.warn('⚠️ Erreur détourage:', error)
+    return null
+  }
 }
 
 /**
  * Upload et traite une photo produit (face/dos)
- * Retourne l'URL originale ET l'URL traitée
- * 
- * @param file - Le fichier image à uploader
- * @returns { original: URL photo chineuse, processed: URL recadrée }
+ * - Upload original sur Cloudinary
+ * - Détourage via Replicate
+ * - Re-upload image détourée sur Cloudinary avec fond blanc
  */
 export async function processAndUploadProductPhoto(file: File): Promise<{
   original: string
   processed: string
 }> {
-  console.log('📸 Upload + traitement photo produit:', file.name, `(${(file.size / 1024).toFixed(1)} KB)`)
+  console.log('📸 Upload photo produit:', file.name, `(${(file.size / 1024).toFixed(1)} KB)`)
 
-  const data = await uploadRaw(file)
+  // 1. Upload original sur Cloudinary
+  const originalUrl = await uploadRaw(file)
+  console.log('✅ Photo originale:', originalUrl)
+
+  // 2. Détourage via Replicate
+  const removedBgUrl = await removeBackground(originalUrl)
   
-  const original = data.secure_url
-  const processed = buildProcessedUrl(original)
-  
-  console.log('✅ Photo originale:', original)
-  console.log('✅ Photo traitée:', processed)
-  
-  return { original, processed }
+  if (removedBgUrl) {
+    // 3. Upload image détourée sur Cloudinary avec fond blanc
+    const processedUrl = await uploadFromUrl(removedBgUrl)
+    console.log('✅ Photo détourée (fond blanc):', processedUrl)
+    return { original: originalUrl, processed: processedUrl }
+  }
+
+  // Fallback si détourage échoue : recadrage simple
+  console.log('⚠️ Fallback: recadrage simple sans détourage')
+  const urlParts = originalUrl.split('/upload/')
+  const fallbackUrl = urlParts.length === 2
+    ? `${urlParts[0]}/upload/c_fill,g_auto,ar_1:1,w_1200,h_1200,q_auto:good,f_auto/${urlParts[1]}`
+    : originalUrl
+
+  return { original: originalUrl, processed: fallbackUrl }
 }
 
 /**
- * Upload simple pour photos détails
- * Retourne original + version améliorée
- * 
- * @param file - Le fichier image à uploader
- * @returns { original: URL brute, processed: URL améliorée }
+ * Upload simple pour photos détails (sans détourage)
  */
 export async function uploadPhotoSimple(file: File): Promise<{
   original: string
@@ -131,19 +139,19 @@ export async function uploadPhotoSimple(file: File): Promise<{
 }> {
   console.log('📸 Upload photo détail:', file.name)
 
-  const data = await uploadRaw(file)
+  const originalUrl = await uploadRaw(file)
   
-  const original = data.secure_url
-  const processed = buildSimpleUrl(original)
-  
-  return { original, processed }
+  // Transformations légères (pas de détourage)
+  const urlParts = originalUrl.split('/upload/')
+  const processedUrl = urlParts.length === 2
+    ? `${urlParts[0]}/upload/c_fill,g_auto,ar_1:1,w_1200,h_1200,q_auto:good,f_auto/${urlParts[1]}`
+    : originalUrl
+
+  return { original: originalUrl, processed: processedUrl }
 }
 
 /**
  * Upload plusieurs photos détails
- * 
- * @param files - Tableau de fichiers
- * @returns Tableau des URLs traitées
  */
 export async function uploadMultiplePhotos(files: File[]): Promise<string[]> {
   if (!files || files.length === 0) return []
@@ -151,13 +159,11 @@ export async function uploadMultiplePhotos(files: File[]): Promise<string[]> {
   console.log(`📸 Upload de ${files.length} photo(s) détail...`)
   
   const results = await Promise.all(files.map(f => uploadPhotoSimple(f)))
-  
   return results.map(r => r.processed)
 }
 
 /**
- * Vérifie si une catégorie est compatible avec FASHN.ai (photo portée)
- * Exclut : bijoux, chaussures, accessoires
+ * Vérifie si une catégorie est compatible avec FASHN.ai
  */
 export function canUseFashnAI(categorie: string): boolean {
   const cat = (categorie || '').toLowerCase()
@@ -175,38 +181,24 @@ export function canUseFashnAI(categorie: string): boolean {
 }
 
 /**
- * Génère une photo portée via FASHN.ai (appelé manuellement via bouton ✨)
+ * Génère une photo portée via FASHN.ai
  */
 export async function generateTryonPhoto(
   imageUrl: string, 
   productName: string
 ): Promise<string | null> {
   try {
-    console.log('🤖 Génération photo portée pour:', productName)
-    
     const response = await fetch('/api/generate-tryon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageUrl, productName })
     })
 
-    if (!response.ok) {
-      console.warn('⚠️ Erreur API generate-tryon:', response.status)
-      return null
-    }
+    if (!response.ok) return null
 
     const data = await response.json()
-    
-    if (data.success && data.onModelUrl) {
-      console.log('✅ Photo portée générée:', data.onModelUrl)
-      return data.onModelUrl
-    }
-    
-    console.warn('⚠️ Pas de photo portée dans la réponse')
-    return null
-    
-  } catch (error) {
-    console.warn('⚠️ Erreur génération photo portée:', error)
+    return data.success && data.onModelUrl ? data.onModelUrl : null
+  } catch {
     return null
   }
 }
