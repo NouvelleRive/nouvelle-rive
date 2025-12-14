@@ -249,7 +249,7 @@ const produitsFiltres = useMemo(() => {
   }, [produits])
 
   // Options de filtres
-  const deposantsUniques = Array.from(new Set(produits.map((p) => p.chineur).filter(Boolean)))
+  const deposantsUniques = Array.from(new Set(produits.map((p) => p.chineur).filter(Boolean))).sort()
   const categoriesUniques = categoriesLabels.length > 0 
     ? categoriesLabels 
     : Array.from(new Set(produits.map((p) => (typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)).filter(Boolean)))
@@ -644,9 +644,9 @@ const produitsFiltres = useMemo(() => {
                 value: filtreDeposant,
                 onChange: setFiltreDeposant,
                 options: deposantsUniques.map(email => ({
-                  value: email!,
-                  label: getChineurName(email)
-                }))
+                value: email!,
+                label: getChineurName(email)
+              })).sort((a, b) => a.label.localeCompare(b.label))
               }
             }),
             categorie: {
