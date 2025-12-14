@@ -211,11 +211,11 @@ export default function ProduitPage() {
       >
         {getAllImages(produit).length > 0 ? (
           <div className="flex flex-col">
-            {produit.imageUrls.map((url, index) => (
+            {getAllImages(produit).map((url, index) => (
               <div 
                 key={index} 
                 className="w-full"
-                style={{ borderBottom: index < produit.imageUrls.length - 1 ? '1px solid #000' : 'none' }}
+                style={{ borderBottom: index < getAllImages(produit).length - 1 ? '1px solid #000' : 'none' }}
               >
                 <img
                   src={url}
