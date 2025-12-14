@@ -240,8 +240,49 @@ const produitsFiltres = useMemo(() => {
 
   // Produits récupérés
   const produitsRecuperes = useMemo(() => {
-    return produits.filter((p) => p.statut === 'retour')
-  }, [produits])
+  const needle = recherche.trim().toLowerCase()
+  
+  return produits
+    .filter((p) => {
+      if (p.statut !== 'retour') return false
+      
+      const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+      if (filtreCategorie && cat !== filtreCategorie) return false
+      if (filtreDeposant && p.chineur !== filtreDeposant) return false
+      
+      if (filtreMois && p.dateRetour) {
+        const dateRetour = p.dateRetour instanceof Timestamp 
+          ? p.dateRetour.toDate() 
+          : new Date(p.dateRetour as any)
+        if (format(dateRetour, 'yyyy-MM') !== filtreMois) return false
+      }
+      
+      if (needle) {
+        const hay = [p.nom, p.sku, p.marque, p.taille, p.description, cat]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        if (!hay.includes(needle)) return false
+      }
+      
+      if (filtrePrix) {
+        const prixRecherche = parseFloat(filtrePrix.replace(',', '.'))
+        if (!isNaN(prixRecherche) && p.prix !== prixRecherche) return false
+      }
+      
+      return true
+    })
+    // Tri par date de récupération (plus récent en premier)
+    .sort((a, b) => {
+      const dateA = a.dateRetour instanceof Timestamp 
+        ? a.dateRetour.toDate().getTime() 
+        : a.dateRetour ? new Date(a.dateRetour as any).getTime() : 0
+      const dateB = b.dateRetour instanceof Timestamp 
+        ? b.dateRetour.toDate().getTime() 
+        : b.dateRetour ? new Date(b.dateRetour as any).getTime() : 0
+      return dateB - dateA
+    })
+}, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix])
 
   // Produits à récupérer
   const produitsARecuperer = useMemo(() => {
