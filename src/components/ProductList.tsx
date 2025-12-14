@@ -190,7 +190,7 @@ const produitsFiltres = useMemo(() => {
 
     const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
     if (filtreCategorie && cat !== filtreCategorie) return false
-    if (filtreDeposant && p.chineur !== filtreDeposant) return false
+    if (filtreDeposant && p.chineurUid !== filtreDeposant) return false
 
     if (filtreMois) {
       if (p.createdAt instanceof Timestamp) {
@@ -248,7 +248,7 @@ const produitsFiltres = useMemo(() => {
       
       const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
       if (filtreCategorie && cat !== filtreCategorie) return false
-      if (filtreDeposant && p.chineur !== filtreDeposant) return false
+      if (filtreDeposant && p.chineurUid !== filtreDeposant) return false
       
       if (filtreMois && p.dateRetour) {
         const dateRetour = p.dateRetour instanceof Timestamp 
@@ -290,7 +290,9 @@ const produitsFiltres = useMemo(() => {
   }, [produits])
 
   // Options de filtres
-  const deposantsUniques = Array.from(new Set(produits.map((p) => p.chineur).filter(Boolean))).sort()
+  const chineursUniques = Array.from(
+  new Set(produits.map((p) => p.chineurUid).filter(Boolean))
+).sort((a, b) => (a || '').localeCompare(b || ''))
   const categoriesUniques = categoriesLabels.length > 0 
     ? categoriesLabels 
     : Array.from(new Set(produits.map((p) => (typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)).filter(Boolean)))
@@ -683,11 +685,15 @@ const produitsFiltres = useMemo(() => {
             chineuse: {
               value: filtreDeposant,
               onChange: setFiltreDeposant,
-              options: deposantsUniques.map(email => {
-                const dep = deposants.find(d => d.email === email)
+              options: chineursUniques.map(uid => {
+                // Chercher le nom dans deposants par trigramme ou email
+                const dep = deposants.find(d => 
+                  d.trigramme?.toLowerCase() === uid?.toLowerCase() || 
+                  d.email?.split('@')[0].toLowerCase() === uid?.toLowerCase()
+                )
                 return {
-                  value: email!,
-                  label: (dep?.nom || email!.split('@')[0]).toUpperCase()
+                  value: uid!,
+                  label: (dep?.nom || uid!).toUpperCase()
                 }
               }).sort((a, b) => a.label.localeCompare(b.label))
             }
