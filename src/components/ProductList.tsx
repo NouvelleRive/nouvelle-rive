@@ -640,15 +640,18 @@ const produitsFiltres = useMemo(() => {
               }))
             },
             ...(isAdmin && {
-              chineuse: {
-                value: filtreDeposant,
-                onChange: setFiltreDeposant,
-                options: deposantsUniques.map(email => ({
-                value: email!,
-                label: getChineurName(email)
-              })).sort((a, b) => a.label.localeCompare(b.label))
-              }
-            }),
+            chineuse: {
+              value: filtreDeposant,
+              onChange: setFiltreDeposant,
+              options: deposants
+                .filter(d => d.nom)
+                .map(d => ({
+                  value: d.email,
+                  label: d.nom!.toUpperCase()
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label))
+            }
+          }),
             categorie: {
               value: filtreCategorie,
               onChange: setFiltreCategorie,
