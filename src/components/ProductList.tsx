@@ -132,7 +132,7 @@ export default function ProductList({
   const [editingProduct, setEditingProduct] = useState<Produit | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [deleteJustification, setDeleteJustification] = useState('')
+  const [deleteReason, setDeleteReason] = useState<'erreur' | 'produit_recupere' | null>(null)
   const [bulkDeleteIds, setBulkDeleteIds] = useState<string[]>([])
   const [deleteProgress, setDeleteProgress] = useState<{ current: number; total: number } | null>(null)
 
@@ -273,79 +273,78 @@ const produitsFiltres = useMemo(() => {
   const handleDelete = (id: string) => {
     setDeleteTarget(id)
     setBulkDeleteIds([])
-    setDeleteJustification('')
+     setDeleteReason(null) 
     setShowDeleteModal(true)
   }
 
   const handleDeleteBulk = (ids: string[]) => {
     setBulkDeleteIds(ids)
     setDeleteTarget(null)
-    setDeleteJustification('')
+    setDeleteReason(null)
     setShowDeleteModal(true)
   }
 
   const confirmDelete = async () => {
-    if (!deleteJustification.trim()) {
-      alert('Veuillez indiquer une justification')
+  if (!deleteReason) {
+    alert('Veuillez choisir une raison')
+    return
+  }
+
+  const idsToDelete = bulkDeleteIds.length > 0 ? bulkDeleteIds : deleteTarget ? [deleteTarget] : []
+  if (idsToDelete.length === 0) return
+
+  try {
+    const auth = (await import('firebase/auth')).getAuth()
+    const token = await auth.currentUser?.getIdToken()
+    
+    if (!token) {
+      alert('Vous devez être connecté')
       return
     }
 
-    const idsToDelete = bulkDeleteIds.length > 0 ? bulkDeleteIds : deleteTarget ? [deleteTarget] : []
-    if (idsToDelete.length === 0) return
+    if (idsToDelete.length > 1) {
+      setDeleteProgress({ current: 0, total: idsToDelete.length })
+    }
 
-    try {
-      if (idsToDelete.length > 5) {
-        setDeleteProgress({ current: 0, total: idsToDelete.length })
-        
-        const batchSize = 10
-        for (let i = 0; i < idsToDelete.length; i += batchSize) {
-          const batch = writeBatch(db)
-          const slice = idsToDelete.slice(i, i + batchSize)
-          
-          for (const id of slice) {
-            batch.update(doc(db, 'produits', id), {
-              statut: 'supprime',
-              justificationSuppression: deleteJustification,
-              dateSuppression: Timestamp.now(),
-            })
-          }
-          
-          await batch.commit()
-          setDeleteProgress({ current: Math.min(i + batchSize, idsToDelete.length), total: idsToDelete.length })
-        }
-        
-        setDeleteProgress(null)
-      } else {
-        const batch = writeBatch(db)
-        for (const id of idsToDelete) {
-          batch.update(doc(db, 'produits', id), {
-            statut: 'supprime',
-            justificationSuppression: deleteJustification,
-            dateSuppression: Timestamp.now(),
-          })
-        }
-        await batch.commit()
-      }
-
-      setDirtyIds((prev) => {
-        const next = new Set(prev)
-        idsToDelete.forEach((id) => next.add(id))
-        return next
+    for (let i = 0; i < idsToDelete.length; i++) {
+      const res = await fetch('/api/delete-produits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: idsToDelete[i],
+          reason: deleteReason,
+        }),
       })
 
-      setShowDeleteModal(false)
-      setDeleteTarget(null)
-      setBulkDeleteIds([])
-      setDeleteJustification('')
-      setSelectedIds(new Set())
-      
-      alert(`${idsToDelete.length} produit(s) supprimé(s)`)
-    } catch (err) {
-      console.error('Erreur suppression:', err)
-      alert('Erreur lors de la suppression')
-      setDeleteProgress(null)
+      const data = await res.json()
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur suppression')
+      }
+
+      if (idsToDelete.length > 1) {
+        setDeleteProgress({ current: i + 1, total: idsToDelete.length })
+      }
     }
+
+    setDeleteProgress(null)
+    setShowDeleteModal(false)
+    setDeleteTarget(null)
+    setBulkDeleteIds([])
+    setDeleteReason(null)
+    setSelectedIds(new Set())
+
+    const actionLabel = deleteReason === 'produit_recupere' ? 'récupéré(s)' : 'supprimé(s)'
+    alert(`${idsToDelete.length} produit(s) ${actionLabel}`)
+
+  } catch (err: any) {
+    console.error('Erreur suppression:', err)
+    alert(err.message || 'Erreur lors de la suppression')
+    setDeleteProgress(null)
   }
+}
 
   const handleGenerateTryon = async (p: Produit) => {
   const faceUrl = p.photos?.face || p.imageUrls?.[0] || p.imageUrl
@@ -643,13 +642,13 @@ const produitsFiltres = useMemo(() => {
             chineuse: {
               value: filtreDeposant,
               onChange: setFiltreDeposant,
-              options: deposants
-                .filter(d => d.nom)
-                .map(d => ({
-                  value: d.email,
-                  label: d.nom!.toUpperCase()
-                }))
-                .sort((a, b) => a.label.localeCompare(b.label))
+              options: deposantsUniques.map(email => {
+                const dep = deposants.find(d => d.email === email)
+                return {
+                  value: email!,
+                  label: (dep?.nom || email!.split('@')[0]).toUpperCase()
+                }
+              }).sort((a, b) => a.label.localeCompare(b.label))
             }
           }),
             categorie: {
@@ -1095,54 +1094,90 @@ const produitsFiltres = useMemo(() => {
           </div>
         </div>
       )}
+{/* Modal suppression */}
+{showDeleteModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl max-w-md w-full p-6">
+      <h3 className="text-lg font-semibold mb-4 text-gray-900">
+        {bulkDeleteIds.length > 0 ? `${bulkDeleteIds.length} produit(s)` : 'Ce produit'}
+      </h3>
+      <p className="text-sm text-gray-500 mb-6">Quelle est la raison ?</p>
 
-      {/* Modal suppression */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">
-              Supprimer {bulkDeleteIds.length > 0 ? `${bulkDeleteIds.length} produit(s)` : 'ce produit'} ?
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">Veuillez indiquer la raison de cette suppression :</p>
-            <textarea
-              value={deleteJustification}
-              onChange={(e) => setDeleteJustification(e.target.value)}
-              placeholder="Ex: Produit abîmé, erreur de saisie, doublon..."
-              className="w-full border border-gray-200 rounded-lg p-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
-              rows={3}
-            />
-            
-            {deleteProgress && (
-              <div className="mb-4">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Suppression en cours...</span>
-                  <span>{deleteProgress.current}/{deleteProgress.total}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <div className="bg-red-600 h-2 rounded-full transition-all" style={{ width: `${(deleteProgress.current / deleteProgress.total) * 100}%` }} />
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); setBulkDeleteIds([]) }}
-                disabled={!!deleteProgress}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={!deleteJustification.trim() || !!deleteProgress}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
-              >
-                Supprimer
-              </button>
+      {!deleteProgress ? (
+        <div className="space-y-3">
+          {/* Bouton Erreur */}
+          <button
+            onClick={() => setDeleteReason('erreur')}
+            className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+              deleteReason === 'erreur'
+                ? 'border-red-500 bg-red-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-medium text-gray-900">❌ Erreur de saisie</div>
+            <div className="text-sm text-gray-500 mt-1">
+              Le produit sera supprimé définitivement (Firestore + Square)
             </div>
+          </button>
+
+          {/* Bouton Récupéré */}
+          <button
+            onClick={() => setDeleteReason('produit_recupere')}
+            className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+              deleteReason === 'produit_recupere'
+                ? 'border-amber-500 bg-amber-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-medium text-gray-900">📦 Produit récupéré</div>
+            <div className="text-sm text-gray-500 mt-1">
+              Le produit sera archivé et visible dans "Produits récupérés"
+            </div>
+          </button>
+        </div>
+      ) : (
+        <div className="mb-4">
+          <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <span>Suppression en cours...</span>
+            <span>{deleteProgress.current}/{deleteProgress.total}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-red-600 h-2 rounded-full transition-all" 
+              style={{ width: `${(deleteProgress.current / deleteProgress.total) * 100}%` }} 
+            />
           </div>
         </div>
       )}
+
+      <div className="flex gap-3 justify-end mt-6">
+        <button
+          onClick={() => {
+            setShowDeleteModal(false)
+            setDeleteTarget(null)
+            setBulkDeleteIds([])
+            setDeleteReason(null)
+          }}
+          disabled={!!deleteProgress}
+          className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+        >
+          Annuler
+        </button>
+        <button
+          onClick={confirmDelete}
+          disabled={!deleteReason || !!deleteProgress}
+          className={`px-4 py-2 rounded-lg text-sm text-white disabled:opacity-50 transition-colors ${
+            deleteReason === 'erreur' 
+              ? 'bg-red-600 hover:bg-red-700' 
+              : 'bg-amber-600 hover:bg-amber-700'
+          }`}
+        >
+          {deleteReason === 'produit_recupere' ? 'Archiver' : 'Supprimer'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }
