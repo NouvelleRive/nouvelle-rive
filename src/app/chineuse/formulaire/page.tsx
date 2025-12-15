@@ -187,10 +187,17 @@ export default function FormulairePage() {
 
       const photosReady = Boolean(photos.face)
 
-      // Create product in Firebase
+     // Construire l'objet photos en excluant les undefined
+      const photosData: Record<string, any> = {}
+      if (photos.face) photosData.face = photos.face
+      if (photos.faceOriginal) photosData.faceOriginal = photos.faceOriginal
+      if (photos.dos) photosData.dos = photos.dos
+      if (photos.dosOriginal) photosData.dosOriginal = photos.dosOriginal
+      if (photos.details && photos.details.length > 0) photosData.details = photos.details
+
       const payload = {
         nom: fullName,
-        description: formData.description,
+        description: formData.description || '',
         categorie: formData.categorie,
         prix: parseFloat(formData.prix),
         quantite: parseInt(formData.quantite) || 1,
@@ -204,13 +211,7 @@ export default function FormulairePage() {
         chineurUid: user.uid,
         categorieRapport,
         trigramme,
-        photos: {
-          face: photos.face,
-          faceOriginal: photos.faceOriginal,
-          dos: photos.dos,
-          dosOriginal: photos.dosOriginal,
-          details: photos.details,
-        },
+        photos: photosData,
         imageUrls,
         imageUrl: imageUrls[0] || '',
         photosReady,
