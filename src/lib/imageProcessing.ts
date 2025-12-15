@@ -48,7 +48,8 @@ async function uploadFromUrl(imageUrl: string): Promise<string> {
   const formData = new FormData()
   formData.append('file', imageUrl)
   formData.append('upload_preset', uploadPreset)
-  formData.append('folder', 'produits-detoures')
+  formData.append('folder', 'produits')
+  
 
   const response = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
