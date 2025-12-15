@@ -13,12 +13,16 @@ const squareClient = new Client({
   environment: Environment.Production,
 })
 
-type Reason = 'erreur' | 'produit_recupere'
+type Reason = 'erreur' | 'produit_recupere' | 'valider_destock'
 
 export async function POST(req: NextRequest) {
   try {
     const { productId, reason } = await req.json()
-    const justif: Reason = reason === 'produit_recupere' ? 'produit_recupere' : 'erreur'
+    
+    // CORRIGÉ : reconnaître les 3 raisons
+    let justif: Reason = 'erreur'
+    if (reason === 'produit_recupere') justif = 'produit_recupere'
+    if (reason === 'valider_destock') justif = 'valider_destock'
 
     if (!productId) {
       return NextResponse.json({ success: false, error: 'productId manquant' }, { status: 400 })
@@ -57,41 +61,77 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 403 })
     }
 
-    // --- Square : suppression ---
-    const squareIds: string[] = []
-    if (data?.variationId) squareIds.push(String(data.variationId))
-    if (data?.catalogObjectId) squareIds.push(String(data.catalogObjectId))
-    if (data?.itemId) squareIds.push(String(data.itemId))
-
-    if (squareIds.length > 0) {
-      try {
-        await squareClient.catalogApi.batchDeleteCatalogObjects({
-          objectIds: squareIds,
-        })
-        console.log('✅ Square: supprimé', squareIds)
-      } catch (squareError: any) {
-        console.error('Square delete error:', squareError?.message)
-        // On continue même si Square échoue
-      }
-    }
-
-    // --- Firestore ---
+    // --- Traitement selon la raison ---
     if (justif === 'produit_recupere') {
+      // Chineuse demande récupération → juste marquer, PAS de suppression Square
+      await produitRef.update({
+        statutRecuperation: 'aRecuperer',
+        dateDemandeRecuperation: FieldValue.serverTimestamp(),
+        derniereAction: 'demande_recuperation',
+      })
+      
+      console.log(`✅ Produit ${productId} en attente de validation vendeuse`)
+      
+      return NextResponse.json({
+        success: true,
+        action: 'demande_recuperation',
+      })
+
+    } else if (justif === 'valider_destock') {
+      // Vendeuse valide → supprimer Square + statut retour
+      const squareIds: string[] = []
+      if (data?.variationId) squareIds.push(String(data.variationId))
+      if (data?.catalogObjectId) squareIds.push(String(data.catalogObjectId))
+      if (data?.itemId) squareIds.push(String(data.itemId))
+
+      if (squareIds.length > 0) {
+        try {
+          await squareClient.catalogApi.batchDeleteCatalogObjects({ objectIds: squareIds })
+          console.log('✅ Square: supprimé', squareIds)
+        } catch (squareError: any) {
+          console.error('Square delete error:', squareError?.message)
+        }
+      }
+
       await produitRef.update({
         statut: 'retour',
+        statutRecuperation: null,
         dateRetour: FieldValue.serverTimestamp(),
-        derniereAction: 'retour',
+        derniereAction: 'retour_valide',
       })
+      
+      console.log(`✅ Produit ${productId} déstocké et validé`)
+      
+      return NextResponse.json({
+        success: true,
+        action: 'retour',
+      })
+
     } else {
+      // Erreur → suppression totale Square + Firestore
+      const squareIds: string[] = []
+      if (data?.variationId) squareIds.push(String(data.variationId))
+      if (data?.catalogObjectId) squareIds.push(String(data.catalogObjectId))
+      if (data?.itemId) squareIds.push(String(data.itemId))
+
+      if (squareIds.length > 0) {
+        try {
+          await squareClient.catalogApi.batchDeleteCatalogObjects({ objectIds: squareIds })
+          console.log('✅ Square: supprimé', squareIds)
+        } catch (squareError: any) {
+          console.error('Square delete error:', squareError?.message)
+        }
+      }
+
       await produitRef.delete()
+      
+      console.log(`✅ Produit ${productId} supprimé définitivement`)
+      
+      return NextResponse.json({
+        success: true,
+        action: 'delete',
+      })
     }
-
-    console.log(`✅ Produit ${productId} ${justif === 'produit_recupere' ? 'retourné' : 'supprimé'}`)
-
-    return NextResponse.json({
-      success: true,
-      action: justif === 'produit_recupere' ? 'retour' : 'delete',
-    })
 
   } catch (e: any) {
     console.error('❌ [API DELETE PRODUITS]', e?.message || e)

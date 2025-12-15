@@ -379,15 +379,46 @@ export default function InventaireList({
     setProcessingIds((prev) => new Set(prev).add(p.id))
 
     try {
+      const res = await fetch('/api/delete-produits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: p.id,
+          reason: 'valider_destock',
+        }),
+      })
+
+      const data = await res.json()
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur validation')
+      }
+
+      onProductUpdate?.()
+    } catch (err: any) {
+      console.error('Erreur récupération:', err)
+      alert(err.message || 'Erreur lors de la récupération')
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(p.id)
+        return next
+      })
+    }
+  }
+
+  const handleCancelDestock = async (p: Produit) => {
+    if (processingIds.has(p.id)) return
+    setProcessingIds((prev) => new Set(prev).add(p.id))
+
+    try {
       await updateDoc(doc(db, 'produits', p.id), {
-        statut: 'retour',
-        dateRetour: Timestamp.now(),
         statutRecuperation: null,
+        dateDemandeRecuperation: null,
       })
       onProductUpdate?.()
     } catch (err) {
-      console.error('Erreur récupération:', err)
-      alert('Erreur lors de la récupération')
+      console.error('Erreur annulation:', err)
+      alert('Erreur lors de l\'annulation')
     } finally {
       setProcessingIds((prev) => {
         const next = new Set(prev)
@@ -598,14 +629,23 @@ export default function InventaireList({
               )}
 
               {mode === 'destock' && (
-                <button
-                  onClick={() => handleMarkCollected(p)}
-                  disabled={isProcessing}
-                  className="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs sm:text-sm hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
-                >
-                  <Package size={14} />
-                  Récupéré
-                </button>
+                <>
+                  <button
+                    onClick={() => handleMarkCollected(p)}
+                    disabled={isProcessing}
+                    className="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs sm:text-sm hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Package size={14} />
+                    Récupéré
+                  </button>
+                  <button
+                    onClick={() => handleCancelDestock(p)}
+                    disabled={isProcessing}
+                    className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs sm:text-sm hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                </>
               )}
 
               <button
