@@ -555,31 +555,6 @@ const handleUpdateSquare = async () => {
       
       await updateDoc(doc(db, 'produits', productId), updateData)
       
-      // ✅ Sync automatique avec Square
-      if (editingProduct.variationId || editingProduct.itemId || editingProduct.catalogObjectId) {
-        try {
-          await fetch('/api/update-square-produits', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              itemId: editingProduct.itemId || editingProduct.catalogObjectId,
-              variationId: editingProduct.variationId,
-              nom: data.sku ? `${data.sku} - ${data.nom}` : data.nom,
-              description: data.description,
-              prix: parseFloat(data.prix) || 0,
-              sku: data.sku || editingProduct.sku,
-              marque: data.marque,
-              taille: data.taille,
-              stock: parseInt(data.quantite) || 1,
-              imageUrl: faceUrl,
-              imageUrls: [faceUrl, dosUrl, ...detailsUrls].filter(Boolean),
-            }),
-          })
-        } catch (squareErr) {
-          console.error('Erreur sync Square:', squareErr)
-        }
-      }
-      
       setShowForm(false)
       setEditingProduct(null)
       alert('Produit mis à jour !')
