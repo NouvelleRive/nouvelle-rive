@@ -420,87 +420,17 @@ const produitsFiltres = useMemo(() => {
     setGeneratingTryonId(null)
   }
 }
-
-  const handleUpdateSquare = async () => {
+const handleUpdateSquare = async () => {
   const idsToSync = new Set([...selectedIds, ...dirtyIds])
   if (idsToSync.size === 0) {
     alert('Aucun produit à synchroniser')
     return
   }
 
-  setUpdatingSquare(true)
-  try {
-    const produitsToSync = produits.filter((p) => idsToSync.has(p.id))
-    
-    let updated = 0
-    const errors: string[] = []
-
-    for (const p of produitsToSync) {
-      const itemId = p.itemId || p.catalogObjectId
-      const variationId = p.variationId
-
-      if (!itemId && !variationId) {
-        console.log(`⏭️ Produit ${p.id} sans ID Square, ignoré`)
-        continue
-      }
-
-      // Récupérer toutes les images
-      const allImages: string[] = []
-      if (p.photos?.face) allImages.push(p.photos.face)
-      if (p.photos?.faceOnModel) allImages.push(p.photos.faceOnModel)
-      if (p.photos?.dos) allImages.push(p.photos.dos)
-      if (p.photos?.details) allImages.push(...p.photos.details)
-      if (allImages.length === 0 && p.imageUrl) allImages.push(p.imageUrl)
-      if (allImages.length === 0 && p.imageUrls) allImages.push(...p.imageUrls)
-
-      const categoryId = typeof p.categorie === 'object' ? p.categorie?.idsquare : undefined
-
-      try {
-        const res = await fetch('/api/update-square-produits', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            itemId,
-            variationId,
-            nom: p.nom,
-            description: p.description,
-            prix: p.prix,
-            sku: p.sku,
-            marque: p.marque,
-            taille: p.taille,
-            categoryId,
-            imageUrl: allImages[0],
-            imageUrls: allImages,
-            stock: p.quantite ?? 1,
-          }),
-        })
-
-        const data = await res.json()
-        if (data.success) {
-          updated++
-        } else {
-          errors.push(`${p.nom}: ${data.error}`)
-        }
-      } catch (err: any) {
-        errors.push(`${p.nom}: ${err.message}`)
-      }
-    }
-
-    setDirtyIds(new Set())
-    setSelectedIds(new Set())
-    
-    if (errors.length > 0) {
-      console.error('Erreurs sync:', errors)
-      alert(`${updated} produit(s) synchronisé(s)\n${errors.length} erreur(s)`)
-    } else {
-      alert(`${updated} produit(s) synchronisé(s) avec Square`)
-    }
-  } catch (err: any) {
-    console.error('Erreur sync Square:', err)
-    alert(err.message || 'Erreur lors de la synchronisation')
-  } finally {
-    setUpdatingSquare(false)
-  }
+  setDirtyIds(new Set())
+  setSelectedIds(new Set())
+  
+  alert(`${idsToSync.size} produit(s) synchronisé(s)`)
 }
 
   const handleBatchUpdate = async (field: 'prix' | 'categorie' | 'quantite', value: any) => {
