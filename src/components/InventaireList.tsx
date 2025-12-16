@@ -374,6 +374,32 @@ export default function InventaireList({
     }
   }
 
+  const handleMarkNotReceived = async (p: Produit) => {
+    if (processingIds.has(p.id)) return
+    
+    if (!confirm(`Supprimer "${p.sku || p.nom}" de la liste ?`)) return
+    
+    setProcessingIds((prev) => new Set(prev).add(p.id))
+
+    try {
+      await updateDoc(doc(db, 'produits', p.id), {
+        statut: 'supprime',
+        dateSuppressionReception: Timestamp.now(),
+        supprimePar: vendeusePrenom,
+      })
+      onProductUpdate?.()
+    } catch (err) {
+      console.error('Erreur suppression:', err)
+      alert('Erreur lors de la suppression')
+    } finally {
+      setProcessingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(p.id)
+        return next
+      })
+    }
+  }
+
   const handleMarkCollected = async (p: Produit) => {
     if (processingIds.has(p.id)) return
     setProcessingIds((prev) => new Set(prev).add(p.id))
@@ -571,6 +597,11 @@ export default function InventaireList({
                 {showChineuse && (
                   <p className="text-xs text-gray-400 mt-1">{getChineurName(p.chineur)}</p>
                 )}
+                {mode === 'reception' && p.createdAt && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Déposé le {p.createdAt.toDate().toLocaleDateString('fr-FR')}
+                  </p>
+                )}
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="font-bold text-[#22209C] text-sm sm:text-base">
@@ -618,14 +649,23 @@ export default function InventaireList({
               )}
 
               {mode === 'reception' && (
-                <button
-                  onClick={() => handleMarkReceived(p)}
-                  disabled={isProcessing}
-                  className="flex-1 sm:flex-none px-3 py-1.5 bg-[#22209C] text-white rounded-lg text-xs sm:text-sm hover:bg-[#1a1878] disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
-                >
-                  <PackageCheck size={14} />
-                  Reçu
-                </button>
+                <>
+                  <button
+                    onClick={() => handleMarkReceived(p)}
+                    disabled={isProcessing}
+                    className="flex-1 sm:flex-none px-3 py-1.5 bg-[#22209C] text-white rounded-lg text-xs sm:text-sm hover:bg-[#1a1878] disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <PackageCheck size={14} />
+                    Reçu
+                  </button>
+                  <button
+                    onClick={() => handleMarkNotReceived(p)}
+                    disabled={isProcessing}
+                    className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs sm:text-sm hover:bg-red-200 disabled:opacity-50 transition-colors"
+                  >
+                    Non reçu
+                  </button>
+                </>
               )}
 
               {mode === 'destock' && (
