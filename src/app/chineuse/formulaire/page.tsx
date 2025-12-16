@@ -222,53 +222,6 @@ export default function FormulairePage() {
 
       const docRef = await addDoc(collection(db, 'produits'), payload)
 
-      // Send to Square if ready
-      const match = categories.find((c) => c?.label === formData.categorie)
-      const idsquare = match?.idsquare
-
-      if (idsquare) {
-        try {
-          const res = await fetch('/api/import-square-produits', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              nom: fullName,
-              productId: docRef.id,
-              prix: parseFloat(formData.prix),
-              description: formData.description,
-              sku,
-              categorie: idsquare,
-              chineurNom: user.uid,
-              chineurEmail: user.email,
-              trigramme,
-              stock: parseInt(formData.quantite) || 1,
-              marque: formData.marque.trim(),
-              taille: formData.taille.trim(),
-              imageUrl: imageUrls[0] || '',
-              imageUrls,
-            }),
-          })
-
-          const raw = await res.text()
-          let data: any = {}
-          try { data = JSON.parse(raw) } catch {}
-
-          if (res.ok && data?.success) {
-            const update: Record<string, any> = {}
-            if (data.catalogObjectId) update.catalogObjectId = data.catalogObjectId
-            if (data.variationId) update.variationId = data.variationId
-            if (data.itemId) update.itemId = data.itemId
-            if (data.imageId) update.imageId = data.imageId
-
-            if (Object.keys(update).length > 0) {
-              await updateDoc(doc(db, 'produits', docRef.id), update)
-            }
-          }
-        } catch (sqErr) {
-          console.error('Erreur Square :', sqErr)
-        }
-      }
-
       alert('✅ Produit ajouté avec succès !')
 
       // Refresh SKU for next product
@@ -336,47 +289,6 @@ export default function FormulairePage() {
         }
         
         const docRef = await addDoc(collection(db, 'produits'), payload)
-        
-        // Sync Square si catégorie a un idsquare
-        const match = categories.find((c) => c?.label === produit.categorie)
-        if (match?.idsquare) {
-          try {
-            const res = await fetch('/api/import-square-produits', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                nom: fullName,
-                productId: docRef.id,
-                prix: produit.prix,
-                description: produit.description || '',
-                sku: rowSku,
-                categorie: match.idsquare,
-                chineurNom: user.uid,
-                chineurEmail: user.email,
-                trigramme,
-                stock: produit.quantite || 1,
-                marque: produit.marque || '',
-                taille: produit.taille || '',
-                imageUrl: '',
-                imageUrls: [],
-              }),
-            })
-            
-            const raw = await res.text()
-            let data: any = {}
-            try { data = JSON.parse(raw) } catch {}
-            
-            if (res.ok && data?.success) {
-              const update: Record<string, any> = {}
-              if (data.catalogObjectId) update.catalogObjectId = data.catalogObjectId
-              if (data.variationId) update.variationId = data.variationId
-              if (data.itemId) update.itemId = data.itemId
-              if (Object.keys(update).length > 0) {
-                await updateDoc(doc(db, 'produits', docRef.id), update)
-              }
-            }
-          } catch {}
-        }
         
         successCount++
       }
