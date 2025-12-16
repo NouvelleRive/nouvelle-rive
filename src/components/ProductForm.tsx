@@ -944,7 +944,7 @@ export default function ProductForm({
                   onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                   required
                   className={`w-full border rounded px-2 py-1.5 text-sm ${mode === 'create' && sku ? 'rounded-l-none' : ''}`}
-                  placeholder="Marque + type de vêtement"
+                  placeholder="Nom du produit"
                 />
               </div>
             </div>
