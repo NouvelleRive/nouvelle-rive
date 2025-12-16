@@ -1,19 +1,20 @@
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
-const { SquareClient } = require("square");
+const { Client, Environment } = require("square");
+const { v4: uuidv4 } = require("uuid");
 
 admin.initializeApp();
 const db = admin.firestore();
 
-// Configure Square client
-const squareClient = new SquareClient({
-  token: "EAAAEDacADsGzZx3vLkWmCK5EUZCG",
-  environment: "production",
+const squareClient = new Client({
+  accessToken: "EAAAEDacADsGzZx3vLkWmCK5EUZCG",
+  environment: Environment.Production,
 });
+
 const locationId = "LRNQ2NP5KXKZ6";
 
 // ============================================
-// Créer produit dans Square quand reçu en boutique
+// TRIGGER: Produit reçu → créer dans Square
 // ============================================
 exports.onProductReceived = functions.firestore
   .document("produits/{productId}")
@@ -22,7 +23,7 @@ exports.onProductReceived = functions.firestore
     const after = change.after.data();
     const productId = context.params.productId;
 
-    // Vérifier si recu passe de false à true
+    // CAS 1: Produit reçu en boutique → créer dans Square
     if (before.recu === false && after.recu === true) {
       console.log(`📦 Produit reçu: ${productId} (${after.sku})`);
 
@@ -31,89 +32,79 @@ exports.onProductReceived = functions.firestore
         return null;
       }
 
-      // Vérifier si le produit existe déjà dans Square (par SKU)
-      try {
-        const searchResult = await squareClient.catalog.search({
-          objectTypes: ["ITEM_VARIATION"],
-          query: {
-            exactQuery: {
-              attributeName: "sku",
-              attributeValue: after.sku,
-            },
-          },
-        });
+      const idempotencyKey = uuidv4();
+      const itemId = `#item_${after.sku}`;
+      const variationId = `#variation_${after.sku}`;
 
-        if (searchResult.objects && searchResult.objects.length > 0) {
-          console.log(`⏭️ Produit ${after.sku} existe déjà dans Square`);
-          return null;
-        }
-      } catch (searchError) {
-        console.error("Erreur recherche Square:", searchError);
-      }
-
-      // Récupérer categoryId
-      let categoryId = null;
-      if (after.categorie && typeof after.categorie === "object" && after.categorie.idsquare) {
-        categoryId = after.categorie.idsquare;
-      }
-
-      // Construire la description
-      const descParts = [];
-      if (after.marque) descParts.push(`Marque: ${after.marque}`);
-      if (after.taille) descParts.push(`Taille: ${after.taille}`);
-      if (after.description) descParts.push(after.description);
-      const finalDescription = descParts.join("\n");
-
-      // Créer dans Square
-      try {
-        const idempotencyKey = `${productId}-${Date.now()}`;
-        
-        const result = await squareClient.catalog.upsertObject({
-          idempotencyKey,
-          object: {
-            type: "ITEM",
-            id: `#item_${after.sku}`,
-            presentAtAllLocations: true,
-            itemData: {
-              name: after.nom,
-              description: finalDescription,
-              categoryId: categoryId || undefined,
-              variations: [
-                {
-                  type: "ITEM_VARIATION",
-                  id: `#variation_${after.sku}`,
-                  presentAtAllLocations: true,
-                  itemVariationData: {
-                    itemId: `#item_${after.sku}`,
-                    name: "Default",
-                    sku: after.sku,
-                    pricingType: "FIXED_PRICING",
-                    priceMoney: {
-                      amount: BigInt(Math.round((after.prix || 0) * 100)),
-                      currency: "EUR",
-                    },
+      // Construire l'objet Square exactement comme l'ancien code
+      const itemData = {
+        type: "ITEM",
+        id: itemId,
+        itemData: {
+          name: after.nom,
+          description: after.description || "",
+          categoryId: after.categorie?.idsquare || undefined,
+          variations: [
+            {
+              type: "ITEM_VARIATION",
+              id: variationId,
+              itemVariationData: {
+                itemId: itemId,
+                name: after.nom,
+                sku: after.sku,
+                pricingType: "FIXED_PRICING",
+                priceMoney: {
+                  amount: BigInt(Math.round((after.prix || 0) * 100)),
+                  currency: "EUR",
+                },
+                trackInventory: true,
+                locationOverrides: [
+                  {
+                    locationId,
                     trackInventory: true,
                   },
-                },
-              ],
+                ],
+              },
             },
-          },
+          ],
+        },
+      };
+
+      try {
+        // Créer dans Square avec batchUpsertCatalogObjects
+        const { result } = await squareClient.catalogApi.batchUpsertCatalogObjects({
+          idempotencyKey,
+          batches: [{ objects: [itemData] }],
         });
 
-        const itemId = result.catalogObject?.id;
-        const variationId = result.catalogObject?.itemData?.variations?.[0]?.id;
+        // Mapper les IDs
+        let realItemId = null;
+        let realVariationId = null;
 
-        console.log(`✅ Créé dans Square: ${after.sku} → item=${itemId}, variation=${variationId}`);
+        if (result.idMappings) {
+          for (const mapping of result.idMappings) {
+            const clientId = mapping.clientObjectId || "";
+            const realId = mapping.objectId || "";
+
+            if (clientId.startsWith("#item_")) {
+              realItemId = realId;
+            } else if (clientId.startsWith("#variation_")) {
+              realVariationId = realId;
+            }
+          }
+        }
+
+        console.log(`✅ Créé dans Square: ${after.sku} → item=${realItemId}, variation=${realVariationId}`);
 
         // Mettre à jour le stock
-        if (variationId) {
-          await squareClient.inventory.batchChange({
-            idempotencyKey: `${productId}-stock-${Date.now()}`,
+        if (realVariationId) {
+          await squareClient.inventoryApi.batchChangeInventory({
+            idempotencyKey: uuidv4(),
             changes: [
               {
                 type: "PHYSICAL_COUNT",
                 physicalCount: {
-                  catalogObjectId: variationId,
+                  catalogObjectId: realVariationId,
                   locationId,
                   quantity: String(after.quantite || 1),
                   state: "IN_STOCK",
@@ -127,14 +118,61 @@ exports.onProductReceived = functions.firestore
 
         // Sauvegarder les IDs Square dans Firestore
         await change.after.ref.update({
-          itemId: itemId || null,
-          variationId: variationId || null,
-          catalogObjectId: itemId || null,
+          catalogObjectId: realItemId,
+          variationId: realVariationId,
+          itemId: realItemId,
           squareSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
       } catch (squareError) {
         console.error(`❌ Erreur création Square pour ${after.sku}:`, squareError);
+      }
+    }
+
+    // CAS 2: Produit passe en retour → supprimer de Square
+    if (before.statut !== "retour" && after.statut === "retour") {
+      console.log(`📤 Produit retourné: ${productId} (${after.sku})`);
+
+      const squareIds = [];
+      if (after.variationId) squareIds.push(String(after.variationId));
+      if (after.catalogObjectId) squareIds.push(String(after.catalogObjectId));
+      if (after.itemId) squareIds.push(String(after.itemId));
+
+      if (squareIds.length > 0) {
+        try {
+          await squareClient.catalogApi.batchDeleteCatalogObjects({ objectIds: squareIds });
+          console.log(`✅ Supprimé de Square: ${after.sku}`);
+        } catch (squareError) {
+          console.error(`❌ Erreur suppression Square:`, squareError);
+        }
+      }
+    }
+
+    return null;
+  });
+
+// ============================================
+// TRIGGER: Produit supprimé → supprimer de Square
+// ============================================
+exports.onProductDeleted = functions.firestore
+  .document("produits/{productId}")
+  .onDelete(async (snap, context) => {
+    const data = snap.data();
+    const productId = context.params.productId;
+
+    console.log(`🗑️ Produit supprimé: ${productId} (${data.sku})`);
+
+    const squareIds = [];
+    if (data.variationId) squareIds.push(String(data.variationId));
+    if (data.catalogObjectId) squareIds.push(String(data.catalogObjectId));
+    if (data.itemId) squareIds.push(String(data.itemId));
+
+    if (squareIds.length > 0) {
+      try {
+        await squareClient.catalogApi.batchDeleteCatalogObjects({ objectIds: squareIds });
+        console.log(`✅ Supprimé de Square: ${data.sku}`);
+      } catch (squareError) {
+        console.error(`❌ Erreur suppression Square:`, squareError);
       }
     }
 

@@ -4,14 +4,8 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
-import { Client, Environment } from 'square'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
-
-const squareClient = new Client({
-  accessToken: process.env.SQUARE_ACCESS_TOKEN,
-  environment: Environment.Production,
-})
 
 type Reason = 'erreur' | 'produit_recupere' | 'valider_destock'
 
@@ -19,7 +13,6 @@ export async function POST(req: NextRequest) {
   try {
     const { productId, reason } = await req.json()
     
-    // CORRIGÉ : reconnaître les 3 raisons
     let justif: Reason = 'erreur'
     if (reason === 'produit_recupere') justif = 'produit_recupere'
     if (reason === 'valider_destock') justif = 'valider_destock'
@@ -62,8 +55,10 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Traitement selon la raison ---
+    // La Cloud Function se charge de la sync Square automatiquement
+
     if (justif === 'produit_recupere') {
-      // Chineuse demande récupération → juste marquer, PAS de suppression Square
+      // Chineuse demande récupération
       await produitRef.update({
         statutRecuperation: 'aRecuperer',
         dateDemandeRecuperation: FieldValue.serverTimestamp(),
@@ -78,21 +73,7 @@ export async function POST(req: NextRequest) {
       })
 
     } else if (justif === 'valider_destock') {
-      // Vendeuse valide → supprimer Square + statut retour
-      const squareIds: string[] = []
-      if (data?.variationId) squareIds.push(String(data.variationId))
-      if (data?.catalogObjectId) squareIds.push(String(data.catalogObjectId))
-      if (data?.itemId) squareIds.push(String(data.itemId))
-
-      if (squareIds.length > 0) {
-        try {
-          await squareClient.catalogApi.batchDeleteCatalogObjects({ objectIds: squareIds })
-          console.log('✅ Square: supprimé', squareIds)
-        } catch (squareError: any) {
-          console.error('Square delete error:', squareError?.message)
-        }
-      }
-
+      // Vendeuse valide → Cloud Function supprimera de Square
       await produitRef.update({
         statut: 'retour',
         statutRecuperation: null,
@@ -100,7 +81,7 @@ export async function POST(req: NextRequest) {
         derniereAction: 'retour_valide',
       })
       
-      console.log(`✅ Produit ${productId} déstocké et validé`)
+      console.log(`✅ Produit ${productId} déstocké`)
       
       return NextResponse.json({
         success: true,
@@ -108,24 +89,10 @@ export async function POST(req: NextRequest) {
       })
 
     } else {
-      // Erreur → suppression totale Square + Firestore
-      const squareIds: string[] = []
-      if (data?.variationId) squareIds.push(String(data.variationId))
-      if (data?.catalogObjectId) squareIds.push(String(data.catalogObjectId))
-      if (data?.itemId) squareIds.push(String(data.itemId))
-
-      if (squareIds.length > 0) {
-        try {
-          await squareClient.catalogApi.batchDeleteCatalogObjects({ objectIds: squareIds })
-          console.log('✅ Square: supprimé', squareIds)
-        } catch (squareError: any) {
-          console.error('Square delete error:', squareError?.message)
-        }
-      }
-
+      // Erreur → suppression Firestore → Cloud Function supprimera de Square
       await produitRef.delete()
       
-      console.log(`✅ Produit ${productId} supprimé définitivement`)
+      console.log(`✅ Produit ${productId} supprimé`)
       
       return NextResponse.json({
         success: true,

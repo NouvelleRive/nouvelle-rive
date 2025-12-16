@@ -1,4 +1,4 @@
-// app/admin/ajouter/page.tsx
+// app/admin/ajouter-produits/page.tsx
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
@@ -88,13 +88,15 @@ export default function AdminAjouterPage() {
         madeIn: data.madeIn || null, sku: finalSku,
         chineurUid: selectedChineuse.uid, categorieRapport,
         trigramme: selectedChineuse.trigramme, 
-        photos: {
-          face: photos.face,
-          faceOriginal: photos.faceOriginal,
-          dos: photos.dos,
-          dosOriginal: photos.dosOriginal,
-          details: photos.details,
-        },
+        ...(Object.keys(photos).length > 0 && {
+          photos: {
+            ...(photos.face && { face: photos.face }),
+            ...(photos.faceOriginal && { faceOriginal: photos.faceOriginal }),
+            ...(photos.dos && { dos: photos.dos }),
+            ...(photos.dosOriginal && { dosOriginal: photos.dosOriginal }),
+            ...(photos.details && photos.details.length > 0 && { details: photos.details }),
+          },
+        }),
         imageUrls,
         imageUrl: imageUrls[0] || '', photosReady: Boolean(photos.face),
         vendu: false, createdAt: serverTimestamp(),
