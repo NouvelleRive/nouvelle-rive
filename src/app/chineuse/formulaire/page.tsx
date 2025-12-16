@@ -321,6 +321,7 @@ export default function FormulairePage() {
 
         {/* Product Form avec import Excel intégré */}
         <ProductForm
+          key={sku}
           mode="create"
           isAdmin={false}
           categories={categories}

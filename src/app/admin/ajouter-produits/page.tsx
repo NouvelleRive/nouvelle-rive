@@ -214,6 +214,7 @@ export default function AdminAjouterPage() {
         <div className="bg-white rounded border p-6">
           {autoSku && <p className="text-sm text-green-600 mb-4">Prochain SKU suggéré : <strong>{autoSku}</strong> <span className="text-gray-400">(modifiable)</span></p>}
           <ProductForm 
+            key={autoSku}
             mode="create" 
             isAdmin={true}
             categories={chineuseCategories} 
