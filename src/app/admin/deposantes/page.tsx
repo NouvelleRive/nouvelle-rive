@@ -484,47 +484,23 @@ export default function AdminDeposantesPage() {
             <div className="p-4 space-y-6">
               {/* INFOS GÉNÉRALES */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations générales</h3>
+                
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations générales</h3>
+                
                 <div className="grid grid-cols-2 gap-4">
-                  
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      Emails {formData.emails.length === 0 && <span className="text-red-400 text-xs ml-1">⚠️ aucun</span>}
-                      {formData.emails.length > 0 && <span className="text-green-500 text-xs ml-1">✓ {formData.emails.length}</span>}
+                      Nom * {fieldStatus(formData.nom)}
                     </label>
-                    <div className="space-y-2">
-                      {formData.emails.map((email, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => {
-                              const newEmails = [...formData.emails]
-                              newEmails[idx] = e.target.value
-                              setFormData({ ...formData, emails: newEmails })
-                            }}
-                            placeholder="contact@example.com"
-                            className="flex-1 border rounded px-3 py-2"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, emails: formData.emails.filter((_, i) => i !== idx) })}
-                            className="p-2 text-red-400 hover:text-red-600"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, emails: [...formData.emails, ''] })}
-                        className="flex items-center gap-2 text-sm text-[#22209C] hover:underline"
-                      >
-                        <Plus size={16} /> Ajouter un email
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      value={formData.nom}
+                      onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                      placeholder="Ines Pineau"
+                      className="w-full border rounded px-3 py-2"
+                    />
                   </div>
-  
+                  <div>
                     <label className="block text-sm font-medium mb-1">
                       Trigramme * {fieldStatus(formData.trigramme)}
                     </label>
@@ -537,6 +513,57 @@ export default function AdminDeposantesPage() {
                       className="w-full border rounded px-3 py-2 uppercase"
                     />
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">
+                    Emails {formData.emails.length === 0 && <span className="text-red-400 text-xs ml-1">⚠️ aucun</span>}
+                    {formData.emails.length > 0 && <span className="text-green-500 text-xs ml-1">✓ {formData.emails.length}</span>}
+                  </label>
+                  <div className="space-y-2">
+                    {formData.emails.map((email, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => {
+                            const newEmails = [...formData.emails]
+                            newEmails[idx] = e.target.value
+                            setFormData({ ...formData, emails: newEmails })
+                          }}
+                          placeholder="contact@example.com"
+                          className="flex-1 border rounded px-3 py-2"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, emails: formData.emails.filter((_, i) => i !== idx) })}
+                          className="p-2 text-red-400 hover:text-red-600"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, emails: [...formData.emails, ''] })}
+                      className="flex items-center gap-2 text-sm text-[#22209C] hover:underline"
+                    >
+                      <Plus size={16} /> Ajouter un email
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">
+                    Instagram {fieldStatus(formData.instagram)}
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.instagram}
+                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                    placeholder="https://instagram.com/..."
+                    className="w-full border rounded px-3 py-2"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
