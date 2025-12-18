@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
 type Creatrice = {
@@ -34,7 +34,7 @@ export default function CreateurPage() {
   const [loading, setLoading] = useState(true)
   const [displayedText, setDisplayedText] = useState('')
 
-  // Fetch créatrice depuis Firebase
+        // Fetch créatrice depuis Firebase
   useEffect(() => {
     async function fetchCreatrice() {
       if (!slug) return
@@ -45,7 +45,7 @@ export default function CreateurPage() {
         
         if (docSnap.exists()) {
           const data = docSnap.data()
-          const createuriceData: Creatrice = {
+          setCreatrice({
             nom: data.nom || slug,
             slug: data.slug || slug,
             specialite: data.specialite || '',
@@ -54,14 +54,7 @@ export default function CreateurPage() {
             lien: data.lien || '',
             instagram: data.instagram || '',
             imageUrl: data.imageUrl || '',
-            produitsPrefers: data.produitsPrefers || [],
-          }
-          setCreatrice(createuriceData)
-
-          // Fetch les produits si produitsPrefers existe
-          if (data.produitsPrefers && data.produitsPrefers.length > 0) {
-            await fetchProduits(data.produitsPrefers)
-          }
+          })
         }
       } catch (error) {
         console.error('Erreur lors du fetch de la créatrice:', error)
@@ -73,33 +66,52 @@ export default function CreateurPage() {
     fetchCreatrice()
   }, [slug])
 
-  // Fetch produits depuis Firebase
-  async function fetchProduits(produitsIds: string[]) {
-    try {
-      const produitsData: Produit[] = []
+  // Fetch les produits de la créatrice (par trigramme) et les trier par favoris
+  useEffect(() => {
+    async function fetchProduitsCreatrices() {
+      if (!creatrice) return
       
-      // Fetch chaque produit par son ID
-      for (const produitId of produitsIds) {
-        const produitRef = doc(db, 'produits', produitId)
-        const produitSnap = await getDoc(produitRef)
+      try {
+        const produitsQuery = query(
+          collection(db, 'produits'),
+          where('trigramme', '==', creatrice.slug.toUpperCase()),
+          where('vendu', '!=', true)
+        )
+        const produitsSnap = await getDocs(produitsQuery)
         
-        if (produitSnap.exists()) {
-          const data = produitSnap.data()
-          produitsData.push({
-            id: produitSnap.id,
-            nom: data.nom || data.name || 'Produit',
-            prix: data.prix || data.price || 0,
-            imageUrl: data.imageUrl || data.image || '',
+        const produitsAvecFavoris = await Promise.all(
+          produitsSnap.docs.map(async (docSnap) => {
+            const data = docSnap.data()
+            
+            const favorisQuery = query(
+              collection(db, 'favoris'),
+              where('productId', '==', docSnap.id)
+            )
+            const favorisSnap = await getDocs(favorisQuery)
+            
+            return {
+              id: docSnap.id,
+              nom: data.nom || 'Produit',
+              prix: data.prix || 0,
+              imageUrl: data.imageUrls?.[0] || data.imageUrl || '',
+              nbFavoris: favorisSnap.size,
+            }
           })
-        }
+        )
+        
+        const topProduits = produitsAvecFavoris
+          .sort((a, b) => b.nbFavoris - a.nbFavoris)
+          .slice(0, 3)
+        
+        setProduits(topProduits)
+      } catch (error) {
+        console.error('Erreur fetch produits:', error)
       }
-      
-      setProduits(produitsData)
-    } catch (error) {
-      console.error('Erreur lors du fetch des produits:', error)
     }
-  }
-
+    
+    fetchProduitsCreatrices()
+  }, [creatrice])
+  
   // Scroll to title
   useEffect(() => {
     if (creatrice) {
