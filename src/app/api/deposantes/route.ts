@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
       nom,
       trigramme,
       email,
+      emails,
       instagram,
       accroche,
       description,
@@ -126,7 +127,8 @@ export async function POST(req: NextRequest) {
     const docData: Record<string, any> = {
       nom: nom?.trim() || '',
       trigramme: trigramme?.trim().toUpperCase() || '',
-      email: email?.trim() || '',
+      email: Array.isArray(emails) && emails.length > 0 ? emails[0]?.trim() || '' : email?.trim() || '',
+      emails: Array.isArray(emails) ? emails.filter((e: string) => e?.trim()).map((e: string) => e.trim()) : (email?.trim() ? [email.trim()] : []),
       instagram: instagram?.trim() || '',
       accroche: accroche?.trim() || '',
       description: description?.trim() || '',
