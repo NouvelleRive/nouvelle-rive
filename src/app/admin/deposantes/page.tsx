@@ -412,7 +412,11 @@ export default function AdminDeposantesPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500">{d.email || '—'}</p>
+                    <p className="text-sm text-gray-500">
+                      {Array.isArray(d.emails) && d.emails.length > 0 
+                        ? d.emails.join(', ') 
+                        : (d.email || '—')}
+                    </p>
                     {accroche && <p className="text-sm text-[#22209C] font-medium mt-1 italic">"{accroche}"</p>}
                   </div>
                 </div>
@@ -564,33 +568,6 @@ export default function AdminDeposantesPage() {
                     placeholder="https://instagram.com/..."
                     className="w-full border rounded px-3 py-2"
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Email {fieldStatus(formData.email)}
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="contact@example.com"
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Instagram {fieldStatus(formData.instagram)}
-                    </label>
-                    <input
-                      type="url"
-                      value={formData.instagram}
-                      onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                      placeholder="https://instagram.com/..."
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
                 </div>
 
                 <div className="mt-4">
