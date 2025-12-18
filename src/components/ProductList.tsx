@@ -9,7 +9,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { 
   MoreHorizontal, Trash2, ChevronUp, Sparkles, Clock,
-  Search, X, FileSpreadsheet, Download, ChevronDown, RefreshCw, ImageIcon
+  Search, X, FileSpreadsheet, Download, ChevronDown, RefreshCw, ImageIcon, Eye, EyeOff
 } from 'lucide-react'
 
 import * as XLSX from 'xlsx'
@@ -420,6 +420,15 @@ const produitsFiltres = useMemo(() => {
     setGeneratingTryonId(null)
   }
 }
+  const handleToggleForceDisplay = async (p: Produit) => {
+    try {
+      await updateDoc(doc(db, 'produits', p.id), {
+        forceDisplay: !p.forceDisplay
+      })
+    } catch (err) {
+      console.error('Erreur toggle forceDisplay:', err)
+    }
+  }
 const handleUpdateSquare = async () => {
   const idsToSync = new Set([...selectedIds, ...dirtyIds])
   if (idsToSync.size === 0) {
@@ -932,6 +941,18 @@ const handleUpdateSquare = async () => {
                     title="Supprimer"
                   >
                     <Trash2 size={20} />
+                  </button>
+
+                  <button
+                    onClick={() => handleToggleForceDisplay(p)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      p.forceDisplay 
+                        ? 'text-green-500 hover:bg-green-50' 
+                        : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
+                    }`}
+                    title={p.forceDisplay ? 'Visible en boutique' : 'Masqué de la boutique'}
+                  >
+                    {p.forceDisplay ? <Eye size={18} /> : <EyeOff size={18} />}
                   </button>
                 </div>
               </div>

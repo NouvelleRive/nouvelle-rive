@@ -15,6 +15,15 @@ type Produit = {
   categorie: string
   marque?: string
   vendu: boolean
+  promotion?: boolean
+  createdAt?: any
+  photos?: {
+    face?: string
+    faceOnModel?: string
+    dos?: string
+    details?: string[]
+  }
+  forceDisplay?: boolean
 }
 
 export default function BoutiquePage() {
@@ -40,7 +49,21 @@ export default function BoutiquePage() {
           ...doc.data()
         })) as Produit[]
 
-        setProduits(data)
+        // Filtrer : seulement les produits avec photo détourée OU tryon OU forcé
+        const produitsVisibles = data.filter(p => {
+          // Forçage manuel
+          if (p.forceDisplay === true) return true
+          
+          // Photo détourée (face traitée sur Cloudinary)
+          if (p.photos?.face) return true
+          
+          // Photo portée (tryon Replicate)
+          if (p.photos?.faceOnModel) return true
+          
+          return false
+        })
+
+        setProduits(produitsVisibles)
       } catch (error) {
         console.error('Erreur:', error)
       } finally {
