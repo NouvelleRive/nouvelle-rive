@@ -31,6 +31,7 @@ type Deposante = {
   id: string
   nom?: string
   email?: string
+  emails?: string[]
   trigramme?: string
   instagram?: string
   accroche?: string
