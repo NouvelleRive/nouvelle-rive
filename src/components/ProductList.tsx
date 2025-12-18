@@ -57,6 +57,7 @@ export type Produit = {
   trigramme?: string
   recu?: boolean
   statutRecuperation?: 'aRecuperer' | 'vole' | null
+  forceDisplay?: boolean
 }
 
 export type Deposant = {
