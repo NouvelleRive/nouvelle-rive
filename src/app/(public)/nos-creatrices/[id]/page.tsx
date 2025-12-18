@@ -9,6 +9,7 @@ import { db } from '@/lib/firebaseConfig'
 type Creatrice = {
   nom: string
   slug: string
+  trigramme?: string
   specialite: string
   accroche: string
   description: string
