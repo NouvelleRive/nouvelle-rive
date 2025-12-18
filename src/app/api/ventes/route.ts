@@ -27,13 +27,18 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const chineurUid = searchParams.get('chineurUid')
     const chineurEmail = searchParams.get('chineurEmail')
+    const trigramme = searchParams.get('trigramme')
 
     // D'abord déclarer la query par défaut
     let query: FirebaseFirestore.Query = adminDb.collection('ventes')
       .orderBy('dateVente', 'desc')
 
     // Ensuite filtrer si nécessaire
-    if (chineurEmail) {
+    if (trigramme) {
+      query = adminDb.collection('ventes')
+        .where('trigramme', '==', trigramme)
+        .orderBy('dateVente', 'desc')
+    } else if (chineurEmail) {
       query = adminDb.collection('ventes')
         .where('chineur', '==', chineurEmail)
         .orderBy('dateVente', 'desc')
@@ -65,7 +70,7 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    console.log(`✅ ${ventes.length} ventes chargées${chineurEmail ? ` pour ${chineurEmail}` : chineurUid ? ` pour ${chineurUid}` : ''}`)
+    console.log(`✅ ${ventes.length} ventes chargées${trigramme ? ` pour trigramme ${trigramme}` : chineurEmail ? ` pour ${chineurEmail}` : chineurUid ? ` pour ${chineurUid}` : ''}`)
     return NextResponse.json({ success: true, ventes })
   } catch (err: any) {
     console.error('[API VENTES GET]', err)

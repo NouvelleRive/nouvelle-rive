@@ -25,6 +25,7 @@ export default function MesVentesPage() {
       setUser(u)
 
       // Charger les infos chineuse depuis la RACINE du document (après migration)
+      let trigramme = ''
       try {
         const deposantsSnap = await getDocs(
           query(collection(db, 'chineuse'), where('email', '==', u.email))
@@ -32,6 +33,7 @@ export default function MesVentesPage() {
         
         if (!deposantsSnap.empty) {
           const depData = deposantsSnap.docs[0].data()
+          trigramme = depData.trigramme || ''
           
           // ✅ Toutes les infos sont maintenant à la racine
           setChineuse({
@@ -51,16 +53,19 @@ export default function MesVentesPage() {
         console.error('Erreur chargement deposant:', err)
       }
 
-      await fetchVentes(u.email!)
+      await fetchVentes(trigramme, u.email!)
     })
     return () => unsub()
   }, [router])
 
-  async function fetchVentes(email: string) {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/ventes?chineurEmail=${encodeURIComponent(email)}`)
-      const data = await res.json()
+async function fetchVentes(trigramme: string, email: string) {
+  setLoading(true)
+  try {
+    const param = trigramme
+      ? `trigramme=${encodeURIComponent(trigramme)}`
+      : `chineurEmail=${encodeURIComponent(email)}`
+      const res = await fetch(`/api/ventes?${param}`)
+    const data = await res.json()
       if (data.success) {
         setVentes(data.ventes || [])
       }
@@ -72,10 +77,10 @@ export default function MesVentesPage() {
   }
 
   const handleRefresh = async () => {
-    if (user?.email) {
-      await fetchVentes(user.email)
-    }
+  if (user?.email) {
+    await fetchVentes(chineuse?.codeChineuse || '', user.email)
   }
+}
 
   return (
     <SalesList
