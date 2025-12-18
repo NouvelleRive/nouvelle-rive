@@ -6,9 +6,7 @@ import { adminDb } from '@/lib/firebaseAdmin'
 
 export async function GET() {
   try {
-    const snap = await adminDb.collection('produits')
-      .where('vendu', '!=', true)
-      .get()
+    const snap = await adminDb.collection('produits').get()
 
     const produits = snap.docs
       .map(doc => {
@@ -23,9 +21,10 @@ export async function GET() {
           prix: d.prix || 0,
           quantite: d.quantite ?? 1,
           statut: d.statut || '',
+          vendu: d.vendu || false,
         }
       })
-      .filter(p => p.quantite > 0 && p.statut !== 'supprime' && p.statut !== 'retour')
+      .filter(p => p.vendu !== true && p.quantite > 0 && p.statut !== 'supprime' && p.statut !== 'retour')
       .sort((a, b) => a.sku.localeCompare(b.sku))
 
     return NextResponse.json({ success: true, produits })
