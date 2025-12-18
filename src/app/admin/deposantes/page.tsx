@@ -58,7 +58,7 @@ const EMPTY_FORM = {
   id: '',
   nom: '',
   trigramme: '',
-  email: '',
+  emails: [] as string[],
   instagram: '',
   accroche: '',
   description: '',
@@ -115,7 +115,7 @@ export default function AdminDeposantesPage() {
       id: d.id,
       nom: d.nom || '',
       trigramme: d.trigramme || '',
-      email: d.email || '',
+      emails: Array.isArray(d.emails) ? d.emails : (d.email ? [d.email] : []),
       instagram: d.instagram || '',
       accroche: d.accroche || '',
       description: d.description || '',
@@ -218,7 +218,7 @@ export default function AdminDeposantesPage() {
         id: formData.id || undefined,
         nom: formData.nom.trim(),
         trigramme: formData.trigramme.trim().toUpperCase(),
-        email: formData.email.trim(),
+        emails: formData.emails.filter(e => e.trim()),
         instagram: formData.instagram.trim(),
         accroche: formData.accroche.trim(),
         description: formData.description.trim(),
@@ -486,19 +486,45 @@ export default function AdminDeposantesPage() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informations générales</h3>
                 <div className="grid grid-cols-2 gap-4">
+                  
                   <div>
                     <label className="block text-sm font-medium mb-1">
-                      Nom * {fieldStatus(formData.nom)}
+                      Emails {formData.emails.length === 0 && <span className="text-red-400 text-xs ml-1">⚠️ aucun</span>}
+                      {formData.emails.length > 0 && <span className="text-green-500 text-xs ml-1">✓ {formData.emails.length}</span>}
                     </label>
-                    <input
-                      type="text"
-                      value={formData.nom}
-                      onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                      placeholder="Ines Pineau"
-                      className="w-full border rounded px-3 py-2"
-                    />
+                    <div className="space-y-2">
+                      {formData.emails.map((email, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => {
+                              const newEmails = [...formData.emails]
+                              newEmails[idx] = e.target.value
+                              setFormData({ ...formData, emails: newEmails })
+                            }}
+                            placeholder="contact@example.com"
+                            className="flex-1 border rounded px-3 py-2"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, emails: formData.emails.filter((_, i) => i !== idx) })}
+                            className="p-2 text-red-400 hover:text-red-600"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, emails: [...formData.emails, ''] })}
+                        className="flex items-center gap-2 text-sm text-[#22209C] hover:underline"
+                      >
+                        <Plus size={16} /> Ajouter un email
+                      </button>
+                    </div>
                   </div>
-                  <div>
+  
                     <label className="block text-sm font-medium mb-1">
                       Trigramme * {fieldStatus(formData.trigramme)}
                     </label>
