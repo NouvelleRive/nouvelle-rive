@@ -44,10 +44,18 @@ export default function BoutiquePage() {
         )
         
         const snapshot = await getDocs(q)
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Produit[]
+        const data = snapshot.docs.map(doc => {
+          const d = doc.data()
+          // Prioriser photos.face (détourée) sur imageUrls
+          const imageUrls = d.photos?.face 
+            ? [d.photos.face, ...(d.imageUrls || [])]
+            : d.imageUrls || []
+          return {
+            id: doc.id,
+            ...d,
+            imageUrls
+          }
+        }) as Produit[]
 
         // Filtrer : seulement les produits avec photo détourée OU tryon OU forcé
         const produitsVisibles = data.filter(p => {
