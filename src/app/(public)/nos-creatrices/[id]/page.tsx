@@ -49,6 +49,7 @@ export default function CreateurPage() {
           setCreatrice({
             nom: data.nom || slug,
             slug: data.slug || slug,
+            trigramme: data.trigramme || '',
             specialite: data.specialite || '',
             accroche: data.accroche || '',
             description: data.description || '',
@@ -75,7 +76,7 @@ export default function CreateurPage() {
       try {
         const produitsQuery = query(
           collection(db, 'produits'),
-          where('trigramme', '==', creatrice.slug.toUpperCase()),
+          where('trigramme', '==', creatrice.trigramme),
           where('vendu', '!=', true)
         )
         const produitsSnap = await getDocs(produitsQuery)
