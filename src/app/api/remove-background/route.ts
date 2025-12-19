@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     console.log('🔄 Détourage Replicate pour:', imageUrl)
 
     const output = await replicate.run(
-      "cjwbw/rembg",
+      "smoretalk/rembg-enhance:4067ee2a58f6c161d434a9c077cfa012820b8e076efa2772aa171e26557da919",
       {
         input: {
           image: imageUrl
@@ -26,17 +26,14 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Détourage terminé:', output)
 
-    // Extraire l'URL
-    let removedBgUrl: string | null = null
-    if (typeof output === 'string') {
-      removedBgUrl = output
-    } else if (output && typeof output === 'object') {
-      removedBgUrl = (output as any).output || (output as any).url || (output as any)[0] || null
-    }
+    // Extraire l'URL avec la méthode .url()
+    const removedBgUrl = typeof output === 'object' && output !== null && 'url' in output
+      ? (output as any).url()
+      : typeof output === 'string'
+        ? output
+        : null
 
-    if (!removedBgUrl) {
-      console.log('⚠️ Pas d\'URL dans output:', JSON.stringify(output))
-    }
+    console.log('✅ URL détourée:', removedBgUrl)
 
     return NextResponse.json({ 
       success: true, 
