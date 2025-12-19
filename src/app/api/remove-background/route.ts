@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     console.log('🔄 Détourage Replicate pour:', imageUrl)
 
     const output = await replicate.run(
-      "ilkerc/rembg:e809cd61a78c0954350fb03725194388f44dcf66",
+      "cjwbw/rembg",
       {
         input: {
           image: imageUrl
