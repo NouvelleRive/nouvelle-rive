@@ -141,7 +141,7 @@ export default function ProduitPage() {
 
   // Vérifier si la catégorie nécessite une taille
   const afficherTaille = (categorie: string) => {
-    const catLower = categorie.toLowerCase()
+    const catLower = (typeof categorie === 'string' ? categorie : categorie?.label || '').toLowerCase()
     return !categoriesSansTaille.some(cat => catLower.includes(cat))
   }
 
