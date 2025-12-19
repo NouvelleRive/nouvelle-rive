@@ -9,16 +9,14 @@ const replicate = new Replicate({
 export async function POST(req: NextRequest) {
   try {
     const { imageUrl } = await req.json()
-
     if (!imageUrl) {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
     }
 
     console.log('🔄 Détourage Replicate pour:', imageUrl)
 
-    // Appeler le modèle rembg sur Replicate
     const output = await replicate.run(
-      "smoretalk/rembg-enhance:4067ee2a58f6c161d434a9c077cfa012820b8e076efa2c8a89d2caa82fdd4bf2",
+      "ilkerc/rembg:e809cd61a78c0954350fb03725194388f44dcf66",
       {
         input: {
           image: imageUrl
@@ -28,15 +26,17 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Détourage terminé:', output)
 
-    // output est l'URL de l'image détourée (fond transparent)
-    // output peut être une string ou un objet
-    const removedBgUrl = typeof output === 'string' 
-      ? output 
-      : Array.isArray(output) 
-        ? output[0] 
-        : (output as any)?.url || null
+    // Extraire l'URL
+    let removedBgUrl: string | null = null
+    if (typeof output === 'string') {
+      removedBgUrl = output
+    } else if (output && typeof output === 'object') {
+      removedBgUrl = (output as any).output || (output as any).url || (output as any)[0] || null
+    }
 
-    console.log('✅ URL détourée:', removedBgUrl)
+    if (!removedBgUrl) {
+      console.log('⚠️ Pas d\'URL dans output:', JSON.stringify(output))
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ Erreur détourage:', error)
+    console.error('❌ Erreur détourage:', error.message)
     return NextResponse.json(
       { error: error.message || 'Erreur détourage' },
       { status: 500 }
