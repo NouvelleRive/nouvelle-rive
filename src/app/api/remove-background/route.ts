@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     // Appeler le modèle rembg sur Replicate
     const output = await replicate.run(
-      "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+      "smoretalk/rembg-enhance:4067ee2a58f6c161d434a9c077cfa012820b8e076efa2c8a89d2caa82fdd4bf2",
       {
         input: {
           image: imageUrl
