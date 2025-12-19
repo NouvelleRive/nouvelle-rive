@@ -39,34 +39,37 @@ async function uploadRaw(file: File): Promise<string> {
   return data.secure_url
 }
 
-/**
- * Upload une image depuis une URL vers Cloudinary
- */
 async function uploadFromUrl(imageUrl: string): Promise<string> {
   const { cloudName, uploadPreset } = getCloudinaryConfig()
 
+  // Télécharger l'image d'abord
+  const response = await fetch(imageUrl)
+  if (!response.ok) {
+    throw new Error(`Erreur téléchargement image: ${response.status}`)
+  }
+  const blob = await response.blob()
+
   const formData = new FormData()
-  formData.append('file', imageUrl)
+  formData.append('file', blob, 'processed.png')
   formData.append('upload_preset', uploadPreset)
   formData.append('folder', 'produits')
-  
 
-  const response = await fetch(
+  const uploadResponse = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
     { method: 'POST', body: formData }
   )
 
-  if (!response.ok) {
-    throw new Error(`Erreur upload Cloudinary: ${response.status}`)
+  if (!uploadResponse.ok) {
+    throw new Error(`Erreur upload Cloudinary: ${uploadResponse.status}`)
   }
 
-  const data = await response.json()
+  const data = await uploadResponse.json()
   
   // Ajouter fond blanc + recadrage carré
   const baseUrl = data.secure_url
   const urlParts = baseUrl.split('/upload/')
   if (urlParts.length === 2) {
-   return `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200,e_improve,e_auto_brightness,e_auto_contrast,e_vibrance:15,e_sharpen:80,e_shadow:40,q_auto:best,f_auto/${urlParts[1]}`
+    return `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200,e_improve,e_auto_brightness,e_auto_contrast,e_vibrance:15,e_sharpen:80,e_shadow:40,q_auto:best,f_auto/${urlParts[1]}`
   }
   return baseUrl
 }
