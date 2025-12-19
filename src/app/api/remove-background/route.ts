@@ -29,11 +29,20 @@ export async function POST(req: NextRequest) {
     console.log('✅ Détourage terminé:', output)
 
     // output est l'URL de l'image détourée (fond transparent)
+    // output peut être une string ou un objet
+    const removedBgUrl = typeof output === 'string' 
+      ? output 
+      : Array.isArray(output) 
+        ? output[0] 
+        : (output as any)?.url || null
+
+    console.log('✅ URL détourée:', removedBgUrl)
+
     return NextResponse.json({ 
       success: true, 
-      removedBgUrl: output 
+      removedBgUrl 
     })
-
+    
   } catch (error: any) {
     console.error('❌ Erreur détourage:', error)
     return NextResponse.json(
