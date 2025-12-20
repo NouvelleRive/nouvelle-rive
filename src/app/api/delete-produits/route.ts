@@ -20,22 +20,7 @@ export async function POST(req: NextRequest) {
     if (!productId) {
       return NextResponse.json({ success: false, error: 'productId manquant' }, { status: 400 })
     }
-
-    // Valider destock : pas besoin d'auth (vendeuses non connectées)
-    if (justif === 'valider_destock') {
-      await produitRef.update({
-        statut: 'retour',
-        statutRecuperation: null,
-        dateRetour: FieldValue.serverTimestamp(),
-        derniereAction: 'retour_valide',
-      })
-      
-      return NextResponse.json({
-        success: true,
-        action: 'retour',
-      })
-    }
-
+    
     // Récupérer le produit d'abord
     const produitRef = adminDb.collection('produits').doc(String(productId))
     const produitSnap = await produitRef.get()
@@ -77,14 +62,6 @@ export async function POST(req: NextRequest) {
     const userEmail = String(decoded?.email || '')
     const isAdmin = userEmail === ADMIN_EMAIL
 
-    // Récupérer le produit
-    const produitRef = adminDb.collection('produits').doc(String(productId))
-    const produitSnap = await produitRef.get()
-
-    if (!produitSnap.exists) {
-      return NextResponse.json({ success: false, error: 'Produit non trouvé' }, { status: 404 })
-    }
-
     const data = produitSnap.data() as any
 
     // Vérifier que l'utilisateur est admin ou propriétaire
@@ -108,22 +85,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         action: 'demande_recuperation',
-      })
-
-    } else if (justif === 'valider_destock') {
-      // Vendeuse valide → Cloud Function supprimera de Square
-      await produitRef.update({
-        statut: 'retour',
-        statutRecuperation: null,
-        dateRetour: FieldValue.serverTimestamp(),
-        derniereAction: 'retour_valide',
-      })
-      
-      console.log(`✅ Produit ${productId} déstocké`)
-      
-      return NextResponse.json({
-        success: true,
-        action: 'retour',
       })
 
     } else {
