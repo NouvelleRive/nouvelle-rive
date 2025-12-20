@@ -27,13 +27,47 @@ export async function POST(req: NextRequest) {
     console.log('✅ Détourage terminé:', output)
 
     // Extraire l'URL avec la méthode .url()
-    const removedBgUrl = typeof output === 'object' && output !== null && 'url' in output
+    const replicateUrl = typeof output === 'object' && output !== null && 'url' in output
       ? (output as any).url()
       : typeof output === 'string'
         ? output
         : null
 
-    console.log('✅ URL détourée:', removedBgUrl)
+    if (!replicateUrl) {
+      return NextResponse.json({ success: true, removedBgUrl: null })
+    }
+
+    // Télécharger l'image détourée côté serveur
+    const imgResponse = await fetch(replicateUrl)
+    if (!imgResponse.ok) {
+      console.error('❌ Erreur téléchargement image détourée')
+      return NextResponse.json({ success: true, removedBgUrl: null })
+    }
+    const blob = await imgResponse.blob()
+
+    // Upload sur Cloudinary
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+
+    const formData = new FormData()
+    formData.append('file', blob, 'detoured.png')
+    formData.append('upload_preset', uploadPreset!)
+    formData.append('folder', 'produits')
+
+    const cloudinaryResponse = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      { method: 'POST', body: formData }
+    )
+
+    if (!cloudinaryResponse.ok) {
+      console.error('❌ Erreur upload Cloudinary:', cloudinaryResponse.status)
+      return NextResponse.json({ success: true, removedBgUrl: null })
+    }
+
+    const cloudinaryData = await cloudinaryResponse.json()
+    const removedBgUrl = cloudinaryData.secure_url
+
+    console.log('✅ URL Cloudinary:', removedBgUrl)
 
     return NextResponse.json({ 
       success: true, 
