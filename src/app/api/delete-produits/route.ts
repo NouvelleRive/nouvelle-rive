@@ -21,6 +21,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'productId manquant' }, { status: 400 })
     }
 
+    // Valider destock : pas besoin d'auth (vendeuses non connectées)
+    if (justif === 'valider_destock') {
+      await produitRef.update({
+        statut: 'retour',
+        statutRecuperation: null,
+        dateRetour: FieldValue.serverTimestamp(),
+        derniereAction: 'retour_valide',
+      })
+      
+      return NextResponse.json({
+        success: true,
+        action: 'retour',
+      })
+    }
+
     // --- Auth Bearer ---
     const authHeader = req.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null

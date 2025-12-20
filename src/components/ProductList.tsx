@@ -1016,9 +1016,6 @@ const handleUpdateSquare = async () => {
               <h3 className="text-lg font-semibold mb-4 text-amber-700">
                 ⚠️ À récupérer ({produitsARecuperer.length})
               </h3>
-              <p className="text-sm text-amber-600 mb-4">
-                Ces produits ont été signalés par la vendeuse. Merci de les récupérer en boutique.
-              </p>
               <div className="space-y-3">
                 {produitsARecuperer.map((p) => {
                   const allImages = getAllImages(p)
