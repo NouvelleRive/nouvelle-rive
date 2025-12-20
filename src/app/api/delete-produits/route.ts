@@ -36,6 +36,29 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // Récupérer le produit d'abord
+    const produitRef = adminDb.collection('produits').doc(String(productId))
+    const produitSnap = await produitRef.get()
+
+    if (!produitSnap.exists) {
+      return NextResponse.json({ success: false, error: 'Produit non trouvé' }, { status: 404 })
+    }
+
+    // Valider destock : pas besoin d'auth (vendeuses non connectées)
+    if (justif === 'valider_destock') {
+      await produitRef.update({
+        statut: 'retour',
+        statutRecuperation: null,
+        dateRetour: FieldValue.serverTimestamp(),
+        derniereAction: 'retour_valide',
+      })
+      
+      return NextResponse.json({
+        success: true,
+        action: 'retour',
+      })
+    }
+
     // --- Auth Bearer ---
     const authHeader = req.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
