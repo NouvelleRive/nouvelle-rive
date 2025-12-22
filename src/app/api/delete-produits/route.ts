@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (!productId) {
       return NextResponse.json({ success: false, error: 'productId manquant' }, { status: 400 })
     }
-    
+
     // Récupérer le produit d'abord
     const produitRef = adminDb.collection('produits').doc(String(productId))
     const produitSnap = await produitRef.get()
@@ -65,9 +65,9 @@ export async function POST(req: NextRequest) {
     const data = produitSnap.data() as any
 
     // Vérifier que l'utilisateur est admin ou propriétaire
-    if (!isAdmin && data.chineurUid !== decoded?.uid) {
-      return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 403 })
-    }
+    if (!isAdmin && data.chineur !== userEmail) {
+    return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 403 })
+  }
 
     // --- Traitement selon la raison ---
     // La Cloud Function se charge de la sync Square automatiquement
