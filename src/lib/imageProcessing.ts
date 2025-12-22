@@ -69,7 +69,7 @@ async function uploadFromUrl(imageUrl: string): Promise<string> {
   const baseUrl = data.secure_url
   const urlParts = baseUrl.split('/upload/')
   if (urlParts.length === 2) {
-    return `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200,e_improve,e_auto_brightness,e_auto_contrast,e_vibrance:15,e_sharpen:80,e_shadow:40,q_auto:best,f_auto/${urlParts[1]}`
+    return `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:best,f_auto/${urlParts[1]}`
   }
   return baseUrl
 }
@@ -128,7 +128,7 @@ export async function processAndUploadProductPhoto(file: File): Promise<{
   console.log('⚠️ Fallback: recadrage simple sans détourage')
   const urlParts = originalUrl.split('/upload/')
   const fallbackUrl = urlParts.length === 2
-    ? `${urlParts[0]}/upload/c_fill,g_auto,ar_1:1,w_1200,h_1200,e_improve,e_auto_brightness,e_auto_contrast,e_vibrance:15,e_sharpen:60,q_auto:good,f_auto/${urlParts[1]}`
+    ? `${urlParts[0]}/upload/c_fill,g_auto,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
     : originalUrl
 
   return { original: originalUrl, processed: fallbackUrl }
@@ -148,7 +148,7 @@ export async function uploadPhotoSimple(file: File): Promise<{
   // Transformations légères (pas de détourage)
   const urlParts = originalUrl.split('/upload/')
   const processedUrl = urlParts.length === 2
-   ? `${urlParts[0]}/upload/c_fill,g_auto,ar_1:1,w_1200,h_1200,e_improve,e_auto_brightness,e_auto_contrast,e_vibrance:15,e_sharpen:60,q_auto:good,f_auto/${urlParts[1]}`
+   ? `${urlParts[0]}/upload/c_fill,g_auto,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
     : originalUrl
 
   return { original: originalUrl, processed: processedUrl }
