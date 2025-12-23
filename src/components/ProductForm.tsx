@@ -857,6 +857,15 @@ export default function ProductForm({
   }
 
   const defaultSubmitLabel = mode === 'create' ? '✓ Ajouter le produit' : '✓ Enregistrer'
+
+  // =====================
+  // RENDER
+  // =====================
+  return (
+    <div className="space-y-4">
+      
+      {/* === GUIDE PHOTO === */}
+      <PhotoGuideModal />
       
       {/* === IMPORT EXCEL (mode création uniquement) === */}
       {mode === 'create' && showExcelImport && onExcelImport && (
@@ -1469,7 +1478,7 @@ export default function ProductForm({
           )}
         </div>
 
-        {/* BOUTONS */}
+       {/* BOUTONS */}
         <div className="flex gap-3">
           {onCancel && (
             <button type="button" onClick={onCancel} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition">
