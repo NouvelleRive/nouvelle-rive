@@ -9,6 +9,74 @@ import { checkSkuUnique } from '@/lib/admin/helpers'
 import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
 
 // =====================
+// GUIDE PHOTO MODAL
+// =====================
+const GUIDE_KEY = 'photoGuideLastSeen'
+const GUIDE_DELAY = 24 * 60 * 60 * 1000 // 24h
+
+function PhotoGuideModal() {
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    const lastSeen = localStorage.getItem(GUIDE_KEY)
+    if (!lastSeen || Date.now() - parseInt(lastSeen) > GUIDE_DELAY) {
+      setShow(true)
+    }
+  }, [])
+
+  const handleClose = () => {
+    localStorage.setItem(GUIDE_KEY, Date.now().toString())
+    setShow(false)
+  }
+
+  if (!show) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-[#22209C] mb-4 flex items-center gap-2">
+          📸 Guide photo
+        </h2>
+        
+        <p className="text-sm text-gray-600 mb-4">
+          Pour un détourage optimal, vos photos doivent respecter ces critères :
+        </p>
+        
+        <ul className="space-y-3 mb-6">
+          <li className="flex items-start gap-3">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span className="text-sm"><strong>Fond uni</strong> — mur blanc, drap, sol neutre</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span className="text-sm"><strong>Pas de main visible</strong> — utilisez un cintre ou posez le vêtement</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span className="text-sm"><strong>Étiquette prix retirée</strong> — ou masquée derrière le vêtement</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span className="text-sm"><strong>Produit entier visible</strong> — ne coupez pas les bords</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-green-500 mt-0.5">✓</span>
+            <span className="text-sm"><strong>Bonne luminosité</strong> — évitez les zones sombres</span>
+          </li>
+        </ul>
+        
+        <button
+          onClick={handleClose}
+          className="w-full bg-[#22209C] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition"
+        >
+          ✓ C'est compris
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// =====================
 // TYPES
 // =====================
 type Cat = { label: string; idsquare?: string }
@@ -789,12 +857,6 @@ export default function ProductForm({
   }
 
   const defaultSubmitLabel = mode === 'create' ? '✓ Ajouter le produit' : '✓ Enregistrer'
-
-  // =====================
-  // RENDER
-  // =====================
-  return (
-    <div className="space-y-4">
       
       {/* === IMPORT EXCEL (mode création uniquement) === */}
       {mode === 'create' && showExcelImport && onExcelImport && (
