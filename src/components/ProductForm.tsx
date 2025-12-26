@@ -1374,7 +1374,24 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
               {formData.existingPhotos.face && !formData.deletedPhotos.face && (
                 <div className="relative group">
                   <img src={formData.existingPhotos.face} alt="Face" className="w-full h-32 object-cover rounded border" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const currentUrl = formData.existingPhotos.face!
+                        const rotatedUrl = currentUrl.includes('/upload/') 
+                          ? currentUrl.replace('/upload/', '/upload/a_90,') 
+                          : currentUrl
+                        setFormData(prev => ({
+                          ...prev,
+                          existingPhotos: { ...prev.existingPhotos, face: rotatedUrl }
+                        }))
+                      }} 
+                      className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+                      title="Tourner 90°"
+                    >
+                      <RefreshCw size={16} />
+                    </button>
                     <button type="button" onClick={() => handleDeleteExistingPhoto('face')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                       <X size={16} />
                     </button>
