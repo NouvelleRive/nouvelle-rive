@@ -5,18 +5,23 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
-import { Save, Plus, X } from 'lucide-react'
+import { Save, Plus, X, Trash2 } from 'lucide-react'
+
+type Critere = {
+  type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
+  valeur: string
+}
+
+type Regle = {
+  id: string
+  criteres: Critere[]
+}
 
 type PageConfig = {
-  chineuses: string[]
-  categoriesContient: string[]
-  nomContient: string[]
-  descriptionContient: string[]
-  marques: string[]
+  regles: Regle[]
   prixMin?: number
   prixMax?: number
   joursRecents?: number
-  logique: 'ET' | 'OU'
 }
 
 type Chineuse = {
@@ -37,38 +42,26 @@ const PAGES = [
 ]
 
 const CATEGORIES = [
-  'Ensemble',
-  'Haut',
-  'Pantalon',
-  'Robe',
-  'Jupe / Short',
-  'Veste / Manteau',
-  'Chaussures',
-  'Pull / Gilet',
-  'Sac',
-  'Ceinture',
-  'Combinaison',
-  'Bracelet',
-  'Boucles d\'oreilles',
-  'Collier',
-  'Bague',
-  'Broches',
-  'Accessoires',
-  'Earcuff',
-  'Charms',
-  'Piercing',
-  'Porte clef',
-  'Porte briquet',
-  'Lunettes',
+  'Ensemble', 'Haut', 'Pantalon', 'Robe', 'Jupe / Short', 'Veste / Manteau',
+  'Chaussures', 'Pull / Gilet', 'Sac', 'Ceinture', 'Combinaison', 'Bracelet',
+  'Boucles d\'oreilles', 'Collier', 'Bague', 'Broches', 'Accessoires',
+  'Earcuff', 'Charms', 'Piercing', 'Porte clef', 'Porte briquet', 'Lunettes',
+]
+
+const TYPES_CRITERES = [
+  { value: 'categorie', label: 'Catégorie' },
+  { value: 'nom', label: 'Nom contient' },
+  { value: 'description', label: 'Description contient' },
+  { value: 'marque', label: 'Marque' },
+  { value: 'chineuse', label: 'Chineuse' },
 ]
 
 const DEFAULT_CONFIG: PageConfig = {
-  chineuses: [],
-  categoriesContient: [],
-  nomContient: [],
-  descriptionContient: [],
-  marques: [],
-  logique: 'OU',
+  regles: [],
+}
+
+function generateId() {
+  return Math.random().toString(36).substr(2, 9)
 }
 
 export default function AdminSitePage() {
@@ -105,7 +98,14 @@ export default function AdminSitePage() {
         const docSnap = await getDoc(docRef)
         
         if (docSnap.exists()) {
-          setConfig({ ...DEFAULT_CONFIG, ...docSnap.data() } as PageConfig)
+          const data = docSnap.data()
+          // Migration : convertir ancien format vers nouveau si nécessaire
+          if (data.regles) {
+            setConfig(data as PageConfig)
+          } else {
+            // Ancien format, on repart de zéro
+            setConfig(DEFAULT_CONFIG)
+          }
         } else {
           setConfig(DEFAULT_CONFIG)
         }
@@ -135,28 +135,75 @@ export default function AdminSitePage() {
     }
   }
 
-  // Ajouter à un tableau
-  const addToArray = (key: keyof PageConfig, value: string) => {
-    if (!value.trim()) return
-    const arr = config[key] as string[]
-    if (arr.includes(value)) return
-    setConfig({ ...config, [key]: [...arr, value] })
+  // Ajouter une règle
+  const addRegle = () => {
+    setConfig({
+      ...config,
+      regles: [...config.regles, { id: generateId(), criteres: [] }]
+    })
   }
 
-  // Supprimer d'un tableau
-  const removeFromArray = (key: keyof PageConfig, value: string) => {
-    const arr = config[key] as string[]
-    setConfig({ ...config, [key]: arr.filter(v => v !== value) })
+  // Supprimer une règle
+  const removeRegle = (regleId: string) => {
+    setConfig({
+      ...config,
+      regles: config.regles.filter(r => r.id !== regleId)
+    })
   }
 
-  const hasFilters = config.chineuses.length > 0 || 
-    config.categoriesContient.length > 0 || 
-    config.nomContient.length > 0 || 
-    config.descriptionContient.length > 0 ||
-    config.marques.length > 0 || 
-    config.prixMin || 
-    config.prixMax || 
-    config.joursRecents
+  // Ajouter un critère à une règle
+  const addCritere = (regleId: string) => {
+    setConfig({
+      ...config,
+      regles: config.regles.map(r => {
+        if (r.id !== regleId) return r
+        return {
+          ...r,
+          criteres: [...r.criteres, { type: 'categorie', valeur: '' }]
+        }
+      })
+    })
+  }
+
+  // Modifier un critère
+  const updateCritere = (regleId: string, critereIndex: number, field: 'type' | 'valeur', value: string) => {
+    setConfig({
+      ...config,
+      regles: config.regles.map(r => {
+        if (r.id !== regleId) return r
+        const newCriteres = [...r.criteres]
+        if (field === 'type') {
+          newCriteres[critereIndex] = { type: value as Critere['type'], valeur: '' }
+        } else {
+          newCriteres[critereIndex] = { ...newCriteres[critereIndex], valeur: value }
+        }
+        return { ...r, criteres: newCriteres }
+      })
+    })
+  }
+
+  // Supprimer un critère
+  const removeCritere = (regleId: string, critereIndex: number) => {
+    setConfig({
+      ...config,
+      regles: config.regles.map(r => {
+        if (r.id !== regleId) return r
+        return {
+          ...r,
+          criteres: r.criteres.filter((_, i) => i !== critereIndex)
+        }
+      })
+    })
+  }
+
+  // Formater l'affichage d'une règle
+  const formatRegle = (regle: Regle) => {
+    if (regle.criteres.length === 0) return '(vide)'
+    return regle.criteres.map(c => {
+      const typeLabel = TYPES_CRITERES.find(t => t.value === c.type)?.label || c.type
+      return `${typeLabel} = "${c.valeur}"`
+    }).join(' ET ')
+  }
 
   return (
     <div className="space-y-6">
@@ -181,188 +228,175 @@ export default function AdminSitePage() {
       ) : (
         <div className="bg-white border rounded-lg p-6 space-y-6">
           
-          {/* Résumé des filtres actifs */}
-          {hasFilters && (
+          {/* Résumé des règles */}
+          {config.regles.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-blue-800 mb-2">📋 Filtres actifs pour cette page :</h3>
-              <ul className="text-sm text-blue-700 space-y-1">
-                {config.chineuses.length > 0 && <li>• Chineuses : {config.chineuses.join(', ')}</li>}
-                {config.categoriesContient.length > 0 && <li>• Catégories : {config.categoriesContient.join(', ')}</li>}
-                {config.nomContient.length > 0 && <li>• Nom contient : {config.nomContient.join(', ')}</li>}
-                {config.descriptionContient.length > 0 && <li>• Description contient : {config.descriptionContient.join(', ')}</li>}
-                {config.marques.length > 0 && <li>• Marques : {config.marques.join(', ')}</li>}
-                {config.prixMin && <li>• Prix min : {config.prixMin}€</li>}
-                {config.prixMax && <li>• Prix max : {config.prixMax}€</li>}
-                {config.joursRecents && <li>• Derniers {config.joursRecents} jours</li>}
-                <li className="font-medium mt-2 pt-2 border-t border-blue-200">
-                  → Mode : {config.logique === 'ET' ? 'Tous les critères (ET)' : 'Au moins un critère (OU)'}
-                </li>
-              </ul>
+              <h3 className="text-sm font-semibold text-blue-800 mb-3">📋 Règles actives (liées par OU) :</h3>
+              <div className="space-y-2">
+                {config.regles.map((regle, idx) => (
+                  <div key={regle.id} className="flex items-center gap-2">
+                    <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">
+                      Règle {idx + 1}
+                    </span>
+                    <span className="text-sm text-blue-700">{formatRegle(regle)}</span>
+                  </div>
+                ))}
+              </div>
+              {(config.prixMin || config.prixMax || config.joursRecents) && (
+                <div className="mt-3 pt-3 border-t border-blue-200 text-sm text-blue-700">
+                  <span className="font-medium">+ Filtres globaux : </span>
+                  {config.prixMin && `Prix min ${config.prixMin}€ `}
+                  {config.prixMax && `Prix max ${config.prixMax}€ `}
+                  {config.joursRecents && `Derniers ${config.joursRecents} jours`}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Logique ET / OU */}
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium">Logique des filtres :</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfig({ ...config, logique: 'OU' })}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  config.logique === 'OU' 
-                    ? 'bg-[#22209C] text-white' 
-                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                OU (inclusif)
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfig({ ...config, logique: 'ET' })}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  config.logique === 'ET' 
-                    ? 'bg-[#22209C] text-white' 
-                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                ET (restrictif)
-              </button>
-            </div>
+          {/* Liste des règles éditables */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-700">Règles de filtrage</h3>
+            <p className="text-xs text-gray-500">
+              Un produit s'affiche s'il correspond à <strong>au moins une règle</strong> (OU).
+              <br />
+              Dans chaque règle, <strong>tous les critères</strong> doivent être remplis (ET).
+            </p>
+
+            {config.regles.map((regle, regleIndex) => (
+              <div key={regle.id} className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-medium text-sm">Règle {regleIndex + 1}</span>
+                  <button
+                    onClick={() => removeRegle(regle.id)}
+                    className="text-red-500 hover:text-red-700 p-1"
+                    title="Supprimer la règle"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                {/* Critères de la règle */}
+                <div className="space-y-2">
+                  {regle.criteres.map((critere, critereIndex) => (
+                    <div key={critereIndex} className="flex items-center gap-2 flex-wrap">
+                      {critereIndex > 0 && (
+                        <span className="text-xs text-gray-500 font-medium">ET</span>
+                      )}
+                      
+                      {/* Type de critère */}
+                      <select
+                        value={critere.type}
+                        onChange={(e) => updateCritere(regle.id, critereIndex, 'type', e.target.value)}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        {TYPES_CRITERES.map(t => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+
+                      <span className="text-gray-400">=</span>
+
+                      {/* Valeur du critère */}
+                      {critere.type === 'categorie' ? (
+                        <select
+                          value={critere.valeur}
+                          onChange={(e) => updateCritere(regle.id, critereIndex, 'valeur', e.target.value)}
+                          className="border rounded px-2 py-1 text-sm flex-1 min-w-[150px]"
+                        >
+                          <option value="">Choisir...</option>
+                          {CATEGORIES.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      ) : critere.type === 'chineuse' ? (
+                        <select
+                          value={critere.valeur}
+                          onChange={(e) => updateCritere(regle.id, critereIndex, 'valeur', e.target.value)}
+                          className="border rounded px-2 py-1 text-sm flex-1 min-w-[150px]"
+                        >
+                          <option value="">Choisir...</option>
+                          {chineusesList.map(c => (
+                            <option key={c.id} value={c.nom || c.id}>{c.nom || c.email || c.id}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={critere.valeur}
+                          onChange={(e) => updateCritere(regle.id, critereIndex, 'valeur', e.target.value)}
+                          placeholder="Valeur..."
+                          className="border rounded px-2 py-1 text-sm flex-1 min-w-[150px]"
+                        />
+                      )}
+
+                      <button
+                        onClick={() => removeCritere(regle.id, critereIndex)}
+                        className="text-gray-400 hover:text-red-500 p-1"
+                        title="Supprimer ce critère"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => addCritere(regle.id)}
+                  className="mt-3 text-sm text-[#22209C] hover:underline flex items-center gap-1"
+                >
+                  <Plus size={14} /> Ajouter un critère
+                </button>
+              </div>
+            ))}
+
+            <button
+              onClick={addRegle}
+              className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-[#22209C] hover:text-[#22209C] transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={18} /> Ajouter une règle
+            </button>
           </div>
 
-          {/* Chineuses - DROPDOWN */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Chineuses</label>
-            {config.chineuses.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {config.chineuses.map((v) => (
-                  <span key={v} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                    {v}
-                    <button onClick={() => removeFromArray('chineuses', v)} className="hover:opacity-70">
-                      <X size={14} />
-                    </button>
-                  </span>
-                ))}
+          {/* Filtres globaux */}
+          <div className="border-t pt-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Filtres globaux (appliqués en plus des règles)</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Prix min (€)</label>
+                <input
+                  type="number"
+                  value={config.prixMin || ''}
+                  onChange={(e) => setConfig({ ...config, prixMin: e.target.value ? Number(e.target.value) : undefined })}
+                  className="border rounded px-3 py-2 w-full"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Prix max (€)</label>
+                <input
+                  type="number"
+                  value={config.prixMax || ''}
+                  onChange={(e) => setConfig({ ...config, prixMax: e.target.value ? Number(e.target.value) : undefined })}
+                  className="border rounded px-3 py-2 w-full"
+                  placeholder="∞"
+                />
+              </div>
+            </div>
+
+            {selectedPage === 'new-in' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-1">Produits des X derniers jours</label>
+                <input
+                  type="number"
+                  value={config.joursRecents || ''}
+                  onChange={(e) => setConfig({ ...config, joursRecents: e.target.value ? Number(e.target.value) : undefined })}
+                  className="border rounded px-3 py-2 w-48"
+                  placeholder="30"
+                />
               </div>
             )}
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  addToArray('chineuses', e.target.value)
-                  e.target.value = ''
-                }
-              }}
-              className="border rounded px-3 py-2 w-full"
-              defaultValue=""
-            >
-              <option value="">+ Ajouter une chineuse...</option>
-              {chineusesList
-                .filter(c => !config.chineuses.includes(c.nom || c.id))
-                .map((c) => (
-                  <option key={c.id} value={c.nom || c.id}>{c.nom || c.email || c.id}</option>
-                ))}
-            </select>
           </div>
-
-          {/* Catégories - DROPDOWN */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Catégorie contient</label>
-            {config.categoriesContient.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {config.categoriesContient.map((v) => (
-                  <span key={v} className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
-                    {v}
-                    <button onClick={() => removeFromArray('categoriesContient', v)} className="hover:opacity-70">
-                      <X size={14} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  addToArray('categoriesContient', e.target.value)
-                  e.target.value = ''
-                }
-              }}
-              className="border rounded px-3 py-2 w-full"
-              defaultValue=""
-            >
-              <option value="">+ Ajouter une catégorie...</option>
-              {CATEGORIES.filter(c => !config.categoriesContient.includes(c)).map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Nom contient */}
-          <FieldArray
-            label="Nom du produit contient"
-            values={config.nomContient}
-            placeholder="Ex: Baguette, Trench"
-            onAdd={(v) => addToArray('nomContient', v)}
-            onRemove={(v) => removeFromArray('nomContient', v)}
-            color="yellow"
-          />
-
-          {/* Description contient */}
-          <FieldArray
-            label="Description contient"
-            values={config.descriptionContient}
-            placeholder="Ex: soie, satin, sequin"
-            onAdd={(v) => addToArray('descriptionContient', v)}
-            onRemove={(v) => removeFromArray('descriptionContient', v)}
-            color="orange"
-          />
-
-          {/* Marques */}
-          <FieldArray
-            label="Marques"
-            values={config.marques}
-            placeholder="Ex: Chanel, Hermès"
-            onAdd={(v) => addToArray('marques', v)}
-            onRemove={(v) => removeFromArray('marques', v)}
-            color="purple"
-          />
-
-          {/* Prix */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Prix min (€)</label>
-              <input
-                type="number"
-                value={config.prixMin || ''}
-                onChange={(e) => setConfig({ ...config, prixMin: e.target.value ? Number(e.target.value) : undefined })}
-                className="border rounded px-3 py-2 w-full"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Prix max (€)</label>
-              <input
-                type="number"
-                value={config.prixMax || ''}
-                onChange={(e) => setConfig({ ...config, prixMax: e.target.value ? Number(e.target.value) : undefined })}
-                className="border rounded px-3 py-2 w-full"
-                placeholder="∞"
-              />
-            </div>
-          </div>
-
-          {/* Jours récents */}
-          {selectedPage === 'new-in' && (
-            <div>
-              <label className="block text-sm font-medium mb-1">Produits des X derniers jours</label>
-              <input
-                type="number"
-                value={config.joursRecents || ''}
-                onChange={(e) => setConfig({ ...config, joursRecents: e.target.value ? Number(e.target.value) : undefined })}
-                className="border rounded px-3 py-2 w-48"
-                placeholder="30"
-              />
-            </div>
-          )}
 
           {/* Bouton sauvegarder */}
           <button
@@ -375,74 +409,6 @@ export default function AdminSitePage() {
           </button>
         </div>
       )}
-    </div>
-  )
-}
-
-function FieldArray({
-  label,
-  values,
-  placeholder,
-  onAdd,
-  onRemove,
-  color,
-}: {
-  label: string
-  values: string[]
-  placeholder: string
-  onAdd: (v: string) => void
-  onRemove: (v: string) => void
-  color: 'blue' | 'green' | 'yellow' | 'orange' | 'purple'
-}) {
-  const [input, setInput] = useState('')
-
-  const colors = {
-    blue: 'bg-blue-100 text-blue-800',
-    green: 'bg-green-100 text-green-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-    orange: 'bg-orange-100 text-orange-800',
-    purple: 'bg-purple-100 text-purple-800',
-  }
-
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-2">{label}</label>
-      {values.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {values.map((v) => (
-            <span key={v} className={`inline-flex items-center gap-1 ${colors[color]} px-2 py-1 rounded text-sm`}>
-              {v}
-              <button onClick={() => onRemove(v)} className="hover:opacity-70">
-                <X size={14} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onAdd(input)
-              setInput('')
-            }
-          }}
-          className="border rounded px-3 py-2 flex-1"
-          placeholder={placeholder}
-        />
-        <button
-          onClick={() => {
-            onAdd(input)
-            setInput('')
-          }}
-          className="border rounded px-3 py-2 hover:bg-gray-50"
-        >
-          <Plus size={18} />
-        </button>
-      </div>
     </div>
   )
 }

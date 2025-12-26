@@ -2,16 +2,21 @@
 import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
+type Critere = {
+  type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
+  valeur: string
+}
+
+type Regle = {
+  id: string
+  criteres: Critere[]
+}
+
 export type PageConfig = {
-  chineuses: string[]
-  categoriesContient: string[]
-  nomContient: string[]
-  descriptionContient: string[]
-  marques: string[]
+  regles: Regle[]
   prixMin?: number
   prixMax?: number
   joursRecents?: number
-  logique: 'ET' | 'OU'
 }
 
 export type Produit = {
@@ -30,6 +35,44 @@ export type Produit = {
 }
 
 /**
+ * Vérifie si un produit correspond à un critère
+ */
+function matchCritere(produit: Produit, critere: Critere): boolean {
+  if (!critere.valeur) return true // Critère vide = toujours vrai
+  
+  const valeurLower = critere.valeur.toLowerCase()
+  
+  switch (critere.type) {
+    case 'categorie':
+      const cat = typeof produit.categorie === 'object' ? produit.categorie?.label : produit.categorie
+      return (cat || '').toLowerCase().includes(valeurLower)
+    
+    case 'nom':
+      return (produit.nom || '').toLowerCase().includes(valeurLower)
+    
+    case 'description':
+      return (produit.description || '').toLowerCase().includes(valeurLower)
+    
+    case 'marque':
+      return (produit.marque || '').toLowerCase().includes(valeurLower)
+    
+    case 'chineuse':
+      return (produit.chineur || '').toLowerCase().includes(valeurLower)
+    
+    default:
+      return false
+  }
+}
+
+/**
+ * Vérifie si un produit correspond à une règle (tous les critères doivent matcher = ET)
+ */
+function matchRegle(produit: Produit, regle: Regle): boolean {
+  if (regle.criteres.length === 0) return false // Règle vide = ne matche rien
+  return regle.criteres.every(critere => matchCritere(produit, critere))
+}
+
+/**
  * Charge les produits filtrés selon la config d'une page
  */
 export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
@@ -37,23 +80,8 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
   const configRef = doc(db, 'siteConfig', pageId)
   const configSnap = await getDoc(configRef)
   const config: PageConfig = configSnap.exists() 
-    ? { 
-        chineuses: [], 
-        categoriesContient: [], 
-        nomContient: [], 
-        descriptionContient: [], 
-        marques: [], 
-        logique: 'OU',
-        ...configSnap.data() 
-      }
-    : { 
-        chineuses: [], 
-        categoriesContient: [], 
-        nomContient: [], 
-        descriptionContient: [], 
-        marques: [],
-        logique: 'OU'
-      }
+    ? { regles: [], ...configSnap.data() }
+    : { regles: [] }
 
   // 2. Charger tous les produits non vendus
   const q = query(
@@ -72,11 +100,11 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
     if (!hasImage) return false
 
-    // Filtre prix min/max (toujours en ET)
+    // Filtre prix min/max (toujours appliqué)
     if (config.prixMin && p.prix < config.prixMin) return false
     if (config.prixMax && p.prix > config.prixMax) return false
 
-    // Filtre jours récents (toujours en ET)
+    // Filtre jours récents (toujours appliqué)
     if (config.joursRecents && p.createdAt) {
       const createdDate = p.createdAt instanceof Timestamp 
         ? p.createdAt.toDate() 
@@ -85,59 +113,11 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
       if (daysAgo > config.joursRecents) return false
     }
 
-    // Conditions textuelles
-    const conditions: boolean[] = []
+    // Si aucune règle, on garde tous les produits (qui passent les filtres globaux)
+    if (config.regles.length === 0) return true
 
-    // Filtre chineuses
-    if (config.chineuses.length > 0) {
-      const chineurMatch = config.chineuses.some(ch => 
-        (p.chineur || '').toLowerCase().includes(ch.toLowerCase())
-      )
-      conditions.push(chineurMatch)
-    }
-
-    // Filtre catégories (contient)
-    if (config.categoriesContient.length > 0) {
-      const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-      const catMatch = config.categoriesContient.some(c => 
-        (cat || '').toLowerCase().includes(c.toLowerCase())
-      )
-      conditions.push(catMatch)
-    }
-
-    // Filtre nom (contient)
-    if (config.nomContient.length > 0) {
-      const nomMatch = config.nomContient.some(n => 
-        (p.nom || '').toLowerCase().includes(n.toLowerCase())
-      )
-      conditions.push(nomMatch)
-    }
-
-    // Filtre description (contient)
-    if (config.descriptionContient.length > 0) {
-      const descMatch = config.descriptionContient.some(d => 
-        (p.description || '').toLowerCase().includes(d.toLowerCase())
-      )
-      conditions.push(descMatch)
-    }
-
-    // Filtre marques
-    if (config.marques.length > 0) {
-      const marqueMatch = config.marques.some(m => 
-        (p.marque || '').toLowerCase().includes(m.toLowerCase())
-      )
-      conditions.push(marqueMatch)
-    }
-
-    // Si aucune condition textuelle, on garde le produit
-    if (conditions.length === 0) return true
-
-    // Appliquer la logique ET ou OU
-    if (config.logique === 'ET') {
-      return conditions.every(c => c === true)
-    } else {
-      return conditions.some(c => c === true)
-    }
+    // Vérifier si au moins une règle matche (OU)
+    return config.regles.some(regle => matchRegle(p, regle))
   })
 
   return produits

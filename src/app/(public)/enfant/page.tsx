@@ -2,52 +2,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, query, where, getDocs } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
+import { getFilteredProducts, Produit } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
-
-type Produit = {
-  id: string
-  nom: string
-  prix: number
-  imageUrls: string[]
-  categorie: string
-  marque?: string
-  taille?: string
-  vendu: boolean
-  chineur: string
-  promotion?: boolean
-  createdAt?: any
-}
 
 export default function EnfantPage() {
   const [produits, setProduits] = useState<Produit[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchEnfantProduits() {
-      try {
-        const q = query(
-          collection(db, 'produits'),
-          where('vendu', '==', false),
-          where('chineur', '==', 'BONAGE')
-        )
-        
-        const snapshot = await getDocs(q)
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Produit[]
-
-        setProduits(data)
-      } catch (error) {
-        console.error('Erreur:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchEnfantProduits()
+    getFilteredProducts('enfant')
+      .then(setProduits)
+      .catch(console.error)
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) {
