@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { Save, Plus, X } from 'lucide-react'
 
@@ -16,6 +16,13 @@ type PageConfig = {
   prixMin?: number
   prixMax?: number
   joursRecents?: number
+  logique: 'ET' | 'OU'
+}
+
+type Chineuse = {
+  id: string
+  nom?: string
+  email?: string
 }
 
 const PAGES = [
@@ -61,6 +68,7 @@ const DEFAULT_CONFIG: PageConfig = {
   nomContient: [],
   descriptionContient: [],
   marques: [],
+  logique: 'OU',
 }
 
 export default function AdminSitePage() {
@@ -68,7 +76,27 @@ export default function AdminSitePage() {
   const [config, setConfig] = useState<PageConfig>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [chineusesList, setChineusesList] = useState<Chineuse[]>([])
 
+  // Charger la liste des chineuses
+  useEffect(() => {
+    async function fetchChineuses() {
+      try {
+        const snap = await getDocs(collection(db, 'chineuse'))
+        const data = snap.docs.map(d => ({
+          id: d.id,
+          nom: d.data().nom,
+          email: d.data().email,
+        }))
+        setChineusesList(data)
+      } catch (error) {
+        console.error('Erreur chargement chineuses:', error)
+      }
+    }
+    fetchChineuses()
+  }, [])
+
+  // Charger la config quand on change de page
   useEffect(() => {
     async function fetchConfig() {
       setLoading(true)
@@ -90,6 +118,7 @@ export default function AdminSitePage() {
     fetchConfig()
   }, [selectedPage])
 
+  // Sauvegarder
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -106,6 +135,7 @@ export default function AdminSitePage() {
     }
   }
 
+  // Ajouter à un tableau
   const addToArray = (key: keyof PageConfig, value: string) => {
     if (!value.trim()) return
     const arr = config[key] as string[]
@@ -113,10 +143,20 @@ export default function AdminSitePage() {
     setConfig({ ...config, [key]: [...arr, value] })
   }
 
+  // Supprimer d'un tableau
   const removeFromArray = (key: keyof PageConfig, value: string) => {
     const arr = config[key] as string[]
     setConfig({ ...config, [key]: arr.filter(v => v !== value) })
   }
+
+  const hasFilters = config.chineuses.length > 0 || 
+    config.categoriesContient.length > 0 || 
+    config.nomContient.length > 0 || 
+    config.descriptionContient.length > 0 ||
+    config.marques.length > 0 || 
+    config.prixMin || 
+    config.prixMax || 
+    config.joursRecents
 
   return (
     <div className="space-y-6">
@@ -142,7 +182,7 @@ export default function AdminSitePage() {
         <div className="bg-white border rounded-lg p-6 space-y-6">
           
           {/* Résumé des filtres actifs */}
-          {(config.chineuses.length > 0 || config.categoriesContient.length > 0 || config.nomContient.length > 0 || config.marques.length > 0 || config.prixMin || config.prixMax || config.joursRecents) && (
+          {hasFilters && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-blue-800 mb-2">📋 Filtres actifs pour cette page :</h3>
               <ul className="text-sm text-blue-700 space-y-1">
@@ -154,19 +194,75 @@ export default function AdminSitePage() {
                 {config.prixMin && <li>• Prix min : {config.prixMin}€</li>}
                 {config.prixMax && <li>• Prix max : {config.prixMax}€</li>}
                 {config.joursRecents && <li>• Derniers {config.joursRecents} jours</li>}
+                <li className="font-medium mt-2 pt-2 border-t border-blue-200">
+                  → Mode : {config.logique === 'ET' ? 'Tous les critères (ET)' : 'Au moins un critère (OU)'}
+                </li>
               </ul>
             </div>
           )}
 
-          {/* Chineuses */}
-          <FieldArray
-            label="Chineuses"
-            values={config.chineuses}
-            placeholder="Nom de la chineuse"
-            onAdd={(v) => addToArray('chineuses', v)}
-            onRemove={(v) => removeFromArray('chineuses', v)}
-            color="blue"
-          />
+          {/* Logique ET / OU */}
+          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+            <span className="text-sm font-medium">Logique des filtres :</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfig({ ...config, logique: 'OU' })}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  config.logique === 'OU' 
+                    ? 'bg-[#22209C] text-white' 
+                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                OU (inclusif)
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfig({ ...config, logique: 'ET' })}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  config.logique === 'ET' 
+                    ? 'bg-[#22209C] text-white' 
+                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                ET (restrictif)
+              </button>
+            </div>
+          </div>
+
+          {/* Chineuses - DROPDOWN */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Chineuses</label>
+            {config.chineuses.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {config.chineuses.map((v) => (
+                  <span key={v} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                    {v}
+                    <button onClick={() => removeFromArray('chineuses', v)} className="hover:opacity-70">
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  addToArray('chineuses', e.target.value)
+                  e.target.value = ''
+                }
+              }}
+              className="border rounded px-3 py-2 w-full"
+              defaultValue=""
+            >
+              <option value="">+ Ajouter une chineuse...</option>
+              {chineusesList
+                .filter(c => !config.chineuses.includes(c.nom || c.id))
+                .map((c) => (
+                  <option key={c.id} value={c.nom || c.id}>{c.nom || c.email || c.id}</option>
+                ))}
+            </select>
+          </div>
 
           {/* Catégories - DROPDOWN */}
           <div>
