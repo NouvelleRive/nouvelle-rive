@@ -1088,6 +1088,7 @@ const handleUpdateSquare = async () => {
               const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
               const allImages = getAllImages(p)
               const isSelected = selectedIds.has(p.id)
+              const canGenerateTryon = false
               const retourDate =
                 p.dateRetour instanceof Timestamp
                   ? p.dateRetour.toDate()
