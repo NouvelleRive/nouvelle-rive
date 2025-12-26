@@ -77,6 +77,112 @@ function PhotoGuideModal() {
 }
 
 // =====================
+// PHOTO REORDER COMPONENT
+// =====================
+type PhotoItem = {
+  id: string
+  url: string
+  type: 'face' | 'faceOnModel' | 'dos' | 'detail'
+  label: string
+  isNew?: boolean
+  file?: File
+}
+
+function PhotoReorderSection({
+  photos,
+  onReorder,
+}: {
+  photos: PhotoItem[]
+  onReorder: (newOrder: PhotoItem[]) => void
+}) {
+  if (photos.length < 2) return null
+
+  const movePhoto = (index: number, direction: 'up' | 'down') => {
+    const newPhotos = [...photos]
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    
+    if (targetIndex < 0 || targetIndex >= photos.length) return
+    
+    // Swap
+    [newPhotos[index], newPhotos[targetIndex]] = [newPhotos[targetIndex], newPhotos[index]]
+    onReorder(newPhotos)
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t">
+      <label className="block text-xs font-medium text-gray-700 mb-2">
+        📐 Ordre d'affichage <span className="font-normal text-gray-500">(la 1ère = photo principale)</span>
+      </label>
+      <div className="space-y-2">
+        {photos.map((photo, index) => (
+          <div
+            key={photo.id}
+            className={`flex items-center gap-3 p-2 rounded-lg border ${
+              index === 0 ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'
+            }`}
+          >
+            {/* Position */}
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              index === 0 ? 'bg-blue-500 text-white' : 'bg-gray-300 text-gray-600'
+            }`}>
+              {index + 1}
+            </span>
+            
+            {/* Thumbnail */}
+            <img
+              src={photo.url}
+              alt={photo.label}
+              className="w-12 h-12 object-cover rounded border"
+            />
+            
+            {/* Label */}
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-gray-700">{photo.label}</span>
+              {photo.isNew && (
+                <span className="ml-2 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                  Nouveau
+                </span>
+              )}
+              {index === 0 && (
+                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                  Photo principale
+                </span>
+              )}
+            </div>
+            
+            {/* Arrows */}
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => movePhoto(index, 'up')}
+                disabled={index === 0}
+                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Monter"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => movePhoto(index, 'down')}
+                disabled={index === photos.length - 1}
+                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Descendre"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// =====================
 // TYPES
 // =====================
 type Cat = { label: string; idsquare?: string }
@@ -123,6 +229,8 @@ type ProductFormData = {
     dos?: boolean
     detailsIndexes?: number[]
   }
+  // Ordre des photos pour l'affichage
+  photoOrder?: PhotoItem[]
 }
 
 // Données d'import Excel
@@ -283,6 +391,9 @@ export default function ProductForm({
   // État validation SKU
   const [skuValidating, setSkuValidating] = useState(false)
 
+  // État pour l'ordre des photos
+const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
+
   // Réinitialiser le formulaire quand initialData change
   useEffect(() => {
     if (initialData) {
@@ -318,6 +429,64 @@ export default function ProductForm({
       setFormData(prev => ({ ...prev, taille: '' }))
     }
   }, [formData.categorie])
+
+  // Construire la liste des photos pour le réordonnancement
+  useEffect(() => {
+    const items: PhotoItem[] = []
+    
+    // Photos existantes
+    if (formData.existingPhotos.face && !formData.deletedPhotos.face) {
+      items.push({ id: 'existing-face', url: formData.existingPhotos.face, type: 'face', label: 'Face' })
+    }
+    if (formData.existingPhotos.faceOnModel && !formData.deletedPhotos.faceOnModel) {
+      items.push({ id: 'existing-faceOnModel', url: formData.existingPhotos.faceOnModel, type: 'faceOnModel', label: 'Portée' })
+    }
+    if (formData.existingPhotos.dos && !formData.deletedPhotos.dos) {
+      items.push({ id: 'existing-dos', url: formData.existingPhotos.dos, type: 'dos', label: 'Dos' })
+    }
+    (formData.existingPhotos.details || []).forEach((url, i) => {
+      if (!isDetailDeleted(i)) {
+        items.push({ id: `existing-detail-${i}`, url, type: 'detail', label: `Détail ${i + 1}` })
+      }
+    })
+    
+    // Nouvelles photos
+    if (formData.photoFace) {
+      items.push({ id: 'new-face', url: URL.createObjectURL(formData.photoFace), type: 'face', label: 'Face', isNew: true, file: formData.photoFace })
+    }
+    if (formData.photoDos) {
+      items.push({ id: 'new-dos', url: URL.createObjectURL(formData.photoDos), type: 'dos', label: 'Dos', isNew: true, file: formData.photoDos })
+    }
+    formData.photosDetails.forEach((file, i) => {
+      items.push({ id: `new-detail-${i}`, url: URL.createObjectURL(file), type: 'detail', label: `Détail (nouveau ${i + 1})`, isNew: true, file })
+    })
+    
+    // Conserver l'ordre existant si possible
+    if (photoOrder.length > 0) {
+      const orderedItems: PhotoItem[] = []
+      const remainingItems = [...items]
+      
+      photoOrder.forEach(orderedPhoto => {
+        const index = remainingItems.findIndex(item => item.id === orderedPhoto.id)
+        if (index !== -1) {
+          orderedItems.push(remainingItems[index])
+          remainingItems.splice(index, 1)
+        }
+      })
+      
+      // Ajouter les nouvelles photos à la fin
+      orderedItems.push(...remainingItems)
+      setPhotoOrder(orderedItems)
+    } else {
+      setPhotoOrder(items)
+    }
+  }, [
+    formData.existingPhotos,
+    formData.deletedPhotos,
+    formData.photoFace,
+    formData.photoDos,
+    formData.photosDetails,
+  ])
 
   const typeTaille = detectTypeTaille(formData.categorie)
   const taillesDisponibles = getTaillesPourCategorie(formData.categorie)
@@ -853,7 +1022,7 @@ export default function ProductForm({
       }
     }
     
-    await onSubmit(formData)
+    await onSubmit({ ...formData, photoOrder })
   }
 
   const defaultSubmitLabel = mode === 'create' ? '✓ Ajouter le produit' : '✓ Enregistrer'
@@ -1476,6 +1645,11 @@ export default function ProductForm({
               </div>
             </div>
           )}
+          {/* Section réordonnancement */}
+          <PhotoReorderSection
+            photos={photoOrder}
+            onReorder={setPhotoOrder}
+          />
         </div>
 
        {/* BOUTONS */}
@@ -1499,4 +1673,4 @@ export default function ProductForm({
 }
 
 // Export types
-export type { ProductFormData, Cat, Chineuse, ExistingPhotos, ExcelImportData }
+export type { ProductFormData, Cat, Chineuse, ExistingPhotos, ExcelImportData, PhotoItem }
