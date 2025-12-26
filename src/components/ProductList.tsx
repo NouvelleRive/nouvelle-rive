@@ -140,6 +140,7 @@ export default function ProductList({
   // Actions
   const [updatingSquare, setUpdatingSquare] = useState(false)
   const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
+  const [savingProduct, setSavingProduct] = useState(false)
 
   const categoriesLabels = categories.map((c) => c.label)
 
@@ -476,6 +477,7 @@ const handleUpdateSquare = async () => {
   // Sauvegarde produit (modification)
   const handleSaveProduct = async (data: ProductFormData) => {
     if (!editingProduct) return
+    setSavingProduct(true)
     
     try {
       const productId = editingProduct.id
@@ -611,12 +613,14 @@ const handleUpdateSquare = async () => {
       setShowForm(false)
       setEditingProduct(null)
       alert('Produit mis à jour !')
-      
-    } catch (err: any) {
-      console.error('Erreur sauvegarde:', err)
-      alert('Erreur: ' + (err.message || 'Impossible de sauvegarder'))
-    }
+        
+  } catch (err: any) {
+    console.error('Erreur sauvegarde:', err)
+    alert('Erreur: ' + (err.message || 'Impossible de sauvegarder'))
+  } finally {
+    setSavingProduct(false)  // <-- ajoute cette ligne
   }
+}
 
   // Export
   const exportToExcel = () => {
@@ -899,10 +903,10 @@ const handleUpdateSquare = async () => {
                 {/* Image */}
                 <div className="flex-shrink-0">
                   {allImages.length > 0 ? (
-                    <img
-                      src={allImages[0]}
-                      alt={p.nom}
-                      className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                   <img
+                    src={allImages[0]}
+                    alt={p.nom}
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                       onClick={() => window.open(allImages[0], '_blank')}
                     />
                   ) : (
@@ -917,14 +921,15 @@ const handleUpdateSquare = async () => {
 
                 {/* Infos principales */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-base">
-                    {p.sku && <span className="text-[#22209C]">{p.sku} - </span>}
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-2">
+                    {p.sku && <span className="text-[#22209C]">{p.sku}</span>}
+                    {p.sku && <span className="text-gray-400"> - </span>}
                     {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                   </h3>
                   {p.description && (
-                    <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>
                   )}
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 mt-1">
                     {p.createdAt instanceof Timestamp
                       ? format(p.createdAt.toDate(), 'dd/MM/yyyy')
                       : '—'}
@@ -932,6 +937,7 @@ const handleUpdateSquare = async () => {
                   {isAdmin && (
                     <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>
                   )}
+                
                   {p.recu === false && (
                   <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1">
                     <Clock size={12} /> En attente de réception
@@ -1178,6 +1184,7 @@ const handleUpdateSquare = async () => {
                 onSubmit={handleSaveProduct}
                 onCancel={() => { setShowForm(false); setEditingProduct(null) }}
                 showExcelImport={false}
+                loading={savingProduct}
               />
             </div>
           </div>
