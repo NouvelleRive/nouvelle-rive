@@ -102,8 +102,9 @@ export default function CreateurPage() {
         )
         
         const topProduits = produitsAvecFavoris
-          .sort((a, b) => b.nbFavoris - a.nbFavoris)
-          .slice(0, 3)
+        .filter(p => p.imageUrl) // Seulement les produits avec photo
+        .sort((a, b) => b.nbFavoris - a.nbFavoris)
+        .slice(0, 3)
         
         setProduits(topProduits)
       } catch (error) {
