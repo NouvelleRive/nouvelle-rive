@@ -30,14 +30,21 @@ export type Produit = {
   taille?: string
   vendu: boolean
   chineur?: string
+  trigramme?: string
   createdAt?: any
   description?: string
+}
+
+type Chineuse = {
+  id: string
+  nom?: string
+  trigramme?: string
 }
 
 /**
  * Vérifie si un produit correspond à un critère
  */
-function matchCritere(produit: Produit, critere: Critere): boolean {
+function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[]): boolean {
   if (!critere.valeur) return true // Critère vide = toujours vrai
   
   const valeurLower = critere.valeur.toLowerCase()
@@ -73,15 +80,15 @@ function matchCritere(produit: Produit, critere: Critere): boolean {
 /**
  * Vérifie si un produit correspond à une règle (tous les critères doivent matcher = ET)
  */
-function matchRegle(produit: Produit, regle: Regle): boolean {
-  if (regle.criteres.length === 0) return false // Règle vide = ne matche rien
-  return regle.criteres.every(critere => matchCritere(produit, critere))
-}
+eturn regle.criteres.every(critere => matchCritere(produit, critere))
 
 /**
  * Charge les produits filtrés selon la config d'une page
  */
-export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
+  function matchRegle(produit: Produit, regle: Regle, chineuses: Chineuse[]): boolean {
+    if (regle.criteres.length === 0) return false
+    return regle.criteres.every(critere => matchCritere(produit, critere, chineuses))
+  }
   // 1. Charger la config
   const configRef = doc(db, 'siteConfig', pageId)
   const configSnap = await getDoc(configRef)
@@ -123,7 +130,7 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     if (config.regles.length === 0) return true
 
     // Vérifier si au moins une règle matche (OU)
-    return config.regles.some(regle => matchRegle(p, regle))
+    return config.regles.some(regle => matchRegle(p, regle, chineuses))
   })
 
   return produits
