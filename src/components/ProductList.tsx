@@ -562,6 +562,49 @@ const handleUpdateSquare = async () => {
       
       if (detailsUrls.length > 0) updateData['photos.details'] = detailsUrls
       else updateData['photos.details'] = deleteField()
+
+      // Reconstruire imageUrls selon l'ordre défini par photoOrder
+      if (data.photoOrder && data.photoOrder.length > 0) {
+        const orderedUrls: string[] = []
+        for (const item of data.photoOrder) {
+          if (item.url) {
+            // Pour les nouvelles photos, on doit utiliser les URLs uploadées
+            if (item.id === 'new-face' && faceUrl) orderedUrls.push(faceUrl)
+            else if (item.id === 'new-dos' && dosUrl) orderedUrls.push(dosUrl)
+            else if (item.id.startsWith('new-detail-')) {
+              // L'index dans photosDetails
+              const idx = parseInt(item.id.replace('new-detail-', ''))
+              if (detailsUrls[idx]) orderedUrls.push(detailsUrls[idx])
+            }
+            // Pour les photos existantes
+            else if (item.id === 'existing-face' && faceUrl) orderedUrls.push(faceUrl)
+            else if (item.id === 'existing-faceOnModel' && faceOnModelUrl) orderedUrls.push(faceOnModelUrl)
+            else if (item.id === 'existing-dos' && dosUrl) orderedUrls.push(dosUrl)
+            else if (item.id.startsWith('existing-detail-')) {
+              const idx = parseInt(item.id.replace('existing-detail-', ''))
+              const originalDetails = editingProduct.photos?.details || []
+              if (originalDetails[idx] && !data.deletedPhotos.detailsIndexes?.includes(idx)) {
+                orderedUrls.push(originalDetails[idx])
+              }
+            }
+          }
+        }
+        if (orderedUrls.length > 0) {
+          updateData.imageUrls = orderedUrls
+          updateData.imageUrl = orderedUrls[0] // La première = image principale
+        }
+      } else {
+        // Fallback : construire imageUrls dans l'ordre par défaut
+        const defaultUrls: string[] = []
+        if (faceUrl) defaultUrls.push(faceUrl)
+        if (faceOnModelUrl) defaultUrls.push(faceOnModelUrl)
+        if (dosUrl) defaultUrls.push(dosUrl)
+        defaultUrls.push(...detailsUrls)
+        if (defaultUrls.length > 0) {
+          updateData.imageUrls = defaultUrls
+          updateData.imageUrl = defaultUrls[0]
+        }
+      }
       
       await updateDoc(doc(db, 'produits', productId), updateData)
       
