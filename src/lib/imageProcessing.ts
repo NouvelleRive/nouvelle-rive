@@ -69,7 +69,7 @@ async function uploadFromUrl(imageUrl: string): Promise<string> {
   const baseUrl = data.secure_url
   const urlParts = baseUrl.split('/upload/')
   if (urlParts.length === 2) {
-  return `${urlParts[0]}/upload/a_auto,b_white,c_pad,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:best,f_auto/${urlParts[1]}`
+  return `${urlParts[0]}/upload/a_exif,b_white,c_pad,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:best,f_auto/${urlParts[1]}`
   }
   return baseUrl
 }
