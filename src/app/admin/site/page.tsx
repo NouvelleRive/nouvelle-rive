@@ -1,6 +1,5 @@
 // app/admin/site/page.tsx
 'use client'
-
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
@@ -30,6 +29,32 @@ const PAGES = [
   { id: 'accessoires', label: 'Accessoires' },
 ]
 
+const CATEGORIES = [
+  'Ensemble',
+  'Haut',
+  'Pantalon',
+  'Robe',
+  'Jupe / Short',
+  'Veste / Manteau',
+  'Chaussures',
+  'Pull / Gilet',
+  'Sac',
+  'Ceinture',
+  'Combinaison',
+  'Bracelet',
+  'Boucles d\'oreilles',
+  'Collier',
+  'Bague',
+  'Broches',
+  'Accessoires',
+  'Earcuff',
+  'Charms',
+  'Piercing',
+  'Porte clef',
+  'Porte briquet',
+  'Lunettes',
+]
+
 const DEFAULT_CONFIG: PageConfig = {
   chineuses: [],
   categoriesContient: [],
@@ -44,7 +69,6 @@ export default function AdminSitePage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Charger la config quand on change de page
   useEffect(() => {
     async function fetchConfig() {
       setLoading(true)
@@ -66,7 +90,6 @@ export default function AdminSitePage() {
     fetchConfig()
   }, [selectedPage])
 
-  // Sauvegarder
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -83,7 +106,6 @@ export default function AdminSitePage() {
     }
   }
 
-  // Ajouter à un tableau
   const addToArray = (key: keyof PageConfig, value: string) => {
     if (!value.trim()) return
     const arr = config[key] as string[]
@@ -91,7 +113,6 @@ export default function AdminSitePage() {
     setConfig({ ...config, [key]: [...arr, value] })
   }
 
-  // Supprimer d'un tableau
   const removeFromArray = (key: keyof PageConfig, value: string) => {
     const arr = config[key] as string[]
     setConfig({ ...config, [key]: arr.filter(v => v !== value) })
@@ -120,6 +141,23 @@ export default function AdminSitePage() {
       ) : (
         <div className="bg-white border rounded-lg p-6 space-y-6">
           
+          {/* Résumé des filtres actifs */}
+          {(config.chineuses.length > 0 || config.categoriesContient.length > 0 || config.nomContient.length > 0 || config.marques.length > 0 || config.prixMin || config.prixMax || config.joursRecents) && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-blue-800 mb-2">📋 Filtres actifs pour cette page :</h3>
+              <ul className="text-sm text-blue-700 space-y-1">
+                {config.chineuses.length > 0 && <li>• Chineuses : {config.chineuses.join(', ')}</li>}
+                {config.categoriesContient.length > 0 && <li>• Catégories : {config.categoriesContient.join(', ')}</li>}
+                {config.nomContient.length > 0 && <li>• Nom contient : {config.nomContient.join(', ')}</li>}
+                {config.descriptionContient.length > 0 && <li>• Description contient : {config.descriptionContient.join(', ')}</li>}
+                {config.marques.length > 0 && <li>• Marques : {config.marques.join(', ')}</li>}
+                {config.prixMin && <li>• Prix min : {config.prixMin}€</li>}
+                {config.prixMax && <li>• Prix max : {config.prixMax}€</li>}
+                {config.joursRecents && <li>• Derniers {config.joursRecents} jours</li>}
+              </ul>
+            </div>
+          )}
+
           {/* Chineuses */}
           <FieldArray
             label="Chineuses"
@@ -130,15 +168,37 @@ export default function AdminSitePage() {
             color="blue"
           />
 
-          {/* Catégories contient */}
-          <FieldArray
-            label="Catégorie contient"
-            values={config.categoriesContient}
-            placeholder="Ex: Sac, Robe, Manteau"
-            onAdd={(v) => addToArray('categoriesContient', v)}
-            onRemove={(v) => removeFromArray('categoriesContient', v)}
-            color="green"
-          />
+          {/* Catégories - DROPDOWN */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Catégorie contient</label>
+            {config.categoriesContient.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {config.categoriesContient.map((v) => (
+                  <span key={v} className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+                    {v}
+                    <button onClick={() => removeFromArray('categoriesContient', v)} className="hover:opacity-70">
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  addToArray('categoriesContient', e.target.value)
+                  e.target.value = ''
+                }
+              }}
+              className="border rounded px-3 py-2 w-full"
+              defaultValue=""
+            >
+              <option value="">+ Ajouter une catégorie...</option>
+              {CATEGORIES.filter(c => !config.categoriesContient.includes(c)).map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Nom contient */}
           <FieldArray
@@ -194,7 +254,7 @@ export default function AdminSitePage() {
             </div>
           </div>
 
-          {/* Jours récents (pour New In) */}
+          {/* Jours récents */}
           {selectedPage === 'new-in' && (
             <div>
               <label className="block text-sm font-medium mb-1">Produits des X derniers jours</label>
@@ -223,7 +283,6 @@ export default function AdminSitePage() {
   )
 }
 
-// Composant réutilisable pour les champs tableau
 function FieldArray({
   label,
   values,
