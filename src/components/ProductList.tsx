@@ -1233,21 +1233,13 @@ const handleUpdateSquare = async () => {
     </button>
   </div>
 </div>
-                    
-
-                    {/* Infos droite */}
-                    <div className="hidden sm:flex flex-col items-end text-sm text-gray-500 space-y-1 min-w-[120px]">
-                      <p><span className="text-gray-400">SKU:</span> <span className="font-medium">{p.sku || '—'}</span></p>
-                      <p><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></p>
-                      <p><span className="text-gray-400">Cat:</span> <span className="font-medium">{cat || '—'}</span></p>
-                    </div>
-                  </div>
-              )
-            })}
-          </div>
+</div>
+              </div>
+            )
+          })}
         </div>
-      )}
-
+      </div>
+    )}
       {/* Modal formulaire */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
