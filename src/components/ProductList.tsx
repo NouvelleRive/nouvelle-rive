@@ -960,52 +960,39 @@ const handleUpdateSquare = async () => {
                   <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
                 </div>
 
+                
+
                 {/* Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {canGenerateTryon && (
-                    <button
-                      onClick={() => handleGenerateTryon(p)}
-                      disabled={generatingTryonId === p.id}
-                      className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50 transition-colors"
-                      title="Générer photo portée avec IA"
-                    >
-                      {generatingTryonId === p.id ? (
-                        <span className="text-xs animate-pulse">⏳</span>
-                      ) : (
-                        <Sparkles size={20} />
-                      )}
-                    </button>
-                  )}
+<div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
 
-                  <button
-                    onClick={() => handleEdit(p)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Modifier"
-                  >
-                    <MoreHorizontal size={20} />
-                  </button>
+  <button
+    onClick={() => handleEdit(p)}
+    className="p-1 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+    title="Modifier"
+  >
+    <MoreHorizontal size={16} className="sm:w-5 sm:h-5" />
+  </button>
 
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Supprimer"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+  <button
+    onClick={() => handleDelete(p.id)}
+    className="p-1 sm:p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+    title="Supprimer"
+  >
+    <Trash2 size={16} className="sm:w-5 sm:h-5" />
+  </button>
 
-                  <button
-                    onClick={() => handleToggleForceDisplay(p)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      p.forceDisplay 
-                        ? 'text-green-500 hover:bg-green-50' 
-                        : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
-                    }`}
-                    title={p.forceDisplay ? 'Visible en boutique' : 'Masqué de la boutique'}
-                  >
-                    {p.forceDisplay ? <Eye size={18} /> : <EyeOff size={18} />}
-                  </button>
-                </div>
-              </div>
+  <button
+    onClick={() => handleToggleForceDisplay(p)}
+    className={`p-1 sm:p-2 rounded-lg transition-colors ${
+      p.forceDisplay 
+        ? 'text-green-500 hover:bg-green-50' 
+        : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
+    }`}
+    title={p.forceDisplay ? 'Visible en boutique' : 'Masqué de la boutique'}
+  >
+    {p.forceDisplay ? <Eye size={14} className="sm:w-[18px] sm:h-[18px]" /> : <EyeOff size={14} className="sm:w-[18px] sm:h-[18px]" />}
+  </button>
+</div>  
 
               {/* Infos mobile (SKU, Prix, Qté) */}
               <div className="sm:hidden flex gap-4 mt-3 pt-3 border-t border-gray-100 text-sm">
@@ -1100,6 +1087,7 @@ const handleUpdateSquare = async () => {
             {produitsRecuperes.map((p) => {
               const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
               const allImages = getAllImages(p)
+              const isSelected = selectedIds.has(p.id)
               const retourDate =
                 p.dateRetour instanceof Timestamp
                   ? p.dateRetour.toDate()
@@ -1112,31 +1100,139 @@ const handleUpdateSquare = async () => {
                   key={p.id}
                   className="bg-white/60 rounded-xl border border-gray-200 p-4 shadow-sm"
                 >
-                  <div className="flex items-start gap-4">
-                    {/* Image */}
-                    <div className="flex-shrink-0">
-                      {allImages.length > 0 ? (
-                        <img src={allImages[0]} alt={p.nom} className="w-20 h-20 object-cover rounded-lg opacity-70" />
-                      ) : (
-                        <div className="w-20 h-20 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 gap-1">
-                          <ImageIcon size={24} className="text-green-400" />
-                          <span className="text-[10px] leading-tight text-center px-1">
-                            {p.sku || p.nom?.substring(0, 10)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+  {/* Ligne 1 mobile: Checkbox + Image + Titre + Actions */}
+  <div className="flex items-start gap-3 w-full">
+    {/* Checkbox */}
+    <div className="flex-shrink-0 pt-1">
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={() => toggleSelection(p.id)}
+        className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+      />
+    </div>
 
-                    {/* Infos principales */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-700 text-base">
-                        {p.sku && <span className="text-gray-500">{p.sku} - </span>}
-                        {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
-                      </h3>
-                      <p className="text-sm text-amber-600 mt-1">
-                        Récupéré le {retourDate ? format(retourDate, 'dd/MM/yyyy') : '—'}
-                      </p>
-                    </div>
+    {/* Image */}
+    <div className="flex-shrink-0">
+      {allImages.length > 0 ? (
+        <img
+          src={allImages[0]}
+          alt={p.nom}
+          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => window.open(allImages[0], '_blank')}
+        />
+      ) : (
+        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400 gap-1">
+          <ImageIcon size={24} className="text-green-400" />
+          <span className="text-[10px] leading-tight text-center px-1">
+            {p.sku || p.nom?.substring(0, 10)}
+          </span>
+        </div>
+      )}
+    </div>
+
+    {/* Infos principales - prend tout l'espace restant */}
+    <div className="flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-semibold text-gray-900 text-sm sm:text-base flex-1">
+          {p.sku && <span className="text-[#22209C]">{p.sku}</span>}
+          {p.sku && <span className="text-gray-400"> - </span>}
+          {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
+        </h3>
+        {/* Actions - sur la même ligne que le titre sur mobile */}
+        <div className="flex flex-col items-center gap-0.5 flex-shrink-0 sm:hidden">
+          <button
+            onClick={() => handleEdit(p)}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <MoreHorizontal size={18} />
+          </button>
+          <button
+            onClick={() => handleDelete(p.id)}
+            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </div>
+      {p.description && (
+        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>
+      )}
+      <p className="text-xs text-gray-400 mt-1">
+        {p.createdAt instanceof Timestamp
+          ? format(p.createdAt.toDate(), 'dd/MM/yyyy')
+          : '—'}
+      </p>
+      {isAdmin && (
+        <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>
+      )}
+      {p.recu === false && (
+        <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1">
+          <Clock size={12} /> En attente de réception
+        </span>
+      )}
+    </div>
+  </div>
+
+  {/* Colonnes desktop seulement */}
+  <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[140px]">
+    <p><span className="text-gray-400">Taille:</span> <span className="font-medium text-gray-700">{p.taille || '—'}</span></p>
+    <p><span className="text-gray-400">Marque:</span> <span className="font-medium text-gray-700">{p.marque || '—'}</span></p>
+    <p><span className="text-gray-400">Matière:</span> <span className="font-medium text-gray-700">{p.material || '—'}</span></p>
+    <p><span className="text-gray-400">Couleur:</span> <span className="font-medium text-gray-700">{p.color || '—'}</span></p>
+  </div>
+
+  <div className="hidden sm:flex flex-col items-end text-sm text-gray-600 space-y-1 min-w-[120px]">
+    <p><span className="text-gray-400">SKU:</span> <span className="font-medium text-gray-700">{p.sku || '—'}</span></p>
+    <p><span className="text-gray-400">Prix:</span> <span className="font-medium text-gray-700">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></p>
+    <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
+  </div>
+
+  {/* Actions desktop */}
+  <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+    {canGenerateTryon && (
+      <button
+        onClick={() => handleGenerateTryon(p)}
+        disabled={generatingTryonId === p.id}
+        className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50 transition-colors"
+        title="Générer photo portée avec IA"
+      >
+        {generatingTryonId === p.id ? (
+          <span className="text-xs animate-pulse">⏳</span>
+        ) : (
+          <Sparkles size={20} />
+        )}
+      </button>
+    )}
+    <button
+      onClick={() => handleEdit(p)}
+      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+      title="Modifier"
+    >
+      <MoreHorizontal size={20} />
+    </button>
+    <button
+      onClick={() => handleDelete(p.id)}
+      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+      title="Supprimer"
+    >
+      <Trash2 size={20} />
+    </button>
+    <button
+      onClick={() => handleToggleForceDisplay(p)}
+      className={`p-2 rounded-lg transition-colors ${
+        p.forceDisplay 
+          ? 'text-green-500 hover:bg-green-50' 
+          : 'text-gray-300 hover:text-gray-500 hover:bg-gray-100'
+      }`}
+      title={p.forceDisplay ? 'Visible en boutique' : 'Masqué de la boutique'}
+    >
+      {p.forceDisplay ? <Eye size={18} /> : <EyeOff size={18} />}
+    </button>
+  </div>
+</div>
+                    
 
                     {/* Infos droite */}
                     <div className="hidden sm:flex flex-col items-end text-sm text-gray-500 space-y-1 min-w-[120px]">
