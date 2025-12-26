@@ -57,7 +57,13 @@ function matchCritere(produit: Produit, critere: Critere): boolean {
       return (produit.marque || '').toLowerCase().includes(valeurLower)
     
     case 'chineuse':
-      return (produit.chineur || '').toLowerCase().includes(valeurLower)
+       const chineuse = chineuses.find(c => 
+          (c.nom || '').toLowerCase() === valeurLower
+        )
+        if (chineuse?.trigramme) {
+          return (produit.trigramme || '').toLowerCase() === chineuse.trigramme.toLowerCase()
+        }
+        return false
     
     default:
       return false
