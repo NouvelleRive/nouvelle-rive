@@ -37,6 +37,7 @@ function AdminNavbar() {
     { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
     { key: 'perf', label: 'Perf', href: '/admin/performance', adminOnly: true },
     { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', isEbay: true, adminOnly: true },
+    { key: 'site', label: 'Site', href: '/admin/site', adminOnly: true },
     { key: 'deposants', label: 'Déposantes', href: '/admin/deposantes' },
     { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
     ]
