@@ -921,13 +921,13 @@ const handleUpdateSquare = async () => {
 
                 {/* Infos principales */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-2">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                     {p.sku && <span className="text-[#22209C]">{p.sku}</span>}
                     {p.sku && <span className="text-gray-400"> - </span>}
                     {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                   </h3>
                   {p.description && (
-                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-2 sm:line-clamp-1">{p.description}</p>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     {p.createdAt instanceof Timestamp

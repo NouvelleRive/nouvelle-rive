@@ -41,11 +41,8 @@ type Chineuse = {
   trigramme?: string
 }
 
-/**
- * Vérifie si un produit correspond à un critère
- */
 function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[]): boolean {
-  if (!critere.valeur) return true // Critère vide = toujours vrai
+  if (!critere.valeur) return true
   
   const valeurLower = critere.valeur.toLowerCase()
   
@@ -64,39 +61,31 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
       return (produit.marque || '').toLowerCase().includes(valeurLower)
     
     case 'chineuse':
-       const chineuse = chineuses.find(c => 
-          (c.nom || '').toLowerCase() === valeurLower
-        )
-        if (chineuse?.trigramme) {
-          return (produit.trigramme || '').toLowerCase() === chineuse.trigramme.toLowerCase()
-        }
-        return false
+      const chineuse = chineuses.find(c => 
+        (c.nom || '').toLowerCase() === valeurLower
+      )
+      if (chineuse?.trigramme) {
+        return (produit.trigramme || '').toLowerCase() === chineuse.trigramme.toLowerCase()
+      }
+      return false
     
     default:
       return false
   }
 }
 
-/**
- * Vérifie si un produit correspond à une règle (tous les critères doivent matcher = ET)
- */
-eturn regle.criteres.every(critere => matchCritere(produit, critere))
+function matchRegle(produit: Produit, regle: Regle, chineuses: Chineuse[]): boolean {
+  if (regle.criteres.length === 0) return false
+  return regle.criteres.every(critere => matchCritere(produit, critere, chineuses))
+}
 
-/**
- * Charge les produits filtrés selon la config d'une page
- */
-  function matchRegle(produit: Produit, regle: Regle, chineuses: Chineuse[]): boolean {
-    if (regle.criteres.length === 0) return false
-    return regle.criteres.every(critere => matchCritere(produit, critere, chineuses))
-  }
-  // 1. Charger la config
+export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
   const configRef = doc(db, 'siteConfig', pageId)
   const configSnap = await getDoc(configRef)
   const config: PageConfig = configSnap.exists() 
     ? { regles: [], ...configSnap.data() }
     : { regles: [] }
 
-  // 2. Charger tous les produits non vendus
   const q = query(
     collection(db, 'produits'),
     where('vendu', '==', false)
@@ -107,17 +96,20 @@ eturn regle.criteres.every(critere => matchCritere(produit, critere))
     ...d.data()
   })) as Produit[]
 
-  // 3. Appliquer les filtres
+  const chineusesSnap = await getDocs(collection(db, 'chineuse'))
+  const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({
+    id: d.id,
+    nom: d.data().nom,
+    trigramme: d.data().trigramme,
+  }))
+
   produits = produits.filter(p => {
-    // Filtre : doit avoir une image
     const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
     if (!hasImage) return false
 
-    // Filtre prix min/max (toujours appliqué)
     if (config.prixMin && p.prix < config.prixMin) return false
     if (config.prixMax && p.prix > config.prixMax) return false
 
-    // Filtre jours récents (toujours appliqué)
     if (config.joursRecents && p.createdAt) {
       const createdDate = p.createdAt instanceof Timestamp 
         ? p.createdAt.toDate() 
@@ -126,10 +118,8 @@ eturn regle.criteres.every(critere => matchCritere(produit, critere))
       if (daysAgo > config.joursRecents) return false
     }
 
-    // Si aucune règle, on garde tous les produits (qui passent les filtres globaux)
     if (config.regles.length === 0) return true
 
-    // Vérifier si au moins une règle matche (OU)
     return config.regles.some(regle => matchRegle(p, regle, chineuses))
   })
 
