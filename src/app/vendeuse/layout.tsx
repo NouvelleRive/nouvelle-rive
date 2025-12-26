@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
-import { ClipboardList, Package, Users, ShoppingBag } from 'lucide-react'
+import { ClipboardList, Package, ShoppingBag, Shirt } from 'lucide-react'
 
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -16,7 +16,7 @@ function VendeuseNavbar() {
 
   const links = [
     { href: '/vendeuse/commandes', label: 'Commandes', icon: ShoppingBag },
-    { href: '/vendeuse/clientes', label: 'Clientes', icon: Users },
+    { href: '/vendeuse/produits', label: 'Produits', icon: Shirt },
     { href: '/vendeuse/inventaire', label: 'Inventaire', icon: ClipboardList },
     { href: '/vendeuse/restock', label: 'RE/DEstock', icon: Package },
   ]
