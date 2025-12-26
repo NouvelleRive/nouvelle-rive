@@ -1242,7 +1242,6 @@ const handleUpdateSquare = async () => {
                       <p><span className="text-gray-400">Cat:</span> <span className="font-medium">{cat || '—'}</span></p>
                     </div>
                   </div>
-                </div>
               )
             })}
           </div>
