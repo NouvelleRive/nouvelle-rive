@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     console.log('🔄 Détourage Replicate pour:', imageUrl)
 
     const output = await replicate.run(
-      "smoretalk/rembg-enhance:4067ee2a58f6c161d434a9c077cfa012820b8e076efa2772aa171e26557da919",
+      "lucataco/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
       {
         input: {
           image: imageUrl
