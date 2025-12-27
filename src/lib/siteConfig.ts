@@ -31,6 +31,7 @@ export type Produit = {
   vendu: boolean
   chineur?: string
   chineurUid?: string
+  sku?: string
   trigramme?: string
   createdAt?: any
   description?: string
@@ -68,7 +69,7 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
         (c.nom || '').toLowerCase() === valeurLower
       )
       if (chineuse) {
-        return produit.chineur === chineuse.email || produit.chineurUid === chineuse.id
+        return produit.chineur === chineuse.email || produit.chineurUid === chineuse.id || (produit.sku || '').toUpperCase().startsWith((chineuse.trigramme || '???').toUpperCase())
       }
       return false
     
