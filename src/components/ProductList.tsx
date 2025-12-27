@@ -682,9 +682,10 @@
       setFiltreMois('')
       setFiltrePrix('')
       setTri('date-desc')
+      setFiltrePhotoManquante(false)
     }
 
-      const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix)
+      const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix || filtrePhotoManquante)
       const hasChangesToSync = selectedIds.size > 0 || dirtyIds.size > 0
 
       // =====================
