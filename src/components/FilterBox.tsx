@@ -84,7 +84,6 @@ export default function FilterBox({
     filters.prix,
     filters.tri,
     filters.statut,
-    filters.photoManquante,
   ].filter(Boolean).length
 
   const getGridCols = () => {
@@ -93,9 +92,13 @@ export default function FilterBox({
     return 'lg:grid-cols-4'
   }
 
+  const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation()
+  }
+
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm ${className}`}>
-      {/* Header mobile */}
+      {/* Header mobile - juste le bouton toggle */}
       <div
         className="lg:hidden flex items-center justify-between w-full mb-2 cursor-pointer"
         onClick={() => setShowFilters(!showFilters)}
@@ -120,9 +123,9 @@ export default function FilterBox({
       {/* Filtres */}
       <div className={`${showFilters ? 'block' : 'hidden'} lg:block space-y-4`}>
         
-        {/* Recherche */}
+        {/* Recherche - pleine largeur */}
         {filters.recherche && (
-          <div className="relative">
+          <div className="relative" onClick={stopPropagation} onTouchStart={stopPropagation}>
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -130,6 +133,8 @@ export default function FilterBox({
               onChange={(e) => filters.recherche!.onChange(e.target.value)}
               placeholder={filters.recherche.placeholder || 'Rechercher...'}
               className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+              onClick={stopPropagation}
+              onTouchStart={stopPropagation}
             />
           </div>
         )}
@@ -138,11 +143,13 @@ export default function FilterBox({
           
           {/* Mois */}
           {filters.mois && (
-            <div>
+            <div onClick={stopPropagation} onTouchStart={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Mois</label>
               <select
                 value={filters.mois.value}
                 onChange={(e) => filters.mois!.onChange(e.target.value)}
+                onClick={stopPropagation}
+                onTouchStart={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Tous</option>
@@ -155,11 +162,13 @@ export default function FilterBox({
 
           {/* Chineuse */}
           {filters.chineuse && (
-            <div>
+            <div onClick={stopPropagation} onTouchStart={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Chineuse</label>
               <select
                 value={filters.chineuse.value}
                 onChange={(e) => filters.chineuse!.onChange(e.target.value)}
+                onClick={stopPropagation}
+                onTouchStart={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Toutes</option>
@@ -172,11 +181,13 @@ export default function FilterBox({
 
           {/* Catégorie */}
           {filters.categorie && (
-            <div>
+            <div onClick={stopPropagation} onTouchStart={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Catégorie</label>
               <select
                 value={filters.categorie.value}
                 onChange={(e) => filters.categorie!.onChange(e.target.value)}
+                onClick={stopPropagation}
+                onTouchStart={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Toutes</option>
@@ -189,13 +200,15 @@ export default function FilterBox({
 
           {/* Prix */}
           {filters.prix && (
-            <div>
+            <div onClick={stopPropagation} onTouchStart={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Prix</label>
               <input
                 type="text"
                 value={filters.prix.value}
                 onChange={(e) => filters.prix!.onChange(e.target.value)}
                 placeholder={filters.prix.placeholder || 'Ex: 95'}
+                onClick={stopPropagation}
+                onTouchStart={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
             </div>
@@ -203,11 +216,13 @@ export default function FilterBox({
 
           {/* Tri */}
           {filters.tri && (
-            <div>
+            <div onClick={stopPropagation} onTouchStart={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Trier par</label>
               <select
                 value={filters.tri.value}
                 onChange={(e) => filters.tri!.onChange(e.target.value)}
+                onClick={stopPropagation}
+                onTouchStart={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 {TRI_OPTIONS.map(({ value, label }) => (
@@ -219,11 +234,13 @@ export default function FilterBox({
 
           {/* Statut */}
           {filters.statut && (
-            <div>
+            <div onClick={stopPropagation} onTouchStart={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Statut</label>
               <select
                 value={filters.statut.value}
                 onChange={(e) => filters.statut!.onChange(e.target.value)}
+                onClick={stopPropagation}
+                onTouchStart={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 {filters.statut.options.map(({ value, label }) => (
@@ -232,31 +249,30 @@ export default function FilterBox({
               </select>
             </div>
           )}
-
-          {/* Photo manquante */}
-          {filters.photoManquante && (
-            <div className="flex items-center gap-2 pt-6">
-              <input
-                type="checkbox"
-                id="photoManquante"
-                checked={filters.photoManquante.value}
-                onChange={(e) => filters.photoManquante!.onChange(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
-              />
-              <label htmlFor="photoManquante" className="text-sm font-medium">
-                Photo manquante
-              </label>
-            </div>
-          )}
         </div>
 
-        {/* Bouton Rechercher */}
+        {/* Photo manquante */}
+        {filters.photoManquante && (
+          <div className="flex items-center gap-2" onClick={stopPropagation} onTouchStart={stopPropagation}>
+            <input
+              type="checkbox"
+              id="photoManquante"
+              checked={filters.photoManquante.value}
+              onChange={(e) => filters.photoManquante!.onChange(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+            />
+            <label htmlFor="photoManquante" className="text-sm">Photo manquante</label>
+          </div>
+        )}
+
+        {/* Bouton Chercher */}
         {showSearchButton && onSearch && (
           <button
             onClick={onSearch}
-            className="w-full bg-[#22209C] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+            className="w-full bg-[#22209C] text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-[#1a1875] transition-colors flex items-center justify-center gap-2"
           >
-            Rechercher
+            <Search size={16} />
+            Chercher
           </button>
         )}
 

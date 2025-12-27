@@ -68,12 +68,14 @@
     }
 
     interface ProductListProps {
-      titre: string
-      produits: Produit[]
-      deposants?: Deposant[]
-      isAdmin?: boolean
-      loading?: boolean
-    }
+  titre: string
+  produits: Produit[]
+  deposants?: Deposant[]
+  isAdmin?: boolean
+  loading?: boolean
+  onSearch?: () => void
+  showSearchButton?: boolean
+}
 
     // =====================
     // HELPERS
@@ -105,6 +107,8 @@
       deposants = [],
       isAdmin = false,
       loading = false,
+      onSearch,
+      showSearchButton = false,
     }: ProductListProps) {
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
@@ -731,6 +735,8 @@
               className="lg:col-span-2"
               hasActiveFilters={hasActiveFilters}
               onReset={resetFilters}
+              onSearch={onSearch}
+              showSearchButton={showSearchButton}
               filters={{
                 recherche: {
                   value: recherche,
@@ -805,6 +811,13 @@
               </div>
             </div>
           </div>
+
+          {/* Message si pas encore cherché */}
+          {showSearchButton && produits.length === 0 && !loading && (
+            <div className="bg-white border rounded-xl p-8 text-center text-gray-500 mb-4">
+              <p>Sélectionnez vos filtres puis cliquez sur "Chercher" pour afficher les produits</p>
+            </div>
+          )}
 
           {/* Compteur */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">

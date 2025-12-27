@@ -16,8 +16,10 @@ export async function POST(req: NextRequest) {
 
     console.log('🔄 Détourage 851-labs pour:', imageUrl)
 
+    // Utiliser 851-labs/background-remover SANS version spécifique
+    // Replicate prendra automatiquement la dernière version stable
     const output = await replicate.run(
-      "851-labs/background-remover:a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4a9c7cf8e1c7f3fc9e8e8",
+      "851-labs/background-remover",
       {
         input: {
           image: imageUrl
@@ -31,11 +33,22 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Détourage réussi, upload sur Cloudinary...')
 
+    // Extraire l'URL du résultat
+    const outputUrl = typeof output === 'object' && output !== null && 'url' in output
+      ? (output as any).url()
+      : typeof output === 'string'
+        ? output
+        : null
+
+    if (!outputUrl) {
+      return NextResponse.json({ success: false, error: 'Pas d\'URL de sortie' })
+    }
+
     // Upload sur Cloudinary
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
-    const imgResponse = await fetch(output as unknown as string)
+    const imgResponse = await fetch(outputUrl)
     const blob = await imgResponse.blob()
 
     const formData = new FormData()
