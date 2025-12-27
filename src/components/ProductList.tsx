@@ -110,7 +110,7 @@
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
 
       // Chineuses depuis Firestore
-      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string}[]>([])
+      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string, trigramme: string}[]>([])
 
       useEffect(() => {
         const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
@@ -118,7 +118,8 @@
             id: d.id,
             nom: d.data().nom || '',
             authUid: d.data().authUid || '',
-            email: d.data().email || ''
+            email: d.data().email || '',
+            trigramme: d.data().trigramme || ''
           }))
           setChineusesList(data)
         })
@@ -209,7 +210,7 @@
 
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
         if (filtreCategorie && cat !== filtreCategorie) return false
-        if (filtreDeposant && p.chineurUid !== filtreDeposant) return false
+        if (filtreDeposant && !p.sku?.toUpperCase().startsWith(filtreDeposant.toUpperCase())) return false
 
         if (filtreMois) {
           if (p.createdAt instanceof Timestamp) {
@@ -273,7 +274,7 @@
           
           const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
           if (filtreCategorie && cat !== filtreCategorie) return false
-          if (filtreDeposant && p.chineurUid !== filtreDeposant) return false
+          if (filtreDeposant && !p.sku?.toUpperCase().startsWith(filtreDeposant.toUpperCase())) return false
           
           if (filtreMois && p.dateRetour) {
             const dateRetour = p.dateRetour instanceof Timestamp 
@@ -744,13 +745,17 @@
                 },
                 chineuse: {
                   value: filtreDeposant,
-                  onChange: setFiltreDeposant,
+                  onChange: (v) => {
+                    setFiltreDeposant(v)
+                    setFiltreCategorie('')
+                  },
                   options: chineusesList
                     .filter(c => c.nom)
                     .map(c => ({
-                      value: c.authUid,
+                      value: (c as any).trigramme || '',
                       label: c.nom.toUpperCase()
                     }))
+                    .filter(c => c.value)
                     .sort((a, b) => a.label.localeCompare(b.label))
                 },
                 categorie: {
@@ -759,7 +764,7 @@
                   options: (filtreDeposant 
                     ? Array.from(new Set(
                         produits
-                          .filter(p => p.chineurUid === filtreDeposant)
+                          .filter(p => p.sku?.toUpperCase().startsWith(filtreDeposant.toUpperCase()))
                           .map(p => typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)
                           .filter(Boolean)
                       ))
