@@ -108,6 +108,7 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
 
   console.log('Produits totaux:', produits.length)
  
+  const chineusesSnap = await getDocs(collection(db, 'chineuse'))
   const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({
     uid: d.id,
     nom: d.data().nom,
