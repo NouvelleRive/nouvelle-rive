@@ -1,4 +1,5 @@
 // app/api/segment-sam/route.ts
+// Redirige vers rembg pour le détourage
 import { NextRequest, NextResponse } from 'next/server'
 import Replicate from 'replicate'
 
@@ -8,83 +9,68 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, points } = await req.json()
+    const { imageUrl } = await req.json()
     
     if (!imageUrl) {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
     }
 
-    if (!points || points.length === 0) {
-      return NextResponse.json({ error: 'points requis (au moins un clic)' }, { status: 400 })
-    }
-
-    console.log('🎯 Segmentation SAM pour:', imageUrl)
-    console.log('📍 Points:', points)
-
-    const inputPoints = points.map((p: { x: number, y: number }) => [p.x, p.y])
-    const inputLabels = points.map((p: { x: number, y: number, label?: number }) => p.label ?? 1)
+    console.log('🔄 Détourage pour:', imageUrl)
 
     const output = await replicate.run(
-      "adirik/grounded-sam:9e5f4af8e45c51358933abe7fb33fee85ceb5655ec13a9a2f4f7866d498df6b4",
+      "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
       {
         input: {
           image: imageUrl,
-          detection_prompt: "clothing, garment, jacket, coat, dress, shirt, pants, skirt, fur"
+          alpha_matting: true,
+          alpha_matting_foreground_threshold: 270,
+          alpha_matting_background_threshold: 20,
+          alpha_matting_erode_size: 15
         }
       }
     )
 
-    console.log('✅ SAM output:', output)
-
-    let maskUrl = null
-    if (output && typeof output === 'object') {
-      if (Array.isArray(output) && output.length > 0) {
-        maskUrl = output[0]
-      }
-    } else if (typeof output === 'string') {
-      maskUrl = output
+    if (!output) {
+      return NextResponse.json({ success: false, error: 'Pas de résultat' })
     }
 
-    if (!maskUrl) {
-      return NextResponse.json({ success: false, error: 'Pas de masque généré' })
-    }
-
-    // Upload le masque sur Cloudinary
+    // Upload sur Cloudinary
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
-    const imgResponse = await fetch(maskUrl)
-    if (!imgResponse.ok) {
-      return NextResponse.json({ success: false, error: 'Erreur téléchargement masque' })
-    }
+    const imgResponse = await fetch(output as string)
     const blob = await imgResponse.blob()
 
     const formData = new FormData()
-    formData.append('file', blob, 'mask.png')
+    formData.append('file', blob, 'detoured.png')
     formData.append('upload_preset', uploadPreset!)
-    formData.append('folder', 'masks')
+    formData.append('folder', 'produits')
 
     const cloudinaryResponse = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       { method: 'POST', body: formData }
     )
 
-    if (!cloudinaryResponse.ok) {
-      return NextResponse.json({ success: false, error: 'Erreur upload masque' })
-    }
-
     const cloudinaryData = await cloudinaryResponse.json()
-    console.log('✅ Masque uploadé:', cloudinaryData.secure_url)
+    
+    // Ajouter fond blanc
+    const baseUrl = cloudinaryData.secure_url
+    const urlParts = baseUrl.split('/upload/')
+    const finalUrl = urlParts.length === 2
+      ? `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200/${urlParts[1]}`
+      : baseUrl
+
+    console.log('✅ Détourage réussi:', finalUrl)
 
     return NextResponse.json({ 
       success: true, 
-      maskUrl: cloudinaryData.secure_url
+      maskUrl: finalUrl
     })
 
   } catch (error: any) {
-    console.error('❌ Erreur SAM:', error.message)
+    console.error('❌ Erreur détourage:', error.message)
     return NextResponse.json(
-      { error: error.message || 'Erreur segmentation' },
+      { error: error.message || 'Erreur détourage' },
       { status: 500 }
     )
   }
