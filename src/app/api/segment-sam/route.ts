@@ -53,11 +53,11 @@ export async function POST(req: NextRequest) {
 
     const cloudinaryData = await cloudinaryResponse.json()
     
-    // Ajouter fond blanc
+   // Ajouter fond blanc en préservant le ratio
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     const finalUrl = urlParts.length === 2
-      ? `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200/${urlParts[1]}`
+      ? `${urlParts[0]}/upload/b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center/${urlParts[1]}`
       : baseUrl
 
     console.log('✅ Détourage réussi:', finalUrl)
