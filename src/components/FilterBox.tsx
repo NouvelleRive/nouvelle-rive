@@ -52,20 +52,28 @@ export interface FilterConfig {
     onChange: (value: string) => void
     options: FilterOption[]
   }
+  photoManquante?: {
+    value: boolean
+    onChange: (value: boolean) => void
+  }
 }
 
 interface FilterBoxProps {
   filters: FilterConfig
   onReset?: () => void
+  onSearch?: () => void
   hasActiveFilters?: boolean
   className?: string
+  showSearchButton?: boolean
 }
 
 export default function FilterBox({
   filters,
   onReset,
+  onSearch,
   hasActiveFilters = false,
   className = '',
+  showSearchButton = false,
 }: FilterBoxProps) {
   const [showFilters, setShowFilters] = useState(false)
 
@@ -76,6 +84,7 @@ export default function FilterBox({
     filters.prix,
     filters.tri,
     filters.statut,
+    filters.photoManquante,
   ].filter(Boolean).length
 
   const getGridCols = () => {
@@ -223,7 +232,33 @@ export default function FilterBox({
               </select>
             </div>
           )}
+
+          {/* Photo manquante */}
+          {filters.photoManquante && (
+            <div className="flex items-center gap-2 pt-6">
+              <input
+                type="checkbox"
+                id="photoManquante"
+                checked={filters.photoManquante.value}
+                onChange={(e) => filters.photoManquante!.onChange(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+              />
+              <label htmlFor="photoManquante" className="text-sm font-medium">
+                Photo manquante
+              </label>
+            </div>
+          )}
         </div>
+
+        {/* Bouton Rechercher */}
+        {showSearchButton && onSearch && (
+          <button
+            onClick={onSearch}
+            className="w-full bg-[#22209C] text-white py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
+          >
+            Rechercher
+          </button>
+        )}
 
         {/* Bouton reset mobile */}
         {hasActiveFilters && onReset && (
