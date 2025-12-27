@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const inputLabels = points.map((p: { x: number, y: number, label?: number }) => p.label ?? 1)
 
     const output = await replicate.run(
-      "meta/sam-2-base:fe97b453f27c427a87cbe17d53a9fdd513623ca99e90f3ed92c9090e8d500a3b",
+      "meta/sam-2-box:8fc3ce92fdd32474a9387df1eded1d59ed374fe5b62451657d1e50e0878e9723",
       {
         input: {
           image: imageUrl,
