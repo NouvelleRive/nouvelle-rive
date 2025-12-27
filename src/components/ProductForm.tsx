@@ -1527,7 +1527,11 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => setFormData({ ...formData, photoFace: e.target.files?.[0] || null })}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleCameraCapture('face', file)
+                          e.target.value = ''
+                        }}
                         className="hidden"
                       />
                     </label>
@@ -1611,7 +1615,11 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => setFormData({ ...formData, photoDos: e.target.files?.[0] || null })}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handleCameraCapture('dos', file)
+                          e.target.value = ''
+                        }}
                         className="hidden"
                       />
                     </label>
