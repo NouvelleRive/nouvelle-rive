@@ -69,7 +69,9 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
       if (chineuse) {
         const match1 = produit.chineur === chineuse.email
         const match2 = produit.chineurUid === chineuse.uid
-        const match3 = Boolean(produit.sku?.toUpperCase().startsWith(chineuse.trigramme?.toUpperCase() || '???'))
+        const trigramme = chineuse.trigramme?.toUpperCase() || '???'
+        const skuUpper = produit.sku?.toUpperCase() || ''
+        const match3 = skuUpper.startsWith(trigramme) && (skuUpper.length === trigramme.length || /\d/.test(skuUpper[trigramme.length]))
         return match1 || match2 || match3
       }
       return false
