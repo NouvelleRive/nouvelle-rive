@@ -1,5 +1,4 @@
 // app/api/segment-sam/route.ts
-// Redirige vers rembg pour le détourage
 import { NextRequest, NextResponse } from 'next/server'
 import Replicate from 'replicate'
 
@@ -15,17 +14,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
     }
 
-    console.log('🔄 Détourage pour:', imageUrl)
+    console.log('🔄 Détourage 851-labs pour:', imageUrl)
 
     const output = await replicate.run(
-      "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+      "851-labs/background-remover:a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4a9c7cf8e1c7f3fc9e8e8",
       {
         input: {
-          image: imageUrl,
-          alpha_matting: true,
-          alpha_matting_foreground_threshold: 270,
-          alpha_matting_background_threshold: 20,
-          alpha_matting_erode_size: 15
+          image: imageUrl
         }
       }
     )
@@ -33,6 +28,8 @@ export async function POST(req: NextRequest) {
     if (!output) {
       return NextResponse.json({ success: false, error: 'Pas de résultat' })
     }
+
+    console.log('✅ Détourage réussi, upload sur Cloudinary...')
 
     // Upload sur Cloudinary
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
@@ -53,14 +50,14 @@ export async function POST(req: NextRequest) {
 
     const cloudinaryData = await cloudinaryResponse.json()
     
-   // Ajouter fond blanc en préservant le ratio
+    // Ajouter fond blanc en préservant le ratio
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     const finalUrl = urlParts.length === 2
-      ? `${urlParts[0]}/upload/b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center/${urlParts[1]}`
+      ? `${urlParts[0]}/upload/b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,q_auto:best/${urlParts[1]}`
       : baseUrl
 
-    console.log('✅ Détourage réussi:', finalUrl)
+    console.log('✅ URL finale:', finalUrl)
 
     return NextResponse.json({ 
       success: true, 

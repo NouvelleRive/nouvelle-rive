@@ -1081,7 +1081,16 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
       }
     }
     
-    await onSubmit({ ...formData, photoOrder })
+    await onSubmit({ 
+      ...formData, 
+      photoOrder,
+      // Ajouter les URLs détourées
+      existingPhotos: {
+        ...formData.existingPhotos,
+        ...(detouredFaceUrl && { face: detouredFaceUrl }),
+        ...(detouredDosUrl && { dos: detouredDosUrl }),
+      }
+    })
   }
 
   const defaultSubmitLabel = mode === 'create' ? '✓ Ajouter le produit' : '✓ Enregistrer'
