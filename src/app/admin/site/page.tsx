@@ -1,6 +1,5 @@
 // app/admin/site/page.tsx
 'use client'
-export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
