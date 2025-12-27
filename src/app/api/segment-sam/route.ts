@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
-    const imgResponse = await fetch(output as string)
+    const imgResponse = await fetch(output as unknown as string)
     const blob = await imgResponse.blob()
 
     const formData = new FormData()
