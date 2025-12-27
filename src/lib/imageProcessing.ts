@@ -16,7 +16,7 @@ function getCloudinaryConfig() {
 }
 
 /**
- * Upload une image vers Cloudinary (sans transformation)
+ * Upload une image vers Cloudinary avec correction EXIF
  */
 async function uploadRaw(file: File): Promise<string> {
   const { cloudName, uploadPreset } = getCloudinaryConfig()
@@ -36,7 +36,14 @@ async function uploadRaw(file: File): Promise<string> {
   }
 
   const data = await response.json()
-  return data.secure_url
+  
+  // Appliquer rotation EXIF pour que l'image soit droite avant détourage
+  const baseUrl = data.secure_url
+  const urlParts = baseUrl.split('/upload/')
+  if (urlParts.length === 2) {
+    return `${urlParts[0]}/upload/a_exif/${urlParts[1]}`
+  }
+  return baseUrl
 }
 
 async function uploadFromUrl(imageUrl: string): Promise<string> {
