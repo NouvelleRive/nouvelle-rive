@@ -27,6 +27,7 @@ type Chineuse = {
   id: string
   nom?: string
   email?: string
+  trigramme?: string
 }
 
 const PAGES = [
@@ -70,7 +71,6 @@ export default function AdminSitePage() {
   const [saving, setSaving] = useState(false)
   const [chineusesList, setChineusesList] = useState<Chineuse[]>([])
 
-  // Charger la liste des chineuses
   useEffect(() => {
     async function fetchChineuses() {
       try {
@@ -79,6 +79,7 @@ export default function AdminSitePage() {
           id: d.id,
           nom: d.data().nom,
           email: d.data().email,
+          trigramme: d.data().trigramme,
         }))
         setChineusesList(data)
       } catch (error) {
@@ -88,7 +89,6 @@ export default function AdminSitePage() {
     fetchChineuses()
   }, [])
 
-  // Charger la config quand on change de page
   useEffect(() => {
     async function fetchConfig() {
       setLoading(true)
@@ -98,11 +98,9 @@ export default function AdminSitePage() {
         
         if (docSnap.exists()) {
           const data = docSnap.data()
-          // Migration : convertir ancien format vers nouveau si nécessaire
           if (data.regles) {
             setConfig(data as PageConfig)
           } else {
-            // Ancien format, on repart de zéro
             setConfig(DEFAULT_CONFIG)
           }
         } else {
@@ -117,7 +115,6 @@ export default function AdminSitePage() {
     fetchConfig()
   }, [selectedPage])
 
-  // Sauvegarder
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -134,7 +131,6 @@ export default function AdminSitePage() {
     }
   }
 
-  // Ajouter une règle
   const addRegle = () => {
     setConfig({
       ...config,
@@ -142,7 +138,6 @@ export default function AdminSitePage() {
     })
   }
 
-  // Supprimer une règle
   const removeRegle = (regleId: string) => {
     setConfig({
       ...config,
@@ -150,7 +145,6 @@ export default function AdminSitePage() {
     })
   }
 
-  // Ajouter un critère à une règle
   const addCritere = (regleId: string) => {
     setConfig({
       ...config,
@@ -164,7 +158,6 @@ export default function AdminSitePage() {
     })
   }
 
-  // Modifier un critère
   const updateCritere = (regleId: string, critereIndex: number, field: 'type' | 'valeur', value: string) => {
     setConfig({
       ...config,
@@ -181,7 +174,6 @@ export default function AdminSitePage() {
     })
   }
 
-  // Supprimer un critère
   const removeCritere = (regleId: string, critereIndex: number) => {
     setConfig({
       ...config,
@@ -195,11 +187,14 @@ export default function AdminSitePage() {
     })
   }
 
-  // Formater l'affichage d'une règle
   const formatRegle = (regle: Regle) => {
     if (regle.criteres.length === 0) return '(vide)'
     return regle.criteres.map(c => {
       const typeLabel = TYPES_CRITERES.find(t => t.value === c.type)?.label || c.type
+      if (c.type === 'chineuse') {
+        const chineuse = chineusesList.find(ch => ch.id === c.valeur)
+        return `${typeLabel} = "${chineuse?.nom || c.valeur}"`
+      }
       return `${typeLabel} = "${c.valeur}"`
     }).join(' ET ')
   }
@@ -208,7 +203,6 @@ export default function AdminSitePage() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-[#22209C]">Configuration des pages</h1>
 
-      {/* Sélecteur de page */}
       <div>
         <label className="block text-sm font-medium mb-2">Page à configurer</label>
         <select
@@ -227,7 +221,6 @@ export default function AdminSitePage() {
       ) : (
         <div className="bg-white border rounded-lg p-6 space-y-6">
           
-          {/* Résumé des règles */}
           {config.regles.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-blue-800 mb-3">📋 Règles actives (liées par OU) :</h3>
@@ -252,7 +245,6 @@ export default function AdminSitePage() {
             </div>
           )}
 
-          {/* Liste des règles éditables */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-700">Règles de filtrage</h3>
             <p className="text-xs text-gray-500">
@@ -274,7 +266,6 @@ export default function AdminSitePage() {
                   </button>
                 </div>
 
-                {/* Critères de la règle */}
                 <div className="space-y-2">
                   {regle.criteres.map((critere, critereIndex) => (
                     <div key={critereIndex} className="flex items-center gap-2 flex-wrap">
@@ -282,7 +273,6 @@ export default function AdminSitePage() {
                         <span className="text-xs text-gray-500 font-medium">ET</span>
                       )}
                       
-                      {/* Type de critère */}
                       <select
                         value={critere.type}
                         onChange={(e) => updateCritere(regle.id, critereIndex, 'type', e.target.value)}
@@ -295,7 +285,6 @@ export default function AdminSitePage() {
 
                       <span className="text-gray-400">=</span>
 
-                      {/* Valeur du critère */}
                       {critere.type === 'categorie' ? (
                         <select
                           value={critere.valeur}
@@ -315,7 +304,7 @@ export default function AdminSitePage() {
                         >
                           <option value="">Choisir...</option>
                           {chineusesList.map(c => (
-                            <option key={c.id} value={c.nom || c.id}>{c.nom || c.email || c.id}</option>
+                            <option key={c.id} value={c.id}>{c.nom || c.email || c.id}</option>
                           ))}
                         </select>
                       ) : (
@@ -356,7 +345,6 @@ export default function AdminSitePage() {
             </button>
           </div>
 
-          {/* Filtres globaux */}
           <div className="border-t pt-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-4">Filtres globaux (appliqués en plus des règles)</h3>
             
@@ -397,7 +385,6 @@ export default function AdminSitePage() {
             )}
           </div>
 
-          {/* Bouton sauvegarder */}
           <button
             onClick={handleSave}
             disabled={saving}
