@@ -68,7 +68,7 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
         (c.nom || '').toLowerCase() === valeurLower
       )
       if (chineuse) {
-        return produit.chineur === chineuse.email || produit.chineurUid === chineuse.authUid
+        return produit.chineur === chineuse.email || produit.chineurUid === chineuse.id
       }
       return false
     
