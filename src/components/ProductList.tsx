@@ -730,7 +730,7 @@
                   value: filtreDeposant,
                   onChange: setFiltreDeposant,
                   options: chineursUniques.map(uid => {
-                    const dep = deposants.find(d => d.id === uid)
+                    const dep = deposants.find(d => (d as any).authUid === uid)
                     return {
                       value: uid!,
                       label: (dep?.nom || dep?.email?.split('@')[0] || uid!).toUpperCase()
@@ -740,7 +740,15 @@
                 categorie: {
                   value: filtreCategorie,
                   onChange: setFiltreCategorie,
-                  options: categoriesUniques.map(c => ({
+                  options: (filtreDeposant 
+                    ? Array.from(new Set(
+                        produits
+                          .filter(p => p.chineurUid === filtreDeposant)
+                          .map(p => typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)
+                          .filter(Boolean)
+                      ))
+                    : categoriesUniques
+                  ).map(c => ({
                     value: c as string,
                     label: c as string
                   }))
