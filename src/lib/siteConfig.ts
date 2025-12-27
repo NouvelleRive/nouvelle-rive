@@ -38,7 +38,7 @@ export type Produit = {
 }
 
 type Chineuse = {
-  id: string
+  uid: string
   nom?: string
   trigramme?: string
   email?: string
@@ -68,13 +68,10 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
         (c.nom || '').toLowerCase() === valeurLower ||
         (c.trigramme || '').toLowerCase() === valeurLower
       )
-      console.log('Recherche chineuse:', valeurLower, 'Trouvée:', chineuse)
       if (chineuse) {
-        const match = produit.chineur === chineuse.email || 
-          produit.chineurUid === chineuse.id || 
-          (produit.sku || '').toUpperCase().startsWith((chineuse.trigramme || '???').toUpperCase())
-        console.log('Produit:', produit.sku, 'chineur:', produit.chineur, 'chineurUid:', produit.chineurUid, 'Match:', match)
-        return match
+        return produit.chineur === chineuse.email || 
+          produit.chineurUid === chineuse.uid ||
+          (produit.sku?.toUpperCase().startsWith(chineuse.trigramme?.toUpperCase() || '???'))
       }
       return false
     
@@ -110,10 +107,9 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
   })) as Produit[]
 
   console.log('Produits totaux:', produits.length)
-
-  const chineusesSnap = await getDocs(collection(db, 'chineuse'))
+ 
   const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({
-    id: d.id,
+    uid: d.id,
     nom: d.data().nom,
     trigramme: d.data().trigramme,
     email: d.data().email,
