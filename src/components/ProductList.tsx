@@ -159,6 +159,7 @@
       const [updatingSquare, setUpdatingSquare] = useState(false)
       const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
       const [savingProduct, setSavingProduct] = useState(false)
+      const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
       const categoriesLabels = categories.map((c) => c.label)
 
@@ -636,6 +637,8 @@
       
           setShowForm(false)
           setEditingProduct(null)
+          setSaveMessage('✅ Photo enregistrée !')
+          setTimeout(() => setSaveMessage(null), 3000)
             
       } catch (err: any) {
         console.error('Erreur sauvegarde:', err)
@@ -1113,6 +1116,13 @@
               </div>
             </div>
           )}
+
+          {/* Toast message */}
+                {saveMessage && (
+                  <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse">
+                    {saveMessage}
+                  </div>
+                )}
 
           {/* Modal formulaire */}
           {showForm && (

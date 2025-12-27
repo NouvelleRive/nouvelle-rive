@@ -396,6 +396,10 @@ export default function ProductForm({
   const [photoToEdit, setPhotoToEdit] = useState<{ file: File; type: 'face' | 'dos' } | null>(null)
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null)
 
+  // URLs des photos détourées (prêtes à enregistrer)
+  const [detouredFaceUrl, setDetouredFaceUrl] = useState<string | null>(null)
+  const [detouredDosUrl, setDetouredDosUrl] = useState<string | null>(null)
+
   // État pour l'ordre des photos
 const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
 
@@ -540,12 +544,14 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
   const handlePhotoEditorConfirm = (processedUrl: string) => {
     if (photoToEdit) {
       if (photoToEdit.type === 'face') {
+        setDetouredFaceUrl(processedUrl)
         setFormData(prev => ({
           ...prev,
           existingPhotos: { ...prev.existingPhotos, face: processedUrl },
           photoFace: null
         }))
       } else if (photoToEdit.type === 'dos') {
+        setDetouredDosUrl(processedUrl)
         setFormData(prev => ({
           ...prev,
           existingPhotos: { ...prev.existingPhotos, dos: processedUrl },
