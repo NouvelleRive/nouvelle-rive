@@ -30,6 +30,7 @@ export type Produit = {
   taille?: string
   vendu: boolean
   chineur?: string
+  chineurUid?: string
   trigramme?: string
   createdAt?: any
   description?: string
@@ -39,6 +40,8 @@ type Chineuse = {
   id: string
   nom?: string
   trigramme?: string
+  email?: string
+  authUid?: string
 }
 
 function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[]): boolean {
@@ -64,8 +67,8 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
       const chineuse = chineuses.find(c => 
         (c.nom || '').toLowerCase() === valeurLower
       )
-      if (chineuse?.trigramme) {
-        return (produit.trigramme || '').toLowerCase() === chineuse.trigramme.toLowerCase()
+      if (chineuse) {
+        return produit.chineur === chineuse.email || produit.chineurUid === chineuse.authUid
       }
       return false
     
@@ -101,6 +104,8 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     id: d.id,
     nom: d.data().nom,
     trigramme: d.data().trigramme,
+    email: d.data().email,
+    authUid: d.data().authUid,
   }))
 
   produits = produits.filter(p => {
