@@ -395,6 +395,3 @@ export default function AdminSitePage() {
           </button>
         </div>
       )}
-    </div>
-  )
-}
