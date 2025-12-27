@@ -109,6 +109,22 @@
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
 
+      // Chineuses depuis Firestore
+      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string}[]>([])
+
+      useEffect(() => {
+        const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
+          const data = snap.docs.map(d => ({
+            id: d.id,
+            nom: d.data().nom || '',
+            authUid: d.data().authUid || '',
+            email: d.data().email || ''
+          }))
+          setChineusesList(data)
+        })
+        return () => unsub()
+      }, [])
+
       // Filtres
       const [recherche, setRecherche] = useState('')
       const [filtreCategorie, setFiltreCategorie] = useState('')
@@ -729,13 +745,13 @@
                 chineuse: {
                   value: filtreDeposant,
                   onChange: setFiltreDeposant,
-                  options: chineursUniques.map(uid => {
-                    const dep = deposants.find(d => (d as any).authUid === uid)
-                    return {
-                      value: uid!,
-                      label: (dep?.nom || dep?.email?.split('@')[0] || uid!).toUpperCase()
-                    }
-                  }).filter(opt => !opt.label.includes('-')).sort((a, b) => a.label.localeCompare(b.label))
+                  options: chineusesList
+                    .filter(c => c.nom)
+                    .map(c => ({
+                      value: c.authUid,
+                      label: c.nom.toUpperCase()
+                    }))
+                    .sort((a, b) => a.label.localeCompare(b.label))
                 },
                 categorie: {
                   value: filtreCategorie,
