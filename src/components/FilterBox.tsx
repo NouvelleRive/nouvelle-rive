@@ -20,42 +20,35 @@ const TRI_OPTIONS: FilterOption[] = [
 ]
 
 export interface FilterConfig {
-  // Recherche texte
   recherche?: {
     value: string
     onChange: (value: string) => void
     placeholder?: string
   }
-  // Filtre Mois
   mois?: {
     value: string
     onChange: (value: string) => void
     options: FilterOption[]
   }
-  // Filtre Chineuse
   chineuse?: {
     value: string
     onChange: (value: string) => void
     options: FilterOption[]
   }
-  // Filtre Catégorie
   categorie?: {
     value: string
     onChange: (value: string) => void
     options: FilterOption[]
   }
-  // Filtre Prix
   prix?: {
     value: string
     onChange: (value: string) => void
     placeholder?: string
   }
-  // Tri (options hardcodées dans TRI_OPTIONS)
   tri?: {
     value: string
     onChange: (value: string) => void
   }
-  // Statut (admin seulement)
   statut?: {
     value: string
     onChange: (value: string) => void
@@ -78,7 +71,6 @@ export default function FilterBox({
 }: FilterBoxProps) {
   const [showFilters, setShowFilters] = useState(false)
 
-  // Compter le nombre de filtres actifs pour le grid
   const activeFilterCount = [
     filters.mois,
     filters.chineuse,
@@ -88,12 +80,13 @@ export default function FilterBox({
     filters.statut,
   ].filter(Boolean).length
 
-  // Déterminer le nombre de colonnes selon le nombre de filtres
   const getGridCols = () => {
     if (activeFilterCount <= 2) return 'lg:grid-cols-2'
     if (activeFilterCount <= 3) return 'lg:grid-cols-3'
     return 'lg:grid-cols-4'
   }
+
+  const stopPropagation = (e: React.MouseEvent) => e.stopPropagation()
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm ${className}`}>
@@ -124,7 +117,7 @@ export default function FilterBox({
         
         {/* Recherche - pleine largeur */}
         {filters.recherche && (
-          <div className="relative">
+          <div className="relative" onClick={stopPropagation}>
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
@@ -132,6 +125,7 @@ export default function FilterBox({
               onChange={(e) => filters.recherche!.onChange(e.target.value)}
               placeholder={filters.recherche.placeholder || 'Rechercher...'}
               className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+              onClick={stopPropagation}
             />
           </div>
         )}
@@ -140,11 +134,12 @@ export default function FilterBox({
           
           {/* Mois */}
           {filters.mois && (
-            <div>
+            <div onClick={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Mois</label>
               <select
                 value={filters.mois.value}
                 onChange={(e) => filters.mois!.onChange(e.target.value)}
+                onClick={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Tous</option>
@@ -157,11 +152,12 @@ export default function FilterBox({
 
           {/* Chineuse */}
           {filters.chineuse && (
-            <div>
+            <div onClick={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Chineuse</label>
               <select
                 value={filters.chineuse.value}
                 onChange={(e) => filters.chineuse!.onChange(e.target.value)}
+                onClick={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Toutes</option>
@@ -174,11 +170,12 @@ export default function FilterBox({
 
           {/* Catégorie */}
           {filters.categorie && (
-            <div>
+            <div onClick={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Catégorie</label>
               <select
                 value={filters.categorie.value}
                 onChange={(e) => filters.categorie!.onChange(e.target.value)}
+                onClick={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 <option value="">Toutes</option>
@@ -191,7 +188,7 @@ export default function FilterBox({
 
           {/* Prix */}
           {filters.prix && (
-            <div>
+            <div onClick={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Prix</label>
               <input
                 type="text"
@@ -199,17 +196,19 @@ export default function FilterBox({
                 onChange={(e) => filters.prix!.onChange(e.target.value)}
                 placeholder={filters.prix.placeholder || 'Ex: 95'}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
+                onClick={stopPropagation}
               />
             </div>
           )}
 
-          {/* Tri - options hardcodées */}
+          {/* Tri */}
           {filters.tri && (
-            <div>
+            <div onClick={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Trier par</label>
               <select
                 value={filters.tri.value}
                 onChange={(e) => filters.tri!.onChange(e.target.value)}
+                onClick={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 {TRI_OPTIONS.map(({ value, label }) => (
@@ -219,13 +218,14 @@ export default function FilterBox({
             </div>
           )}
 
-          {/* Statut (admin) */}
+          {/* Statut */}
           {filters.statut && (
-            <div>
+            <div onClick={stopPropagation}>
               <label className="block text-sm font-medium mb-1">Statut</label>
               <select
                 value={filters.statut.value}
                 onChange={(e) => filters.statut!.onChange(e.target.value)}
+                onClick={stopPropagation}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               >
                 {filters.statut.options.map(({ value, label }) => (
@@ -239,7 +239,7 @@ export default function FilterBox({
         {/* Bouton reset mobile */}
         {hasActiveFilters && onReset && (
           <button
-            onClick={onReset}
+            onClick={(e) => { stopPropagation(e); onReset(); }}
             className="lg:hidden text-sm text-[#22209C] flex items-center gap-1"
           >
             <X size={14} /> Réinitialiser les filtres
