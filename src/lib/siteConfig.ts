@@ -70,7 +70,7 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
       )
       if (chineuse) {
         return produit.chineur === chineuse.email || 
-          produit.chineurUid === chineuse.uid ||
+          produit.trigramme === chineuse.trigramme ||
           (produit.sku?.toUpperCase().startsWith(chineuse.trigramme?.toUpperCase() || '???'))
       }
       return false
