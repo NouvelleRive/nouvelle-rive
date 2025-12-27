@@ -66,7 +66,8 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
     
     case 'chineuse':
       const chineuse = chineuses.find(c => 
-        (c.nom || '').toLowerCase() === valeurLower
+        (c.nom || '').toLowerCase() === valeurLower ||
+        (c.trigramme || '').toLowerCase() === valeurLower
       )
       if (chineuse) {
         return produit.chineur === chineuse.email || produit.chineurUid === chineuse.id || (produit.sku || '').toUpperCase().startsWith((chineuse.trigramme || '???').toUpperCase())
