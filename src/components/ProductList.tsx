@@ -755,8 +755,8 @@ const handleUpdateSquare = async () => {
           }}
         />
 
-        {/* Exporter */}
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
+        {/* Exporter - hidden on mobile */}
+        <div className="hidden lg:block bg-white border rounded-xl p-4 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Exporter</h2>
           <div className="flex flex-col gap-3">
             <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
