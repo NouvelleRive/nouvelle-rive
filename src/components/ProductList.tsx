@@ -921,13 +921,32 @@ const handleUpdateSquare = async () => {
 
                 {/* Infos principales */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
-                    {p.sku && <span className="text-[#22209C]">{p.sku}</span>}
-                    {p.sku && <span className="text-gray-400"> - </span>}
-                    {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
-                  </h3>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base leading-tight flex-1">
+                      {p.sku && <span className="text-[#22209C]">{p.sku}</span>}
+                      {p.sku && <span className="text-gray-400"> - </span>}
+                      {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
+                    </h3>
+                    {/* Actions mobile */}
+                    <div className="flex items-center gap-0.5 sm:hidden flex-shrink-0">
+                      <button
+                        onClick={() => handleEdit(p)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Modifier"
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
                   {p.description && (
-                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-2 sm:line-clamp-1">{p.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-2 sm:line-clamp-1">{p.description}</p>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     {p.createdAt instanceof Timestamp
@@ -937,7 +956,7 @@ const handleUpdateSquare = async () => {
                   {isAdmin && (
                     <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>
                   )}
-                
+
                   {p.recu === false && (
                   <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1">
                     <Clock size={12} /> En attente de réception
@@ -960,8 +979,8 @@ const handleUpdateSquare = async () => {
                   <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Actions - Desktop only */}
+                <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
                   {canGenerateTryon && (
                     <button
                       onClick={() => handleGenerateTryon(p)}
@@ -1005,7 +1024,7 @@ const handleUpdateSquare = async () => {
                     {p.forceDisplay ? <Eye size={18} /> : <EyeOff size={18} />}
                   </button>
                 </div>
-              </div>
+              </div> 
 
               {/* Infos mobile (SKU, Prix, Qté) */}
               <div className="sm:hidden flex gap-4 mt-3 pt-3 border-t border-gray-100 text-sm">
