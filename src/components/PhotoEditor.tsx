@@ -122,12 +122,8 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       const data = await response.json()
 
       if (data.success && data.maskUrl) {
-        // Construire l'URL finale avec fond blanc
-        const urlParts = imageUrl.split('/upload/')
-        if (urlParts.length === 2) {
-          const finalUrl = `${urlParts[0]}/upload/b_white,c_pad,ar_1:1,w_1200,h_1200,e_sharpen:30,q_auto:best,f_auto/${urlParts[1]}`
-          setPreviewUrl(finalUrl)
-        }
+        // Utiliser directement l'URL retournée par l'API (déjà avec fond blanc)
+        setPreviewUrl(data.maskUrl)
       } else {
         throw new Error(data.error || 'Erreur segmentation')
       }
