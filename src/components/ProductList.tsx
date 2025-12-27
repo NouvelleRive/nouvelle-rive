@@ -3,7 +3,7 @@
 
     import { useState, useMemo, useEffect } from 'react'
     import { db } from '@/lib/firebaseConfig'
-    import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField } from 'firebase/firestore'
+    import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField, collection } from 'firebase/firestore'
     import { processAndUploadProductPhoto, uploadMultiplePhotos } from '@/lib/imageProcessing'
     import { format } from 'date-fns'
     import { fr } from 'date-fns/locale'
