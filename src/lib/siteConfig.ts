@@ -44,6 +44,9 @@ type Chineuse = {
   email?: string
 }
 
+// Normaliser pour ignorer les accents
+const normalize = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
 function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[]): boolean {
   if (!critere.valeur) return true
   
@@ -64,14 +67,16 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
       return (produit.marque || '').toLowerCase().includes(valeurLower)
     
     case 'chineuse':
+      const valeurNorm = normalize(critere.valeur)
       const chineuse = chineuses.find(c => 
-        (c.nom || '').toLowerCase() === valeurLower ||
-        (c.trigramme || '').toLowerCase() === valeurLower
+        normalize(c.nom || '') === valeurNorm ||
+        normalize(c.trigramme || '') === valeurNorm
       )
       if (chineuse) {
-        return produit.chineur === chineuse.email || 
-          produit.trigramme === chineuse.trigramme ||
-          (produit.sku?.toUpperCase().startsWith(chineuse.trigramme?.toUpperCase() || '???'))
+        const match1 = produit.chineur === chineuse.email
+        const match2 = produit.chineurUid === chineuse.uid
+        const match3 = Boolean(produit.sku?.toUpperCase().startsWith(chineuse.trigramme?.toUpperCase() || '???'))
+        return match1 || match2 || match3
       }
       return false
     
@@ -86,15 +91,11 @@ function matchRegle(produit: Produit, regle: Regle, chineuses: Chineuse[]): bool
 }
 
 export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
-  console.log('getFilteredProducts appelé avec:', pageId)
-  
   const configRef = doc(db, 'siteConfig', pageId)
   const configSnap = await getDoc(configRef)
   const config: PageConfig = configSnap.exists() 
     ? { regles: [], ...configSnap.data() }
     : { regles: [] }
-
-  console.log('Config:', JSON.stringify(config, null, 2))
 
   const q = query(
     collection(db, 'produits'),
@@ -106,8 +107,6 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     ...d.data()
   })) as Produit[]
 
-  console.log('Produits totaux:', produits.length)
- 
   const chineusesSnap = await getDocs(collection(db, 'chineuse'))
   const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({
     uid: d.id,
@@ -115,8 +114,6 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     trigramme: d.data().trigramme,
     email: d.data().email,
   }))
-
-  console.log('Chineuses:', chineuses.map(c => ({ nom: c.nom, trigramme: c.trigramme, email: c.email })))
 
   produits = produits.filter(p => {
     const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
@@ -137,8 +134,6 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
 
     return config.regles.some(regle => matchRegle(p, regle, chineuses))
   })
-
-  console.log('Produits filtrés:', produits.length)
 
   return produits
 }
