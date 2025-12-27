@@ -633,10 +633,9 @@
           }
           
           await updateDoc(doc(db, 'produits', productId), updateData)
-          
+      
           setShowForm(false)
           setEditingProduct(null)
-          alert('Produit mis à jour !')
             
       } catch (err: any) {
         console.error('Erreur sauvegarde:', err)

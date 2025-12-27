@@ -75,27 +75,46 @@ async function uploadFromUrl(imageUrl: string): Promise<string> {
 }
 
 /**
- * Appelle l'API de détourage (Replicate rembg)
+ * Appelle l'API de détourage (Replicate rembg) avec retry
  */
-async function removeBackground(imageUrl: string): Promise<string | null> {
-  try {
-    const response = await fetch('/api/remove-background', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageUrl })
-    })
+async function removeBackground(imageUrl: string, retries = 3): Promise<string | null> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      console.log(`🔄 Tentative détourage ${i + 1}/${retries}...`)
+      
+      const response = await fetch('/api/remove-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl })
+      })
 
-    if (!response.ok) {
-      console.warn('⚠️ Détourage échoué:', response.status)
-      return null
+      if (!response.ok) {
+        console.warn(`⚠️ Détourage échoué (${response.status}), retry...`)
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          continue
+        }
+        return null
+      }
+
+      const data = await response.json()
+      if (data.removedBgUrl) {
+        console.log('✅ Détourage réussi')
+        return data.removedBgUrl
+      }
+      
+      console.warn('⚠️ Pas d\'URL retournée, retry...')
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
+    } catch (error) {
+      console.warn(`⚠️ Erreur détourage (tentative ${i + 1}):`, error)
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
     }
-
-    const data = await response.json()
-    return data.removedBgUrl || null
-  } catch (error) {
-    console.warn('⚠️ Erreur détourage:', error)
-    return null
   }
+  return null
 }
 
 /**
