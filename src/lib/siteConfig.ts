@@ -42,7 +42,6 @@ type Chineuse = {
   nom?: string
   trigramme?: string
   email?: string
-  authUid?: string
 }
 
 function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[]): boolean {
@@ -69,8 +68,13 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
         (c.nom || '').toLowerCase() === valeurLower ||
         (c.trigramme || '').toLowerCase() === valeurLower
       )
+      console.log('Recherche chineuse:', valeurLower, 'Trouvée:', chineuse)
       if (chineuse) {
-        return produit.chineur === chineuse.email || produit.chineurUid === chineuse.id || (produit.sku || '').toUpperCase().startsWith((chineuse.trigramme || '???').toUpperCase())
+        const match = produit.chineur === chineuse.email || 
+          produit.chineurUid === chineuse.id || 
+          (produit.sku || '').toUpperCase().startsWith((chineuse.trigramme || '???').toUpperCase())
+        console.log('Produit:', produit.sku, 'chineur:', produit.chineur, 'chineurUid:', produit.chineurUid, 'Match:', match)
+        return match
       }
       return false
     
@@ -85,11 +89,15 @@ function matchRegle(produit: Produit, regle: Regle, chineuses: Chineuse[]): bool
 }
 
 export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
+  console.log('getFilteredProducts appelé avec:', pageId)
+  
   const configRef = doc(db, 'siteConfig', pageId)
   const configSnap = await getDoc(configRef)
   const config: PageConfig = configSnap.exists() 
     ? { regles: [], ...configSnap.data() }
     : { regles: [] }
+
+  console.log('Config:', JSON.stringify(config, null, 2))
 
   const q = query(
     collection(db, 'produits'),
@@ -101,14 +109,17 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     ...d.data()
   })) as Produit[]
 
+  console.log('Produits totaux:', produits.length)
+
   const chineusesSnap = await getDocs(collection(db, 'chineuse'))
   const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({
     id: d.id,
     nom: d.data().nom,
     trigramme: d.data().trigramme,
     email: d.data().email,
-    authUid: d.data().authUid,
   }))
+
+  console.log('Chineuses:', chineuses.map(c => ({ nom: c.nom, trigramme: c.trigramme, email: c.email })))
 
   produits = produits.filter(p => {
     const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
@@ -129,6 +140,8 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
 
     return config.regles.some(regle => matchRegle(p, regle, chineuses))
   })
+
+  console.log('Produits filtrés:', produits.length)
 
   return produits
 }
