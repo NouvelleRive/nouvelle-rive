@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { X, Image as ImageIcon, Upload, RefreshCw, FileSpreadsheet, Download, Camera } from 'lucide-react'
+import PhotoEditor from '@/components/PhotoEditor'
 import ExcelJS from 'exceljs'
 import * as XLSX from 'xlsx'
 import { checkSkuUnique } from '@/lib/admin/helpers'
@@ -391,6 +392,10 @@ export default function ProductForm({
   // État validation SKU
   const [skuValidating, setSkuValidating] = useState(false)
 
+  // État éditeur photo
+  const [photoToEdit, setPhotoToEdit] = useState<{ file: File; type: 'face' | 'dos' } | null>(null)
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null)
+
   // État pour l'ordre des photos
 const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
 
@@ -499,14 +504,62 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
   // =====================
   // CAMERA HANDLERS
   // =====================
-  const handleCameraCapture = (type: 'face' | 'dos' | 'details', file: File) => {
-    if (type === 'face') {
-      setFormData(prev => ({ ...prev, photoFace: file }))
-    } else if (type === 'dos') {
-      setFormData(prev => ({ ...prev, photoDos: file }))
+  const handleCameraCapture = async (type: 'face' | 'dos' | 'details', file: File) => {
+    if (type === 'face' || type === 'dos') {
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+      
+      const formDataUpload = new FormData()
+      formDataUpload.append('file', file)
+      formDataUpload.append('upload_preset', uploadPreset!)
+      formDataUpload.append('folder', 'produits')
+      
+      try {
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: 'POST', body: formDataUpload }
+        )
+        const data = await response.json()
+        
+        const urlParts = data.secure_url.split('/upload/')
+        const url = urlParts.length === 2 
+          ? `${urlParts[0]}/upload/a_exif/${urlParts[1]}`
+          : data.secure_url
+        
+        setUploadedPhotoUrl(url)
+        setPhotoToEdit({ file, type })
+      } catch (err) {
+        console.error('Erreur upload:', err)
+        alert('Erreur upload photo')
+      }
     } else if (type === 'details') {
       setFormData(prev => ({ ...prev, photosDetails: [...prev.photosDetails, file] }))
     }
+  }
+
+  const handlePhotoEditorConfirm = (processedUrl: string) => {
+    if (photoToEdit) {
+      if (photoToEdit.type === 'face') {
+        setFormData(prev => ({
+          ...prev,
+          existingPhotos: { ...prev.existingPhotos, face: processedUrl },
+          photoFace: null
+        }))
+      } else if (photoToEdit.type === 'dos') {
+        setFormData(prev => ({
+          ...prev,
+          existingPhotos: { ...prev.existingPhotos, dos: processedUrl },
+          photoDos: null
+        }))
+      }
+    }
+    setPhotoToEdit(null)
+    setUploadedPhotoUrl(null)
+  }
+
+  const handlePhotoEditorCancel = () => {
+    setPhotoToEdit(null)
+    setUploadedPhotoUrl(null)
   }
 
   // =====================
@@ -1685,6 +1738,15 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
           </button>
         </div>
       </form>
+
+      {/* Photo Editor Modal */}
+      {photoToEdit && uploadedPhotoUrl && (
+        <PhotoEditor
+          imageUrl={uploadedPhotoUrl}
+          onConfirm={handlePhotoEditorConfirm}
+          onCancel={handlePhotoEditorCancel}
+        />
+      )}
     </div>
   )
 }

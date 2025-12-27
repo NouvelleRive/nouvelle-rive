@@ -82,53 +82,8 @@ async function uploadFromUrl(imageUrl: string): Promise<string> {
 }
 
 /**
- * Appelle l'API de détourage (Replicate rembg) avec retry
- */
-async function removeBackground(imageUrl: string, retries = 3): Promise<string | null> {
-  for (let i = 0; i < retries; i++) {
-    try {
-      console.log(`🔄 Tentative détourage ${i + 1}/${retries}...`)
-      
-      const response = await fetch('/api/remove-background', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl })
-      })
-
-      if (!response.ok) {
-        console.warn(`⚠️ Détourage échoué (${response.status}), retry...`)
-        if (i < retries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          continue
-        }
-        return null
-      }
-
-      const data = await response.json()
-      if (data.removedBgUrl) {
-        console.log('✅ Détourage réussi')
-        return data.removedBgUrl
-      }
-      
-      console.warn('⚠️ Pas d\'URL retournée, retry...')
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      }
-    } catch (error) {
-      console.warn(`⚠️ Erreur détourage (tentative ${i + 1}):`, error)
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      }
-    }
-  }
-  return null
-}
-
-/**
  * Upload et traite une photo produit (face/dos)
- * - Upload original sur Cloudinary
- * - Détourage via Replicate
- * - Re-upload image détourée sur Cloudinary avec fond blanc
+ * Sans détourage auto - le détourage se fait via PhotoEditor avec SAM
  */
 export async function processAndUploadProductPhoto(file: File): Promise<{
   original: string
@@ -136,28 +91,16 @@ export async function processAndUploadProductPhoto(file: File): Promise<{
 }> {
   console.log('📸 Upload photo produit:', file.name, `(${(file.size / 1024).toFixed(1)} KB)`)
 
-  // 1. Upload original sur Cloudinary
   const originalUrl = await uploadRaw(file)
-  console.log('✅ Photo originale:', originalUrl)
+  console.log('✅ Photo uploadée:', originalUrl)
 
-  // 2. Détourage via Replicate
-  const removedBgUrl = await removeBackground(originalUrl)
-  
-  if (removedBgUrl) {
-    // 3. Upload image détourée sur Cloudinary avec fond blanc
-    const processedUrl = await uploadFromUrl(removedBgUrl)
-    console.log('✅ Photo détourée (fond blanc):', processedUrl)
-    return { original: originalUrl, processed: processedUrl }
-  }
-
-  // Fallback si détourage échoue : recadrage simple
-  console.log('⚠️ Fallback: recadrage simple sans détourage')
+  // Transformations basiques sans détourage
   const urlParts = originalUrl.split('/upload/')
-  const fallbackUrl = urlParts.length === 2
-    ? `${urlParts[0]}/upload/a_auto,c_fill,g_auto,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
+  const processedUrl = urlParts.length === 2
+    ? `${urlParts[0]}/upload/c_pad,ar_1:1,w_1200,h_1200,b_white,e_auto_color,e_auto_brightness,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
     : originalUrl
 
-  return { original: originalUrl, processed: fallbackUrl }
+  return { original: originalUrl, processed: processedUrl }
 }
 
 /**
