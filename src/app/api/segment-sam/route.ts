@@ -25,13 +25,11 @@ export async function POST(req: NextRequest) {
     const inputLabels = points.map((p: { x: number, y: number, label?: number }) => p.label ?? 1)
 
     const output = await replicate.run(
-      "meta/sam-2-box:8fc3ce92fdd32474a9387df1eded1d59ed374fe5b62451657d1e50e0878e9723",
+      "adirik/grounded-sam:9e5f4af8e45c51358933abe7fb33fee85ceb5655ec13a9a2f4f7866d498df6b4",
       {
         input: {
           image: imageUrl,
-          point_coords: inputPoints,
-          point_labels: inputLabels,
-          multimask_output: false
+          detection_prompt: "clothing, garment, jacket, coat, dress, shirt, pants, skirt, fur"
         }
       }
     )
