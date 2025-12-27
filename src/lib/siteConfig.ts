@@ -44,9 +44,6 @@ type Chineuse = {
   email?: string
 }
 
-// Normaliser pour ignorer les accents
-const normalize = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-
 function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[]): boolean {
   if (!critere.valeur) return true
   
@@ -67,11 +64,8 @@ function matchCritere(produit: Produit, critere: Critere, chineuses: Chineuse[])
       return (produit.marque || '').toLowerCase().includes(valeurLower)
     
     case 'chineuse':
-      const valeurNorm = normalize(critere.valeur)
-      const chineuse = chineuses.find(c => 
-        normalize(c.nom || '') === valeurNorm ||
-        normalize(c.trigramme || '') === valeurNorm
-      )
+      // Chercher par uid (comme l'admin)
+      const chineuse = chineuses.find(c => c.uid === critere.valeur)
       if (chineuse) {
         const match1 = produit.chineur === chineuse.email
         const match2 = produit.chineurUid === chineuse.uid
