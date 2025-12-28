@@ -1,4 +1,3 @@
-// app/api/detourage/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import Replicate from 'replicate'
 
@@ -21,8 +20,7 @@ export async function POST(req: NextRequest) {
       { input: { image: imageUrl } }
     )
 
-    console.log('📦 Output:', output, typeof output)
-    console.log('📦 Output JSON:', JSON.stringify(output))
+    console.log('📦 Output:', JSON.stringify(output))
 
     let outputUrl: string | null = null
     
@@ -31,27 +29,18 @@ export async function POST(req: NextRequest) {
     } else if (Array.isArray(output) && output.length > 0) {
       outputUrl = output[0]
     } else if (output && typeof output === 'object') {
-      // Peut-être un objet avec une propriété url ou output
       const obj = output as any
       outputUrl = obj.url || obj.output || obj.image || null
     }
 
     if (!outputUrl) {
-      console.error('❌ Pas d\'URL dans output:', output)
       return NextResponse.json({ success: false, error: 'Pas de résultat de Replicate' })
     }
-
-    console.log('✅ URL détourée:', outputUrl)
 
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
     const imgResponse = await fetch(outputUrl)
-    if (!imgResponse.ok) {
-      console.error('❌ Erreur fetch image:', imgResponse.status)
-      return NextResponse.json({ success: false, error: 'Erreur téléchargement image détourée' })
-    }
-    
     const blob = await imgResponse.blob()
 
     const formData = new FormData()
@@ -65,14 +54,6 @@ export async function POST(req: NextRequest) {
     )
 
     const cloudinaryData = await cloudinaryResponse.json()
-    
-    if (!cloudinaryData.secure_url) {
-      console.error('❌ Erreur Cloudinary:', cloudinaryData)
-      return NextResponse.json({ success: false, error: 'Erreur upload Cloudinary' })
-    }
-
-    console.log('✅ Cloudinary URL:', cloudinaryData.secure_url)
-
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     
@@ -81,8 +62,6 @@ export async function POST(req: NextRequest) {
     const finalUrl = urlParts.length === 2
       ? `${urlParts[0]}/upload/${rotationTransform}b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best/${urlParts[1]}`
       : baseUrl
-
-    console.log('✅ URL finale:', finalUrl)
 
     return NextResponse.json({ success: true, maskUrl: finalUrl })
 
