@@ -14,12 +14,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
     }
 
-    console.log('🔄 Détourage 851-labs pour:', imageUrl)
+    console.log('🔄 Détourage pour:', imageUrl)
 
-    // Utiliser 851-labs/background-remover SANS version spécifique
-    // Replicate prendra automatiquement la dernière version stable
+    // Utiliser lucataco/remove-bg
     const output = await replicate.run(
-      "851-labs/background-remover",
+      "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
       {
         input: {
           image: imageUrl
@@ -33,12 +32,8 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Détourage réussi, upload sur Cloudinary...')
 
-    // Extraire l'URL du résultat
-    const outputUrl = typeof output === 'object' && output !== null && 'url' in output
-      ? (output as any).url()
-      : typeof output === 'string'
-        ? output
-        : null
+    // L'output est directement l'URL
+    const outputUrl = typeof output === 'string' ? output : null
 
     if (!outputUrl) {
       return NextResponse.json({ success: false, error: 'Pas d\'URL de sortie' })
@@ -63,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const cloudinaryData = await cloudinaryResponse.json()
     
-    // Ajouter fond blanc en préservant le ratio
+    // Fond blanc + centrage
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     const finalUrl = urlParts.length === 2
