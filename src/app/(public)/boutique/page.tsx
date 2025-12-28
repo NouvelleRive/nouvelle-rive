@@ -43,35 +43,37 @@ export default function BoutiquePage() {
           where('vendu', '==', false)
         )
         
-        const snapshot = await getDocs(q)
-        const data = snapshot.docs.map(doc => {
-          const d = doc.data()
-          // Prioriser photos.face (détourée) sur imageUrls
-          const imageUrls = d.photos?.face 
-            ? [d.photos.face, ...(d.imageUrls || [])]
-            : d.imageUrls || []
-          return {
-            id: doc.id,
-            ...d,
-            imageUrls
-          }
-        }) as Produit[]
+       const snapshot = await getDocs(q)
+        const data = snapshot.docs
+          .filter(doc => {
+            const d = doc.data()
+            // Exclure produits vendus (quantité 0) ou retournés/supprimés
+            if ((d.quantite ?? 1) <= 0) return false
+            if (d.statut === 'retour' || d.statut === 'supprime') return false
+            return true
+          })
+          .map(doc => {
+            const d = doc.data()
+            const imageUrls = d.photos?.face 
+              ? [d.photos.face, ...(d.imageUrls || [])]
+              : d.imageUrls || []
+            return {
+              id: doc.id,
+              ...d,
+              imageUrls
+            }
+          }) as Produit[]
 
         // Filtrer : seulement les produits avec photo détourée OU tryon OU forcé
         const produitsVisibles = data.filter(p => {
-          // Forçage manuel
           if (p.forceDisplay === true) return true
-          
-          // Photo détourée (face traitée sur Cloudinary)
           if (p.photos?.face) return true
-          
-          // Photo portée (tryon Replicate)
           if (p.photos?.faceOnModel) return true
-          
           return false
         })
 
         setProduits(produitsVisibles)
+        
       } catch (error) {
         console.error('Erreur:', error)
       } finally {

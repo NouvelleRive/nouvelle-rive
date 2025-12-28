@@ -112,6 +112,11 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
   }))
 
   produits = produits.filter(p => {
+    // Exclure produits vendus (quantité 0) ou retournés/supprimés
+    const quantite = (p as any).quantite ?? 1
+    if (quantite <= 0) return false
+    if ((p as any).statut === 'retour' || (p as any).statut === 'supprime') return false
+
     const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
     if (!hasImage) return false
 
