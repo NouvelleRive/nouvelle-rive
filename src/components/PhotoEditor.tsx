@@ -35,7 +35,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       // Envoyer l'URL avec rotation
       const urlToProcess = getRotatedUrl(imageUrl, rotation)
       
-      const res = await fetch('/api/segment-sam', {
+      const res = await fetch('/api/detourage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: urlToProcess }),

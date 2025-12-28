@@ -186,6 +186,28 @@ export async function POST(req: NextRequest) {
             })
 
             synced++
+// Upload images vers Square
+            const imageUrls = product.data.imageUrls || []
+            if (imageUrls.length > 0 && ids.itemId) {
+              for (const imageUrl of imageUrls.slice(0, 5)) {
+                try {
+                  await squareClient.catalogApi.createCatalogImage({
+                    idempotencyKey: uuidv4(),
+                    image: {
+                      type: 'IMAGE',
+                      imageData: {
+                        url: imageUrl,
+                      },
+                    },
+                    objectId: ids.itemId,
+                  })
+                  console.log(`📷 Image uploadée pour ${sku}`)
+                } catch (imgErr: any) {
+                  console.warn(`⚠️ Image non uploadée pour ${sku}:`, imgErr?.message)
+                }
+              }
+            }
+
             console.log(`✅ ${sku} synchronisé`)
           } catch (err: any) {
             console.error(`❌ Erreur pour ${sku}:`, err?.message)
