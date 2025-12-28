@@ -180,4 +180,4 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       </div>
     </div>
   )
-}   
+}
