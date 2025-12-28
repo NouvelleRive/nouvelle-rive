@@ -14,50 +14,55 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
     }
 
-    console.log('🔄 Détourage pour:', imageUrl)
-
-    const output = await replicate.run(
+    console.log('🔄 Étape 1: Détourage vêtement...')
+    
+    // Étape 1: Détourage du vêtement
+    const removeBgOutput = await replicate.run(
       "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
-      {
-        input: {
-          image: imageUrl
-        }
-      }
+      { input: { image: imageUrl } }
     )
 
-    console.log('📦 Output Replicate:', output, typeof output)
-
-    if (!output) {
-      return NextResponse.json({ success: false, error: 'Pas de résultat Replicate' })
-    }
-
-    // Gérer différents formats de sortie
-    let outputUrl: string | null = null
-    
-    if (typeof output === 'string') {
-      outputUrl = output
-    } else if (typeof output === 'object' && output !== null) {
-      // Si c'est un objet avec une méthode url() ou une propriété url
-      if ('url' in output && typeof (output as any).url === 'function') {
-        outputUrl = await (output as any).url()
-      } else if ('url' in output) {
-        outputUrl = (output as any).url
-      } else if (Array.isArray(output) && output.length > 0) {
-        outputUrl = output[0]
+    let detourageUrl = typeof removeBgOutput === 'string' ? removeBgOutput : null
+    if (!detourageUrl && removeBgOutput && typeof removeBgOutput === 'object') {
+      if (Array.isArray(removeBgOutput) && removeBgOutput.length > 0) {
+        detourageUrl = removeBgOutput[0]
       }
     }
 
-    console.log('🔗 Output URL:', outputUrl)
+    if (!detourageUrl) {
+      return NextResponse.json({ success: false, error: 'Échec détourage' })
+    }
 
-    if (!outputUrl) {
-      return NextResponse.json({ success: false, error: `Format inattendu: ${JSON.stringify(output)}` })
+    console.log('✅ Détourage OK:', detourageUrl)
+    console.log('🔄 Étape 2: Détection cintre...')
+
+    // Étape 2: Détecter le cintre avec grounded-sam
+    try {
+      const samOutput = await replicate.run(
+        "schananas/grounded_sam:ee871c19efb1941f55f66a3f1e6e94df115fa57e8077cb1e11690f9cba768546",
+        {
+          input: {
+            image: detourageUrl,
+            text_prompt: "hanger, coat hanger, clothes hanger"
+          }
+        }
+      )
+
+      console.log('📦 SAM output:', samOutput)
+
+      // Si un cintre est détecté, on a un masque qu'on peut utiliser
+      // Pour l'instant on log juste et on continue avec l'image détourée
+      
+    } catch (samError: any) {
+      console.log('⚠️ Pas de cintre détecté ou erreur SAM:', samError.message)
+      // On continue sans masquer le cintre
     }
 
     // Upload sur Cloudinary
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
 
-    const imgResponse = await fetch(outputUrl)
+    const imgResponse = await fetch(detourageUrl)
     const blob = await imgResponse.blob()
 
     const formData = new FormData()
@@ -86,9 +91,9 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ Erreur détourage:', error.message)
+    console.error('❌ Erreur:', error.message)
     return NextResponse.json(
-      { error: error.message || 'Erreur détourage' },
+      { error: error.message || 'Erreur' },
       { status: 500 }
     )
   }
