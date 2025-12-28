@@ -17,11 +17,15 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const [rotation, setRotation] = useState(0)
 
   const getRotatedUrl = (url: string, deg: number) => {
-    if (deg === 0) return url
-    const urlParts = url.split('/upload/')
-    if (urlParts.length !== 2) return url
-    return `${urlParts[0]}/upload/a_${deg}/${urlParts[1]}`
-  }
+  if (!url) return ''
+  if (deg === 0) return url
+  const cleanUrl = url
+    .replace(/\/upload\/a_\d+\//, '/upload/')
+    .replace(/\/upload\/a_exif\//, '/upload/')
+  const urlParts = cleanUrl.split('/upload/')
+  if (urlParts.length !== 2) return url
+  return `${urlParts[0]}/upload/a_${deg}/${urlParts[1]}`
+}
 
   const currentDisplayUrl = getRotatedUrl(imageUrl, rotation)
 
