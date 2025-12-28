@@ -1,5 +1,5 @@
 // lib/imageProcessing.ts
-// Traitement d'images : upload Cloudinary + détourage Replicate
+// Traitement d'images : upload Cloudinary + détourage Replicate + transformations
 
 /**
  * Configuration Cloudinary
@@ -16,13 +16,13 @@ function getCloudinaryConfig() {
 }
 
 /**
- * Upload une image vers Cloudinary avec correction EXIF
+ * Upload une image vers Cloudinary
  */
-async function uploadRaw(file: File): Promise<string> {
+async function uploadToCloudinary(file: File | Blob, filename?: string): Promise<string> {
   const { cloudName, uploadPreset } = getCloudinaryConfig()
 
   const formData = new FormData()
-  formData.append('file', file)
+  formData.append('file', file, filename || 'image.png')
   formData.append('upload_preset', uploadPreset)
   formData.append('folder', 'produits')
 
@@ -36,37 +36,69 @@ async function uploadRaw(file: File): Promise<string> {
   }
 
   const data = await response.json()
-  
-  // Appliquer rotation EXIF pour que l'image soit droite avant détourage
-  const baseUrl = data.secure_url
-  const urlParts = baseUrl.split('/upload/')
-  if (urlParts.length === 2) {
-    return `${urlParts[0]}/upload/a_exif/${urlParts[1]}`
-  }
-  return baseUrl
+  return data.secure_url
 }
 
+/**
+ * Applique les transformations Cloudinary (lumière, contraste, fond blanc, etc.)
+ */
+function applyTransformations(url: string, withBackground: boolean = true): string {
+  const urlParts = url.split('/upload/')
+  if (urlParts.length !== 2) return url
+
+  const transforms = withBackground
+    ? 'b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto'
+    : 'c_pad,ar_1:1,w_1200,h_1200,g_center,e_auto_brightness,e_auto_contrast,e_brightness:5,e_vibrance:15,e_sharpen:30,q_auto:good,f_auto'
+
+  return `${urlParts[0]}/upload/${transforms}/${urlParts[1]}`
+}
 
 /**
  * Upload et traite une photo produit (face/dos)
- * Sans détourage auto - le détourage se fait via PhotoEditor avec SAM
+ * Retourne original + processed (avec transformations basiques, sans détourage)
+ * Le détourage se fait via PhotoEditor
  */
 export async function processAndUploadProductPhoto(file: File): Promise<{
   original: string
   processed: string
 }> {
-  console.log('📸 Upload photo produit:', file.name, `(${(file.size / 1024).toFixed(1)} KB)`)
+  console.log('📸 Upload photo produit:', file.name)
 
-  const originalUrl = await uploadRaw(file)
-  console.log('✅ Photo uploadée:', originalUrl)
-
-  // Transformations basiques sans détourage
+  const originalUrl = await uploadToCloudinary(file)
+  
+  // Appliquer rotation EXIF
   const urlParts = originalUrl.split('/upload/')
-  const processedUrl = urlParts.length === 2
-    ? `${urlParts[0]}/upload/c_pad,ar_1:1,w_1200,h_1200,b_white,e_auto_color,e_auto_brightness,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
+  const exifUrl = urlParts.length === 2
+    ? `${urlParts[0]}/upload/a_exif/${urlParts[1]}`
     : originalUrl
 
-  return { original: originalUrl, processed: processedUrl }
+  // Transformations basiques sans détourage
+  const processedUrl = applyTransformations(exifUrl, false)
+
+  return { original: exifUrl, processed: processedUrl }
+}
+
+/**
+ * Détoure une image via Replicate (lucataco/remove-bg)
+ * Appelé depuis PhotoEditor
+ */
+export async function removeBackground(imageUrl: string): Promise<string> {
+  console.log('🔄 Détourage Replicate pour:', imageUrl)
+
+  // Appel API Replicate
+  const response = await fetch('/api/segment-sam', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageUrl }),
+  })
+
+  const data = await response.json()
+
+  if (!data.success || !data.maskUrl) {
+    throw new Error(data.error || 'Erreur détourage')
+  }
+
+  return data.maskUrl
 }
 
 /**
@@ -78,12 +110,12 @@ export async function uploadPhotoSimple(file: File): Promise<{
 }> {
   console.log('📸 Upload photo détail:', file.name)
 
-  const originalUrl = await uploadRaw(file)
+  const originalUrl = await uploadToCloudinary(file)
   
-  // Transformations légères (pas de détourage)
+  // Transformations légères
   const urlParts = originalUrl.split('/upload/')
   const processedUrl = urlParts.length === 2
-  ? `${urlParts[0]}/upload/a_auto,c_fill,g_auto,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
+    ? `${urlParts[0]}/upload/a_auto,c_fill,g_auto,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
     : originalUrl
 
   return { original: originalUrl, processed: processedUrl }
@@ -94,8 +126,6 @@ export async function uploadPhotoSimple(file: File): Promise<{
  */
 export async function uploadMultiplePhotos(files: File[]): Promise<string[]> {
   if (!files || files.length === 0) return []
-  
-  console.log(`📸 Upload de ${files.length} photo(s) détail...`)
   
   const results = await Promise.all(files.map(f => uploadPhotoSimple(f)))
   return results.map(r => r.processed)
