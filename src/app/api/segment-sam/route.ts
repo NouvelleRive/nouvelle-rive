@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
 
     console.log('🔄 Détourage pour:', imageUrl)
 
-    // Utiliser lucataco/remove-bg
     const output = await replicate.run(
       "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
       {
@@ -26,17 +25,32 @@ export async function POST(req: NextRequest) {
       }
     )
 
+    console.log('📦 Output Replicate:', output, typeof output)
+
     if (!output) {
-      return NextResponse.json({ success: false, error: 'Pas de résultat' })
+      return NextResponse.json({ success: false, error: 'Pas de résultat Replicate' })
     }
 
-    console.log('✅ Détourage réussi, upload sur Cloudinary...')
+    // Gérer différents formats de sortie
+    let outputUrl: string | null = null
+    
+    if (typeof output === 'string') {
+      outputUrl = output
+    } else if (typeof output === 'object' && output !== null) {
+      // Si c'est un objet avec une méthode url() ou une propriété url
+      if ('url' in output && typeof (output as any).url === 'function') {
+        outputUrl = await (output as any).url()
+      } else if ('url' in output) {
+        outputUrl = (output as any).url
+      } else if (Array.isArray(output) && output.length > 0) {
+        outputUrl = output[0]
+      }
+    }
 
-    // L'output est directement l'URL
-    const outputUrl = typeof output === 'string' ? output : null
+    console.log('🔗 Output URL:', outputUrl)
 
     if (!outputUrl) {
-      return NextResponse.json({ success: false, error: 'Pas d\'URL de sortie' })
+      return NextResponse.json({ success: false, error: `Format inattendu: ${JSON.stringify(output)}` })
     }
 
     // Upload sur Cloudinary
@@ -58,7 +72,6 @@ export async function POST(req: NextRequest) {
 
     const cloudinaryData = await cloudinaryResponse.json()
     
-    // Fond blanc + centrage
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     const finalUrl = urlParts.length === 2
