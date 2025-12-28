@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     const finalUrl = urlParts.length === 2
-      ? `${urlParts[0]}/upload/b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,q_auto:best/${urlParts[1]}`
+  ? `${urlParts[0]}/upload/a_exif,b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best/${urlParts[1]}`
       : baseUrl
 
     return NextResponse.json({ success: true, maskUrl: finalUrl })

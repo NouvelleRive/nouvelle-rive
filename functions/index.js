@@ -129,6 +129,57 @@ exports.onProductReceived = functions
             itemId: ids.itemId,
             squareSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
+
+          // Upload image vers Square
+          const imageUrl = after.photos?.face || after.imageUrl || (after.imageUrls && after.imageUrls[0])
+          if (imageUrl && ids.itemId) {
+            try {
+              const fetch = require('node-fetch')
+              const FormData = require('form-data')
+              
+              const imageResponse = await fetch(imageUrl)
+              const imageBuffer = await imageResponse.buffer()
+              
+              const formData = new FormData()
+              formData.append('file', imageBuffer, {
+                filename: 'product.jpg',
+                contentType: 'image/jpeg',
+              })
+              
+              const metadata = {
+                idempotency_key: uuidv4(),
+                object_id: ids.itemId,
+                image: {
+                  type: 'IMAGE',
+                  id: `#image-${Date.now()}`,
+                  image_data: {
+                    caption: after.nom,
+                  },
+                },
+              }
+              formData.append('request', JSON.stringify(metadata), {
+                contentType: 'application/json',
+              })
+              
+              const uploadResponse = await fetch('https://connect.squareup.com/v2/catalog/images', {
+                method: 'POST',
+                headers: {
+                  'Authorization': 'Bearer EAAAl47KiVln6ChvRD8zUXqLU4LWjc4-7VSJfUEsBOm5QE4IBUiR_ChKoi3OBJm9',
+                  'Square-Version': '2023-09-25',
+                  ...formData.getHeaders(),
+                },
+                body: formData,
+              })
+              
+              if (uploadResponse.ok) {
+                console.log(`📷 Image uploadée pour ${after.sku}`)
+              } else {
+                console.warn(`⚠️ Image non uploadée pour ${after.sku}`)
+              }
+            } catch (imgErr) {
+              console.warn(`⚠️ Erreur upload image ${after.sku}:`, imgErr.message)
+            }
+          }
         }
 
       } catch (squareError) {

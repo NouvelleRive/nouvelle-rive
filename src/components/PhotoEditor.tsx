@@ -32,9 +32,10 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     setError(null)
 
     try {
-      // Envoyer l'URL avec rotation
-      const urlToProcess = getRotatedUrl(imageUrl, rotation)
-      
+      // Envoyer l'URL originale (sans transformation) à Replicate
+      // La rotation sera appliquée après par Cloudinary
+      const baseImageUrl = imageUrl.replace(/\/upload\/a_\d+\//, '/upload/').replace(/\/upload\/a_exif\//, '/upload/')
+
       const res = await fetch('/api/detourage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
