@@ -114,7 +114,7 @@
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
 
       // Chineuses depuis Firestore
-      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string, trigramme: string}[]>([])
+      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string, trigramme: string, categories: {label: string, idsquare?: string}[]}[]>([])
 
       useEffect(() => {
         const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
@@ -123,7 +123,8 @@
             nom: d.data().nom || '',
             authUid: d.data().authUid || '',
             email: d.data().email || '',
-            trigramme: d.data().trigramme || ''
+            trigramme: d.data().trigramme || '',
+            categories: d.data()['Catégorie'] || d.data().categories || []
           }))
           setChineusesList(data)
         })
@@ -324,9 +325,27 @@
       const chineursUniques = Array.from(
       new Set(produits.map((p) => p.chineurUid).filter(Boolean))
     ).sort((a, b) => (a || '').localeCompare(b || ''))
-      const categoriesUniques = categoriesLabels.length > 0 
-        ? categoriesLabels 
-        : Array.from(new Set(produits.map((p) => (typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)).filter(Boolean)))
+      const categoriesUniques = useMemo(() => {
+  // Si une chineuse est sélectionnée, prendre ses catégories
+  if (filtreDeposant) {
+    const chineuse = chineusesList.find(c => c.trigramme?.toUpperCase() === filtreDeposant.toUpperCase())
+    if (chineuse?.categories?.length > 0) {
+      return chineuse.categories.map(c => c.label)
+    }
+  }
+  
+  // Sinon toutes les catégories de toutes les chineuses
+  const allCategories = new Set<string>()
+  chineusesList.forEach(c => {
+    (c.categories || []).forEach(cat => {
+      if (cat.label) allCategories.add(cat.label)
+    })
+  })
+  if (allCategories.size > 0) return Array.from(allCategories).sort()
+  
+  // Fallback: catégories depuis les produits
+  return Array.from(new Set(produits.map((p) => (typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)).filter(Boolean)))
+}, [filtreDeposant, chineusesList, produits])
       
       const moisUniques = Array.from(
         new Set(
@@ -769,15 +788,7 @@
                 categorie: {
                   value: filtreCategorie,
                   onChange: setFiltreCategorie,
-                  options: (filtreDeposant 
-                    ? Array.from(new Set(
-                        produits
-                          .filter(p => p.sku?.toUpperCase().startsWith(filtreDeposant.toUpperCase()))
-                          .map(p => typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)
-                          .filter(Boolean)
-                      ))
-                    : categoriesUniques
-                  ).map(c => ({
+                  options: categoriesUniques.map(c => ({
                     value: c as string,
                     label: c as string
                   }))
