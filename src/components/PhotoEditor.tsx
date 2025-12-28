@@ -1,7 +1,7 @@
 // components/PhotoEditor.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X, RotateCcw, RotateCw, Check } from 'lucide-react'
 
 interface PhotoEditorProps {
@@ -16,7 +16,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const [error, setError] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
 
-  // URL avec rotation appliquée
   const getRotatedUrl = (url: string, deg: number) => {
     if (deg === 0) return url
     const urlParts = url.split('/upload/')
@@ -26,20 +25,19 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
   const currentDisplayUrl = getRotatedUrl(imageUrl, rotation)
 
-  // Lancer le détourage
   const handleAutoRemove = async () => {
     setProcessing(true)
     setError(null)
 
     try {
-      // Envoyer l'URL originale (sans transformation) à Replicate
-      // La rotation sera appliquée après par Cloudinary
-      const baseImageUrl = imageUrl.replace(/\/upload\/a_\d+\//, '/upload/').replace(/\/upload\/a_exif\//, '/upload/')
+      const baseImageUrl = imageUrl
+        .replace(/\/upload\/a_\d+\//, '/upload/')
+        .replace(/\/upload\/a_exif\//, '/upload/')
 
       const res = await fetch('/api/detourage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: urlToProcess }),
+        body: JSON.stringify({ imageUrl: baseImageUrl, rotation }),
       })
 
       const data = await res.json()
@@ -56,13 +54,11 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     }
   }
 
-  // Rotation
   const handleRotate = (direction: 'left' | 'right') => {
     setRotation(prev => {
       const newRot = direction === 'right' ? prev + 90 : prev - 90
       return ((newRot % 360) + 360) % 360
     })
-    // Reset le résultat si on tourne après détourage
     if (processedUrl) {
       setProcessedUrl(null)
     }
@@ -77,7 +73,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">
             {processing ? '⏳ Détourage...' : error ? '❌ Erreur' : processedUrl ? '✨ Résultat' : '📸 Photo'}
@@ -91,7 +86,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
           </button>
         </div>
 
-        {/* Image */}
         <div className="p-4">
           <div className="relative aspect-square bg-white rounded-xl overflow-hidden border">
             <img
@@ -100,7 +94,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
               className="absolute inset-0 w-full h-full object-contain"
             />
 
-            {/* Loading overlay */}
             {processing && (
               <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#22209C] border-t-transparent mb-4" />
@@ -110,7 +103,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
             )}
           </div>
 
-          {/* Rotation buttons - only before processing */}
           {!processedUrl && !processing && (
             <div className="flex justify-center gap-4 mt-4">
               <button
@@ -130,7 +122,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
             </div>
           )}
 
-          {/* Error */}
           {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
@@ -138,7 +129,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
           )}
         </div>
 
-        {/* Actions */}
         <div className="p-4 border-t bg-gray-50">
           {processing ? (
             <div className="text-center text-gray-500 text-sm py-2">
