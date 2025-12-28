@@ -530,49 +530,49 @@
         try {
           const productId = editingProduct.id
         
-          // Préparer les URLs des photos
-          let faceUrl: string | undefined = editingProduct.photos?.face
-          let faceOriginalUrl: string | undefined = (editingProduct.photos as any)?.faceOriginal
-          let dosUrl: string | undefined = editingProduct.photos?.dos
-          let dosOriginalUrl: string | undefined = (editingProduct.photos as any)?.dosOriginal
-          let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
-          
-          // Gérer les photos détails existantes (filtrer les supprimées)
-          let detailsUrls = [...(editingProduct.photos?.details || [])]
-          if (data.deletedPhotos.detailsIndexes && data.deletedPhotos.detailsIndexes.length > 0) {
-            detailsUrls = detailsUrls.filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
-          }
-          
-          // Upload nouvelle photo face (avec traitement complet)
-          if (data.photoFace) {
-            const result = await processAndUploadProductPhoto(data.photoFace)
-            faceUrl = result.processed
-            faceOriginalUrl = result.original
-          }
+      // Préparer les URLs des photos - utiliser celles du PhotoEditor si disponibles
+      let faceUrl: string | undefined = data.existingPhotos?.face || editingProduct.photos?.face
+      let faceOriginalUrl: string | undefined = (data.existingPhotos as any)?.faceOriginal || (editingProduct.photos as any)?.faceOriginal
+      let dosUrl: string | undefined = data.existingPhotos?.dos || editingProduct.photos?.dos
+      let dosOriginalUrl: string | undefined = (data.existingPhotos as any)?.dosOriginal || (editingProduct.photos as any)?.dosOriginal
+      let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
 
-          // Upload nouvelle photo dos (avec traitement complet)
-          if (data.photoDos) {
-            const result = await processAndUploadProductPhoto(data.photoDos)
-            dosUrl = result.processed
-            dosOriginalUrl = result.original
-          }
+      // Gérer les photos détails existantes (filtrer les supprimées)
+      let detailsUrls = [...(editingProduct.photos?.details || [])]
+      if (data.deletedPhotos.detailsIndexes && data.deletedPhotos.detailsIndexes.length > 0) {
+        detailsUrls = detailsUrls.filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
+      }
 
-          // Upload nouvelles photos détails (traitement léger)
-          if (data.photosDetails.length > 0) {
-            const newDetailsUrls = await uploadMultiplePhotos(data.photosDetails)
-            detailsUrls.push(...newDetailsUrls)
-          }
-          
-          // Gérer les suppressions de face/dos/faceOnModel
-          if (data.deletedPhotos.face) {
-            faceUrl = undefined
-            faceOriginalUrl = undefined
-          }
-          if (data.deletedPhotos.dos) {
-            dosUrl = undefined
-            dosOriginalUrl = undefined
-          }
-          if (data.deletedPhotos.faceOnModel) faceOnModelUrl = undefined
+      // Upload nouvelle photo face SEULEMENT si c'est un nouveau File (pas déjà traité par PhotoEditor)
+      if (data.photoFace) {
+        const result = await processAndUploadProductPhoto(data.photoFace)
+        faceUrl = result.processed
+        faceOriginalUrl = result.original
+      }
+
+      // Upload nouvelle photo dos SEULEMENT si c'est un nouveau File
+      if (data.photoDos) {
+        const result = await processAndUploadProductPhoto(data.photoDos)
+        dosUrl = result.processed
+        dosOriginalUrl = result.original
+      }
+
+      // Upload nouvelles photos détails
+      if (data.photosDetails.length > 0) {
+        const newDetailsUrls = await uploadMultiplePhotos(data.photosDetails)
+        detailsUrls.push(...newDetailsUrls)
+      }
+
+      // Gérer les suppressions
+      if (data.deletedPhotos.face) {
+        faceUrl = undefined
+        faceOriginalUrl = undefined
+      }
+      if (data.deletedPhotos.dos) {
+        dosUrl = undefined
+        dosOriginalUrl = undefined
+      }
+      if (data.deletedPhotos.faceOnModel) faceOnModelUrl = undefined
           
           // Trouver la catégorie avec idsquare
           const catObj = categories.find((c) => c.label === data.categorie)
