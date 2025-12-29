@@ -2,7 +2,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, RotateCcw, RotateCw, Check } from 'lucide-react'
+import { X, RotateCcw, Check } from 'lucide-react'
 
 interface PhotoEditorProps {
   imageUrl: string
@@ -14,34 +14,20 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const [processing, setProcessing] = useState(false)
   const [processedUrl, setProcessedUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [rotation, setRotation] = useState(0)
-
-  const getRotatedUrl = (url: string, deg: number) => {
-  if (!url) return ''
-  if (deg === 0) return url
-  const cleanUrl = url
-    .replace(/\/upload\/a_\d+\//, '/upload/')
-    .replace(/\/upload\/a_exif\//, '/upload/')
-  const urlParts = cleanUrl.split('/upload/')
-  if (urlParts.length !== 2) return url
-  return `${urlParts[0]}/upload/a_${deg}/${urlParts[1]}`
-}
-
-  const currentDisplayUrl = getRotatedUrl(imageUrl, rotation)
 
   const handleAutoRemove = async () => {
     setProcessing(true)
     setError(null)
 
     try {
-      const baseImageUrl = imageUrl
+      const cleanUrl = imageUrl
         .replace(/\/upload\/a_\d+\//, '/upload/')
         .replace(/\/upload\/a_exif\//, '/upload/')
 
       const res = await fetch('/api/detourage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: baseImageUrl, rotation }),
+        body: JSON.stringify({ imageUrl: cleanUrl }),
       })
 
       const data = await res.json()
@@ -55,22 +41,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       setError(err.message || 'Erreur réseau')
     } finally {
       setProcessing(false)
-    }
-  }
-
-  const handleRotate = (direction: 'left' | 'right') => {
-    setRotation(prev => {
-      const newRot = direction === 'right' ? prev + 90 : prev - 90
-      return ((newRot % 360) + 360) % 360
-    })
-    if (processedUrl) {
-      setProcessedUrl(null)
-    }
-  }
-
-  const handleConfirm = () => {
-    if (processedUrl) {
-      onConfirm(processedUrl)
     }
   }
 
@@ -93,7 +63,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
         <div className="p-4">
           <div className="relative aspect-square bg-white rounded-xl overflow-hidden border">
             <img
-              src={processedUrl || currentDisplayUrl}
+              src={processedUrl || imageUrl}
               alt="Photo"
               className="absolute inset-0 w-full h-full object-contain"
             />
@@ -106,25 +76,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
               </div>
             )}
           </div>
-
-          {!processedUrl && !processing && (
-            <div className="flex justify-center gap-4 mt-4">
-              <button
-                onClick={() => handleRotate('left')}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition"
-              >
-                <RotateCcw size={18} />
-                Gauche
-              </button>
-              <button
-                onClick={() => handleRotate('right')}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 transition"
-              >
-                <RotateCw size={18} />
-                Droite
-              </button>
-            </div>
-          )}
 
           {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -149,14 +100,14 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
           ) : processedUrl ? (
             <div className="flex gap-3">
               <button
-                onClick={() => { setProcessedUrl(null); setRotation(0) }}
+                onClick={() => setProcessedUrl(null)}
                 className="flex-1 flex items-center justify-center gap-2 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-100 transition"
               >
                 <RotateCcw size={18} />
                 Recommencer
               </button>
               <button
-                onClick={handleConfirm}
+                onClick={() => onConfirm(processedUrl)}
                 className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition"
               >
                 <Check size={20} />
