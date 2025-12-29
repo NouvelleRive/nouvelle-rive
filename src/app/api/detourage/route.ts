@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     const rotationTransform = rotation !== 0 ? `a_${rotation},` : ''
 
     const finalUrl = urlParts.length === 2
-  ? `${urlParts[0]}/upload/${rotationTransform}b_white,c_lpad,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto/${urlParts[1]}`
+  ? `${urlParts[0]}/upload/${rotationTransform}e_trim,b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto/${urlParts[1]}`
   : baseUrl
 
 
