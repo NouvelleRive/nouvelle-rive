@@ -1,3 +1,4 @@
+// app/api/detourage/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import Replicate from 'replicate'
 
@@ -7,18 +8,19 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl } = await req.json()
+    const body = await req.json()
+    const { imageUrl, rotation = 0 } = body
 
-    if (!imageUrl) {
-      return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return NextResponse.json({ error: 'imageUrl requis et doit être une string' }, { status: 400 })
     }
 
-    // Nettoyer l'URL
+    // Nettoyer l'URL (enlever les transformations existantes)
     const cleanUrl = imageUrl
       .replace(/\/upload\/a_\d+\//, '/upload/')
       .replace(/\/upload\/a_exif\//, '/upload/')
 
-    console.log('🔄 Détourage pour:', cleanUrl)
+    console.log('🔄 Détourage pour:', cleanUrl, 'rotation:', rotation)
 
     const output = await replicate.run(
       "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (typeof output === 'string') {
       outputUrl = output
     } else if (Array.isArray(output) && output.length > 0) {
-      outputUrl = output[0]
+      outputUrl = String(output[0])
     } else if (output && typeof output === 'object') {
       const obj = output as any
       outputUrl = obj.url || obj.output || obj.image || null
@@ -62,14 +64,16 @@ export async function POST(req: NextRequest) {
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     
+    const rotationTransform = rotation !== 0 ? `a_${rotation},` : ''
+    
     const finalUrl = urlParts.length === 2
-      ? `${urlParts[0]}/upload/b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,q_auto:best/${urlParts[1]}`
+      ? `${urlParts[0]}/upload/${rotationTransform}b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,q_auto:best/${urlParts[1]}`
       : baseUrl
 
     return NextResponse.json({ success: true, maskUrl: finalUrl })
 
   } catch (error: any) {
-    console.error('❌ Erreur:', error.message)
+    console.error('❌ Erreur détourage:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
