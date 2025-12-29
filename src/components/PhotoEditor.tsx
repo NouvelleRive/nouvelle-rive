@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { X, RotateCcw, RotateCw, Check, Eraser, Sun, Paintbrush } from 'lucide-react'
+import { X, RotateCcw, RotateCw, Check, Eraser } from 'lucide-react'
 
 interface PhotoEditorProps {
   imageUrl: string
@@ -13,6 +13,7 @@ interface PhotoEditorProps {
 export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEditorProps) {
   const [processing, setProcessing] = useState(false)
   const [processedUrl, setProcessedUrl] = useState<string | null>(null)
+  const [rawUrl, setRawUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
   const [mode, setMode] = useState<'view' | 'erase'>('view')
@@ -41,10 +42,12 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
   const currentDisplayUrl = getRotatedUrl(processedUrl || imageUrl, processedUrl ? 0 : rotation)
 
-  // Initialiser le canvas pour le mode gomme
   const initCanvas = () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !rawUrl) {
+      console.error('Canvas ou rawUrl manquant')
+      return
+    }
 
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -57,7 +60,11 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
         setCanvasReady(true)
       }
     }
-    img.src = currentDisplayUrl
+    img.onerror = (err) => {
+      console.error('Erreur chargement image canvas:', err)
+      setError('Impossible de charger l\'image pour la gomme')
+    }
+    img.src = rawUrl
   }
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -114,6 +121,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
       if (data.success && data.maskUrl) {
         setProcessedUrl(data.maskUrl)
+        setRawUrl(data.rawUrl || data.maskUrl)
         setMode('view')
       } else {
         setError(data.error || 'Erreur lors du détourage')
@@ -132,6 +140,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     })
     if (processedUrl) {
       setProcessedUrl(null)
+      setRawUrl(null)
     }
   }
 
@@ -161,7 +170,16 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       )
 
       const data = await res.json()
-      setProcessedUrl(data.secure_url)
+      const newRawUrl = data.secure_url
+      
+      // Appliquer les mêmes transformations que le détourage
+      const urlParts = newRawUrl.split('/upload/')
+      const finalUrl = urlParts.length === 2
+        ? `${urlParts[0]}/upload/e_trim,b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto/${urlParts[1]}`
+        : newRawUrl
+
+      setProcessedUrl(finalUrl)
+      setRawUrl(newRawUrl)
       setMode('view')
       setCanvasReady(false)
     } catch (err: any) {
@@ -223,7 +241,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
             </div>
           )}
 
-          {/* Mode gomme - contrôles */}
           {mode === 'erase' && (
             <div className="mb-4">
               <label className="text-sm text-gray-600 mb-2 block">Taille du pinceau: {brushSize}px</label>
@@ -252,7 +269,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
             </div>
           )}
 
-          {/* Contrôles rotation - avant détourage */}
           {mode === 'view' && !processedUrl && !processing && (
             <div className="flex justify-center gap-4 mb-4">
               <button
@@ -270,7 +286,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
             </div>
           )}
 
-          {/* Actions principales */}
           {mode === 'view' && (
             <>
               {processing ? (
@@ -286,7 +301,6 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
                 </button>
               ) : processedUrl ? (
                 <div className="space-y-3">
-                  {/* Bouton gomme */}
                   <button
                     onClick={handleEnterEraseMode}
                     className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
@@ -296,7 +310,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
                   
                   <div className="flex gap-3">
                     <button
-                      onClick={() => { setProcessedUrl(null); setRotation(0) }}
+                      onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0) }}
                       className="flex-1 flex items-center justify-center gap-2 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-100 transition"
                     >
                       <RotateCcw size={18} /> Recommencer
