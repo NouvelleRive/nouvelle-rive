@@ -7,17 +7,22 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0 } = await req.json()
+    const { imageUrl } = await req.json()
 
     if (!imageUrl) {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
     }
 
-    console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation)
+    // Nettoyer l'URL
+    const cleanUrl = imageUrl
+      .replace(/\/upload\/a_\d+\//, '/upload/')
+      .replace(/\/upload\/a_exif\//, '/upload/')
+
+    console.log('🔄 Détourage pour:', cleanUrl)
 
     const output = await replicate.run(
       "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
-      { input: { image: imageUrl } }
+      { input: { image: cleanUrl } }
     )
 
     console.log('📦 Output:', JSON.stringify(output))
@@ -57,10 +62,8 @@ export async function POST(req: NextRequest) {
     const baseUrl = cloudinaryData.secure_url
     const urlParts = baseUrl.split('/upload/')
     
-    const rotationTransform = rotation !== 0 ? `a_${rotation},` : ''
-    
     const finalUrl = urlParts.length === 2
-      ? `${urlParts[0]}/upload/${rotationTransform}b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best/${urlParts[1]}`
+      ? `${urlParts[0]}/upload/b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,q_auto:best/${urlParts[1]}`
       : baseUrl
 
     return NextResponse.json({ success: true, maskUrl: finalUrl })
