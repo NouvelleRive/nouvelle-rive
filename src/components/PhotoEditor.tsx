@@ -1,8 +1,8 @@
 // components/PhotoEditor.tsx
 'use client'
 
-import { useState } from 'react'
-import { X, RotateCcw, RotateCw, Check } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { X, RotateCcw, RotateCw, Check, Eraser, Sun, Paintbrush } from 'lucide-react'
 
 interface PhotoEditorProps {
   imageUrl: string
@@ -15,8 +15,12 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const [processedUrl, setProcessedUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
+  const [mode, setMode] = useState<'view' | 'erase'>('view')
+  const [brushSize, setBrushSize] = useState(30)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [canvasReady, setCanvasReady] = useState(false)
 
-  // Protection si imageUrl est undefined
   if (!imageUrl) {
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -35,27 +39,82 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     return `${urlParts[0]}/upload/a_${deg}/${urlParts[1]}`
   }
 
-  const currentDisplayUrl = getRotatedUrl(imageUrl, rotation)
+  const currentDisplayUrl = getRotatedUrl(processedUrl || imageUrl, processedUrl ? 0 : rotation)
+
+  // Initialiser le canvas pour le mode gomme
+  const initCanvas = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.drawImage(img, 0, 0)
+        setCanvasReady(true)
+      }
+    }
+    img.src = currentDisplayUrl
+  }
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (mode !== 'erase') return
+    setIsDrawing(true)
+    draw(e)
+  }
+
+  const stopDrawing = () => {
+    setIsDrawing(false)
+  }
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || mode !== 'erase') return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    let clientX, clientY
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX
+      clientY = e.touches[0].clientY
+    } else {
+      clientX = e.clientX
+      clientY = e.clientY
+    }
+
+    const x = (clientX - rect.left) * scaleX
+    const y = (clientY - rect.top) * scaleY
+
+    ctx.fillStyle = 'white'
+    ctx.beginPath()
+    ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
+    ctx.fill()
+  }
 
   const handleAutoRemove = async () => {
     setProcessing(true)
     setError(null)
 
     try {
-      const baseImageUrl = imageUrl
-        .replace(/\/upload\/a_\d+\//, '/upload/')
-        .replace(/\/upload\/a_exif\//, '/upload/')
-
       const res = await fetch('/api/detourage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: baseImageUrl, rotation }),
+        body: JSON.stringify({ imageUrl, rotation }),
       })
 
       const data = await res.json()
 
       if (data.success && data.maskUrl) {
         setProcessedUrl(data.maskUrl)
+        setMode('view')
       } else {
         setError(data.error || 'Erreur lors du détourage')
       }
@@ -76,6 +135,42 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     }
   }
 
+  const handleEnterEraseMode = () => {
+    setMode('erase')
+    setTimeout(initCanvas, 100)
+  }
+
+  const handleSaveErased = async () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    setProcessing(true)
+    try {
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((b) => resolve(b!), 'image/png')
+      })
+
+      const formData = new FormData()
+      formData.append('file', blob, 'edited.png')
+      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
+      formData.append('folder', 'produits')
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: 'POST', body: formData }
+      )
+
+      const data = await res.json()
+      setProcessedUrl(data.secure_url)
+      setMode('view')
+      setCanvasReady(false)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   const handleConfirm = () => {
     if (processedUrl) {
       onConfirm(processedUrl)
@@ -84,10 +179,10 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">
-            {processing ? '⏳ Détourage...' : error ? '❌ Erreur' : processedUrl ? '✅ Résultat' : '📷 Éditer la photo'}
+            {processing ? '⏳ Traitement...' : error ? '❌ Erreur' : mode === 'erase' ? '🖌️ Gomme' : processedUrl ? '✅ Résultat' : '📷 Éditer'}
           </h2>
           <button onClick={onCancel} className="p-2 hover:bg-gray-100 rounded-full">
             <X size={20} />
@@ -96,11 +191,30 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
         <div className="p-4">
           <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
-            <img
-              src={processedUrl || currentDisplayUrl}
-              alt="Aperçu"
-              className="w-full h-full object-contain"
-            />
+            {mode === 'erase' && canvasReady ? (
+              <canvas
+                ref={canvasRef}
+                className="w-full h-full object-contain cursor-crosshair"
+                onMouseDown={startDrawing}
+                onMouseUp={stopDrawing}
+                onMouseMove={draw}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchEnd={stopDrawing}
+                onTouchMove={draw}
+              />
+            ) : (
+              <img
+                src={currentDisplayUrl}
+                alt="Aperçu"
+                className="w-full h-full object-contain"
+              />
+            )}
+            {mode === 'erase' && !canvasReady && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <p>Chargement...</p>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -109,7 +223,37 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
             </div>
           )}
 
-          {!processedUrl && !processing && (
+          {/* Mode gomme - contrôles */}
+          {mode === 'erase' && (
+            <div className="mb-4">
+              <label className="text-sm text-gray-600 mb-2 block">Taille du pinceau: {brushSize}px</label>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={brushSize}
+                onChange={(e) => setBrushSize(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => { setMode('view'); setCanvasReady(false) }}
+                  className="flex-1 py-2 border rounded-lg"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveErased}
+                  className="flex-1 py-2 bg-green-600 text-white rounded-lg"
+                >
+                  Appliquer
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Contrôles rotation - avant détourage */}
+          {mode === 'view' && !processedUrl && !processing && (
             <div className="flex justify-center gap-4 mb-4">
               <button
                 onClick={() => handleRotate('left')}
@@ -126,39 +270,54 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
             </div>
           )}
 
-          {processing ? (
-            <div className="text-center text-gray-500 text-sm py-2">
-              Veuillez patienter...
-            </div>
-          ) : error ? (
-            <button
-              onClick={handleAutoRemove}
-              className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
-            >
-              <RotateCcw size={18} /> Réessayer
-            </button>
-          ) : processedUrl ? (
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setProcessedUrl(null); setRotation(0) }}
-                className="flex-1 flex items-center justify-center gap-2 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-100 transition"
-              >
-                <RotateCcw size={18} /> Recommencer
-              </button>
-              <button
-                onClick={handleConfirm}
-                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition"
-              >
-                <Check size={20} /> Valider
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleAutoRemove}
-              className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
-            >
-              Détourer
-            </button>
+          {/* Actions principales */}
+          {mode === 'view' && (
+            <>
+              {processing ? (
+                <div className="text-center text-gray-500 text-sm py-2">
+                  Veuillez patienter...
+                </div>
+              ) : error ? (
+                <button
+                  onClick={handleAutoRemove}
+                  className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
+                >
+                  <RotateCcw size={18} /> Réessayer
+                </button>
+              ) : processedUrl ? (
+                <div className="space-y-3">
+                  {/* Bouton gomme */}
+                  <button
+                    onClick={handleEnterEraseMode}
+                    className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
+                  >
+                    <Eraser size={18} /> Effacer au doigt
+                  </button>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setProcessedUrl(null); setRotation(0) }}
+                      className="flex-1 flex items-center justify-center gap-2 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-100 transition"
+                    >
+                      <RotateCcw size={18} /> Recommencer
+                    </button>
+                    <button
+                      onClick={handleConfirm}
+                      className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition"
+                    >
+                      <Check size={20} /> Valider
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAutoRemove}
+                  className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
+                >
+                  Détourer
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
