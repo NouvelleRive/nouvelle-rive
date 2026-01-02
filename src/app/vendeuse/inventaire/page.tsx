@@ -255,7 +255,7 @@ export default function InventairePage() {
             )}
           </div>
 
-          {inventaires.length > 0 && !inventaireActif && (
+          {isAdmin && inventaires.length > 0 && !inventaireActif && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <p className="text-xs text-gray-400 mb-2">Inventaires précédents :</p>
               <div className="flex flex-wrap gap-2">
