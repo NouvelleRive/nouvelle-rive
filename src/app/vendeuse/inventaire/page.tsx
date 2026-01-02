@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { db } from '@/lib/firebaseConfig'
+import { db, auth } from '@/lib/firebaseConfig'
 import {
   collection,
   query,
@@ -10,10 +10,14 @@ import {
   doc,
   addDoc,
   updateDoc,
+  setDoc,
   Timestamp,
   orderBy,
   limit,
+  getDocs,
+  where,
 } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Plus, Calendar, CheckCircle } from 'lucide-react'
@@ -29,6 +33,7 @@ type Inventaire = {
 }
 
 const VENDEUSES = ['Hina', 'Sofia', 'Loah', 'Teo', 'Salomé']
+const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
 export default function InventairePage() {
   const [vendeusePrenom, setVendeusePrenom] = useState<string>('')
@@ -41,6 +46,14 @@ export default function InventairePage() {
   const [showNewInventaireModal, setShowNewInventaireModal] = useState(false)
   const [newInventaireNom, setNewInventaireNom] = useState('')
   const [creatingInventaire, setCreatingInventaire] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setIsAdmin(user?.email === ADMIN_EMAIL)
+    })
+    return () => unsub()
+  }, [])
 
   useEffect(() => {
     const q = query(collection(db, 'produits'))
@@ -125,14 +138,42 @@ export default function InventairePage() {
 
   const handleTerminerInventaire = async () => {
     if (!inventaireActif) return
-    if (!confirm('Terminer cet inventaire ?')) return
+    if (!confirm('Terminer cet inventaire ? Les pièces non trouvées seront enregistrées comme manquantes.')) return
 
     try {
+      // Trouver les produits manquants (non cochés pendant cet inventaire)
+      const manquants = produits.filter((p) => {
+        // Exclure les vendus, supprimés, retours, quantité 0
+        if (p.vendu || p.statut === 'supprime' || p.statut === 'retour' || (p.quantite ?? 1) <= 0) return false
+        // Manquant = pas inventorié pendant cet inventaire
+        return p.inventaireId !== inventaireActif.id
+      })
+
+      // Sauvegarder chaque manquant dans la sous-collection
+      for (const p of manquants) {
+        const trigramme = deposants.find(d => d.email === p.chineur)?.trigramme || p.chineur?.split('@')[0] || 'N/A'
+        await setDoc(doc(db, 'inventaires', inventaireActif.id, 'manquants', p.sku || p.id), {
+          sku: p.sku || '',
+          produitId: p.id,
+          nom: p.nom,
+          prix: p.prix || 0,
+          trigramme: trigramme,
+          signalePar: vendeusePrenom,
+          dateSignalement: Timestamp.now(),
+          traite: false,
+        })
+      }
+
+      // Mettre à jour le statut de l'inventaire
       await updateDoc(doc(db, 'inventaires', inventaireActif.id), {
         statut: 'termine',
         dateFin: Timestamp.now(),
+        nbManquants: manquants.length,
+        valeurManquants: manquants.reduce((sum, p) => sum + (p.prix || 0), 0),
       })
+
       setInventaireActif(null)
+      alert(`Inventaire clôturé. ${manquants.length} pièce(s) manquante(s) enregistrée(s).`)
     } catch (err) {
       console.error('Erreur:', err)
       alert('Erreur lors de la clôture')
@@ -186,28 +227,32 @@ export default function InventairePage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {inventaireActif && (
-                <button
-                  onClick={handleTerminerInventaire}
-                  className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
-                >
-                  <CheckCircle size={14} />
-                  <span className="hidden sm:inline">Terminer</span>
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setNewInventaireNom(`Inventaire ${format(new Date(), 'MMMM yyyy', { locale: fr })}`)
-                  setShowNewInventaireModal(true)
-                }}
-                className="px-3 py-1.5 text-xs bg-[#22209C] text-white rounded-lg hover:bg-[#1a1878] transition-colors flex items-center gap-1"
-              >
-                <Plus size={14} />
-                <span className="hidden sm:inline">Nouvel inventaire</span>
-                <span className="sm:hidden">Nouveau</span>
-              </button>
-            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {inventaireActif ? (
+                  <button
+                    onClick={handleTerminerInventaire}
+                    className="px-3 py-1.5 text-xs border border-red-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1"
+                  >
+                    <CheckCircle size={14} />
+                    <span className="hidden sm:inline">Clôturer {inventaireActif.nom.replace('Inventaire ', '')}</span>
+                    <span className="sm:hidden">Clôturer</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setNewInventaireNom(`Inventaire ${format(new Date(), 'MMMM yyyy', { locale: fr })}`)
+                      setShowNewInventaireModal(true)
+                    }}
+                    className="px-3 py-1.5 text-xs bg-[#22209C] text-white rounded-lg hover:bg-[#1a1878] transition-colors flex items-center gap-1"
+                  >
+                    <Plus size={14} />
+                    <span className="hidden sm:inline">Ouvrir inventaire</span>
+                    <span className="sm:hidden">Ouvrir</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {inventaires.length > 0 && !inventaireActif && (
@@ -249,18 +294,20 @@ export default function InventairePage() {
             Pas d'inventaire en cours
           </h2>
           <p className="text-sm text-gray-400 mb-4">
-            Créez un nouvel inventaire pour commencer
+            {isAdmin ? 'Ouvrez un nouvel inventaire pour commencer' : 'En attente de l\'ouverture par l\'admin'}
           </p>
-          <button
-            onClick={() => {
-              setNewInventaireNom(`Inventaire ${format(new Date(), 'MMMM yyyy', { locale: fr })}`)
-              setShowNewInventaireModal(true)
-            }}
-            className="px-4 py-2 bg-[#22209C] text-white rounded-lg hover:bg-[#1a1878] transition-colors flex items-center gap-2"
-          >
-            <Plus size={18} />
-            Créer un inventaire
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setNewInventaireNom(`Inventaire ${format(new Date(), 'MMMM yyyy', { locale: fr })}`)
+                setShowNewInventaireModal(true)
+              }}
+              className="px-4 py-2 bg-[#22209C] text-white rounded-lg hover:bg-[#1a1878] transition-colors flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Ouvrir inventaire
+            </button>
+          )}
         </div>
       )}
 
