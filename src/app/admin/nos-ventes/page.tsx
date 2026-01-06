@@ -137,6 +137,8 @@ export default function AdminNosVentesPage() {
       filtered = filtered.map(p => {
         let score = 0
         const pCat = (typeof p.categorie === 'string' ? p.categorie : p.categorie?.label || '').toLowerCase()
+        const pNom = (p.nom || '').toLowerCase()
+        const pDescription = (p.description || '').toLowerCase()
 
         if (prixVenteVal > 0 && p.prix === prixVenteVal) score += 10000
         if (trigrammeFromRemarque && p.trigramme?.toUpperCase() === trigrammeFromRemarque) score += 1000
@@ -145,6 +147,15 @@ export default function AdminNosVentesPage() {
           const diff = Math.abs(p.prix - prixVenteVal) / prixVenteVal
           if (diff <= 0.15) score += 25
         }
+
+        // Matching textuel nom/description
+        const remarqueWords = remarque.split(/\s+/).filter(w => w.length > 2)
+        for (const word of remarqueWords) {
+          if (pNom.includes(word)) score += 500
+          if (pDescription.includes(word)) score += 200
+        }
+        if (remarque.length > 3 && pNom.includes(remarque)) score += 2000
+        if (pNom.length > 3 && remarque.includes(pNom)) score += 2000
 
         return { ...p, _score: score }
       })

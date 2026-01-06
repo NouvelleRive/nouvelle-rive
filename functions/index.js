@@ -197,7 +197,7 @@ exports.onProductReceived = functions
     }
 
     // CAS 2: Produit modifié (prix, nom, quantité) → mettre à jour Square
-    if (after.recu === true && after.variationId && before.recu === true) {
+    if (after.variationId) {
       const prixChange = before.prix !== after.prix;
       const nomChange = before.nom !== after.nom;
       const descChange = before.description !== after.description;
