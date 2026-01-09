@@ -1,7 +1,7 @@
     //src/components/ProductList.tsx
     'use client'
 
-    import { useState, useMemo, useEffect } from 'react'
+    import { useState, useMemo, useEffect, useRef } from 'react'
     import { db } from '@/lib/firebaseConfig'
     import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField, collection } from 'firebase/firestore'
     import { processAndUploadProductPhoto, uploadMultiplePhotos } from '@/lib/imageProcessing'
@@ -17,6 +17,7 @@
     import autoTable from 'jspdf-autotable'
     import ProductForm, { ProductFormData } from '@/components/ProductForm'
     import FilterBox from '@/components/FilterBox'
+    
 
     // =====================
     // TYPES
@@ -151,6 +152,15 @@
       // Photos expandables
       const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
+      // Infinite scroll
+      const [visibleCount, setVisibleCount] = useState(20)
+      const loaderRef = useRef<HTMLDivElement>(null)
+
+      // Reset quand les filtres changent
+      useEffect(() => {
+        setVisibleCount(20)
+      }, [recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, tri])
+
       // Modals
       const [showForm, setShowForm] = useState(false)
       const [editingProduct, setEditingProduct] = useState<Produit | null>(null)
@@ -269,6 +279,19 @@
         return tri === 'date-asc' ? dateA - dateB : dateB - dateA
       })
     }, [produitsFiltres, tri])
+
+    useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < produitsTriés.length) {
+          setVisibleCount(prev => Math.min(prev + 20, produitsTriés.length))
+        }
+      },
+      { threshold: 0.1 }
+    )
+    if (loaderRef.current) observer.observe(loaderRef.current)
+    return () => observer.disconnect()
+  }, [visibleCount, produitsTriés.length])
 
       // Produits récupérés
       const produitsRecuperes = useMemo(() => {
@@ -931,7 +954,7 @@
 
           {/* Liste produits - Nouveau Design */}
           <div className="space-y-3">
-            {produitsTriés.map((p) => {
+            {produitsTriés.slice(0, visibleCount).map((p) => {
               const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
               const allImages = getAllImages(p)
               const isExpanded = expandedIds.has(p.id)
@@ -1045,6 +1068,19 @@
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
               <p className="text-gray-400">Aucun produit</p>
             </div>
+          )}
+
+          {/* AJOUTER ICI - Loader infinite scroll */}
+          {visibleCount < produitsTriés.length && (
+            <div ref={loaderRef} className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#22209C]" />
+            </div>
+          )}
+
+          {visibleCount >= produitsTriés.length && produitsTriés.length > 20 && (
+            <p className="text-center text-gray-400 text-sm py-4">
+              {produitsTriés.length} produits affichés
+            </p>
           )}
 
         {/* Produits à récupérer */}
