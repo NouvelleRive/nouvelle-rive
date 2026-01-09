@@ -281,17 +281,21 @@
     }, [produitsFiltres, tri])
 
     useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && visibleCount < produitsTriés.length) {
-          setVisibleCount(prev => Math.min(prev + 20, produitsTriés.length))
-        }
-      },
-      { threshold: 0.1 }
-    )
-    if (loaderRef.current) observer.observe(loaderRef.current)
-    return () => observer.disconnect()
-  }, [visibleCount, produitsTriés.length])
+  const loader = loaderRef.current
+  if (!loader) return
+  
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && visibleCount < produitsTriés.length) {
+        setVisibleCount(prev => Math.min(prev + 20, produitsTriés.length))
+      }
+    },
+    { threshold: 0.1, rootMargin: '100px' }
+  )
+
+  observer.observe(loader)
+  return () => observer.disconnect()
+}, [visibleCount, produitsTriés.length])
 
       // Produits récupérés
       const produitsRecuperes = useMemo(() => {
