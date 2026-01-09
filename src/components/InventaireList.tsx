@@ -1,7 +1,7 @@
 // components/InventaireList.tsx
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { doc, updateDoc, Timestamp } from 'firebase/firestore'
 import {
@@ -149,6 +149,9 @@ export default function InventaireList({
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
   const [newPhotos, setNewPhotos] = useState<File[]>([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  // Infinite scroll
+  const [visibleCount, setVisibleCount] = useState(20)
+  const loaderRef = useRef<HTMLDivElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
 
   const getChineurName = (email: string | undefined) => {
@@ -256,6 +259,29 @@ export default function InventaireList({
     
     return grouped
   }, [produitsFiltres, mode, inventaireId])
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const loader = loaderRef.current
+    if (!loader) return
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < produitsFiltres.length) {
+          setVisibleCount(prev => Math.min(prev + 20, produitsFiltres.length))
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    )
+    
+    observer.observe(loader)
+    return () => observer.disconnect()
+  }, [visibleCount, produitsFiltres.length])
+
+  // Reset quand les filtres changent
+  useEffect(() => {
+    setVisibleCount(20)
+  }, [recherche, filtreCategorie, filtreDeposant, filtrePrix, filtreStatut, mode])
 
   const stats = useMemo(() => {
     if (mode === 'inventaire') {
@@ -872,7 +898,14 @@ export default function InventaireList({
         </div>
       ) : (
         <div className="space-y-2">
-          {produitsFiltres.map((p) => renderProductCard(p, true))}
+          {produitsFiltres.slice(0, visibleCount).map((p) => renderProductCard(p, true))}
+        </div>
+      )}
+
+      {/* Loader infinite scroll */}
+      {visibleCount < produitsFiltres.length && (
+        <div ref={loaderRef} className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#22209C]" />
         </div>
       )}
 
