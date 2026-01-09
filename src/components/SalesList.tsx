@@ -1,7 +1,7 @@
 // components/SalesList.tsx
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -114,6 +114,10 @@ export default function SalesList({
   // Sélection (admin)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  // Infinite scroll
+  const [visibleCount, setVisibleCount] = useState(20)
+  const loaderRef = useRef<HTMLDivElement>(null)
 
   // Export
   const [showMonthSelect, setShowMonthSelect] = useState(false)
@@ -301,6 +305,25 @@ export default function SalesList({
     return tri === 'date-asc' ? dateA - dateB : dateB - dateA
   })
 }, [ventesFiltrees, tri])
+
+// Infinite scroll observer
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && visibleCount < ventesTriees.length) {
+        setVisibleCount(prev => Math.min(prev + 20, ventesTriees.length))
+      }
+    },
+    { threshold: 0.1 }
+  )
+  if (loaderRef.current) observer.observe(loaderRef.current)
+  return () => observer.disconnect()
+}, [visibleCount, ventesTriees.length])
+
+// Reset quand les filtres changent
+useEffect(() => {
+  setVisibleCount(20)
+}, [recherche, filtreMois, filtreChineuse, filtrePrix, filtreStatut, tri])
 
   // =====================
   // STATS
@@ -849,7 +872,7 @@ export default function SalesList({
             <p className="text-gray-400">Aucune vente</p>
           </div>
         ) : (
-          ventesTriees.map(vente => {
+          ventesTriees.slice(0, visibleCount).map(vente => {
             const cat = getCategorie(vente)
             const prix = getPrix(vente)
             const isSelected = selectedIds.has(vente.id)
@@ -960,6 +983,13 @@ export default function SalesList({
           })
         )}
       </div>
+
+      {/* Loader infinite scroll */}
+      {visibleCount < ventesTriees.length && (
+        <div ref={loaderRef} className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#22209C]" />
+        </div>
+      )}
 
       {/* Modal suppression groupée */}
       {showDeleteModal && (
