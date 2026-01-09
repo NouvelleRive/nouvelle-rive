@@ -308,15 +308,19 @@ export default function SalesList({
 
 // Infinite scroll observer
 useEffect(() => {
+  const loader = loaderRef.current
+  if (!loader) return
+  
   const observer = new IntersectionObserver(
     (entries) => {
       if (entries[0].isIntersecting && visibleCount < ventesTriees.length) {
         setVisibleCount(prev => Math.min(prev + 20, ventesTriees.length))
       }
     },
-    { threshold: 0.1 }
+    { threshold: 0.1, rootMargin: '100px' }
   )
-  if (loaderRef.current) observer.observe(loaderRef.current)
+  
+  observer.observe(loader)
   return () => observer.disconnect()
 }, [visibleCount, ventesTriees.length])
 
