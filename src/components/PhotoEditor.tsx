@@ -144,6 +144,30 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     }
   }
 
+  const handleConserver = async () => {
+    setProcessing(true)
+    setError(null)
+
+    try {
+      const urlParts = imageUrl.split('/upload/')
+      
+      if (urlParts.length !== 2) {
+        throw new Error('URL Cloudinary invalide')
+      }
+
+      const rotationTransform = rotation !== 0 ? `a_${rotation},` : ''
+
+      const finalUrl = `${urlParts[0]}/upload/${rotationTransform}c_fill,ar_1:1,w_1200,h_1200,g_auto,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto/${urlParts[1]}`
+
+      setProcessedUrl(finalUrl)
+      setRawUrl(imageUrl)
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du recadrage')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   const handleEnterEraseMode = () => {
     setMode('erase')
     setTimeout(initCanvas, 100)
@@ -324,12 +348,20 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={handleAutoRemove}
-                  className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
-                >
-                  Détourer
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleAutoRemove}
+                    className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
+                  >
+                    Détourer
+                  </button>
+                  <button
+                    onClick={handleConserver}
+                    className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
+                  >
+                    Conserver (recadrer uniquement)
+                  </button>
+                </div>
               )}
             </>
           )}
