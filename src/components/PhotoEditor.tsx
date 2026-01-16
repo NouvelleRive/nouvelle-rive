@@ -232,7 +232,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
         </div>
 
         <div className="p-4">
-          <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-4">
+          <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-2">
             {mode === 'erase' && canvasReady ? (
               <canvas
                 ref={canvasRef}
@@ -348,18 +348,18 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="flex gap-2">
                   <button
                     onClick={handleAutoRemove}
-                    className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
+                    className="flex-1 flex items-center justify-center gap-1 bg-[#22209C] text-white py-2.5 rounded-xl font-semibold hover:opacity-90 transition text-sm"
                   >
                     Détourer
                   </button>
                   <button
                     onClick={handleConserver}
-                    className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
+                    className="flex-1 flex items-center justify-center gap-1 border border-gray-300 text-gray-700 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition text-sm"
                   >
-                    Conserver (recadrer uniquement)
+                    Conserver
                   </button>
                 </div>
               )}
