@@ -231,7 +231,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
           </button>
         </div>
 
-        <div className="p-4">
+        <div className="p-3">
           <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-2">
             {mode === 'erase' && canvasReady ? (
               <canvas

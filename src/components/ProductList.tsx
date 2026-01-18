@@ -99,6 +99,13 @@
       return true
     }
 
+    function isOlderThan2Months(createdAt: Timestamp | undefined): boolean {
+      if (!createdAt) return false
+      const twoMonthsAgo = new Date()
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+      return createdAt.toDate() < twoMonthsAgo
+  }
+
     // =====================
     // COMPONENT
     // =====================
@@ -222,7 +229,7 @@
       const needle = recherche.trim().toLowerCase()
       return produits.filter((p) => {
         if (p.statut === 'supprime') return false
-        if ((p.quantite ?? 1) <= 0 || p.statut === 'retour') return false
+        if ((p.quantite ?? 1) <= 0 || p.statut === 'retour' || p.statutRecuperation === 'aRecuperer') return false
 
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
         if (filtreCategorie && cat !== filtreCategorie) return false
@@ -999,6 +1006,14 @@
                       <h3 className="font-semibold text-gray-900 text-sm leading-tight">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente</span>}
+                      {isOlderThan2Months(p.createdAt) && !p.statutRecuperation && (
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200"
+                      >
+                        🔄 2 mois+ – rotation ?
+                      </button>
+                    )}
                     </div>
                     <div className="flex flex-col gap-0.5 flex-shrink-0">
                       {canGenerateTryon && <button onClick={() => handleGenerateTryon(p)} disabled={generatingTryonId === p.id} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>}
@@ -1033,6 +1048,14 @@
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
                       {isAdmin && <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>}
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente de réception</span>}
+                    {isOlderThan2Months(p.createdAt) && !p.statutRecuperation && (
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200 transition-colors"
+                      >
+                        🔄 En surface depuis 2 mois+ – demande de rotation ?
+                      </button>
+                    )}
                     </div>
                     <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[140px]">
                       <p><span className="text-gray-400">Taille:</span> <span className="font-medium text-gray-700">{p.taille || '—'}</span></p>
