@@ -3,33 +3,39 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 
-/**
- * Upload une image vers Cloudinary depuis une URL
- */
-async function uploadToCloudinary(imageUrl: string): Promise<string> {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+async function uploadToBunny(imageUrl: string): Promise<string> {
+  const storageZone = process.env.BUNNY_STORAGE_ZONE
+  const apiKey = process.env.BUNNY_API_KEY
+  const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
 
-  if (!cloudName || !uploadPreset) {
-    throw new Error('Configuration Cloudinary manquante')
+  if (!storageZone || !apiKey || !cdnUrl) {
+    throw new Error('Configuration Bunny manquante')
   }
 
-  const formData = new FormData()
-  formData.append('file', imageUrl)
-  formData.append('upload_preset', uploadPreset)
-  formData.append('folder', 'produits/on-model')
+  // Télécharger l'image depuis l'URL FASHN
+  const imageResponse = await fetch(imageUrl)
+  if (!imageResponse.ok) throw new Error('Erreur téléchargement image FASHN')
+  const buffer = await imageResponse.arrayBuffer()
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-    { method: 'POST', body: formData }
-  )
+  // Générer un nom de fichier unique
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8)
+  const filename = `on-model_${timestamp}_${random}.png`
+  const path = `produits/on-model/${filename}`
 
-  if (!response.ok) {
-    throw new Error('Erreur upload Cloudinary')
-  }
+  // Upload vers Bunny
+  const response = await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
+    method: 'PUT',
+    headers: {
+      'AccessKey': apiKey,
+      'Content-Type': 'image/png',
+    },
+    body: Buffer.from(buffer),
+  })
 
-  const data = await response.json()
-  return data.secure_url
+  if (!response.ok) throw new Error('Erreur upload Bunny')
+
+  return `${cdnUrl}/${path}`
 }
 
 export async function POST(req: NextRequest) {
