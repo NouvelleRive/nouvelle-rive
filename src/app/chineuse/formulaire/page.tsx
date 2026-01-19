@@ -43,7 +43,7 @@ async function computeNextSkuForTrigram(trigramme: string, userEmail: string): P
   if (!tri || !userEmail) return ''
 
   const qSnap = await getDocs(
-    query(collection(db, 'produits'), where('chineur', '==', userEmail), where('trigramme', '==', tri))
+    query(collection(db, 'produits'), where('trigramme', '==', tri))
   )
 
   let maxNum = 0
