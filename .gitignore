@@ -40,3 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 functions/serviceAccountKey.json
+scripts/migrate-to-bunny.js
+scripts/migrate-chineuses-to-bunny.js

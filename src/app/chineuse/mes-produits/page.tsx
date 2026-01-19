@@ -24,7 +24,7 @@ export default function MesProduits() {
 
       // Récupérer le trigramme de l'utilisateur
       const chineuseSnap = await getDocs(
-        query(collection(db, 'chineuse'), where('email', '==', user.email))
+        query(collection(db, 'chineuse'), where('emails', 'array-contains', user.email))
       )
       let trigramme = ''
       if (!chineuseSnap.empty) {

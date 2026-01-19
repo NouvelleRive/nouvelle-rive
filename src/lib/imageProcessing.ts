@@ -4,39 +4,47 @@
 /**
  * Configuration Cloudinary
  */
-function getCloudinaryConfig() {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+function getBunnyConfig() {
+  const storageZone = process.env.NEXT_PUBLIC_BUNNY_STORAGE_ZONE
+  const apiKey = process.env.BUNNY_API_KEY
+  const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
 
-  if (!cloudName || !uploadPreset) {
-    throw new Error('Configuration Cloudinary manquante dans .env.local')
+  if (!storageZone || !apiKey || !cdnUrl) {
+    throw new Error('Configuration Bunny manquante dans .env.local')
   }
 
-  return { cloudName, uploadPreset }
+  return { storageZone, apiKey, cdnUrl }
+}
+
+function generateFilename(prefix: string, extension: string = 'png'): string {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8)
+  return `${prefix}_${timestamp}_${random}.${extension}`
 }
 
 /**
- * Upload une image vers Cloudinary
+ * Upload une image vers Bunny CDN via l'API route
  */
-async function uploadToCloudinary(file: File | Blob, filename?: string): Promise<string> {
-  const { cloudName, uploadPreset } = getCloudinaryConfig()
+async function uploadToBunny(file: File | Blob, folder: string, filename?: string): Promise<string> {
+  const finalFilename = filename || generateFilename('img', 'png')
+  const path = `${folder}/${finalFilename}`
 
-  const formData = new FormData()
-  formData.append('file', file, filename || 'image.png')
-  formData.append('upload_preset', uploadPreset)
-  formData.append('folder', 'produits')
+  const arrayBuffer = await file.arrayBuffer()
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-    { method: 'POST', body: formData }
-  )
+  const response = await fetch('/api/upload-bunny', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64, path, contentType: file.type || 'image/png' })
+  })
 
   if (!response.ok) {
-    throw new Error(`Erreur upload Cloudinary: ${response.status}`)
+    const error = await response.json().catch(() => ({}))
+    throw new Error(`Erreur upload Bunny: ${error.error || response.status}`)
   }
 
   const data = await response.json()
-  return data.secure_url
+  return data.url
 }
 
 /**
