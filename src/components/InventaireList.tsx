@@ -94,31 +94,25 @@
     return match ? parseInt(match[1], 10) : 999999
   }
 
-  // Upload Cloudinary
-  async function uploadToCloudinary(file: File): Promise<string> {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+  // Upload Bunny
+  async function uploadToBunny(file: File): Promise<string> {
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 8)
+    const filename = `inventaire_${timestamp}_${random}.png`
+    const path = `produits/${filename}`
 
-    if (!cloudName || !uploadPreset) {
-      throw new Error('Configuration Cloudinary manquante')
-    }
+    const arrayBuffer = await file.arrayBuffer()
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('upload_preset', uploadPreset)
-    formData.append('folder', 'produits')
+    const response = await fetch('/api/upload-bunny', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64, path, contentType: file.type || 'image/png' })
+    })
 
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      { method: 'POST', body: formData }
-    )
-
-    if (!response.ok) {
-      throw new Error('Erreur upload Cloudinary')
-    }
-
+    if (!response.ok) throw new Error('Erreur upload')
     const data = await response.json()
-    return data.secure_url
+    return data.url
   }
 
   // =====================
@@ -502,7 +496,7 @@
           const newUrls: string[] = []
 
           for (const file of newPhotos) {
-            const url = await uploadToCloudinary(file)
+            const url = await uploadToBunny(file)
             newUrls.push(url)
           }
 

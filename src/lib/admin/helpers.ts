@@ -71,18 +71,24 @@ export function readCategorieRapportLabel(data: any): string {
   return label
 }
 
-export async function uploadToCloudinary(file: File): Promise<string> {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-  if (!cloudName || !uploadPreset) throw new Error('Configuration Cloudinary manquante')
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('upload_preset', uploadPreset)
-  formData.append('folder', 'produits')
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: formData })
-  if (!response.ok) throw new Error('Erreur upload Cloudinary')
+export async function uploadToBunny(file: File): Promise<string> {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8)
+  const filename = `produit_${timestamp}_${random}.png`
+  const path = `produits/${filename}`
+
+  const arrayBuffer = await file.arrayBuffer()
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+
+  const response = await fetch('/api/upload-bunny', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64, path, contentType: file.type || 'image/png' })
+  })
+
+  if (!response.ok) throw new Error('Erreur upload Bunny')
   const data = await response.json()
-  return data.secure_url
+  return data.url
 }
 
 export function canUseFashnAI(categorie: string): boolean {
