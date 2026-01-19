@@ -111,7 +111,7 @@ export default function FormulairePage() {
 
       let chineuseSnap = await getDoc(doc(db, 'chineuse', u.uid))
       if (!chineuseSnap.exists() && u.email) {
-        const byEmail = await getDocs(query(collection(db, 'chineuse'), where('email', '==', u.email)))
+        const byEmail = await getDocs(query(collection(db, 'chineuse'), where('emails', 'array-contains', u.email)))
         if (!byEmail.empty) chineuseSnap = byEmail.docs[0]
       }
 
