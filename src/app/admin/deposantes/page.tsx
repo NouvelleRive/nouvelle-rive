@@ -141,27 +141,24 @@ export default function AdminDeposantesPage() {
     setShowModal(true)
   }
 
-  const uploadToCloudinary = async (file: File): Promise<string> => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+  const uploadToBunny = async (file: File): Promise<string> => {
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 8)
+    const filename = `deposante_${timestamp}_${random}.png`
+    const path = `deposantes/${filename}`
 
-    if (!cloudName || !uploadPreset) {
-      throw new Error('Configuration Cloudinary manquante')
-    }
+    const arrayBuffer = await file.arrayBuffer()
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('upload_preset', uploadPreset)
-    fd.append('folder', 'deposantes')
-
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    const response = await fetch('/api/upload-bunny', {
       method: 'POST',
-      body: fd,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64, path, contentType: file.type || 'image/png' })
     })
 
     if (!response.ok) throw new Error('Erreur upload')
     const data = await response.json()
-    return data.secure_url
+    return data.url
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,7 +206,7 @@ export default function AdminDeposantesPage() {
       let finalImageUrl = formData.imageUrl
 
       if (imageFile) {
-        finalImageUrl = await uploadToCloudinary(imageFile)
+        finalImageUrl = await uploadToBunny(imageFile)
       }
 
       const auth = getAuth()
