@@ -28,7 +28,7 @@ export default function MesVentesPage() {
       let trigramme = ''
       try {
         const deposantsSnap = await getDocs(
-          query(collection(db, 'chineuse'), where('email', '==', u.email))
+          query(collection(db, 'chineuse'), where('emails', 'array-contains', u.email))
         )
         
         if (!deposantsSnap.empty) {
