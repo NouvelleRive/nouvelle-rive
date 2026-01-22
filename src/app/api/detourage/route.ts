@@ -111,9 +111,10 @@ export async function POST(req: NextRequest) {
 
     // Détourage via Replicate (birefnet)
    const output = await replicate.run(
-      "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+      "lucataco/birefnet:8d92ce47a47a66937e0809ee950c5f49aba56ff7a3e29df91d01df32638d2b95",
       { input: { image: imageUrl } }
     )
+
 
     if (!output) {
       return NextResponse.json({ success: false, error: 'Pas de résultat de Replicate' })
