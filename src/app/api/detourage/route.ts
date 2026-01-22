@@ -1,6 +1,7 @@
 // app/api/detourage/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import Replicate from 'replicate'
+import sharp from 'sharp'
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
@@ -16,12 +17,13 @@ export async function POST(req: NextRequest) {
 
     console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation)
 
+    // 1. Détourage via Replicate
     const output = await replicate.run(
       "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
       { input: { image: imageUrl } }
     )
 
-    console.log('📦 Output:', output, typeof output)
+    console.log('📦 Output Replicate:', output, typeof output)
 
     if (!output) {
       return NextResponse.json({ success: false, error: 'Pas de résultat de Replicate' })
@@ -30,40 +32,90 @@ export async function POST(req: NextRequest) {
     const outputUrl = String(output)
     console.log('✅ URL détourée:', outputUrl)
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-
+    // 2. Télécharger l'image détourée
     const imgResponse = await fetch(outputUrl)
     if (!imgResponse.ok) {
       return NextResponse.json({ success: false, error: 'Erreur téléchargement image' })
     }
 
-    const blob = await imgResponse.blob()
+    const arrayBuffer = await imgResponse.arrayBuffer()
+    let imageBuffer = Buffer.from(arrayBuffer)
 
-    const formData = new FormData()
-    formData.append('file', blob, 'detoured.png')
-    formData.append('upload_preset', uploadPreset!)
-    formData.append('folder', 'produits')
+    // 3. Appliquer les transformations avec Sharp
+    let sharpInstance = sharp(imageBuffer)
 
-    const cloudinaryResponse = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      { method: 'POST', body: formData }
-    )
+    // Rotation si demandée
+    if (rotation !== 0) {
+      sharpInstance = sharpInstance.rotate(rotation)
+    }
 
-    const cloudinaryData = await cloudinaryResponse.json()
-    const baseUrl = cloudinaryData.secure_url
-    const urlParts = baseUrl.split('/upload/')
+    // Trim (supprimer les bords transparents)
+    sharpInstance = sharpInstance.trim()
 
-    const rotationTransform = rotation !== 0 ? `a_${rotation},` : ''
+    // Récupérer les métadonnées après trim pour le padding
+    const trimmedBuffer = await sharpInstance.toBuffer()
+    const metadata = await sharp(trimmedBuffer).metadata()
+    const trimmedWidth = metadata.width || 1200
+    const trimmedHeight = metadata.height || 1200
 
-    const finalUrl = urlParts.length === 2
-      ? `${urlParts[0]}/upload/${rotationTransform}e_trim:0,b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto/${urlParts[1]}`
-      : baseUrl
+    // Calculer la taille du carré (le plus grand côté + marge)
+    const maxDim = Math.max(trimmedWidth, trimmedHeight)
+    const targetSize = Math.min(Math.ceil(maxDim * 1.1), 1200) // 10% de marge, max 1200
+
+    // Créer l'image finale : fond blanc, carré, centré
+    const finalBuffer = await sharp(trimmedBuffer)
+      .resize(targetSize, targetSize, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      })
+      .flatten({ background: { r: 255, g: 255, b: 255 } }) // Fond blanc opaque
+      .resize(1200, 1200) // Taille finale
+      .modulate({
+        brightness: 1.08,  // e_brightness:8
+        saturation: 1.20,  // e_vibrance:20
+      })
+      .gamma(1.05)  // e_gamma:105
+      .sharpen({ sigma: 1.5 })  // e_sharpen:40
+      .png({ quality: 90 })
+      .toBuffer()
+
+    console.log('🖼️ Transformations Sharp appliquées')
+
+    // 4. Upload vers Bunny
+    const storageZone = process.env.BUNNY_STORAGE_ZONE
+    const apiKey = process.env.BUNNY_API_KEY
+    const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
+
+    if (!storageZone || !apiKey || !cdnUrl) {
+      return NextResponse.json({ success: false, error: 'Configuration Bunny manquante' })
+    }
+
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 8)
+    const filename = `detoured_${timestamp}_${random}.png`
+    const path = `produits/${filename}`
+
+    const bunnyResponse = await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
+      method: 'PUT',
+      headers: {
+        'AccessKey': apiKey,
+        'Content-Type': 'image/png',
+      },
+      body: finalBuffer,
+    })
+
+    if (!bunnyResponse.ok) {
+      console.error('❌ Erreur Bunny:', bunnyResponse.status)
+      return NextResponse.json({ success: false, error: `Erreur upload Bunny: ${bunnyResponse.status}` })
+    }
+
+    const finalUrl = `${cdnUrl}/${path}`
+    console.log('✅ Upload Bunny réussi:', finalUrl)
 
     return NextResponse.json({ 
       success: true, 
       maskUrl: finalUrl,
-      rawUrl: baseUrl
+      rawUrl: outputUrl // URL brute de Replicate (temporaire)
     })
 
   } catch (error: any) {

@@ -491,7 +491,7 @@
           updates.marque = editValues.marque
         }
 
-        // Upload nouvelles photos vers Cloudinary
+        // Upload nouvelles photos vers Bunny
         if (newPhotos.length > 0) {
           const newUrls: string[] = []
 
