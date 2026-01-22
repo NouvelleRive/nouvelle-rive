@@ -9,7 +9,27 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0 } = await req.json()
+    const { imageUrl, rotation = 0, base64, mode } = await req.json()
+
+// Mode gomme : upload direct
+if (mode === 'erased' && base64) {
+  const buffer = Buffer.from(base64, 'base64')
+  const storageZone = process.env.BUNNY_STORAGE_ZONE
+  const apiKey = process.env.BUNNY_API_KEY
+  const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
+  
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8)
+  const path = `produits/edited_${timestamp}_${random}.png`
+  
+  await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
+    method: 'PUT',
+    headers: { 'AccessKey': apiKey!, 'Content-Type': 'image/png' },
+    body: buffer,
+  })
+  
+  return NextResponse.json({ success: true, maskUrl: `${cdnUrl}/${path}`, rawUrl: `${cdnUrl}/${path}` })
+}
 
     if (!imageUrl || typeof imageUrl !== 'string') {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
@@ -17,13 +37,11 @@ export async function POST(req: NextRequest) {
 
     console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation)
 
-    // 1. Détourage via Replicate
+    // 1. Détourage via Replicate (birefnet)
     const output = await replicate.run(
-      "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+      "smoretalk/birefnet-massive:b76c8ce7ae4860517cdf2e57e610c84c2ffe7789c51d8eb79380de3ab2f6dad4",
       { input: { image: imageUrl } }
     )
-
-    console.log('📦 Output Replicate:', output, typeof output)
 
     if (!output) {
       return NextResponse.json({ success: false, error: 'Pas de résultat de Replicate' })
@@ -49,33 +67,40 @@ export async function POST(req: NextRequest) {
       sharpInstance = sharpInstance.rotate(rotation)
     }
 
-    // Trim (supprimer les bords transparents)
-    sharpInstance = sharpInstance.trim()
-
-    // Récupérer les métadonnées après trim pour le padding
-    const trimmedBuffer = await sharpInstance.toBuffer()
+    // Trim agressif (supprimer les bords transparents)
+    const trimmedBuffer = await sharpInstance.trim({ threshold: 10 }).toBuffer()
+    
+    // Récupérer les dimensions après trim
     const metadata = await sharp(trimmedBuffer).metadata()
-    const trimmedWidth = metadata.width || 1200
-    const trimmedHeight = metadata.height || 1200
+    const trimmedWidth = metadata.width || 1000
+    const trimmedHeight = metadata.height || 1000
 
-    // Calculer la taille du carré (le plus grand côté + marge)
+    // Calculer la taille pour que l'image prenne 90% du carré (moins de blanc)
     const maxDim = Math.max(trimmedWidth, trimmedHeight)
-    const targetSize = Math.min(Math.ceil(maxDim * 1.1), 1200) // 10% de marge, max 1200
+    const padding = Math.ceil(maxDim * 0.05) // seulement 5% de marge
+    const canvasSize = maxDim + (padding * 2)
+    const finalSize = Math.min(canvasSize, 1200)
 
-    // Créer l'image finale : fond blanc, carré, centré
+    // Créer l'image finale : fond blanc, carré, centré, GRANDE
     const finalBuffer = await sharp(trimmedBuffer)
-      .resize(targetSize, targetSize, {
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .extend({
+        top: padding,
+        bottom: padding,
+        left: padding,
+        right: padding,
+        background: { r: 255, g: 255, b: 255 }
+      })
+      .resize(finalSize, finalSize, {
         fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
+        background: { r: 255, g: 255, b: 255 }
       })
-      .flatten({ background: { r: 255, g: 255, b: 255 } }) // Fond blanc opaque
-      .resize(1200, 1200) // Taille finale
+      .resize(1200, 1200)
       .modulate({
-        brightness: 1.08,  // e_brightness:8
-        saturation: 1.20,  // e_vibrance:20
+        brightness: 1.05,
+        saturation: 1.15,
       })
-      .gamma(1.05)  // e_gamma:105
-      .sharpen({ sigma: 1.5 })  // e_sharpen:40
+      .sharpen({ sigma: 1.2 })
       .png({ quality: 90 })
       .toBuffer()
 
@@ -115,7 +140,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       maskUrl: finalUrl,
-      rawUrl: outputUrl // URL brute de Replicate (temporaire)
+      rawUrl: finalUrl // Maintenant c'est la même URL (Bunny), donc la gomme marchera
     })
 
   } catch (error: any) {

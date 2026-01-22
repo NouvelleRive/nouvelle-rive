@@ -18,7 +18,6 @@ import {
 import { auth, db } from '@/lib/firebaseConfig'
 import ProductForm, { ProductFormData, Cat, ExcelImportData } from '@/components/ProductForm'
 import { checkSkuUnique } from '@/lib/admin/helpers'
-import { processProductPhotos } from '@/lib/imageProcessing'
 
 // =====================
 // HELPERS
@@ -172,28 +171,18 @@ export default function FormulairePage() {
       }
       const fullName = `${sku} - ${formData.nom.trim()}`
 
-      // ✅ Upload et traitement photos (détourage, fond blanc, lumière, etc.)
-      const photos = await processProductPhotos({
-        face: formData.photoFace,
-        dos: formData.photoDos,
-        details: formData.photosDetails
-      })
+     // Photos déjà traitées par PhotoEditor
+const imageUrls: string[] = []
+if (formData.existingPhotos.face) imageUrls.push(formData.existingPhotos.face)
+if (formData.existingPhotos.dos) imageUrls.push(formData.existingPhotos.dos)
+if (formData.existingPhotos.details) imageUrls.push(...formData.existingPhotos.details)
 
-      // Build imageUrls array (photos traitées en premier)
-      const imageUrls: string[] = []
-      if (photos.face) imageUrls.push(photos.face)
-      if (photos.dos) imageUrls.push(photos.dos)
-      imageUrls.push(...photos.details)
+const photosReady = Boolean(formData.existingPhotos.face)
 
-      const photosReady = Boolean(photos.face)
-
-     // Construire l'objet photos en excluant les undefined
-      const photosData: Record<string, any> = {}
-      if (photos.face) photosData.face = photos.face
-      if (photos.faceOriginal) photosData.faceOriginal = photos.faceOriginal
-      if (photos.dos) photosData.dos = photos.dos
-      if (photos.dosOriginal) photosData.dosOriginal = photos.dosOriginal
-      if (photos.details && photos.details.length > 0) photosData.details = photos.details
+const photosData: Record<string, any> = {}
+if (formData.existingPhotos.face) photosData.face = formData.existingPhotos.face
+if (formData.existingPhotos.dos) photosData.dos = formData.existingPhotos.dos
+if (formData.existingPhotos.details?.length) photosData.details = formData.existingPhotos.details
 
       const payload = {
         nom: fullName,

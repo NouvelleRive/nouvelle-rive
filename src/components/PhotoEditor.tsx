@@ -149,20 +149,23 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     setError(null)
 
     try {
-      const urlParts = imageUrl.split('/upload/')
-      
-      if (urlParts.length !== 2) {
-        throw new Error('URL Cloudinary invalide')
+      // Appeler une API pour traiter sans détourage
+      const res = await fetch('/api/detourage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl, rotation, skipDetourage: true }),
+      })
+
+      const data = await res.json()
+
+      if (data.success && data.maskUrl) {
+       setProcessedUrl(data.maskUrl)
+        setRawUrl(data.url)
+      } else {
+        setError(data.error || 'Erreur lors du traitement')
       }
-
-      const rotationTransform = rotation !== 0 ? `a_${rotation},` : ''
-
-      const finalUrl = `${urlParts[0]}/upload/${rotationTransform}c_fill,ar_1:1,w_1200,h_1200,g_auto,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto/${urlParts[1]}`
-
-      setProcessedUrl(finalUrl)
-      setRawUrl(imageUrl)
     } catch (err: any) {
-      setError(err.message || 'Erreur lors du recadrage')
+      setError(err.message || 'Erreur réseau')
     } finally {
       setProcessing(false)
     }
@@ -183,27 +186,29 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
         canvas.toBlob((b) => resolve(b!), 'image/png')
       })
 
-      const formData = new FormData()
-      formData.append('file', blob, 'edited.png')
-      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!)
-      formData.append('folder', 'produits')
+      // Convertir en base64
+      const arrayBuffer = await blob.arrayBuffer()
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
 
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
-      )
+      // Upload vers Bunny
+      const timestamp = Date.now()
+      const random = Math.random().toString(36).substring(2, 8)
+      const path = `produits/edited_${timestamp}_${random}.png`
+
+      const res = await fetch('/api/detourage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64, mode: 'erased' })
+      })
 
       const data = await res.json()
-      const newRawUrl = data.secure_url
       
-      // Appliquer les mêmes transformations que le détourage
-      const urlParts = newRawUrl.split('/upload/')
-      const finalUrl = urlParts.length === 2
-        ? `${urlParts[0]}/upload/e_trim,b_white,c_pad,ar_1:1,w_1200,h_1200,g_center,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto/${urlParts[1]}`
-        : newRawUrl
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur upload')
+      }
 
-      setProcessedUrl(finalUrl)
-      setRawUrl(newRawUrl)
+      setProcessedUrl(data.url)
+      setRawUrl(data.url)
       setMode('view')
       setCanvasReady(false)
     } catch (err: any) {
