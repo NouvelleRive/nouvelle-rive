@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     // Détourage via Replicate (birefnet)
     const output = await replicate.run(
-      "smoretalk/birefnet-massive:b76c8ce7ae4860517cdf2e57e610c84c2ffe7789c51d8eb79380de3ab2f6dad4",
+      "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
       { input: { image: imageUrl } }
     )
 
