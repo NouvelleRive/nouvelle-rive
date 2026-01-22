@@ -12,7 +12,6 @@ import {
   extractSkuNumFromSkuOrName, 
   checkSkuUnique
 } from '@/lib/admin/helpers'
-import { processProductPhotos } from '@/lib/imageProcessing'
 
 type Cat = { label: string; idsquare?: string }
 
@@ -67,18 +66,11 @@ export default function AdminAjouterPage() {
       const deposantOriginal = deposants.find((d: any) => d.id === selectedChineuse.uid)
       const categorieRapport = readCategorieRapportLabel(deposantOriginal)
 
-      // ✅ Upload et traitement photos (détourage, fond blanc, lumière, etc.)
-      const photos = await processProductPhotos({
-        face: data.photoFace,
-        dos: data.photoDos,
-        details: data.photosDetails
-      })
-
-      // Build imageUrls array (photos traitées en premier)
+      // Photos déjà traitées par PhotoEditor
       const imageUrls: string[] = []
-      if (photos.face) imageUrls.push(photos.face)
-      if (photos.dos) imageUrls.push(photos.dos)
-      imageUrls.push(...photos.details)
+      if (data.existingPhotos.face) imageUrls.push(data.existingPhotos.face)
+      if (data.existingPhotos.dos) imageUrls.push(data.existingPhotos.dos)
+      if (data.existingPhotos.details) imageUrls.push(...data.existingPhotos.details)
 
       const payload: any = {
         nom: fullName, description: data.description, categorie: data.categorie,
@@ -88,17 +80,15 @@ export default function AdminAjouterPage() {
         madeIn: data.madeIn || null, sku: finalSku,
         chineurUid: selectedChineuse.uid, categorieRapport,
         trigramme: selectedChineuse.trigramme, 
-        ...(Object.keys(photos).length > 0 && {
+        ...(Object.keys(data.existingPhotos).length > 0 && {
           photos: {
-            ...(photos.face && { face: photos.face }),
-            ...(photos.faceOriginal && { faceOriginal: photos.faceOriginal }),
-            ...(photos.dos && { dos: photos.dos }),
-            ...(photos.dosOriginal && { dosOriginal: photos.dosOriginal }),
-            ...(photos.details && photos.details.length > 0 && { details: photos.details }),
+            ...(data.existingPhotos.face && { face: data.existingPhotos.face }),
+            ...(data.existingPhotos.dos && { dos: data.existingPhotos.dos }),
+            ...(data.existingPhotos.details?.length && { details: data.existingPhotos.details }),
           },
         }),
         imageUrls,
-        imageUrl: imageUrls[0] || '', photosReady: Boolean(photos.face),
+        imageUrl: imageUrls[0] || '', photosReady: Boolean(data.existingPhotos.face),
         vendu: false, createdAt: serverTimestamp(),
         recu: false,
       }
