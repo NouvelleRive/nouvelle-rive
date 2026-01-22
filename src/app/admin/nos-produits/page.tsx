@@ -38,7 +38,8 @@ export default function NosProduits() {
     if (!selectedChineuse) return produits
     return produits.filter(p => 
       p.chineur === selectedChineuse.email || 
-      p.chineurUid === selectedChineuse.uid
+      p.chineurUid === selectedChineuse.uid ||
+      (selectedChineuse.trigramme && p.trigramme === selectedChineuse.trigramme)
     )
   }, [produits, selectedChineuse])
 

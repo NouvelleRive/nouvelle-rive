@@ -48,42 +48,18 @@ async function uploadToBunny(file: File | Blob, folder: string, filename?: strin
 }
 
 /**
- * Applique les transformations Cloudinary (lumière, contraste, fond blanc, etc.)
- */
-function applyTransformations(url: string, withBackground: boolean = true): string {
-  const urlParts = url.split('/upload/')
-  if (urlParts.length !== 2) return url
-
-  const transforms = withBackground
-    ? 'b_white,c_lpad,ar_1:1,w_1200,h_1200,g_center,e_auto_brightness,e_auto_contrast,e_brightness:8,e_gamma:105,e_vibrance:20,e_sharpen:40,q_auto:best,f_auto'
-    : 'c_pad,ar_1:1,w_1200,h_1200,g_center,e_auto_brightness,e_auto_contrast,e_brightness:5,e_vibrance:15,e_sharpen:30,q_auto:good,f_auto'
-
-  return `${urlParts[0]}/upload/${transforms}/${urlParts[1]}`
-}
-
-/**
  * Upload et traite une photo produit (face/dos)
- * Retourne original + processed (avec transformations basiques, sans détourage)
- * Le détourage se fait via PhotoEditor
  */
 export async function processAndUploadProductPhoto(file: File): Promise<{
   original: string
   processed: string
 }> {
-  console.log('📸 Upload photo produit:', file.name)
+  console.log('📸 Upload photo produit vers Bunny:', file.name)
 
-  const originalUrl = await uploadToCloudinary(file)
-  
-  // Appliquer rotation EXIF
-  const urlParts = originalUrl.split('/upload/')
-  const exifUrl = urlParts.length === 2
-    ? `${urlParts[0]}/upload/a_exif/${urlParts[1]}`
-    : originalUrl
+  const filename = generateFilename('produit', 'png')
+  const url = await uploadToBunny(file, 'produits', filename)
 
-  // Transformations basiques sans détourage
-  const processedUrl = applyTransformations(exifUrl, false)
-
-  return { original: exifUrl, processed: processedUrl }
+  return { original: url, processed: url }
 }
 
 /**
@@ -116,19 +92,13 @@ export async function uploadPhotoSimple(file: File): Promise<{
   original: string
   processed: string
 }> {
-  console.log('📸 Upload photo détail:', file.name)
+  console.log('📸 Upload photo détail vers Bunny:', file.name)
 
-  const originalUrl = await uploadToCloudinary(file)
-  
-  // Transformations légères
-  const urlParts = originalUrl.split('/upload/')
-  const processedUrl = urlParts.length === 2
-    ? `${urlParts[0]}/upload/a_auto,c_fill,g_auto,ar_1:1,w_1200,h_1200,e_auto_color,e_auto_brightness,e_auto_contrast,e_brightness:5,e_gamma:102,e_vibrance:10,e_sharpen:30,q_auto:good,f_auto/${urlParts[1]}`
-    : originalUrl
+  const filename = generateFilename('detail', 'png')
+  const url = await uploadToBunny(file, 'produits/details', filename)
 
-  return { original: originalUrl, processed: processedUrl }
+  return { original: url, processed: url }
 }
-
 /**
  * Upload plusieurs photos détails
  */
