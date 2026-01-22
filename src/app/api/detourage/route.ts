@@ -111,9 +111,9 @@ export async function POST(req: NextRequest) {
 
     // Détourage via Replicate (birefnet)
    const output = await replicate.run(
-      "men1scus/birefnet",
-      { input: { image: imageUrl } }
-    )
+  "men1scus/birefnet:b1fbd983bdb62fc01f1a90c96d414d0ed09bb490fe4a0920bdbee1e08a594098",
+  { input: { image: imageUrl } }
+)
 
 
     if (!output) {
