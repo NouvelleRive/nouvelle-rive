@@ -513,7 +513,13 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
       try {
         // Upload vers Bunny
         const arrayBuffer = await file.arrayBuffer()
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        const uint8Array = new Uint8Array(arrayBuffer)
+        let binary = ''
+        const chunkSize = 8192
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          binary += String.fromCharCode(...uint8Array.slice(i, i + chunkSize))
+        }
+        const base64 = btoa(binary)
         const timestamp = Date.now()
         const random = Math.random().toString(36).substring(2, 8)
         const path = `produits/temp_${timestamp}_${random}.jpg`
