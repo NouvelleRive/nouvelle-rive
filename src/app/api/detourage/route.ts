@@ -35,7 +35,8 @@ async function uploadToBunny(buffer: Buffer, prefix: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0, base64, mode, contentType, path } = await req.json()
+    const body = await req.json()
+    const { imageUrl, rotation = 0, base64, mode, contentType, path, skipDetourage } = body
 
     // Mode gomme : upload base64 direct
     if (mode === 'erased' && base64) {
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, maskUrl: url, rawUrl: url, url })
     }
 
-    // Mode raw : upload simple sans traitement (remplace /api/upload-bunny)
+    // Mode raw : upload simple sans traitement
     if (mode === 'raw' && base64) {
       const buffer = Buffer.from(base64, 'base64')
       const prefix = path?.split('/').pop()?.split('.')[0] || 'raw'
@@ -54,6 +55,34 @@ export async function POST(req: NextRequest) {
 
     if (!imageUrl || typeof imageUrl !== 'string') {
       return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
+    }
+
+    // Mode conserver : juste rotation + transformations, pas de détourage
+    if (skipDetourage) {
+      console.log('🔄 Conserver (sans détourage):', imageUrl, 'rotation:', rotation)
+      
+      const imgResponse = await fetch(imageUrl)
+      if (!imgResponse.ok) {
+        return NextResponse.json({ success: false, error: 'Erreur téléchargement image' })
+      }
+
+      const arrayBuffer = await imgResponse.arrayBuffer()
+      let sharpInstance = sharp(Buffer.from(arrayBuffer))
+
+      if (rotation !== 0) {
+        sharpInstance = sharpInstance.rotate(rotation)
+      }
+
+      const finalBuffer = await sharpInstance
+        .resize(1200, 1200, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .modulate({ brightness: 1.05, saturation: 1.15 })
+        .sharpen({ sigma: 1.2 })
+        .png({ quality: 90 })
+        .toBuffer()
+
+      const finalUrl = await uploadToBunny(finalBuffer, 'conserved')
+      return NextResponse.json({ success: true, maskUrl: finalUrl, rawUrl: finalUrl, url: finalUrl })
     }
 
     console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation)
