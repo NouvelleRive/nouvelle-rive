@@ -510,27 +510,26 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
   // =====================
   const handleCameraCapture = async (type: 'face' | 'dos' | 'details', file: File) => {
     if (type === 'face' || type === 'dos') {
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
-      
-      const formDataUpload = new FormData()
-      formDataUpload.append('file', file)
-      formDataUpload.append('upload_preset', uploadPreset!)
-      formDataUpload.append('folder', 'produits')
-      
       try {
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-          { method: 'POST', body: formDataUpload }
-        )
+        // Upload vers Bunny
+        const arrayBuffer = await file.arrayBuffer()
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        const timestamp = Date.now()
+        const random = Math.random().toString(36).substring(2, 8)
+        const path = `produits/temp_${timestamp}_${random}.jpg`
+        
+        const response = await fetch('/api/detourage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, skipDetourage: true })
+        })
         const data = await response.json()
-        
-        const urlParts = data.secure_url.split('/upload/')
-        const url = urlParts.length === 2 
-          ? `${urlParts[0]}/upload/a_exif/${urlParts[1]}`
-          : data.secure_url
-        
-        setUploadedPhotoUrl(url)
+
+        if (!data.success) {
+          throw new Error(data.error || 'Erreur upload')
+        }
+
+        setUploadedPhotoUrl(data.maskUrl)
         setPhotoToEdit({ file, type })
       } catch (err) {
         console.error('Erreur upload:', err)
