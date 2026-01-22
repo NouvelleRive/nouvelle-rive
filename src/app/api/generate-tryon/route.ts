@@ -139,9 +139,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 3. Re-upload vers Cloudinary pour avoir une URL permanente
-    console.log('☁️ Upload vers Cloudinary...')
-    const finalUrl = await uploadToCloudinary(modelImageUrl)
+    // 3. Re-upload vers Bunny pour avoir une URL permanente
+    console.log('☁️ Upload vers Bunny...')
+    const finalUrl = await uploadToBunny(modelImageUrl)
 
     console.log('✅ Photo portée générée:', finalUrl)
 
