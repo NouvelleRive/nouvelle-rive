@@ -4,7 +4,6 @@
     import { useState, useMemo, useEffect, useRef } from 'react'
     import { db } from '@/lib/firebaseConfig'
     import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField, collection } from 'firebase/firestore'
-    import { processAndUploadProductPhoto, uploadMultiplePhotos } from '@/lib/imageProcessing'
     import { format } from 'date-fns'
     import { fr } from 'date-fns/locale'
     import { 
@@ -576,27 +575,27 @@
       if (data.deletedPhotos.detailsIndexes && data.deletedPhotos.detailsIndexes.length > 0) {
         detailsUrls = detailsUrls.filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
       }
+// Les photos face/dos sont déjà traitées par PhotoEditor (dans existingPhotos)
+// On ne fait rien ici car ProductForm gère déjà ça
 
-      // Upload nouvelle photo face SEULEMENT si c'est un nouveau File (pas déjà traité par PhotoEditor)
-      if (data.photoFace) {
-        const result = await processAndUploadProductPhoto(data.photoFace)
-        faceUrl = result.processed
-        faceOriginalUrl = result.original
-      }
-
-      // Upload nouvelle photo dos SEULEMENT si c'est un nouveau File
-      if (data.photoDos) {
-        const result = await processAndUploadProductPhoto(data.photoDos)
-        dosUrl = result.processed
-        dosOriginalUrl = result.original
-      }
-
-      // Upload nouvelles photos détails
-      if (data.photosDetails.length > 0) {
-        const newDetailsUrls = await uploadMultiplePhotos(data.photosDetails)
-        detailsUrls.push(...newDetailsUrls)
-      }
-
+// Pour les photos détails (pas de détourage), upload direct vers Bunny
+if (data.photosDetails.length > 0) {
+  for (const file of data.photosDetails) {
+    const arrayBuffer = await file.arrayBuffer()
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 8)
+    const path = `produits/detail_${timestamp}_${random}.png`
+    
+    const res = await fetch('/api/upload-bunny', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64, path, contentType: file.type || 'image/png' })
+    })
+    const result = await res.json()
+    if (result.success) detailsUrls.push(result.url)
+  }
+}
       // Gérer les suppressions
       if (data.deletedPhotos.face) {
         faceUrl = undefined
