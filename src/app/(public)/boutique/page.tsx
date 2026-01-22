@@ -50,6 +50,7 @@ export default function BoutiquePage() {
             // Exclure produits vendus (quantité 0) ou retournés/supprimés
             if ((d.quantite ?? 1) <= 0) return false
             if (d.statut === 'retour' || d.statut === 'supprime') return false
+            if (d.recu !== true) return false
             return true
           })
           .map(doc => {
