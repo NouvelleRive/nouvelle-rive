@@ -16,12 +16,13 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const [rawUrl, setRawUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
-  const [mode, setMode] = useState<'view' | 'erase'>('view')
+  const [mode, setMode] = useState<'view' | 'erase' | 'restore'>('view')
   const [brushSize, setBrushSize] = useState(30)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [canvasReady, setCanvasReady] = useState(false)
   const [canvasHistory, setCanvasHistory] = useState<ImageData[]>([])
+  const originalImageRef = useRef<HTMLImageElement | null>(null)
 
   if (!imageUrl) {
     return (
@@ -64,6 +65,8 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
         // Sauvegarder l'état initial
       const initialState = ctx.getImageData(0, 0, canvas.width, canvas.height)
       setCanvasHistory([initialState])
+      // Garder l'image originale pour la restauration
+      originalImageRef.current = img
       }
     }
     img.onerror = (err) => {
@@ -74,7 +77,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   }
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (mode !== 'erase') return
+    if (mode !== 'erase' && mode !== 'restore') return
     setIsDrawing(true)
     draw(e)
   }
@@ -104,7 +107,7 @@ const handleUndo = () => {
 }
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || mode !== 'erase') return
+    if (!isDrawing || (mode !== 'erase' && mode !== 'restore')) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -126,10 +129,19 @@ const handleUndo = () => {
     const x = (clientX - rect.left) * scaleX
     const y = (clientY - rect.top) * scaleY
 
-    ctx.fillStyle = 'white'
-    ctx.beginPath()
-    ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
-    ctx.fill()
+    if (mode === 'erase') {
+      ctx.fillStyle = 'white'
+      ctx.beginPath()
+      ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
+      ctx.fill()
+    } else if (mode === 'restore' && originalImageRef.current) {
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.drawImage(originalImageRef.current, 0, 0)
+      ctx.restore()
+    }
     // Sauvegarder après chaque trait (au relâchement)
   }
 
@@ -266,7 +278,7 @@ const handleUndo = () => {
 
         <div className="p-3">
           <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-2">
-            {mode === 'erase' ? (  
+            {(mode === 'erase' || mode === 'restore') ? (
               <canvas
                 ref={canvasRef}
                 className="w-full h-full object-contain cursor-crosshair"
@@ -298,8 +310,22 @@ const handleUndo = () => {
             </div>
           )}
 
-          {mode === 'erase' && (
+          {(mode === 'erase' || mode === 'restore') && (
             <div className="mb-4">
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={() => setMode('erase')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode === 'erase' ? 'bg-red-100 text-red-700 border-2 border-red-400' : 'border text-gray-600'}`}
+                >
+                  🧹 Gomme
+                </button>
+                <button
+                  onClick={() => setMode('restore')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode === 'restore' ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'border text-gray-600'}`}
+                >
+                  🖌️ Restaurer
+                </button>
+              </div>
               <label className="text-sm text-gray-600 mb-2 block">Taille du pinceau: {brushSize}px</label>
               <input
                 type="range"
