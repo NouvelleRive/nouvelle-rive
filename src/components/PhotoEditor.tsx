@@ -64,7 +64,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
         setCanvasReady(true)
         // Sauvegarder l'état initial
       const initialState = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      setCanvasHistory([initialState])
+      setCanvasHistory(() => [initialState])
       // Garder l'image originale pour la restauration
       originalImageRef.current = img
       }
@@ -88,7 +88,10 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     const ctx = canvas?.getContext('2d')
     if (canvas && ctx) {
       const newState = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      setCanvasHistory(prev => [...prev, newState])
+      setCanvasHistory(prev => {
+        if (prev.length > 20) return [...prev.slice(-19), newState]
+        return [...prev, newState]
+      })
     }
   }
   setIsDrawing(false)
