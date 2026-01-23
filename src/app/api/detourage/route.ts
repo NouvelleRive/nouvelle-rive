@@ -53,11 +53,16 @@ export async function POST(req: NextRequest) {
 
     console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation)
 
-    // 1. Détourage via Replicate
+    // Télécharger et convertir en RGB avant Replicate
+    const preResponse = await fetch(imageUrl)
+    const preBuffer = Buffer.from(await preResponse.arrayBuffer())
+    const rgbBuffer = await sharp(preBuffer).toColorspace('srgb').png().toBuffer()
+    const base64Image = `data:image/png;base64,${rgbBuffer.toString('base64')}`
+
     const output = await replicate.run(
-    "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
-    { input: { image: imageUrl } }
-  )
+      "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+      { input: { image: base64Image } }
+    )
 
     console.log('📦 Output Replicate:', output, typeof output)
 
