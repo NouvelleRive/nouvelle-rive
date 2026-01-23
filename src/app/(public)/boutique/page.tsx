@@ -12,6 +12,7 @@
     nom: string
     prix: number
     imageUrls: string[]
+    imageUrl?: string
     categorie: string
     marque?: string
     vendu: boolean
@@ -141,7 +142,7 @@
           const d = doc.data()
           if ((d.quantite ?? 1) <= 0) return false
           if (d.statut === 'retour' || d.statut === 'supprime') return false
-          if (d.enBoutique !== true) return false
+          if (d.recu === false) return false
           return true
         })
         .map(doc => {
@@ -154,6 +155,8 @@
 
       const produitsVisibles = data.filter(p => {
         if (p.forceDisplay === true) return true
+        if (p.imageUrls && p.imageUrls.length > 0) return true
+        if (p.imageUrl) return true
         if (p.photos?.face) return true
         if (p.photos?.faceOnModel) return true
         return false
