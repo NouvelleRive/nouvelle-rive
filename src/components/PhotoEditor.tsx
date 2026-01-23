@@ -66,7 +66,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       console.error('Erreur chargement image canvas:', err)
       setError('Impossible de charger l\'image pour la gomme')
     }
-    img.src = rawUrl
+    img.src = urlToLoad
   }
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -175,7 +175,8 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
   const handleEnterEraseMode = () => {
     setMode('erase')
-    setTimeout(initCanvas, 100)
+    setCanvasReady(false)
+    setTimeout(initCanvas, 200)
   }
 
   const handleSaveErased = async () => {
@@ -240,7 +241,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
         <div className="p-3">
           <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-2">
-            {mode === 'erase' && canvasReady ? (
+            {mode === 'erase' ? (  
               <canvas
                 ref={canvasRef}
                 className="w-full h-full object-contain cursor-crosshair"
