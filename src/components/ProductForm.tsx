@@ -519,7 +519,7 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
         for (let i = 0; i < uint8Array.length; i += chunkSize) {
           binary += String.fromCharCode(...uint8Array.slice(i, i + chunkSize))
         }
-        const base64 = btoa(binary)git add . && git commit -m "fix base64 stack overflow" && git push
+        const base64 = btoa(binary)
         const timestamp = Date.now()
         const random = Math.random().toString(36).substring(2, 8)
         const path = `produits/temp_${timestamp}_${random}.jpg`
