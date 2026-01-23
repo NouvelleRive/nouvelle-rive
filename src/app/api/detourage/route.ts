@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
 
     // 1. Détourage via Replicate
     const output = await replicate.run(
-  "lucataco/remove-bg",
-  { input: { image: imageUrl } }
-)
+    "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+    { input: { image: imageUrl } }
+  )
 
     console.log('📦 Output Replicate:', output, typeof output)
 
