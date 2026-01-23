@@ -317,13 +317,13 @@ const handleUndo = () => {
             <div className="mb-4">
               <div className="flex gap-2 mb-3">
                 <button
-                  onClick={() => setMode('erase')}
+                  onClick={() => { if (mode !== 'erase') setMode('erase') }}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode === 'erase' ? 'bg-red-100 text-red-700 border-2 border-red-400' : 'border text-gray-600'}`}
                 >
                   🧹 Gomme
                 </button>
                 <button
-                  onClick={() => setMode('restore')}
+                  onClick={() => { if (mode !== 'restore') setMode('restore') }}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode === 'restore' ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'border text-gray-600'}`}
                 >
                   🖌️ Restaurer
