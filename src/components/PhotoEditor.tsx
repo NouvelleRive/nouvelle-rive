@@ -16,6 +16,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const [rawUrl, setRawUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
+  const [fineRotation, setFineRotation] = useState(0)
   const [mode, setMode] = useState<'view' | 'erase' | 'restore'>('view')
   const [brushSize, setBrushSize] = useState(30)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -36,13 +37,15 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   }
 
   const getRotatedUrl = (url: string, deg: number) => {
-  if (!url || deg === 0) return url || ''
+  if (!url) return url || ''
+  if (deg === 0) return url
   const urlParts = url.split('/upload/')
   if (urlParts.length !== 2) return url
   return `${urlParts[0]}/upload/a_${deg}/${urlParts[1]}`
 }
 
-  const currentDisplayUrl = getRotatedUrl(processedUrl || imageUrl, processedUrl ? 0 : rotation)
+  const totalRotation = rotation + fineRotation
+  const currentDisplayUrl = getRotatedUrl(processedUrl || imageUrl, processedUrl ? 0 : totalRotation)
 
   const initCanvas = useCallback(() => {
   const canvas = canvasRef.current
@@ -156,7 +159,7 @@ const handleUndo = () => {
       const res = await fetch('/api/detourage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl, rotation }),
+        body: JSON.stringify({ imageUrl, rotation: rotation + fineRotation }),
       })
 
       const data = await res.json()
@@ -195,7 +198,7 @@ const handleUndo = () => {
       const res = await fetch('/api/detourage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl, rotation, skipDetourage: true }),
+        body: JSON.stringify({ imageUrl, rotation: rotation + fineRotation, skipDetourage: true }),
       })
 
       const data = await res.json()
