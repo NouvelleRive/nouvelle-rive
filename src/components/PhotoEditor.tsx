@@ -21,6 +21,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [canvasReady, setCanvasReady] = useState(false)
+  const [canvasHistory, setCanvasHistory] = useState<ImageData[]>([])
 
   if (!imageUrl) {
     return (
@@ -60,6 +61,9 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       if (ctx) {
         ctx.drawImage(img, 0, 0)
         setCanvasReady(true)
+        // Sauvegarder l'état initial
+      const initialState = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      setCanvasHistory([initialState])
       }
     }
     img.onerror = (err) => {
@@ -76,8 +80,28 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   }
 
   const stopDrawing = () => {
-    setIsDrawing(false)
+  if (isDrawing) {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (canvas && ctx) {
+      const newState = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      setCanvasHistory(prev => [...prev, newState])
+    }
   }
+  setIsDrawing(false)
+}
+
+const handleUndo = () => {
+  if (canvasHistory.length <= 1) return
+  const canvas = canvasRef.current
+  const ctx = canvas?.getContext('2d')
+  if (!canvas || !ctx) return
+  
+  const newHistory = canvasHistory.slice(0, -1)
+  const previousState = newHistory[newHistory.length - 1]
+  ctx.putImageData(previousState, 0, 0)
+  setCanvasHistory(newHistory)
+}
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || mode !== 'erase') return
@@ -106,6 +130,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
     ctx.beginPath()
     ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
     ctx.fill()
+    // Sauvegarder après chaque trait (au relâchement)
   }
 
   const handleAutoRemove = async () => {
@@ -286,10 +311,11 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
               />
               <div className="flex gap-2 mt-3">
                 <button
-                  onClick={() => { setMode('view'); setCanvasReady(false) }}
-                  className="flex-1 py-2 border rounded-lg"
+                  onClick={handleUndo}
+                  disabled={canvasHistory.length <= 1}
+                  className="flex-1 py-2 border rounded-lg disabled:opacity-40"
                 >
-                  Annuler
+                  ↩ Annuler
                 </button>
                 <button
                   onClick={handleSaveErased}
