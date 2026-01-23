@@ -1,7 +1,7 @@
 // components/PhotoEditor.tsx
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { X, RotateCcw, RotateCw, Check, Eraser } from 'lucide-react'
 
 interface PhotoEditorProps {
@@ -44,7 +44,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
 
   const currentDisplayUrl = getRotatedUrl(processedUrl || imageUrl, processedUrl ? 0 : rotation)
 
-  const initCanvas = () => {
+  const initCanvas = useCallback(() => {
   const canvas = canvasRef.current
   const urlToLoad = processedUrl || imageUrl
   
@@ -74,7 +74,7 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
       setError('Impossible de charger l\'image pour la gomme')
     }
     img.src = urlToLoad
-  }
+  }, [processedUrl, imageUrl])
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (mode !== 'erase' && mode !== 'restore') return
