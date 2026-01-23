@@ -86,13 +86,21 @@ function matchRegle(produit: Produit, regle: Regle, chineuses: Chineuse[]): bool
   return regle.criteres.every(critere => matchCritere(produit, critere, chineuses))
 }
 
+export async function getFilteredProducts(pageId: string): Promise<Produit[]>
+export async function getFilteredProducts(
+  pageId: string,
+  options: {
+    limitCount?: number
+    lastDoc?: DocumentSnapshot | null
+  }
+): Promise<{ produits: Produit[], lastDoc: DocumentSnapshot | null, hasMore: boolean }>
 export async function getFilteredProducts(
   pageId: string,
   options?: {
     limitCount?: number
     lastDoc?: DocumentSnapshot | null
   }
-): Promise<{ produits: Produit[], lastDoc: DocumentSnapshot | null, hasMore: boolean }> {
+): Promise<Produit[] | { produits: Produit[], lastDoc: DocumentSnapshot | null, hasMore: boolean }> {
   const configRef = doc(db, 'siteConfig', pageId)
   const configSnap = await getDoc(configRef)
   const config: PageConfig = configSnap.exists() 
@@ -155,10 +163,13 @@ let q = options?.lastDoc
     return config.regles.some(regle => matchRegle(p, regle, chineuses))
   })
 
-  const lastDocResult = snapshot.docs[snapshot.docs.length - 1] || null
-  return { 
-  produits, 
-  lastDoc: lastDocResult, 
-  hasMore: snapshot.docs.length === limitCount 
+  if (options) {
+    const lastDocResult = snapshot.docs[snapshot.docs.length - 1] || null
+    return { 
+      produits, 
+      lastDoc: lastDocResult, 
+      hasMore: snapshot.docs.length === limitCount 
     }
+  }
+  return produits
 }
