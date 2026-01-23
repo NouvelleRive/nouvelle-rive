@@ -116,6 +116,7 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     const quantite = (p as any).quantite ?? 1
     if (quantite <= 0) return false
     if ((p as any).statut === 'retour' || (p as any).statut === 'supprime') return false
+    if ((p as any).recu === false) return false
 
     const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
     if (!hasImage) return false
