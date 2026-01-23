@@ -43,9 +43,11 @@ export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEdit
   const currentDisplayUrl = getRotatedUrl(processedUrl || imageUrl, processedUrl ? 0 : rotation)
 
   const initCanvas = () => {
-    const canvas = canvasRef.current
-    if (!canvas || !rawUrl) {
-      console.error('Canvas ou rawUrl manquant')
+  const canvas = canvasRef.current
+  const urlToLoad = processedUrl || imageUrl
+  
+  if (!canvas || !urlToLoad) {
+      console.error('Canvas ou URL manquant', { canvas: !!canvas, urlToLoad })
       return
     }
 
