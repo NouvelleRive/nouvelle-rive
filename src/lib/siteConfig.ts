@@ -1,5 +1,5 @@
 // lib/siteConfig.ts
-import { doc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy, limit, startAfter, DocumentSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
 type Critere = {
@@ -86,17 +86,35 @@ function matchRegle(produit: Produit, regle: Regle, chineuses: Chineuse[]): bool
   return regle.criteres.every(critere => matchCritere(produit, critere, chineuses))
 }
 
-export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
+export async function getFilteredProducts(
+  pageId: string,
+  options?: {
+    limitCount?: number
+    lastDoc?: DocumentSnapshot | null
+  }
+): Promise<{ produits: Produit[], lastDoc: DocumentSnapshot | null, hasMore: boolean }> {
   const configRef = doc(db, 'siteConfig', pageId)
   const configSnap = await getDoc(configRef)
   const config: PageConfig = configSnap.exists() 
     ? { regles: [], ...configSnap.data() }
     : { regles: [] }
 
-  const q = query(
-    collection(db, 'produits'),
-    where('vendu', '==', false)
-  )
+  const limitCount = options?.limitCount || 100
+let q = options?.lastDoc
+  ? query(
+      collection(db, 'produits'),
+      where('vendu', '==', false),
+      orderBy('createdAt', 'desc'),
+      startAfter(options.lastDoc),
+      limit(limitCount)
+    )
+  : query(
+      collection(db, 'produits'),
+      where('vendu', '==', false),
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    )
+
   const snapshot = await getDocs(q)
   let produits = snapshot.docs.map(d => ({
     id: d.id,
@@ -137,5 +155,10 @@ export async function getFilteredProducts(pageId: string): Promise<Produit[]> {
     return config.regles.some(regle => matchRegle(p, regle, chineuses))
   })
 
-  return produits
+  const lastDocResult = snapshot.docs[snapshot.docs.length - 1] || null
+  return { 
+  produits, 
+  lastDoc: lastDocResult, 
+  hasMore: snapshot.docs.length === limitCount 
+    }
 }
