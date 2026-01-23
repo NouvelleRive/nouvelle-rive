@@ -1,6 +1,7 @@
 // lib/siteConfig.ts
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy, limit, startAfter, DocumentSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { useState, useEffect, useCallback } from 'react'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -172,4 +173,51 @@ let q = options?.lastDoc
     }
   }
   return produits
+}
+export function useFilteredProducts(pageId: string) {
+  const [produits, setProduits] = useState<Produit[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [lastDoc, setLastDoc] = useState<any>(null)
+
+  useEffect(() => {
+    getFilteredProducts(pageId, { limitCount: 100 })
+      .then(result => {
+        setProduits(result.produits)
+        setLastDoc(result.lastDoc)
+        setHasMore(result.hasMore)
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [pageId])
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !lastDoc) return
+    
+    setLoadingMore(true)
+    try {
+      const result = await getFilteredProducts(pageId, { lastDoc, limitCount: 100 })
+      setProduits(prev => [...prev, ...result.produits])
+      setLastDoc(result.lastDoc)
+      setHasMore(result.hasMore)
+    } catch (error) {
+      console.error('Erreur:', error)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [pageId, loadingMore, hasMore, lastDoc])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
+        loadMore()
+      }
+    }
+    
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [loadMore])
+
+  return { produits, loading, loadingMore }
 }
