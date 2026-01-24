@@ -1,11 +1,10 @@
-// app/(public)/accessoires/page.tsx
 'use client'
 
 import { useFilteredProducts } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
 
-export default function NewInPage() {
-  const { produits, loading, loadingMore } = useFilteredProducts('new-in')
+export default function AccessoiresPage() {
+  const { produits, loading, loadingMore } = useFilteredProducts('accessoires')
 
   if (loading) {
     return (
