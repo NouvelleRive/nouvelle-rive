@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { Save, Plus, X, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-react'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -21,6 +22,8 @@ type PageConfig = {
   prixMin?: number
   prixMax?: number
   joursRecents?: number
+  produitsManquels?: string[]
+  ordreManuel?: string[]
 }
 
 type Chineuse = {
@@ -28,6 +31,16 @@ type Chineuse = {
   nom?: string
   email?: string
   trigramme?: string
+}
+
+type ProduitPreview = {
+  id: string
+  nom: string
+  imageUrl?: string
+  imageUrls?: string[]
+  prix?: number
+  nbFavoris?: number
+  masque?: boolean
 }
 
 const PAGES = [
@@ -70,6 +83,9 @@ export default function AdminSitePage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [chineusesList, setChineusesList] = useState<Chineuse[]>([])
+
+  const [produitsFiltrés, setProduitsFiltrés] = useState<ProduitPreview[]>([])
+  const [loadingProduits, setLoadingProduits] = useState(false)
 
   useEffect(() => {
     async function fetchChineuses() {
@@ -114,6 +130,56 @@ export default function AdminSitePage() {
     }
     fetchConfig()
   }, [selectedPage])
+
+  useEffect(() => {
+  async function fetchProduitsFiltres() {
+    if (!config) return
+    setLoadingProduits(true)
+    try {
+      const { getFilteredProducts } = await import('@/lib/siteConfig')
+      const produits = await getFilteredProducts(selectedPage)
+      
+      // Récupérer les favoris pour chaque produit
+      const produitsAvecFavoris = await Promise.all(
+        produits.map(async (p: any) => {
+          const favorisSnap = await getDocs(collection(db, 'favoris'))
+          const nbFavoris = favorisSnap.docs.filter(d => d.data().productId === p.id).length
+          return {
+            id: p.id,
+            nom: p.nom,
+            imageUrl: p.imageUrl,
+            imageUrls: p.imageUrls,
+            prix: p.prix,
+            nbFavoris,
+            masque: config.produitsManquels?.includes(p.id) || false
+          }
+        })
+      )
+      
+      // Trier par ordre manuel ou par favoris
+      let produitsTries = [...produitsAvecFavoris]
+      if (config.ordreManuel && config.ordreManuel.length > 0) {
+        produitsTries.sort((a, b) => {
+          const indexA = config.ordreManuel?.indexOf(a.id) ?? -1
+          const indexB = config.ordreManuel?.indexOf(b.id) ?? -1
+          if (indexA === -1 && indexB === -1) return (b.nbFavoris || 0) - (a.nbFavoris || 0)
+          if (indexA === -1) return 1
+          if (indexB === -1) return -1
+          return indexA - indexB
+        })
+      } else {
+        produitsTries.sort((a, b) => (b.nbFavoris || 0) - (a.nbFavoris || 0))
+      }
+      
+      setProduitsFiltrés(produitsTries)
+    } catch (error) {
+      console.error('Erreur chargement produits:', error)
+    } finally {
+      setLoadingProduits(false)
+    }
+  }
+  fetchProduitsFiltres()
+}, [selectedPage, config.regles, config.prixMin, config.prixMax, config.joursRecents])
 
   const handleSave = async () => {
     setSaving(true)
@@ -197,6 +263,42 @@ export default function AdminSitePage() {
       }
       return `${typeLabel} = "${c.valeur}"`
     }).join(' ET ')
+    const toggleMasquerProduit = (produitId: string) => {
+  const current = config.produitsManquels || []
+  const newList = current.includes(produitId)
+    ? current.filter(id => id !== produitId)
+    : [...current, produitId]
+  setConfig({ ...config, produitsManquels: newList })
+}
+
+const moveProduct = (produitId: string, direction: 'up' | 'down') => {
+  const currentOrder = config.ordreManuel || produitsFiltrés.map(p => p.id)
+  const index = currentOrder.indexOf(produitId)
+  if (index === -1) return
+  
+  const newIndex = direction === 'up' ? index - 1 : index + 1
+  if (newIndex < 0 || newIndex >= currentOrder.length) return
+  
+  const newOrder = [...currentOrder]
+  ;[newOrder[index], newOrder[newIndex]] = [newOrder[newIndex], newOrder[index]]
+  setConfig({ ...config, ordreManuel: newOrder })
+  
+  // Mettre à jour l'affichage local
+  const newProduits = [...produitsFiltrés]
+  ;[newProduits[index], newProduits[newIndex]] = [newProduits[newIndex], newProduits[index]]
+  setProduitsFiltrés(newProduits)
+}
+
+const resetOrdre = () => {
+  setConfig({ ...config, ordreManuel: undefined })
+  const sorted = [...produitsFiltrés].sort((a, b) => (b.nbFavoris || 0) - (a.nbFavoris || 0))
+  setProduitsFiltrés(sorted)
+}
+
+const getImageUrl = (p: ProduitPreview) => {
+  if (p.imageUrls && p.imageUrls.length > 0) return p.imageUrls[0]
+  return p.imageUrl || ''
+}
   }
 
   return (
