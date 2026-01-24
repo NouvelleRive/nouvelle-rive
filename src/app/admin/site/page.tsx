@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react'
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { useFilteredProducts } from '@/lib/siteConfig'
 import { Save, Plus, X, Trash2 } from 'lucide-react'
 import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-react'
 
@@ -86,6 +87,7 @@ export default function AdminSitePage() {
 
   const [produitsFiltrés, setProduitsFiltrés] = useState<ProduitPreview[]>([])
   const [loadingProduits, setLoadingProduits] = useState(false)
+  const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage)
 
   useEffect(() => {
     async function fetchChineuses() {
@@ -133,28 +135,23 @@ export default function AdminSitePage() {
 
   useEffect(() => {
   async function fetchProduitsFiltres() {
-    if (!config) return
+    if (!config || loadingProduitsHook || !produitsFromHook) return
     setLoadingProduits(true)
     try {
-      const { getFilteredProducts } = await import('@/lib/siteConfig')
-      const result = await getFilteredProducts(selectedPage, { limitCount: 100 })
-      
-      // Récupérer les favoris pour chaque produit
-      const produitsAvecFavoris = await Promise.all(
-        result.produits.map(async (p: any) => {
-          const favorisSnap = await getDocs(collection(db, 'favoris'))
-          const nbFavoris = favorisSnap.docs.filter(d => d.data().productId === p.id).length
-          return {
-            id: p.id,
-            nom: p.nom,
-            imageUrl: p.imageUrl,
-            imageUrls: p.imageUrls,
-            prix: p.prix,
-            nbFavoris,
-            masque: config.produitsManquels?.includes(p.id) || false
-          }
-        })
-      )
+      const favorisSnap = await getDocs(collection(db, 'favoris'))
+
+      const produitsAvecFavoris = produitsFromHook.map((p: any) => {
+        const nbFavoris = favorisSnap.docs.filter(d => d.data().productId === p.id).length
+        return {
+          id: p.id,
+          nom: p.nom,
+          imageUrl: p.imageUrl,
+          imageUrls: p.imageUrls,
+          prix: p.prix,
+          nbFavoris,
+          masque: config.produitsManquels?.includes(p.id) || false
+        }
+      })
       
       // Trier par ordre manuel ou par favoris
       let produitsTries = [...produitsAvecFavoris]
@@ -179,7 +176,7 @@ export default function AdminSitePage() {
     }
   }
   fetchProduitsFiltres()
-}, [selectedPage, config.regles, config.prixMin, config.prixMax, config.joursRecents])
+}, [produitsFromHook, config.produitsManquels, config.ordreManuel])
 
   const handleSave = async () => {
     setSaving(true)
