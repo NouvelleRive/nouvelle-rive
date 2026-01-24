@@ -6,7 +6,8 @@ import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useFilteredProducts } from '@/lib/siteConfig'
 import { Save, Plus, X, Trash2 } from 'lucide-react'
-import ProductGrid from '@/components/ProductGrid'
+import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-react'
+import ProductList from '@/components/ProductList'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -23,6 +24,8 @@ type PageConfig = {
   prixMin?: number
   prixMax?: number
   joursRecents?: number
+  produitsManquels?: string[]
+  ordreManuel?: string[]
 }
 
 type Chineuse = {
@@ -30,6 +33,16 @@ type Chineuse = {
   nom?: string
   email?: string
   trigramme?: string
+}
+
+type ProduitPreview = {
+  id: string
+  nom: string
+  imageUrl?: string
+  imageUrls?: string[]
+  prix?: number
+  nbFavoris?: number
+  masque?: boolean
 }
 
 const PAGES = [
@@ -73,7 +86,9 @@ export default function AdminSitePage() {
   const [saving, setSaving] = useState(false)
   const [chineusesList, setChineusesList] = useState<Chineuse[]>([])
 
-  const { produits, loading: loadingProduits, loadingMore } = useFilteredProducts(selectedPage)
+  const [produitsFiltrés, setProduitsFiltrés] = useState<ProduitPreview[]>([])
+  const [loadingProduits, setLoadingProduits] = useState(false)
+  const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage)
 
   useEffect(() => {
     async function fetchChineuses() {
@@ -202,6 +217,43 @@ export default function AdminSitePage() {
       return `${typeLabel} = "${c.valeur}"`
     }).join(' ET ')
   }
+
+  const toggleMasquerProduit = (produitId: string) => {
+  const current = config.produitsManquels || []
+  const newList = current.includes(produitId)
+    ? current.filter(id => id !== produitId)
+    : [...current, produitId]
+  setConfig({ ...config, produitsManquels: newList })
+}
+
+const moveProduct = (produitId: string, direction: 'up' | 'down') => {
+  const currentOrder = config.ordreManuel || produitsFiltrés.map(p => p.id)
+  const index = currentOrder.indexOf(produitId)
+  if (index === -1) return
+  
+  const newIndex = direction === 'up' ? index - 1 : index + 1
+  if (newIndex < 0 || newIndex >= currentOrder.length) return
+  
+  const newOrder = [...currentOrder]
+  ;[newOrder[index], newOrder[newIndex]] = [newOrder[newIndex], newOrder[index]]
+  setConfig({ ...config, ordreManuel: newOrder })
+  
+  // Mettre à jour l'affichage local
+  const newProduits = [...produitsFiltrés]
+  ;[newProduits[index], newProduits[newIndex]] = [newProduits[newIndex], newProduits[index]]
+  setProduitsFiltrés(newProduits)
+}
+
+const resetOrdre = () => {
+  setConfig({ ...config, ordreManuel: undefined })
+  const sorted = [...produitsFiltrés].sort((a, b) => (b.nbFavoris || 0) - (a.nbFavoris || 0))
+  setProduitsFiltrés(sorted)
+}
+
+const getImageUrl = (p: ProduitPreview) => {
+  if (p.imageUrls && p.imageUrls.length > 0) return p.imageUrls[0]
+  return p.imageUrl || ''
+}
 
   return (
     <div className="space-y-6">
@@ -399,24 +451,24 @@ export default function AdminSitePage() {
           </button>
         </div>
       )}
-
       <div className="border-t pt-6 mt-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">
-          Produits correspondants ({produits.length} total)
-        </h3>
-        
-        {loadingProduits ? (
-          <div className="py-10 text-center text-gray-500">Chargement des produits...</div>
-        ) : (
-          <ProductGrid produits={produits} columns={3} />
-        )}
-        
-        {loadingMore && (
-          <div className="py-8 text-center">
-            <p className="text-gray-500 text-sm">Chargement...</p>
-          </div>
-        )}
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-sm font-semibold text-gray-700">
+      Produits correspondants ({produitsFromHook.length} total)
+    </h3>
+  </div>
+  
+  {loadingProduitsHook ? (
+    <div className="py-10 text-center text-gray-500">Chargement des produits...</div>
+  ) : (
+    <ProductList
+      titre=""
+      produits={produitsFromHook}
+      isAdmin={true}
+      loading={loadingProduitsHook}
+    />
+  )}
+</div>
       </div>
-    </div>
   )
 }
