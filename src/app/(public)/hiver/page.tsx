@@ -1,20 +1,10 @@
-// app/(public)/hiver/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
-import { getFilteredProducts, Produit } from '@/lib/siteConfig'
+import { useFilteredProducts } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
 
-export default function HiverPage() {
-  const [produits, setProduits] = useState<Produit[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    getFilteredProducts('hiver')
-      .then(setProduits)
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+export default function AccessoiresPage() {
+  const { produits, loading, loadingMore } = useFilteredProducts('accessoires')
 
   if (loading) {
     return (
@@ -27,6 +17,11 @@ export default function HiverPage() {
   return (
     <div className="min-h-screen bg-white">
       <ProductGrid produits={produits} columns={3} />
+      {loadingMore && (
+        <div className="py-8 text-center">
+          <p className="text-gray-500 text-sm">Chargement...</p>
+        </div>
+      )}
     </div>
   )
 }
