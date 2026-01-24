@@ -263,7 +263,9 @@ export default function AdminSitePage() {
       }
       return `${typeLabel} = "${c.valeur}"`
     }).join(' ET ')
-    const toggleMasquerProduit = (produitId: string) => {
+  }
+
+  const toggleMasquerProduit = (produitId: string) => {
   const current = config.produitsManquels || []
   const newList = current.includes(produitId)
     ? current.filter(id => id !== produitId)
@@ -299,7 +301,6 @@ const getImageUrl = (p: ProduitPreview) => {
   if (p.imageUrls && p.imageUrls.length > 0) return p.imageUrls[0]
   return p.imageUrl || ''
 }
-  }
 
   return (
     <div className="space-y-6">
@@ -497,6 +498,93 @@ const getImageUrl = (p: ProduitPreview) => {
           </button>
         </div>
       )}
+      <div className="border-t pt-6 mt-6">
+  <div className="flex items-center justify-between mb-4">
+    <h3 className="text-sm font-semibold text-gray-700">
+      Produits correspondants ({produitsFiltrés.filter(p => !p.masque).length} visibles / {produitsFiltrés.length} total)
+    </h3>
+    <button
+      onClick={resetOrdre}
+      className="text-xs text-[#22209C] hover:underline"
+    >
+      Réinitialiser l'ordre (par favoris)
+    </button>
+  </div>
+  
+  {loadingProduits ? (
+    <div className="py-10 text-center text-gray-500">Chargement des produits...</div>
+  ) : produitsFiltrés.length === 0 ? (
+    <div className="py-10 text-center text-gray-400">Aucun produit ne correspond aux critères</div>
+  ) : (
+    <div className="space-y-2 max-h-[500px] overflow-y-auto">
+      {produitsFiltrés.map((produit, index) => (
+        <div
+          key={produit.id}
+          className={`flex items-center gap-3 p-2 rounded-lg border ${
+            produit.masque ? 'bg-gray-100 opacity-50' : 'bg-white'
+          }`}
+        >
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => moveProduct(produit.id, 'up')}
+              disabled={index === 0}
+              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+            >
+              <ArrowUp size={14} />
+            </button>
+            <button
+              onClick={() => moveProduct(produit.id, 'down')}
+              disabled={index === produitsFiltrés.length - 1}
+              className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+            >
+              <ArrowDown size={14} />
+            </button>
+          </div>
+          
+          <span className="text-xs text-gray-400 w-6">{index + 1}</span>
+          
+          <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+            {getImageUrl(produit) ? (
+              <img
+                src={getImageUrl(produit)}
+                alt={produit.nom}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                ?
+              </div>
+            )}
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm truncate ${produit.masque ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+              {produit.nom}
+            </p>
+            <p className="text-xs text-gray-500">{produit.prix}€</p>
+          </div>
+          
+          <div className="flex items-center gap-1 text-xs text-pink-500">
+            <Heart size={12} fill="currentColor" />
+            <span>{produit.nbFavoris || 0}</span>
+          </div>
+          
+          <button
+            onClick={() => toggleMasquerProduit(produit.id)}
+            className={`p-2 rounded-lg ${
+              produit.masque
+                ? 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            title={produit.masque ? 'Afficher' : 'Masquer'}
+          >
+            {produit.masque ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
       </div>
   )
 }
