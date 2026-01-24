@@ -137,11 +137,11 @@ export default function AdminSitePage() {
     setLoadingProduits(true)
     try {
       const { getFilteredProducts } = await import('@/lib/siteConfig')
-      const produits = await getFilteredProducts(selectedPage)
+      const result = await getFilteredProducts(selectedPage, { limitCount: 100 })
       
       // Récupérer les favoris pour chaque produit
       const produitsAvecFavoris = await Promise.all(
-        produits.map(async (p: any) => {
+        result.produits.map(async (p: any) => {
           const favorisSnap = await getDocs(collection(db, 'favoris'))
           const nbFavoris = favorisSnap.docs.filter(d => d.data().productId === p.id).length
           return {
