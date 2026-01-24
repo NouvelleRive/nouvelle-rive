@@ -1019,7 +1019,7 @@ if (data.photosDetails.length > 0) {
                       {canGenerateTryon && <button onClick={() => handleGenerateTryon(p)} disabled={generatingTryonId === p.id} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>}
                       <button onClick={() => handleEdit(p)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={16} /></button>
                       <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
-                      <button onClick={() => handleToggleForceDisplay(p)} className={`p-1.5 rounded-lg ${(p as any).hidden ? 'text-gray-300' : 'text-green-500'}`}>{(p as any).hidden ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                      <button onClick={() => handleToggleForceDisplay(p)} className={`p-1.5 rounded-lg ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                     </div>
                   </div>
                   <div className="sm:hidden flex gap-4 mt-3 pt-3 border-t border-gray-100 text-sm">
@@ -1072,7 +1072,7 @@ if (data.photosDetails.length > 0) {
                       {canGenerateTryon && <button onClick={() => handleGenerateTryon(p)} disabled={generatingTryonId === p.id} className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs animate-pulse">⏳</span> : <Sparkles size={20} />}</button>}
                       <button onClick={() => handleEdit(p)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={20} /></button>
                       <button onClick={() => handleDelete(p.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={20} /></button>
-                      <button onClick={() => handleToggleForceDisplay(p)} className={`p-2 rounded-lg ${(p as any).hidden ? 'text-gray-300 hover:text-gray-500 hover:bg-gray-100' : 'text-green-500 hover:bg-green-50'}`}>{(p as any).hidden ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                      <button onClick={() => handleToggleForceDisplay(p)} className={`p-2 rounded-lg ${isHidden(p) ? 'text-gray-300 hover:text-gray-500 hover:bg-gray-100' : 'text-green-500 hover:bg-green-50'}`}>{isHidden(p) ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                     </div>
                   </div>
                   {allImages.length > 1 && (
