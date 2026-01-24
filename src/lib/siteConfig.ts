@@ -144,7 +144,6 @@ let q = options?.lastDoc
     if (quantite <= 0) return false
     if ((p as any).statut === 'retour' || (p as any).statut === 'supprime') return false
     if ((p as any).recu === false) return false
-    if ((p as any).forceDisplay === true) return true
 
     const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
     if (!hasImage) return false
