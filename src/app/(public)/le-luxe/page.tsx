@@ -1,10 +1,14 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useFilteredProducts } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
 
-export default function AccessoiresPage() {
-  const { produits, loading, loadingMore } = useFilteredProducts('accessoires')
+export default function Page() {
+  const pathname = usePathname()
+  const pageId = pathname.split('/').pop() || ''
+  
+  const { produits, loading, loadingMore } = useFilteredProducts(pageId)
 
   if (loading) {
     return (
