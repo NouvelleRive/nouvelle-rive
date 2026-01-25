@@ -399,6 +399,7 @@ export default function ProductForm({
   // URLs des photos détourées (prêtes à enregistrer)
   const [detouredFaceUrl, setDetouredFaceUrl] = useState<string | null>(null)
   const [detouredDosUrl, setDetouredDosUrl] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   // État pour l'ordre des photos
 const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
@@ -512,6 +513,7 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
     if (type === 'face' || type === 'dos') {
       try {
         // Upload vers Bunny
+        setUploadingPhoto(true)
         const arrayBuffer = await file.arrayBuffer()
         const uint8Array = new Uint8Array(arrayBuffer)
         let binary = ''
@@ -537,9 +539,11 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
 
         setUploadedPhotoUrl(data.maskUrl)
         setPhotoToEdit({ file, type })
-      } catch (err) {
+     } catch (err) {
         console.error('Erreur upload:', err)
         alert('Erreur upload photo')
+      } finally {
+        setUploadingPhoto(false)
       }
     } else if (type === 'details') {
       setFormData(prev => ({ ...prev, photosDetails: [...prev.photosDetails, file] }))
