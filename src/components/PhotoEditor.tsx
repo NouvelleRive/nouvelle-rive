@@ -278,7 +278,7 @@
 
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl h-[90vh] flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-lg font-semibold text-gray-900">
               {processing ? '⏳ Traitement...' : error ? '❌ Erreur' : mode === 'erase' ? '🖌️ Gomme' : processedUrl ? '✅ Résultat' : '📷 Éditer'}
@@ -288,8 +288,8 @@
             </button>
           </div>
 
-          <div className="p-3">
-            <div className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-2">
+          <div className="p-3 flex-1 flex flex-col min-h-0">
+            <div className="relative bg-gray-100 rounded-xl overflow-hidden mb-2" style={{ height: 'calc(100% - 120px)' }}>
               {(mode === 'erase' || mode === 'restore') ? (
                 <canvas
                   ref={canvasRef}
@@ -341,7 +341,7 @@
                 <label className="text-sm text-gray-600 mb-2 block">Taille du pinceau: {brushSize}px</label>
                 <input
                   type="range"
-                  min="10"
+                  min="3"
                   max="100"
                   value={brushSize}
                   onChange={(e) => setBrushSize(Number(e.target.value))}
