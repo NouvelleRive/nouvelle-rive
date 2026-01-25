@@ -97,12 +97,13 @@ export default function CreateurPage() {
               prix: data.prix || 0,
               imageUrl: data.imageUrls?.[0] || data.imageUrl || '',
               nbFavoris: favorisSnap.size,
+              recu: data.recu === true,
             }
           })
         )
         
         const topProduits = produitsAvecFavoris
-        .filter(p => p.imageUrl) // Seulement les produits avec photo
+         .filter(p => p.imageUrl && p.recu === true)
         .sort((a, b) => b.nbFavoris - a.nbFavoris)
         .slice(0, 3)
         
