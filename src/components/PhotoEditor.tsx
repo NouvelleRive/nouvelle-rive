@@ -45,8 +45,7 @@
   }
 
     const totalRotation = rotation + fineRotation
-    const currentDisplayUrl = getRotatedUrl(processedUrl || imageUrl, processedUrl ? 0 : totalRotation)
-
+    const currentDisplayUrl = processedUrl || imageUrl
     const initCanvas = useCallback(() => {
     const canvas = canvasRef.current
     const urlToLoad = processedUrl || imageUrl
@@ -189,31 +188,8 @@
       }
     }
 
-    const handleConserver = async () => {
-      setProcessing(true)
-      setError(null)
-
-      try {
-        // Appeler une API pour traiter sans détourage
-        const res = await fetch('/api/detourage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl, rotation: rotation + fineRotation, skipDetourage: true }),
-        })
-
-        const data = await res.json()
-
-        if (data.success && data.maskUrl) {
-        setProcessedUrl(data.maskUrl)
-          setRawUrl(data.url)
-        } else {
-          setError(data.error || 'Erreur lors du traitement')
-        }
-      } catch (err: any) {
-        setError(err.message || 'Erreur réseau')
-      } finally {
-        setProcessing(false)
-      }
+    const handleConserver = () => {
+      onConfirm(imageUrl)
     }
 
     const handleEnterEraseMode = () => {
@@ -302,7 +278,8 @@
             <img
               src={currentDisplayUrl}
               alt="Aperçu"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain transition-transform"
+              style={{ transform: processedUrl ? 'none' : `rotate(${totalRotation}deg)` }}
             />
           )}
           {mode === 'erase' && !canvasReady && (
