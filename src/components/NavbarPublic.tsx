@@ -29,7 +29,7 @@ export default function NavbarPublic() {
     { href: '/hiver', label: 'HIVER' },
     { href: '/soiree', label: 'SOIRÉE' },
     { href: '/les-iconiques', label: 'LES ICONIQUES DU VINTAGE' },
-    { href: '/le-luxe', label: 'LE LUXE' },
+    { href: '/luxe', label: 'LE LUXE' },
     { href: '/coups-de-coeur', label: 'NOS PIÈCES PRÉFÉRÉES' },
     { href: '/nos-creatrices', label: 'NOS CRÉATRICES/CURATEURICES' },
     { href: '/femme', label: '(PLUTÔT) FEMME' },
