@@ -358,7 +358,18 @@
                 </button>
               </div>
               <div>
-                <label className="text-xs text-gray-600 block mb-1">Ajuster: {fineRotation}°</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs text-gray-600">Ajuster: {fineRotation}°</label>
+                  {(rotation !== 0 || fineRotation !== 0) && (
+                    <button
+                      type="button"
+                      onClick={() => { setRotation(0); setFineRotation(0) }}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Réinitialiser
+                    </button>
+                  )}
+                </div>
                 <input
                   type="range"
                   min="-15"
