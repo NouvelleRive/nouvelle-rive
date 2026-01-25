@@ -278,19 +278,14 @@
 
     return (
   <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl w-[95vw] max-w-5xl shadow-2xl h-[85vh] flex flex-col">
-      <div className="flex items-center justify-between p-3 border-b">
-        <h2 className="text-lg font-semibold text-gray-900">
-          {processing ? '⏳ Traitement...' : error ? '❌ Erreur' : mode === 'erase' ? '🖌️ Gomme' : processedUrl ? '✅ Résultat' : '📷 Éditer'}
-        </h2>
-        <button onClick={onCancel} className="p-2 hover:bg-gray-100 rounded-full">
-          <X size={20} />
-        </button>
-      </div>
+    <div className="bg-white rounded-2xl w-[95vw] max-w-5xl shadow-2xl h-[85vh] flex relative">
+      <button onClick={onCancel} className="absolute top-3 right-3 p-2 hover:bg-gray-100 rounded-full z-10">
+        <X size={20} />
+      </button>
 
       <div className="flex-1 flex min-h-0 p-3 gap-4">
         {/* Image à gauche - maximum de place */}
-        <div className="flex-1 relative bg-gray-100 rounded-xl overflow-hidden">
+        <div className="aspect-square h-full relative bg-gray-100 rounded-l-2xl overflow-hidden">
           {(mode === 'erase' || mode === 'restore') ? (
             <canvas
               ref={canvasRef}
@@ -318,7 +313,10 @@
         </div>
 
         {/* Boutons à droite - compact */}
-        <div className="w-48 flex flex-col gap-2 shrink-0">
+        <div className="flex-1 flex flex-col gap-2 p-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            {processing ? '⏳ Traitement...' : error ? '❌ Erreur' : mode === 'erase' ? '🖌️ Gomme' : processedUrl ? '✅ Résultat' : '📷 Éditer'}
+          </h2>
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 p-2 rounded-lg text-xs">
               {error}
