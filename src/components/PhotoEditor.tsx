@@ -364,12 +364,20 @@
 
           {mode === 'view' && processedUrl && !processing && (
             <>
-              <button
-                onClick={handleEnterEraseMode}
-                className="py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
-              >
-                <Eraser size={16} className="inline mr-1" /> Gomme
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleEnterEraseMode}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
+                >
+                  <Eraser size={16} className="inline mr-1" /> Gomme
+                </button>
+                <button
+                  onClick={() => { setMode('restore'); setCanvasReady(false); setTimeout(initCanvas, 200) }}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
+                >
+                  🖌️ Restaurer
+                </button>
+              </div>
               
               {/* Rotation après détourage */}
               <div className="border-t pt-3 mt-2">
