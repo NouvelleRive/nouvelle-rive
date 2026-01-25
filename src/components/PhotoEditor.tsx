@@ -294,7 +294,7 @@
           {(mode === 'erase' || mode === 'restore') ? (
             <canvas
               ref={canvasRef}
-              className="w-full h-full object-contain cursor-crosshair"
+              className="absolute inset-0 w-full h-full object-contain cursor-crosshair"
               onMouseDown={startDrawing}
               onMouseUp={stopDrawing}
               onMouseMove={draw}
