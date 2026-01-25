@@ -9,10 +9,10 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0, base64, skipDetourage } = await req.json()
+    const { imageUrl, rotation = 0, base64, skipDetourage, mode } = await req.json()
 
     // Mode skipDetourage avec base64 (caméra/conserver)
-    if (skipDetourage && base64) {
+    if (base64 && (skipDetourage || mode === 'erased')) {
       console.log('🔄 Conserver (base64, sans détourage), rotation:', rotation)
       
       let sharpInstance = sharp(Buffer.from(base64, 'base64'))
