@@ -46,6 +46,9 @@
 
     const totalRotation = rotation + fineRotation
     const currentDisplayUrl = processedUrl || imageUrl
+    
+    // Rotation appliquée seulement après détourage (sur PNG fond blanc)
+    const displayRotation = processedUrl ? totalRotation : 0
     const initCanvas = useCallback(() => {
     const canvas = canvasRef.current
     const urlToLoad = processedUrl || imageUrl
@@ -164,8 +167,8 @@
         const data = await res.json()
 
         if (data.success && data.maskUrl) {
-          onConfirm(data.maskUrl)
-          return
+          setProcessedUrl(data.maskUrl)
+          setRawUrl(data.rawUrl || data.maskUrl)
         } else {
           setError(data.error || 'Erreur lors du détourage')
         }
@@ -181,10 +184,6 @@
         const newRot = direction === 'right' ? prev + 90 : prev - 90
         return ((newRot % 360) + 360) % 360
       })
-      if (processedUrl) {
-        setProcessedUrl(null)
-        setRawUrl(null)
-      }
     }
 
     const handleConserver = () => {
@@ -278,7 +277,7 @@
               src={currentDisplayUrl}
               alt="Aperçu"
               className="w-full h-full object-contain transition-transform"
-              style={{ transform: processedUrl ? 'none' : `rotate(${totalRotation}deg)` }}
+              style={{ transform: `rotate(${displayRotation}deg)` }}
             />
           )}
           {mode === 'erase' && !canvasReady && (
@@ -342,42 +341,6 @@
 
           {mode === 'view' && !processedUrl && !processing && (
             <>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleRotate('left')}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
-                >
-                  <RotateCcw size={16} />
-                </button>
-                <button
-                  onClick={() => handleRotate('right')}
-                  className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
-                >
-                  <RotateCw size={16} />
-                </button>
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-xs text-gray-600">Ajuster: {fineRotation}°</label>
-                  {(rotation !== 0 || fineRotation !== 0) && (
-                    <button
-                      type="button"
-                      onClick={() => { setRotation(0); setFineRotation(0) }}
-                      className="text-xs text-red-500 hover:text-red-700"
-                    >
-                      Réinitialiser
-                    </button>
-                  )}
-                </div>
-                <input
-                  type="range"
-                  min="-15"
-                  max="15"
-                  value={fineRotation}
-                  onChange={(e) => setFineRotation(Number(e.target.value))}
-                  className="w-full"
-                />
-              </div>
               <button
                 onClick={handleAutoRemove}
                 className="py-2 bg-[#22209C] text-white rounded-lg text-sm font-semibold"
@@ -407,6 +370,47 @@
               >
                 <Eraser size={16} className="inline mr-1" /> Gomme
               </button>
+              
+              {/* Rotation après détourage */}
+              <div className="border-t pt-3 mt-2">
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => handleRotate('left')}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleRotate('right')}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                  >
+                    <RotateCw size={16} />
+                  </button>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs text-gray-600">Incliner: {fineRotation}°</label>
+                    {(rotation !== 0 || fineRotation !== 0) && (
+                      <button
+                        type="button"
+                        onClick={() => { setRotation(0); setFineRotation(0) }}
+                        className="text-xs text-red-500 hover:text-red-700"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="range"
+                    min="-15"
+                    max="15"
+                    value={fineRotation}
+                    onChange={(e) => setFineRotation(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              
               <button
                 onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0); setFineRotation(0) }}
                 className="py-2 border border-gray-300 text-gray-600 rounded-lg text-sm"

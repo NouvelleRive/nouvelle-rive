@@ -1771,6 +1771,16 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
         </div>
       </form>
 
+      {/* Loader pendant upload photo */}
+      {uploadingPhoto && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22209C]"></div>
+            <p className="text-gray-700 font-medium">Chargement de l'image...</p>
+          </div>
+        </div>
+      )}
+
       {/* Photo Editor Modal */}
       {photoToEdit && uploadedPhotoUrl && (
         <PhotoEditor
