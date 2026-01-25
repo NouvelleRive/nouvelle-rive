@@ -164,9 +164,8 @@
         const data = await res.json()
 
         if (data.success && data.maskUrl) {
-          setProcessedUrl(data.maskUrl)
-          setRawUrl(data.rawUrl || data.maskUrl)
-          setMode('view')
+          onConfirm(data.maskUrl)
+          return
         } else {
           setError(data.error || 'Erreur lors du détourage')
         }
