@@ -181,6 +181,9 @@
       const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
       const [savingProduct, setSavingProduct] = useState(false)
       const [saveMessage, setSaveMessage] = useState<string | null>(null)
+      const [localHidden, setLocalHidden] = useState<Record<string, boolean>>({})
+
+      const isHidden = (p: Produit) => localHidden[p.id] ?? (p as any).hidden ?? false
 
       const categoriesLabels = categories.map((c) => c.label)
 
@@ -503,15 +506,19 @@
         setGeneratingTryonId(null)
       }
     }
-      const handleToggleForceDisplay = async (p: Produit) => {
-  try {
-    await updateDoc(doc(db, 'produits', p.id), {
-      hidden: !(p as any).hidden
-    })
-  } catch (err) {
-    console.error('Erreur toggle hidden:', err)
+    const handleToggleForceDisplay = async (p: Produit) => {
+    const currentHidden = localHidden[p.id] ?? (p as any).hidden ?? false
+    const newHidden = !currentHidden
+    setLocalHidden(prev => ({ ...prev, [p.id]: newHidden }))
+    try {
+      await updateDoc(doc(db, 'produits', p.id), {
+        hidden: newHidden
+      })
+    } catch (err) {
+      console.error('Erreur toggle hidden:', err)
+      setLocalHidden(prev => ({ ...prev, [p.id]: currentHidden }))
+    }
   }
-}
 
     const handleUpdateSquare = async () => {
       const idsToSync = new Set([...selectedIds, ...dirtyIds])
