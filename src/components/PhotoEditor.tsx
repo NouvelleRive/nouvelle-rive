@@ -277,68 +277,70 @@
     }
 
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl h-[90vh] flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {processing ? '⏳ Traitement...' : error ? '❌ Erreur' : mode === 'erase' ? '🖌️ Gomme' : processedUrl ? '✅ Résultat' : '📷 Éditer'}
-            </h2>
-            <button onClick={onCancel} className="p-2 hover:bg-gray-100 rounded-full">
-              <X size={20} />
-            </button>
-          </div>
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl w-[95vw] max-w-5xl shadow-2xl h-[85vh] flex flex-col">
+      <div className="flex items-center justify-between p-3 border-b">
+        <h2 className="text-lg font-semibold text-gray-900">
+          {processing ? '⏳ Traitement...' : error ? '❌ Erreur' : mode === 'erase' ? '🖌️ Gomme' : processedUrl ? '✅ Résultat' : '📷 Éditer'}
+        </h2>
+        <button onClick={onCancel} className="p-2 hover:bg-gray-100 rounded-full">
+          <X size={20} />
+        </button>
+      </div>
 
-          <div className="p-3 flex-1 flex flex-col min-h-0">
-            <div className="relative bg-gray-100 rounded-xl overflow-hidden mb-2" style={{ height: 'calc(100% - 120px)' }}>
-              {(mode === 'erase' || mode === 'restore') ? (
-                <canvas
-                  ref={canvasRef}
-                  className="w-full h-full object-contain cursor-crosshair"
-                  onMouseDown={startDrawing}
-                  onMouseUp={stopDrawing}
-                  onMouseMove={draw}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchEnd={stopDrawing}
-                  onTouchMove={draw}
-                />
-              ) : (
-                <img
-                  src={currentDisplayUrl}
-                  alt="Aperçu"
-                  className="w-full h-full object-contain"
-                />
-              )}
-              {mode === 'erase' && !canvasReady && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/80">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              )}
+      <div className="flex-1 flex min-h-0 p-3 gap-4">
+        {/* Image à gauche - maximum de place */}
+        <div className="flex-1 relative bg-gray-100 rounded-xl overflow-hidden">
+          {(mode === 'erase' || mode === 'restore') ? (
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full object-contain cursor-crosshair"
+              onMouseDown={startDrawing}
+              onMouseUp={stopDrawing}
+              onMouseMove={draw}
+              onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing}
+              onTouchEnd={stopDrawing}
+              onTouchMove={draw}
+            />
+          ) : (
+            <img
+              src={currentDisplayUrl}
+              alt="Aperçu"
+              className="w-full h-full object-contain"
+            />
+          )}
+          {mode === 'erase' && !canvasReady && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
+          )}
+        </div>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4 text-sm">
-                {error}
-              </div>
-            )}
+        {/* Boutons à droite - compact */}
+        <div className="w-48 flex flex-col gap-2 shrink-0">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 p-2 rounded-lg text-xs">
+              {error}
+            </div>
+          )}
 
-            {(mode === 'erase' || mode === 'restore') && (
-              <div className="mb-4">
-                <div className="flex gap-2 mb-3">
-                  <button
-                    onClick={() => { if (mode !== 'erase') setMode('erase') }}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode === 'erase' ? 'bg-red-100 text-red-700 border-2 border-red-400' : 'border text-gray-600'}`}
-                  >
-                    🧹 Gomme
-                  </button>
-                  <button
-                    onClick={() => { if (mode !== 'restore') setMode('restore') }}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium ${mode === 'restore' ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'border text-gray-600'}`}
-                  >
-                    🖌️ Restaurer
-                  </button>
-                </div>
-                <label className="text-sm text-gray-600 mb-2 block">Taille du pinceau: {brushSize}px</label>
+          {(mode === 'erase' || mode === 'restore') && (
+            <>
+              <button
+                onClick={() => setMode('erase')}
+                className={`py-2 rounded-lg text-sm font-medium ${mode === 'erase' ? 'bg-red-100 text-red-700 border-2 border-red-400' : 'border text-gray-600'}`}
+              >
+                🧹 Gomme
+              </button>
+              <button
+                onClick={() => setMode('restore')}
+                className={`py-2 rounded-lg text-sm font-medium ${mode === 'restore' ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'border text-gray-600'}`}
+              >
+                🖌️ Restaurer
+              </button>
+              <div className="mt-2">
+                <label className="text-xs text-gray-600 block mb-1">Pinceau: {brushSize}px</label>
                 <input
                   type="range"
                   min="3"
@@ -347,109 +349,96 @@
                   onChange={(e) => setBrushSize(Number(e.target.value))}
                   className="w-full"
                 />
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={handleUndo}
-                    disabled={canvasHistory.length <= 1}
-                    className="flex-1 py-2 border rounded-lg disabled:opacity-40"
-                  >
-                    ↩ Annuler
-                  </button>
-                  <button
-                    onClick={handleSaveErased}
-                    className="flex-1 py-2 bg-green-600 text-white rounded-lg"
-                  >
-                    Appliquer
-                  </button>
-                </div>
               </div>
-            )}
+              <button
+                onClick={handleUndo}
+                disabled={canvasHistory.length <= 1}
+                className="py-2 border rounded-lg text-sm disabled:opacity-40"
+              >
+                ↩ Annuler
+              </button>
+              <button
+                onClick={handleSaveErased}
+                className="py-2 bg-green-600 text-white rounded-lg text-sm"
+              >
+                Appliquer
+              </button>
+            </>
+          )}
 
-            {mode === 'view' && !processedUrl && !processing && (
-              <div className="flex justify-center gap-4 mb-4">
+          {mode === 'view' && !processedUrl && !processing && (
+            <>
+              <div className="flex gap-2">
                 <button
                   onClick={() => handleRotate('left')}
-                  className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
                 >
-                  <RotateCcw size={18} /> Gauche
+                  <RotateCcw size={16} />
                 </button>
                 <button
                   onClick={() => handleRotate('right')}
-                  className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
                 >
-                  <RotateCw size={18} /> Droite
+                  <RotateCw size={16} />
                 </button>
-                <div className="w-full mt-3">
-                  <label className="text-sm text-gray-600 block mb-1">Ajuster: {fineRotation}°</label>
-                  <input
-                    type="range"
-                    min="-15"
-                    max="15"
-                    value={fineRotation}
-                    onChange={(e) => setFineRotation(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
               </div>
-            )}
+              <div>
+                <label className="text-xs text-gray-600 block mb-1">Ajuster: {fineRotation}°</label>
+                <input
+                  type="range"
+                  min="-15"
+                  max="15"
+                  value={fineRotation}
+                  onChange={(e) => setFineRotation(Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <button
+                onClick={handleAutoRemove}
+                className="py-2 bg-[#22209C] text-white rounded-lg text-sm font-semibold"
+              >
+                Détourer
+              </button>
+              <button
+                onClick={handleConserver}
+                className="py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
+              >
+                Conserver
+              </button>
+            </>
+          )}
 
-            {mode === 'view' && (
-              <>
-                {processing ? (
-                  <div className="text-center text-gray-500 text-sm py-2">
-                    Veuillez patienter...
-                  </div>
-                ) : error ? (
-                  <button
-                    onClick={handleAutoRemove}
-                    className="w-full flex items-center justify-center gap-2 bg-[#22209C] text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"
-                  >
-                    <RotateCcw size={18} /> Réessayer
-                  </button>
-                ) : processedUrl ? (
-                  <div className="space-y-3">
-                    <button
-                      onClick={handleEnterEraseMode}
-                      className="w-full flex items-center justify-center gap-2 border border-gray-300 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition"
-                    >
-                      <Eraser size={18} /> Effacer au doigt
-                    </button>
-                    
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0) }}
-                        className="flex-1 flex items-center justify-center gap-2 border border-gray-300 text-gray-600 py-3 rounded-xl font-medium hover:bg-gray-100 transition"
-                      >
-                        <RotateCcw size={18} /> Recommencer
-                      </button>
-                      <button
-                        onClick={handleConfirm}
-                        className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition"
-                      >
-                        <Check size={20} /> Valider
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleAutoRemove}
-                      className="flex-1 flex items-center justify-center gap-1 bg-[#22209C] text-white py-2.5 rounded-xl font-semibold hover:opacity-90 transition text-sm"
-                    >
-                      Détourer
-                    </button>
-                    <button
-                      onClick={handleConserver}
-                      className="flex-1 flex items-center justify-center gap-1 border border-gray-300 text-gray-700 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition text-sm"
-                    >
-                      Conserver
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          {mode === 'view' && processing && (
+            <div className="text-center text-gray-500 text-sm py-4">
+              Veuillez patienter...
+            </div>
+          )}
+
+          {mode === 'view' && processedUrl && !processing && (
+            <>
+              <button
+                onClick={handleEnterEraseMode}
+                className="py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
+              >
+                <Eraser size={16} className="inline mr-1" /> Gomme
+              </button>
+              <button
+                onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0); setFineRotation(0) }}
+                className="py-2 border border-gray-300 text-gray-600 rounded-lg text-sm"
+              >
+                <RotateCcw size={16} className="inline mr-1" /> Recommencer
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
+              >
+                <Check size={16} className="inline mr-1" /> Valider
+              </button>
+            </>
+          )}
         </div>
       </div>
-    )
-  }
+    </div>
+  </div>
+)
+}
