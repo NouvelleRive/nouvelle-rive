@@ -285,7 +285,7 @@
 
       <div className="flex-1 flex min-h-0 p-3 gap-4">
         {/* Image à gauche - maximum de place */}
-        <div className="aspect-square h-full relative bg-gray-100 rounded-l-2xl overflow-hidden">
+        <div className="aspect-square h-full relative bg-white rounded-l-2xl overflow-hidden flex items-center justify-center">
           {(mode === 'erase' || mode === 'restore') ? (
             <canvas
               ref={canvasRef}
