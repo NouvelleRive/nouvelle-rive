@@ -1512,7 +1512,7 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
                     e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
                     const file = e.dataTransfer.files[0]
                     if (file && file.type.startsWith('image/')) {
-                      setFormData({ ...formData, photoFace: file })
+                      handleCameraCapture('face', file)
                     } else {
                       alert('Veuillez déposer une image')
                     }
@@ -1600,7 +1600,7 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
                     e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
                     const file = e.dataTransfer.files[0]
                     if (file && file.type.startsWith('image/')) {
-                      setFormData({ ...formData, photoDos: file })
+                      handleCameraCapture('dos', file)
                     } else {
                       alert('Veuillez déposer une image')
                     }
