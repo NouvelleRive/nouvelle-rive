@@ -9,7 +9,7 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0, base64, skipDetourage, mode } = await req.json()
+    const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly } = await req.json()
 
     // Mode skipDetourage avec base64 (caméra/conserver)
     if (base64 && (skipDetourage || mode === 'erased')) {
@@ -45,6 +45,35 @@ export async function POST(req: NextRequest) {
 
       const finalUrl = `${cdnUrl}/${path}`
       return NextResponse.json({ success: true, maskUrl: finalUrl, rawUrl: finalUrl, url: finalUrl })
+    }
+    // Mode rotation seulement (après détourage)
+    if (imageUrl && applyRotationOnly && rotation !== 0) {
+      console.log('🔄 Rotation seulement:', rotation, '°')
+      
+      const imgResponse = await fetch(imageUrl)
+      const imgBuffer = Buffer.from(await imgResponse.arrayBuffer())
+      
+      const rotatedBuffer = await sharp(imgBuffer)
+        .rotate(rotation, { background: { r: 255, g: 255, b: 255, alpha: 1 } })
+        .png()
+        .toBuffer()
+      
+      const storageZone = process.env.BUNNY_STORAGE_ZONE
+      const apiKey = process.env.BUNNY_API_KEY
+      const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
+      
+      const timestamp = Date.now()
+      const random = Math.random().toString(36).substring(2, 8)
+      const path = `produits/rotated_${timestamp}_${random}.png`
+      
+      await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
+        method: 'PUT',
+        headers: { 'AccessKey': apiKey!, 'Content-Type': 'image/png' },
+        body: rotatedBuffer,
+      })
+      
+      const finalUrl = `${cdnUrl}/${path}`
+      return NextResponse.json({ success: true, maskUrl: finalUrl })
     }
 
     if (!imageUrl || typeof imageUrl !== 'string') {

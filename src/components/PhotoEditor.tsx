@@ -244,9 +244,36 @@
       }
     }
 
-    const handleConfirm = () => {
-      if (processedUrl) {
+    const handleConfirm = async () => {
+      if (!processedUrl) return
+      
+      const totalRot = rotation + fineRotation
+      
+      // Si pas de rotation, envoyer directement
+      if (totalRot === 0) {
         onConfirm(processedUrl)
+        return
+      }
+      
+      // Sinon, appliquer la rotation côté serveur
+      setProcessing(true)
+      try {
+        const res = await fetch('/api/detourage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, applyRotationOnly: true })
+        })
+        const data = await res.json()
+        
+        if (data.success && data.maskUrl) {
+          onConfirm(data.maskUrl)
+        } else {
+          setError(data.error || 'Erreur rotation')
+        }
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setProcessing(false)
       }
     }
 
