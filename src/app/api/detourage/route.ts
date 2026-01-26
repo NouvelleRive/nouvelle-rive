@@ -9,7 +9,7 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly } = await req.json()
+    const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly, offset } = await req.json()
 
     // Mode skipDetourage avec base64 (caméra/conserver)
     if (base64 && (skipDetourage || mode === 'erased')) {
@@ -53,12 +53,27 @@ export async function POST(req: NextRequest) {
       const imgResponse = await fetch(imageUrl)
       const imgBuffer = Buffer.from(await imgResponse.arrayBuffer())
       
-      // Rotation + trim + recentrage
+     // Rotation + offset + recentrage
       const rotated = await sharp(imgBuffer)
         .rotate(rotation, { background: { r: 255, g: 255, b: 255, alpha: 1 } })
         .toBuffer()
       
+      const meta = await sharp(rotated).metadata()
+      const w = meta.width || 1200
+      const h = meta.height || 1200
+      
+      // Appliquer l'offset en ajoutant des marges
+      const ox = offset?.x || 0
+      const oy = offset?.y || 0
+      
       const rotatedBuffer = await sharp(rotated)
+        .extend({
+          top: Math.max(0, -oy),
+          bottom: Math.max(0, oy),
+          left: Math.max(0, -ox),
+          right: Math.max(0, ox),
+          background: { r: 255, g: 255, b: 255 }
+        })
         .resize(1200, 1200, {
           fit: 'contain',
           background: { r: 255, g: 255, b: 255 }

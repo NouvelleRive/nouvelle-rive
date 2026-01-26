@@ -19,6 +19,7 @@
     const [fineRotation, setFineRotation] = useState(0)
     const [mode, setMode] = useState<'view' | 'erase' | 'restore'>('view')
     const [brushSize, setBrushSize] = useState(30)
+    const [offset, setOffset] = useState({ x: 0, y: 0 })
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [canvasReady, setCanvasReady] = useState(false)
@@ -250,7 +251,7 @@
       const totalRot = rotation + fineRotation
       
       // Si pas de rotation, envoyer directement
-      if (totalRot === 0) {
+      if (totalRot === 0 && offset.x === 0 && offset.y === 0) {
         onConfirm(processedUrl)
         return
       }
@@ -261,7 +262,7 @@
         const res = await fetch('/api/detourage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, applyRotationOnly: true })
+          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, offset, applyRotationOnly: true })
         })
         const data = await res.json()
         
@@ -304,7 +305,7 @@
               src={currentDisplayUrl}
               alt="Aperçu"
               className="w-full h-full object-contain transition-transform"
-              style={{ transform: `rotate(${displayRotation}deg)` }}
+              style={{ transform: `rotate(${displayRotation}deg) translate(${offset.x}px, ${offset.y}px)` }}
             />
           )}
           {mode === 'erase' && !canvasReady && (
@@ -446,6 +447,33 @@
                 </div>
               </div>
               
+              {/* Position */}
+              <div className="border-t pt-3 mt-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs text-gray-600 font-medium">Position</label>
+                  {(offset.x !== 0 || offset.y !== 0) && (
+                    <button
+                      type="button"
+                      onClick={() => setOffset({ x: 0, y: 0 })}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-1 w-24 mx-auto">
+                  <div></div>
+                  <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y - 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">↑</button>
+                  <div></div>
+                  <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x - 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">←</button>
+                  <button onClick={() => setOffset({ x: 0, y: 0 })} className="p-2 border rounded hover:bg-gray-100 text-xs">⊙</button>
+                  <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x + 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">→</button>
+                  <div></div>
+                  <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y + 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">↓</button>
+                  <div></div>
+                </div>
+              </div>
+
               <button
                 onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0); setFineRotation(0) }}
                 className="py-2 border border-gray-300 text-gray-600 rounded-lg text-sm"
