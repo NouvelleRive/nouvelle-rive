@@ -392,100 +392,98 @@
 
           {mode === 'view' && processedUrl && !processing && (
             <>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleEnterEraseMode}
-                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
-                >
-                  <Eraser size={16} className="inline mr-1" /> Gomme
-                </button>
-                <button
-                  onClick={() => { setMode('restore'); setCanvasReady(false); setTimeout(initCanvas, 200) }}
-                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
-                >
-                  🖌️ Restaurer
-                </button>
+              {/* Section Détourage */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Détourage</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleEnterEraseMode}
+                    className="flex-1 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-50"
+                  >
+                    <Eraser size={14} className="inline mr-1" /> Gomme
+                  </button>
+                  <button
+                    onClick={() => { setMode('restore'); setCanvasReady(false); setTimeout(initCanvas, 200) }}
+                    className="flex-1 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-50"
+                  >
+                    🖌️ Restaurer
+                  </button>
+                </div>
               </div>
-              
-              {/* Rotation après détourage */}
-              <div className="border-t pt-3 mt-2">
-                <div className="flex gap-2 mb-2">
+
+              {/* Section Inclinaison */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase">Inclinaison</h3>
+                  {(rotation !== 0 || fineRotation !== 0) && (
+                    <button onClick={() => { setRotation(0); setFineRotation(0) }} className="text-xs text-red-500">Reset</button>
+                  )}
+                </div>
+                <div className="flex gap-2 mb-3">
                   <button
                     onClick={() => handleRotate('left')}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                    className="flex-1 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                   >
-                    <RotateCcw size={16} />
+                    <RotateCcw size={16} className="mx-auto" />
                   </button>
                   <button
                     onClick={() => handleRotate('right')}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-2 border rounded-lg hover:bg-gray-50 text-sm"
+                    className="flex-1 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                   >
-                    <RotateCw size={16} />
+                    <RotateCw size={16} className="mx-auto" />
                   </button>
                 </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-xs text-gray-600">Incliner: {fineRotation}°</label>
-                    {(rotation !== 0 || fineRotation !== 0) && (
-                      <button
-                        type="button"
-                        onClick={() => { setRotation(0); setFineRotation(0) }}
-                        className="text-xs text-red-500 hover:text-red-700"
-                      >
-                        Reset
-                      </button>
-                    )}
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-8">{fineRotation}°</span>
                   <input
                     type="range"
                     min="-15"
                     max="15"
                     value={fineRotation}
                     onChange={(e) => setFineRotation(Number(e.target.value))}
-                    className="w-full"
+                    className="flex-1"
                   />
                 </div>
               </div>
-              
-              {/* Position */}
-              <div className="border-t pt-3 mt-2">
+
+              {/* Section Position */}
+              <div className="bg-gray-50 rounded-lg p-3">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-xs text-gray-600 font-medium">Position</label>
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase">Position</h3>
                   {(offset.x !== 0 || offset.y !== 0) && (
-                    <button
-                      type="button"
-                      onClick={() => setOffset({ x: 0, y: 0 })}
-                      className="text-xs text-red-500 hover:text-red-700"
-                    >
-                      Reset
-                    </button>
+                    <button onClick={() => setOffset({ x: 0, y: 0 })} className="text-xs text-red-500">Reset</button>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-1 w-24 mx-auto">
-                  <div></div>
-                  <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y - 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">↑</button>
-                  <div></div>
-                  <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x - 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">←</button>
-                  <button onClick={() => setOffset({ x: 0, y: 0 })} className="p-2 border rounded hover:bg-gray-100 text-xs">⊙</button>
-                  <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x + 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">→</button>
-                  <div></div>
-                  <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y + 10 }))} className="p-2 border rounded hover:bg-gray-100 text-sm">↓</button>
-                  <div></div>
+                <div className="flex justify-center">
+                  <div className="inline-grid grid-cols-3 gap-1">
+                    <div></div>
+                    <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y - 20 }))} className="w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600">▲</button>
+                    <div></div>
+                    <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x - 20 }))} className="w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600">◀</button>
+                    <button onClick={() => setOffset({ x: 0, y: 0 })} className="w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 text-xs">●</button>
+                    <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x + 20 }))} className="w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600">▶</button>
+                    <div></div>
+                    <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y + 20 }))} className="w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600">▼</button>
+                    <div></div>
+                  </div>
                 </div>
               </div>
 
-              <button
-                onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0); setFineRotation(0) }}
-                className="py-2 border border-gray-300 text-gray-600 rounded-lg text-sm"
-              >
-                <RotateCcw size={16} className="inline mr-1" /> Recommencer
-              </button>
-              <button
-                onClick={handleConfirm}
-                className="py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
-              >
-                <Check size={16} className="inline mr-1" /> Valider
-              </button>
+              {/* Actions */}
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0); setFineRotation(0); setOffset({ x: 0, y: 0 }) }}
+                  className="flex-1 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm"
+                >
+                  <RotateCcw size={14} className="inline mr-1" /> Refaire
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  className="flex-1 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold"
+                >
+                  <Check size={14} className="inline mr-1" /> Valider
+                </button>
+              </div>
             </>
           )}
         </div>
