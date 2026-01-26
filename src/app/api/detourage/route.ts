@@ -53,9 +53,20 @@ export async function POST(req: NextRequest) {
       const imgResponse = await fetch(imageUrl)
       const imgBuffer = Buffer.from(await imgResponse.arrayBuffer())
       
-      const rotatedBuffer = await sharp(imgBuffer)
+      // Rotation + trim + recentrage
+      const rotated = await sharp(imgBuffer)
         .rotate(rotation, { background: { r: 255, g: 255, b: 255, alpha: 1 } })
-        .png()
+        .toBuffer()
+      
+      const trimmed = await sharp(rotated).trim().toBuffer()
+      
+      const rotatedBuffer = await sharp(trimmed)
+        .resize(1200, 1200, {
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255 }
+        })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .png({ quality: 90 })
         .toBuffer()
       
       const storageZone = process.env.BUNNY_STORAGE_ZONE
