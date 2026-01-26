@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         .rotate(rotation, { background: { r: 255, g: 255, b: 255, alpha: 1 } })
         .toBuffer()
       
-      const trimmed = await sharp(rotated).trim().toBuffer()
+      const rotatedBuffer = await sharp(rotated)
       
       const rotatedBuffer = await sharp(trimmed)
         .resize(1200, 1200, {
