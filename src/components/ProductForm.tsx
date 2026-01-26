@@ -557,14 +557,16 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
         setFormData(prev => ({
           ...prev,
           existingPhotos: { ...prev.existingPhotos, face: processedUrl },
-          photoFace: null
+          photoFace: null,
+          deletedPhotos: { ...prev.deletedPhotos, face: false }
         }))
       } else if (photoToEdit.type === 'dos') {
         setDetouredDosUrl(processedUrl)
         setFormData(prev => ({
           ...prev,
           existingPhotos: { ...prev.existingPhotos, dos: processedUrl },
-          photoDos: null
+          photoDos: null,
+          deletedPhotos: { ...prev.deletedPhotos, dos: false }
         }))
       }
     }
