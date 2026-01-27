@@ -8,11 +8,12 @@
     imageUrl: string
     onConfirm: (processedUrl: string) => void
     onCancel: () => void
+    alreadyProcessed?: boolean
   }
 
-  export default function PhotoEditor({ imageUrl, onConfirm, onCancel }: PhotoEditorProps) {
+  export default function PhotoEditor({ imageUrl, onConfirm, onCancel, alreadyProcessed = false }: PhotoEditorProps) {
     const [processing, setProcessing] = useState(false)
-    const [processedUrl, setProcessedUrl] = useState<string | null>(null)
+    const [processedUrl, setProcessedUrl] = useState<string | null>(alreadyProcessed ? imageUrl : null)
     const [rawUrl, setRawUrl] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [rotation, setRotation] = useState(0)

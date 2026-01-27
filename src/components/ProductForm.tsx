@@ -1523,8 +1523,8 @@ async function compressImage(file: File): Promise<string> {
                         type="button" 
                         onClick={() => {
                           setUploadedPhotoUrl(formData.existingPhotos.face!)
-                          setPhotoToEdit({ file: new File([], 'existing'), type: 'face' })
-                        }} 
+                          setPhotoToEdit({ file: new File([], 'existing'), type: 'face', alreadyProcessed: true })
+                        }}
                         className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600"
                         title="Modifier"
                       >
@@ -1856,6 +1856,7 @@ async function compressImage(file: File): Promise<string> {
             imageUrl={uploadedPhotoUrl}
             onConfirm={handlePhotoEditorConfirm}
             onCancel={handlePhotoEditorCancel}
+            alreadyProcessed={(photoToEdit as any).alreadyProcessed}
           />
         )}
       </div>
