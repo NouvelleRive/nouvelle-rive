@@ -546,7 +546,42 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
         setUploadingPhoto(false)
       }
     } else if (type === 'details') {
-      setFormData(prev => ({ ...prev, photosDetails: [...prev.photosDetails, file] }))
+      // Formatter en carré 1200x1200 avant d'ajouter
+      try {
+        setUploadingPhoto(true)
+        const arrayBuffer = await file.arrayBuffer()
+        const uint8Array = new Uint8Array(arrayBuffer)
+        let binary = ''
+        const chunkSize = 8192
+        for (let i = 0; i < uint8Array.length; i += chunkSize) {
+          binary += String.fromCharCode(...uint8Array.slice(i, i + chunkSize))
+        }
+        const base64 = btoa(binary)
+        
+        const response = await fetch('/api/detourage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64, skipDetourage: true, mode: 'erased' })
+        })
+        const data = await response.json()
+        
+        if (data.success && data.maskUrl) {
+          setFormData(prev => ({
+            ...prev,
+            existingPhotos: {
+              ...prev.existingPhotos,
+              details: [...(prev.existingPhotos.details || []), data.maskUrl]
+            }
+          }))
+        } else {
+          throw new Error(data.error || 'Erreur formatage')
+        }
+      } catch (err) {
+        console.error('Erreur formatage détail:', err)
+        alert('Erreur formatage photo détail')
+      } finally {
+        setUploadingPhoto(false)
+      }
     }
   }
 
@@ -1708,12 +1743,14 @@ const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
                   onDragLeave={(e) => {
                     e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
                   }}
-                  onDrop={(e) => {
+                  onDrop={async (e) => {
                     e.preventDefault()
                     e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
                     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
                     if (files.length > 0) {
-                      setFormData({ ...formData, photosDetails: [...formData.photosDetails, ...files] })
+                      for (const file of files) {
+                        await handleCameraCapture('details', file)
+                      }
                     } else {
                       alert('Veuillez déposer des images')
                     }
