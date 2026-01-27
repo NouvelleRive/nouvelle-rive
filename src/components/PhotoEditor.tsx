@@ -281,10 +281,12 @@
       const totalRot = rotation + fineRotation
       const hasOffset = offset.x !== 0 || offset.y !== 0
       
-      console.log('🔄 handleConfirm - rotation:', totalRot, 'offset:', offset)
+      const hasZoom = zoom !== 1
       
-      // Si pas de rotation et pas d'offset, envoyer directement
-      if (totalRot === 0 && !hasOffset) {
+      console.log('🔄 handleConfirm - rotation:', totalRot, 'offset:', offset, 'zoom:', zoom)
+      
+      // Si pas de rotation, pas d'offset et pas de zoom, envoyer directement
+      if (totalRot === 0 && !hasOffset && !hasZoom) {
         onConfirm(processedUrl)
         return
       }
@@ -295,7 +297,7 @@
         const res = await fetch('/api/detourage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, offset, applyRotationOnly: true })
+          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, offset, zoom, applyRotationOnly: true })
         })
         const data = await res.json()
         
