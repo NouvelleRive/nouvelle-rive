@@ -16,6 +16,17 @@
     import autoTable from 'jspdf-autotable'
     import ProductForm, { ProductFormData } from '@/components/ProductForm'
     import FilterBox from '@/components/FilterBox'
+
+    // Conversion base64 robuste pour gros fichiers
+    function uint8ArrayToBase64(uint8Array: Uint8Array): string {
+      const CHUNK_SIZE = 0x8000 // 32KB chunks
+      const chunks: string[] = []
+      for (let i = 0; i < uint8Array.length; i += CHUNK_SIZE) {
+        const chunk = uint8Array.subarray(i, i + CHUNK_SIZE)
+        chunks.push(String.fromCharCode.apply(null, chunk as unknown as number[]))
+      }
+      return btoa(chunks.join(''))
+    }
     
 
     // =====================
@@ -591,12 +602,7 @@ if (data.photosDetails.length > 0) {
   for (const file of data.photosDetails) {
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
-    let binary = ''
-    const chunkSize = 8192
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      binary += String.fromCharCode(...uint8Array.slice(i, i + chunkSize))
-    }
-    const base64 = btoa(binary)
+    const base64 = uint8ArrayToBase64(uint8Array)
     
     const res = await fetch('/api/detourage', {
       method: 'POST',
