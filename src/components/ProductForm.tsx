@@ -558,9 +558,7 @@ async function compressImage(file: File): Promise<string> {
         try {
           // Upload vers Bunny
           setUploadingPhoto(true)
-          const arrayBuffer = await file.arrayBuffer()
-          const uint8Array = new Uint8Array(arrayBuffer)
-          const base64 = uint8ArrayToBase64(uint8Array)
+          const base64 = await compressImage(file)
           const timestamp = Date.now()
           const random = Math.random().toString(36).substring(2, 8)
           const path = `produits/temp_${timestamp}_${random}.jpg`
@@ -588,9 +586,7 @@ async function compressImage(file: File): Promise<string> {
         // Formatter en carré 1200x1200 avant d'ajouter
         try {
           setUploadingPhoto(true)
-          const arrayBuffer = await file.arrayBuffer()
-          const uint8Array = new Uint8Array(arrayBuffer)
-          const base64 = uint8ArrayToBase64(uint8Array)
+          const base64 = await compressImage(file)
           
           const response = await fetch('/api/detourage', {
             method: 'POST',
@@ -1526,19 +1522,13 @@ async function compressImage(file: File): Promise<string> {
                       <button 
                         type="button" 
                         onClick={() => {
-                          const currentUrl = formData.existingPhotos.face!
-                          const rotatedUrl = currentUrl.includes('/upload/') 
-                            ? currentUrl.replace('/upload/', '/upload/a_90,') 
-                            : currentUrl
-                          setFormData(prev => ({
-                            ...prev,
-                            existingPhotos: { ...prev.existingPhotos, face: rotatedUrl }
-                          }))
+                          setUploadedPhotoUrl(formData.existingPhotos.face!)
+                          setPhotoToEdit({ file: new File([], 'existing'), type: 'face' })
                         }} 
-                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
-                        title="Tourner 90°"
+                        className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600"
+                        title="Modifier"
                       >
-                        <RefreshCw size={16} />
+                        <ImageIcon size={16} />
                       </button>
                       <button type="button" onClick={() => handleDeleteExistingPhoto('face')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                         <X size={16} />
