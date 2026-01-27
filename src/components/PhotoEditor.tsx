@@ -21,6 +21,7 @@
     const [mode, setMode] = useState<'view' | 'erase' | 'restore'>('view')
     const [brushSize, setBrushSize] = useState(30)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
+    const [zoom, setZoom] = useState(1)
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [canvasReady, setCanvasReady] = useState(false)
@@ -337,7 +338,7 @@
               src={currentDisplayUrl}
               alt="Aperçu"
               className="w-full h-full object-contain transition-transform"
-              style={{ transform: `rotate(${displayRotation}deg) translate(${offset.x}px, ${offset.y}px)` }}
+              style={{ transform: `scale(${zoom}) rotate(${displayRotation}deg) translate(${offset.x}px, ${offset.y}px)` }}
             />
           )}
           {mode === 'erase' && !canvasReady && (
@@ -501,10 +502,25 @@
                 </div>
               </div>
 
+              {/* Section Zoom */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase">Zoom</h3>
+                  {zoom !== 1 && (
+                    <button onClick={() => setZoom(1)} className="text-xs text-red-500">Reset</button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600">−</button>
+                  <span className="text-sm text-gray-600 w-12 text-center">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="w-10 h-10 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600">+</button>
+                </div>
+              </div>
+
               {/* Actions */}
               <div className="flex gap-2 mt-2">
                 <button
-                  onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0); setFineRotation(0); setOffset({ x: 0, y: 0 }) }}
+                  onClick={() => { setProcessedUrl(null); setRawUrl(null); setRotation(0); setFineRotation(0); setOffset({ x: 0, y: 0 }); setZoom(1) }}
                   className="flex-1 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm"
                 >
                   <RotateCcw size={14} className="inline mr-1" /> Refaire
