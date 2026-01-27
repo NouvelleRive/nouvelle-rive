@@ -96,12 +96,12 @@ export async function POST(req: NextRequest) {
       
       const rotatedBuffer = await sharp(rotated)
         .extend({
-          top: Math.max(0, -oy),
-          bottom: Math.max(0, oy),
-          left: Math.max(0, -ox),
-          right: Math.max(0, ox),
-          background: { r: 255, g: 255, b: 255 }
-        })
+        top: Math.max(0, oy),
+        bottom: Math.max(0, -oy),
+        left: Math.max(0, ox),
+        right: Math.max(0, -ox),
+        background: { r: 255, g: 255, b: 255 }
+      })
         .resize(1200, 1200, {
           fit: 'contain',
           background: { r: 255, g: 255, b: 255 }
