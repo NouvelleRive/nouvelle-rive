@@ -3,6 +3,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import Replicate from 'replicate'
 import sharp from 'sharp'
 
+async function deleteBunnyFile(url: string) {
+  try {
+    const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
+    if (!url.startsWith(cdnUrl!)) return
+    
+    const path = url.replace(cdnUrl + '/', '')
+    const storageZone = process.env.BUNNY_STORAGE_ZONE
+    const apiKey = process.env.BUNNY_API_KEY
+    
+    await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
+      method: 'DELETE',
+      headers: { 'AccessKey': apiKey! }
+    })
+    console.log('🗑️ Ancienne image supprimée:', path)
+  } catch (err) {
+    console.error('Erreur suppression Bunny:', err)
+  }
+}
+
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 })
@@ -105,10 +124,14 @@ export async function POST(req: NextRequest) {
       })
       
       const finalUrl = `${cdnUrl}/${path}`
+      
+      // Supprimer l'ancienne version
+      await deleteBunnyFile(imageUrl)
+      
       return NextResponse.json({ success: true, maskUrl: finalUrl })
     }
 
-    // Mode formatOnly (conserver sans détourage, juste carré 1200x1200)
+    // Mode formatOnly
     if (imageUrl && formatOnly) {
       console.log('🔄 Format only (carré 1200x1200)')
       
