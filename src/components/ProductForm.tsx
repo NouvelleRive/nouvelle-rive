@@ -20,6 +20,39 @@
     return btoa(chunks.join(''))
   }
 
+  // Compresser l'image avant envoi (max ~1.5MB)
+async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+    
+    img.onload = () => {
+      let { width, height } = img
+      const maxDim = 1600
+      
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = (height / width) * maxDim
+          width = maxDim
+        } else {
+          width = (width / height) * maxDim
+          height = maxDim
+        }
+      }
+      
+      canvas.width = width
+      canvas.height = height
+      ctx?.drawImage(img, 0, 0, width, height)
+      
+      resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1])
+    }
+    
+    img.onerror = reject
+    img.src = URL.createObjectURL(file)
+  })
+}
+
   // =====================
   // GUIDE PHOTO MODAL
   // =====================
