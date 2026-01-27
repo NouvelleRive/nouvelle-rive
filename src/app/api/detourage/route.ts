@@ -46,9 +46,17 @@ export async function POST(req: NextRequest) {
       const finalUrl = `${cdnUrl}/${path}`
       return NextResponse.json({ success: true, maskUrl: finalUrl, rawUrl: finalUrl, url: finalUrl })
     }
-    // Mode rotation seulement (après détourage)
-    if (imageUrl && applyRotationOnly && rotation !== 0) {
-      console.log('🔄 Rotation seulement:', rotation, '°')
+    // Mode rotation/position (après détourage)
+    if (imageUrl && applyRotationOnly) {
+      const hasRotation = rotation !== 0
+      const hasOffset = offset && (offset.x !== 0 || offset.y !== 0)
+      
+      // Si rien à faire, retourner l'URL originale
+      if (!hasRotation && !hasOffset) {
+        return NextResponse.json({ success: true, maskUrl: imageUrl })
+      }
+
+      console.log('🔄 Rotation/Position:', rotation, '°, offset:', offset)
       
       const imgResponse = await fetch(imageUrl)
       const imgBuffer = Buffer.from(await imgResponse.arrayBuffer())
