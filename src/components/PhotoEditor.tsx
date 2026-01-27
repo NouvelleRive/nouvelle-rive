@@ -26,6 +26,7 @@
     const [canvasReady, setCanvasReady] = useState(false)
     const [canvasHistory, setCanvasHistory] = useState<ImageData[]>([])
     const originalImageRef = useRef<HTMLImageElement | null>(null)
+    const sourceImageRef = useRef<HTMLImageElement | null>(null)
 
     if (!imageUrl) {
       return (
@@ -144,12 +145,12 @@
         ctx.beginPath()
         ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
         ctx.fill()
-      } else if (mode === 'restore' && originalImageRef.current) {
+      } else if (mode === 'restore' && sourceImageRef.current) {
         ctx.save()
         ctx.beginPath()
         ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
         ctx.clip()
-        ctx.drawImage(originalImageRef.current, 0, 0)
+        ctx.drawImage(sourceImageRef.current, 0, 0, canvas.width, canvas.height)
         ctx.restore()
       }
       // Sauvegarder après chaque trait (au relâchement)
@@ -158,6 +159,13 @@
     const handleAutoRemove = async () => {
       setProcessing(true)
       setError(null)
+      
+      // Sauvegarder l'image source avant détourage
+      const srcImg = new Image()
+      srcImg.crossOrigin = 'anonymous'
+      srcImg.src = imageUrl
+      await new Promise(resolve => { srcImg.onload = resolve })
+      sourceImageRef.current = srcImg
 
       try {
         const res = await fetch('/api/detourage', {
