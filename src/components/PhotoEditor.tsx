@@ -187,8 +187,28 @@
       })
     }
 
-    const handleConserver = () => {
-      onConfirm(imageUrl)
+    const handleConserver = async () => {
+      setProcessing(true)
+      try {
+        const res = await fetch('/api/detourage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl, skipDetourage: true, formatOnly: true })
+        })
+        const data = await res.json()
+        
+        if (data.success && data.maskUrl) {
+          onConfirm(data.maskUrl)
+        } else {
+          setError(data.error || 'Erreur formatage')
+          onConfirm(imageUrl) // Fallback
+        }
+      } catch (err: any) {
+        console.error('Erreur formatage:', err)
+        onConfirm(imageUrl) // Fallback
+      } finally {
+        setProcessing(false)
+      }
     }
 
     const handleEnterEraseMode = () => {

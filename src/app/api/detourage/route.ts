@@ -9,7 +9,7 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly, offset } = await req.json()
+    const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly, offset, formatOnly } = await req.json()
 
     // Mode skipDetourage avec base64 (caméra/conserver)
     if (base64 && (skipDetourage || mode === 'erased')) {
@@ -102,6 +102,39 @@ export async function POST(req: NextRequest) {
         method: 'PUT',
         headers: { 'AccessKey': apiKey!, 'Content-Type': 'image/png' },
         body: rotatedBuffer,
+      })
+      
+      const finalUrl = `${cdnUrl}/${path}`
+      return NextResponse.json({ success: true, maskUrl: finalUrl })
+    }
+
+    // Mode formatOnly (conserver sans détourage, juste carré 1200x1200)
+    if (imageUrl && formatOnly) {
+      console.log('🔄 Format only (carré 1200x1200)')
+      
+      const imgResponse = await fetch(imageUrl)
+      const imgBuffer = Buffer.from(await imgResponse.arrayBuffer())
+      
+      const finalBuffer = await sharp(imgBuffer)
+        .resize(1200, 1200, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .modulate({ brightness: 1.05, saturation: 1.15 })
+        .sharpen({ sigma: 1.2 })
+        .png({ quality: 90 })
+        .toBuffer()
+      
+      const storageZone = process.env.BUNNY_STORAGE_ZONE
+      const apiKey = process.env.BUNNY_API_KEY
+      const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
+      
+      const timestamp = Date.now()
+      const random = Math.random().toString(36).substring(2, 8)
+      const path = `produits/formatted_${timestamp}_${random}.png`
+      
+      await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
+        method: 'PUT',
+        headers: { 'AccessKey': apiKey!, 'Content-Type': 'image/png' },
+        body: finalBuffer,
       })
       
       const finalUrl = `${cdnUrl}/${path}`
