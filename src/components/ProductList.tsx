@@ -586,7 +586,7 @@
 // Les photos face/dos sont déjà traitées par PhotoEditor (dans existingPhotos)
 // On ne fait rien ici car ProductForm gère déjà ça
 
-// Pour les photos détails (pas de détourage), upload direct vers Bunny
+// Pour les photos détails, formatage carré 1200x1200 via detourage API
 if (data.photosDetails.length > 0) {
   for (const file of data.photosDetails) {
     const arrayBuffer = await file.arrayBuffer()
@@ -597,19 +597,17 @@ if (data.photosDetails.length > 0) {
       binary += String.fromCharCode(...uint8Array.slice(i, i + chunkSize))
     }
     const base64 = btoa(binary)
-    const timestamp = Date.now()
-    const random = Math.random().toString(36).substring(2, 8)
-    const path = `produits/detail_${timestamp}_${random}.png`
     
-    const res = await fetch('/api/upload-bunny', {
+    const res = await fetch('/api/detourage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base64, path, contentType: file.type || 'image/png' })
+      body: JSON.stringify({ base64, skipDetourage: true, mode: 'erased' })
     })
     const result = await res.json()
-    if (result.success) detailsUrls.push(result.url)
+    if (result.success && result.maskUrl) detailsUrls.push(result.maskUrl)
   }
 }
+
       // Gérer les suppressions
       if (data.deletedPhotos.face) {
         faceUrl = undefined
