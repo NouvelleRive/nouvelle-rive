@@ -1,3 +1,16 @@
+/**
+ * SCRIPT DE SYNCHRONISATION FIRESTORE → SQUARE
+ * 
+ * Ce script met à jour Square avec les données de Firestore :
+ * - Corrige les prix si différents
+ * - Corrige les noms si différents
+ * - Upload les photos manquantes
+ * 
+ * Pour lancer : cd functions && node sync-square.js
+ * 
+ * ⚠️ Ne pas commit serviceAccountKey.json sur GitHub !
+ */
+
 // functions/sync-square.js
 const admin = require("firebase-admin");
 const { Client, Environment } = require("square");
