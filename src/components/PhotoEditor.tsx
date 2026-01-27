@@ -269,9 +269,12 @@
       if (!processedUrl) return
       
       const totalRot = rotation + fineRotation
+      const hasOffset = offset.x !== 0 || offset.y !== 0
       
-      // Si pas de rotation, envoyer directement
-      if (totalRot === 0 && offset.x === 0 && offset.y === 0) {
+      console.log('🔄 handleConfirm - rotation:', totalRot, 'offset:', offset)
+      
+      // Si pas de rotation et pas d'offset, envoyer directement
+      if (totalRot === 0 && !hasOffset) {
         onConfirm(processedUrl)
         return
       }
