@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
       // Appliquer l'offset en ajoutant des marges
       const ox = offset?.x || 0
       const oy = offset?.y || 0
+      console.log('📐 Applying offset - ox:', ox, 'oy:', oy)
       
       const rotatedBuffer = await sharp(rotated)
         .extend({
