@@ -1621,7 +1621,18 @@ async function compressImage(file: File): Promise<string> {
                 {formData.existingPhotos.dos && !formData.deletedPhotos.dos && (
                   <div className="relative group">
                     <img src={formData.existingPhotos.dos} alt="Dos" className="w-full h-32 object-cover rounded border" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setUploadedPhotoUrl(formData.existingPhotos.dos!)
+                          setPhotoToEdit({ file: new File([], 'existing'), type: 'dos', alreadyProcessed: true })
+                        }}
+                        className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600"
+                        title="Modifier"
+                      >
+                        <ImageIcon size={16} />
+                      </button>
                       <button type="button" onClick={() => {
                         if (confirm('Supprimer cette photo ?')) {
                           handleDeleteExistingPhoto('dos')
