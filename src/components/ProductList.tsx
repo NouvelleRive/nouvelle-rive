@@ -1074,13 +1074,16 @@ if (data.photosDetails.length > 0) {
                       </button>
                     )}
                     </div>
-                    <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[140px]">
+                    <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[120px]">
+                      <p><span className="text-gray-400">Cat:</span> <span className="font-medium text-gray-700">{cat || '—'}</span></p>
                       <p><span className="text-gray-400">Taille:</span> <span className="font-medium text-gray-700">{p.taille || '—'}</span></p>
                       <p><span className="text-gray-400">Marque:</span> <span className="font-medium text-gray-700">{p.marque || '—'}</span></p>
+                    </div>
+                    <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[100px]">
                       <p><span className="text-gray-400">Matière:</span> <span className="font-medium text-gray-700">{p.material || '—'}</span></p>
                       <p><span className="text-gray-400">Couleur:</span> <span className="font-medium text-gray-700">{p.color || '—'}</span></p>
                     </div>
-                    <div className="flex flex-col items-end text-sm text-gray-600 space-y-1 min-w-[120px]">
+                    <div className="hidden md:flex flex-col items-end text-sm text-gray-600 space-y-1 min-w-[100px]">
                       <p><span className="text-gray-400">SKU:</span> <span className="font-medium text-gray-700">{p.sku || '—'}</span></p>
                       <p><span className="text-gray-400">Prix:</span> <span className="font-medium text-gray-700">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></p>
                       <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
