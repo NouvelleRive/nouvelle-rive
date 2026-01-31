@@ -6,7 +6,7 @@
   import PhotoEditor from '@/components/PhotoEditor'
   import ExcelJS from 'exceljs'
   import * as XLSX from 'xlsx'
-  import { checkSkuUnique } from '@/lib/admin/helpers'
+  import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
 
   // Conversion base64 robuste pour gros fichiers
@@ -435,6 +435,7 @@ async function compressImage(file: File): Promise<string> {
     
     // État validation SKU
     const [skuValidating, setSkuValidating] = useState(false)
+    const [nextAvailableSku, setNextAvailableSku] = useState<string>('')
 
     // État éditeur photo
     const [photoToEdit, setPhotoToEdit] = useState<{ file: File; type: 'face' | 'dos' } | null>(null)
@@ -483,6 +484,18 @@ async function compressImage(file: File): Promise<string> {
         setFormData(prev => ({ ...prev, taille: '' }))
       }
     }, [formData.categorie])
+
+    // Charger le prochain SKU disponible
+    useEffect(() => {
+      const loadNextSku = async () => {
+        const tri = isAdmin && selectedChineuse ? selectedChineuse.trigramme : trigramme
+        if (tri) {
+          const next = await getNextAvailableSkuForTrigramme(tri)
+          setNextAvailableSku(next)
+        }
+      }
+      loadNextSku()
+    }, [trigramme, selectedChineuse, isAdmin])
 
     // Construire la liste des photos pour le réordonnancement
     useEffect(() => {
@@ -1354,7 +1367,10 @@ async function compressImage(file: File): Promise<string> {
                     className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-gray-600"
                   />
                 )}
-              </div>
+                {nextAvailableSku && (
+                  <p className="text-xs text-gray-500 mt-1">Prochain dispo : <span className="font-mono text-[#22209C]">{nextAvailableSku}</span></p>
+                )}
+                </div>
 
               {/* Catégorie */}
               <div>

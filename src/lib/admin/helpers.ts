@@ -22,6 +22,28 @@ export async function checkSkuUnique(sku: string, currentProduitId?: string): Pr
   return false
 }
 
+/ Trouver le prochain SKU disponible pour un trigramme
+export async function getNextAvailableSkuForTrigramme(trigramme: string): Promise<string> {
+  const tri = (trigramme || '').toUpperCase().trim()
+  if (!tri) return ''
+  
+  try {
+    const qSnap = await getDocs(
+      query(collection(db, 'produits'), where('trigramme', '==', tri))
+    )
+    let maxNum = 0
+    qSnap.forEach((d) => {
+      const data: any = d.data()
+      const trySku = extractSkuNumFromSkuOrName(data?.sku || '', tri)
+      const n = trySku ?? 0
+      if (n > maxNum) maxNum = n
+    })
+    return `${tri}${maxNum + 1}`
+  } catch {
+    return ''
+  }
+}
+
 // =====================
 // HELPERS
 // =====================
