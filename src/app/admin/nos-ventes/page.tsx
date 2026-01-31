@@ -99,11 +99,13 @@ export default function AdminNosVentesPage() {
     loadVentes()
   }, [])
 
-  // Filtrer les ventes par chineuse sélectionnée
   const ventesFiltrees = useMemo(() => {
-    if (!selectedChineuse?.uid) return ventes
-    return ventes.filter(v => v.chineurUid === selectedChineuse.uid)
-  }, [ventes, selectedChineuse?.uid])
+  if (!selectedChineuse?.uid) return ventes
+  return ventes.filter(v => 
+    v.chineurUid === selectedChineuse.uid || 
+    v.trigramme?.toUpperCase() === selectedChineuse.trigramme?.toUpperCase()
+  )
+}, [ventes, selectedChineuse?.uid, selectedChineuse?.trigramme])
 
   // Produits disponibles (non vendus)
   const produitsDisponibles = useMemo(() => {
@@ -489,46 +491,8 @@ export default function AdminNosVentesPage() {
           codeChineuse: selectedChineuse.trigramme,
         } : null}
         deposants={deposants}
-        chineuses={[
-          { trigramme: 'AE', nom: 'Aerea Studio' },
-          { trigramme: 'AGE', nom: 'Age Paris' },
-          { trigramme: 'AIM', nom: 'Aime' },
-          { trigramme: 'ACAY', nom: 'Alisa Cayoo' },
-          { trigramme: 'ANA', nom: 'Anashi' },
-          { trigramme: 'AN', nom: 'Anashi' },
-          { trigramme: 'ARC', nom: 'Archive-s' },
-          { trigramme: 'BON', nom: 'Bonage' },
-          { trigramme: 'BRI', nom: 'Brillante' },
-          { trigramme: 'BRU', nom: 'Brujas' },
-          { trigramme: 'CAM', nom: 'Cameleon' },
-          { trigramme: 'CN', nom: 'Cent-Neuf' },
-          { trigramme: 'EQU', nom: 'Collection Equine' },
-          { trigramme: 'COZ', nom: 'Cozines' },
-          { trigramme: 'DV', nom: 'Dark Vintage' },
-          { trigramme: 'DM', nom: 'Diabolo Menthe' },
-          { trigramme: 'FRU', nom: 'Frusques' },
-          { trigramme: 'IP', nom: 'Ines Pineau' },
-          { trigramme: 'MB', nom: 'Maison Beguin' },
-          { trigramme: 'MAK', nom: 'Maki Corp' },
-          { trigramme: 'MV', nom: 'Mission Vintage' },
-          { trigramme: 'MIS', nom: 'Mission Vintage' },
-          { trigramme: 'MUS', nom: 'Muse Rebelle' },
-          { trigramme: 'MR', nom: 'Muse Rebelle' },
-          { trigramme: 'NG', nom: 'Nan Goldies' },
-          { trigramme: 'NR', nom: 'Nouvelle Rive' },
-          { trigramme: 'PP', nom: 'Pardon Pardon' },
-          { trigramme: 'PS', nom: 'Personal Seller' },
-          { trigramme: 'POR', nom: 'Porte' },
-          { trigramme: 'PRE', nom: 'Prestanx' },
-          { trigramme: 'PRI', nom: 'Pristini' },
-          { trigramme: 'RAS', nom: 'Rashhiiid' },
-          { trigramme: 'ST', nom: 'Sergio Tacchineur' },
-          { trigramme: 'SOI', nom: 'Soir' },
-          { trigramme: 'STRC', nom: 'Strass Chronique' },
-          { trigramme: 'TDO', nom: 'Tête d\'Orange' },
-          { trigramme: 'PV', nom: 'The Parisian Vintage' },
-          { trigramme: 'TPV', nom: 'The Parisian Vintage' },
-        ]}
+        chineuses={deposants.map(d => ({ trigramme: d.trigramme || '', nom: d.nom || '' }))}
+      
         isAdmin={true}
         loading={loading || loadingVentes}
         onAttribuer={handleAttribuer}
