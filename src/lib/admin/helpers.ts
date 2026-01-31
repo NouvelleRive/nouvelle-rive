@@ -22,7 +22,7 @@ export async function checkSkuUnique(sku: string, currentProduitId?: string): Pr
   return false
 }
 
-/ Trouver le prochain SKU disponible pour un trigramme
+// Trouver le prochain SKU disponible pour un trigramme
 export async function getNextAvailableSkuForTrigramme(trigramme: string): Promise<string> {
   const tri = (trigramme || '').toUpperCase().trim()
   if (!tri) return ''
