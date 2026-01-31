@@ -505,8 +505,12 @@
         const data = await res.json()
 
         if (data.success && data.onModelUrl) {
+          const currentImages = getAllImages(p)
+          const newImageUrls = [data.onModelUrl, ...currentImages.filter(url => url !== data.onModelUrl)]
           await updateDoc(doc(db, 'produits', p.id), {
             'photos.faceOnModel': data.onModelUrl,
+            imageUrls: newImageUrls,
+            imageUrl: data.onModelUrl,
           })
           alert('Photo portée générée !')
         } else {
