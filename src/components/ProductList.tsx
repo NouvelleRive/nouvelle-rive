@@ -206,6 +206,9 @@
       }
 
       const getAllImages = (p: Produit): string[] => {
+        // Utiliser imageUrls en priorité (respecte l'ordre défini)
+        if (Array.isArray(p.imageUrls) && p.imageUrls.length > 0) return p.imageUrls
+        // Fallback sur photos structurées
         if (p.photos) {
           const imgs: string[] = []
           if (p.photos.face) imgs.push(p.photos.face)
@@ -214,7 +217,6 @@
           if (p.photos.details) imgs.push(...p.photos.details)
           return imgs
         }
-        if (Array.isArray(p.imageUrls) && p.imageUrls.length > 0) return p.imageUrls
         if (p.imageUrl) return [p.imageUrl]
         return []
       }
