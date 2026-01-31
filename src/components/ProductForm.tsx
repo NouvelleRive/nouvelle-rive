@@ -1368,7 +1368,7 @@ async function compressImage(file: File): Promise<string> {
                   />
                 )}
                 {nextAvailableSku && (
-                  <p className="text-xs text-gray-500 mt-1">Prochain dispo : <span className="font-mono text-[#22209C]">{nextAvailableSku}</span></p>
+                  <p className="text-xs text-green-600 mt-1">Prochain SKU suggéré : <strong>{nextAvailableSku}</strong></p>
                 )}
                 </div>
 
