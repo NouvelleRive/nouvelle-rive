@@ -142,10 +142,6 @@ export default function AdminDeposantesPage() {
   }
 
   const uploadToBunny = async (file: File): Promise<string> => {
-    const timestamp = Date.now()
-    const random = Math.random().toString(36).substring(2, 8)
-    const filename = `deposante_${timestamp}_${random}.png`
-    const path = `deposantes/${filename}`
 
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
@@ -156,15 +152,15 @@ export default function AdminDeposantesPage() {
     }
     const base64 = btoa(binary)
 
-    const response = await fetch('/api/upload-bunny', {
+    const response = await fetch('/api/detourage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base64, path, contentType: file.type || 'image/png' })
+      body: JSON.stringify({ base64, skipDetourage: true, mode: 'erased' })
     })
 
     if (!response.ok) throw new Error('Erreur upload')
     const data = await response.json()
-    return data.url
+    return data.maskUrl
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
