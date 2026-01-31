@@ -667,15 +667,18 @@ if (data.photosDetails.length > 0) {
           // Reconstruire imageUrls selon l'ordre défini par photoOrder
           if (data.photoOrder && data.photoOrder.length > 0) {
             const orderedUrls: string[] = []
+            const existingDetailsKept = (editingProduct.photos?.details || [])
+              .filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
+            const newDetailsStartIndex = existingDetailsKept.length
             for (const item of data.photoOrder) {
               if (item.url) {
                 // Pour les nouvelles photos, on doit utiliser les URLs uploadées
                 if (item.id === 'new-face' && faceUrl) orderedUrls.push(faceUrl)
                 else if (item.id === 'new-dos' && dosUrl) orderedUrls.push(dosUrl)
                 else if (item.id.startsWith('new-detail-')) {
-                  // L'index dans photosDetails
                   const idx = parseInt(item.id.replace('new-detail-', ''))
-                  if (detailsUrls[idx]) orderedUrls.push(detailsUrls[idx])
+                  const actualIdx = newDetailsStartIndex + idx
+                  if (detailsUrls[actualIdx]) orderedUrls.push(detailsUrls[actualIdx])
                 }
                 // Pour les photos existantes
                 else if (item.id === 'existing-face' && faceUrl) orderedUrls.push(faceUrl)
