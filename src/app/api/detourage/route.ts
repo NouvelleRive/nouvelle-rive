@@ -28,7 +28,7 @@ const replicate = new Replicate({
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly, offset, formatOnly } = await req.json()
+    const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly, offset, zoom = 1, formatOnly } = await req.json()
 
     // Mode skipDetourage avec base64 (caméra/conserver)
     if (base64 && (skipDetourage || mode === 'erased')) {
@@ -69,9 +69,10 @@ export async function POST(req: NextRequest) {
     if (imageUrl && applyRotationOnly) {
       const hasRotation = rotation !== 0
       const hasOffset = offset && (offset.x !== 0 || offset.y !== 0)
+      const hasZoom = zoom !== 1
       
       // Si rien à faire, retourner l'URL originale
-      if (!hasRotation && !hasOffset) {
+      if (!hasRotation && !hasOffset && !hasZoom) {
         return NextResponse.json({ success: true, maskUrl: imageUrl })
       }
 
@@ -94,21 +95,42 @@ export async function POST(req: NextRequest) {
       const oy = offset?.y || 0
       console.log('📐 Applying offset - ox:', ox, 'oy:', oy)
       
-      const rotatedBuffer = await sharp(rotated)
-        .extend({
-        top: Math.max(0, oy),
-        bottom: Math.max(0, -oy),
-        left: Math.max(0, ox),
-        right: Math.max(0, -ox),
-        background: { r: 255, g: 255, b: 255 }
-      })
-        .resize(1200, 1200, {
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255 }
-        })
-        .flatten({ background: { r: 255, g: 255, b: 255 } })
-        .png({ quality: 90 })
-        .toBuffer()
+      // D'abord appliquer l'offset
+        let processedBuffer = await sharp(rotated)
+          .extend({
+            top: Math.max(0, oy),
+            bottom: Math.max(0, -oy),
+            left: Math.max(0, ox),
+            right: Math.max(0, -ox),
+            background: { r: 255, g: 255, b: 255 }
+          })
+          .toBuffer()
+
+        // Si zoom différent de 1, appliquer le zoom
+        if (zoom !== 1) {
+          const meta = await sharp(processedBuffer).metadata()
+          const currentW = meta.width || 1200
+          const currentH = meta.height || 1200
+          
+          // zoom > 1 = agrandir l'image (donc elle prend plus de place dans le cadre)
+          // zoom < 1 = réduire l'image (donc elle prend moins de place, plus de blanc autour)
+          const scaledW = Math.round(currentW * zoom)
+          const scaledH = Math.round(currentH * zoom)
+          
+          processedBuffer = await sharp(processedBuffer)
+            .resize(scaledW, scaledH, { fit: 'inside' })
+            .toBuffer()
+        }
+
+        // Finaliser en 1200x1200 avec fond blanc
+        const rotatedBuffer = await sharp(processedBuffer)
+          .resize(1200, 1200, {
+            fit: 'contain',
+            background: { r: 255, g: 255, b: 255 }
+          })
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .png({ quality: 90 })
+          .toBuffer()
       
       const storageZone = process.env.BUNNY_STORAGE_ZONE
       const apiKey = process.env.BUNNY_API_KEY
