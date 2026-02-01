@@ -32,21 +32,17 @@ type Produit = {
 const categoriesSansTaille = ['bijoux', 'boucles d\'oreilles', 'colliers', 'bracelets', 'bagues', 'lunettes', 'lunettes de soleil', 'montres', 'accessoires']
 
 function getAllImages(p: Produit): string[] {
-  const imgs: string[] = []
+  // Priorité à imageUrls (respecte l'ordre défini)
+  if (p.imageUrls?.length > 0) return p.imageUrls
   
-  // Priorité aux photos structurées
+  // Fallback sur photos structurées
+  const imgs: string[] = []
   if (p.photos) {
     if (p.photos.face) imgs.push(p.photos.face)
     if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
     if (p.photos.dos) imgs.push(p.photos.dos)
     if (p.photos.details) imgs.push(...p.photos.details)
   }
-  
-  // Fallback sur imageUrls si pas de photos structurées
-  if (imgs.length === 0 && p.imageUrls?.length > 0) {
-    return p.imageUrls
-  }
-  
   return imgs
 }
 
