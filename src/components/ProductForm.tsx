@@ -106,6 +106,10 @@ async function compressImage(file: File): Promise<string> {
             </li>
             <li className="flex items-start gap-3">
               <span className="text-green-500 mt-0.5">✓</span>
+              <span className="text-sm"><strong>Veste/manteau fermé</strong> — boutonnez ou zippez le vêtement</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-green-500 mt-0.5">✓</span>
               <span className="text-sm"><strong>Bonne luminosité</strong> — évitez les zones sombres</span>
             </li>
           </ul>
