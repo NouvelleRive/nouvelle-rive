@@ -595,30 +595,8 @@
       let dosOriginalUrl: string | undefined = (data.existingPhotos as any)?.dosOriginal || (editingProduct.photos as any)?.dosOriginal
       let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
 
-      // Gérer les photos détails existantes (filtrer les supprimées)
+      // Gérer les photos détails - ProductForm gère déjà l'ajout et la suppression
       let detailsUrls = [...(data.existingPhotos?.details || [])]
-      if (data.deletedPhotos.detailsIndexes && data.deletedPhotos.detailsIndexes.length > 0) {
-        detailsUrls = detailsUrls.filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
-      }
-// Les photos face/dos sont déjà traitées par PhotoEditor (dans existingPhotos)
-// On ne fait rien ici car ProductForm gère déjà ça
-
-// Pour les photos détails, formatage carré 1200x1200 via detourage API
-if (data.photosDetails.length > 0) {
-  for (const file of data.photosDetails) {
-    const arrayBuffer = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
-    const base64 = uint8ArrayToBase64(uint8Array)
-    
-    const res = await fetch('/api/detourage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base64, skipDetourage: true, mode: 'erased' })
-    })
-    const result = await res.json()
-    if (result.success && result.maskUrl) detailsUrls.push(result.maskUrl)
-  }
-}
 
       // Gérer les suppressions
       if (data.deletedPhotos.face) {
