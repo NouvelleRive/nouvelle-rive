@@ -130,31 +130,33 @@
       const scaleY = canvas.height / rect.height
 
       let clientX, clientY
-      if ('touches' in e) {
+      if ('touches' in e && e.touches.length > 0) {
         clientX = e.touches[0].clientX
         clientY = e.touches[0].clientY
-      } else {
+      } else if ('clientX' in e) {
         clientX = e.clientX
         clientY = e.clientY
+      } else {
+        return
       }
 
       const x = (clientX - rect.left) * scaleX
       const y = (clientY - rect.top) * scaleY
+      const scaledBrushSize = brushSize * Math.max(scaleX, scaleY)
 
       if (mode === 'erase') {
         ctx.fillStyle = 'white'
         ctx.beginPath()
-        ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
+        ctx.arc(x, y, scaledBrushSize, 0, Math.PI * 2)
         ctx.fill()
       } else if (mode === 'restore' && sourceImageRef.current) {
         ctx.save()
         ctx.beginPath()
-        ctx.arc(x, y, brushSize * scaleX, 0, Math.PI * 2)
+        ctx.arc(x, y, scaledBrushSize, 0, Math.PI * 2)
         ctx.clip()
         ctx.drawImage(sourceImageRef.current, 0, 0, canvas.width, canvas.height)
         ctx.restore()
       }
-      // Sauvegarder après chaque trait (au relâchement)
     }
 
     const handleAutoRemove = async () => {
@@ -315,25 +317,25 @@
 
     return (
   <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-    <div className="bg-white rounded-2xl w-[95vw] max-w-5xl shadow-2xl h-[85vh] flex relative">
+    <div className="bg-white rounded-2xl w-[95vw] max-w-5xl shadow-2xl h-[95vh] md:h-[85vh] flex flex-col md:flex-row relative overflow-hidden">
       <button onClick={onCancel} className="absolute top-3 right-3 p-2 hover:bg-gray-100 rounded-full z-10">
         <X size={20} />
       </button>
 
-      <div className="flex-1 flex min-h-0 p-3 gap-4">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 p-2 md:p-3 gap-2 md:gap-4 overflow-hidden">
         {/* Image à gauche - maximum de place */}
-        <div className="aspect-square h-full relative bg-white rounded-l-2xl overflow-hidden flex items-center justify-center">
+        <div className="h-[40vh] md:h-full md:aspect-square relative bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0">
           {(mode === 'erase' || mode === 'restore') ? (
             <canvas
               ref={canvasRef}
-              className="absolute inset-0 w-full h-full object-contain cursor-crosshair"
+              className="max-w-full max-h-full cursor-crosshair touch-none"
               onMouseDown={startDrawing}
               onMouseUp={stopDrawing}
               onMouseMove={draw}
               onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchEnd={stopDrawing}
-              onTouchMove={draw}
+              onTouchStart={(e) => { e.preventDefault(); startDrawing(e) }}
+              onTouchEnd={(e) => { e.preventDefault(); stopDrawing() }}
+              onTouchMove={(e) => { e.preventDefault(); draw(e) }}
             />
           ) : (
             <img
@@ -351,7 +353,7 @@
         </div>
 
         {/* Boutons à droite - compact */}
-        <div className="flex-1 flex flex-col gap-2 p-4">
+        <div className="flex-1 flex flex-col gap-2 p-2 md:p-4 overflow-y-auto min-h-0">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">
             {processing ? '⏳ Traitement...' : error ? '❌ Erreur' : mode === 'erase' ? '🖌️ Gomme' : processedUrl ? '✅ Résultat' : '📷 Éditer'}
           </h2>
