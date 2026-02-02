@@ -680,6 +680,16 @@
               updateData.imageUrls = orderedUrls
               updateData.imageUrl = orderedUrls[0] // La première = image principale
             }
+            
+            // S'assurer que toutes les photos détails sont dans imageUrls
+            if (detailsUrls.length > 0) {
+              detailsUrls.forEach(url => {
+                if (!updateData.imageUrls?.includes(url)) {
+                  updateData.imageUrls = [...(updateData.imageUrls || []), url]
+                }
+              })
+            }
+
           } else {
             // Fallback : construire imageUrls dans l'ordre par défaut
             const defaultUrls: string[] = []
