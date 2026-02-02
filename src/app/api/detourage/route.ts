@@ -134,8 +134,8 @@
         } else {
           // zoom === 1, juste resize normal
           processedBuffer = await sharp(processedBuffer)
-          .extract({ left: 0, top: 0, width: 1200, height: 1200 })
-          .toBuffer()
+            .resize(1200, 1200, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+            .toBuffer()
                 }
 
         // Finaliser
