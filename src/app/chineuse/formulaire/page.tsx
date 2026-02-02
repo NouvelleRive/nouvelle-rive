@@ -171,11 +171,15 @@ export default function FormulairePage() {
       }
       const fullName = `${sku} - ${formData.nom.trim()}`
 
-     // Photos déjà traitées par PhotoEditor
-const imageUrls: string[] = []
-if (formData.existingPhotos.face) imageUrls.push(formData.existingPhotos.face)
-if (formData.existingPhotos.dos) imageUrls.push(formData.existingPhotos.dos)
-if (formData.existingPhotos.details) imageUrls.push(...formData.existingPhotos.details)
+    // Utiliser photoOrder si disponible, sinon fallback
+    let imageUrls: string[] = []
+    if (formData.photoOrder && formData.photoOrder.length > 0) {
+      imageUrls = formData.photoOrder.map(item => item.url).filter(Boolean) as string[]
+    } else {
+      if (formData.existingPhotos.face) imageUrls.push(formData.existingPhotos.face)
+      if (formData.existingPhotos.dos) imageUrls.push(formData.existingPhotos.dos)
+      if (formData.existingPhotos.details) imageUrls.push(...formData.existingPhotos.details)
+    }
 
 const photosReady = Boolean(formData.existingPhotos.face)
 
