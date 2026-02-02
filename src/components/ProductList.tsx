@@ -670,9 +670,8 @@
                 else if (item.id === 'existing-dos' && dosUrl) orderedUrls.push(dosUrl)
                 else if (item.id.startsWith('existing-detail-')) {
                   const idx = parseInt(item.id.replace('existing-detail-', ''))
-                  const originalDetails = editingProduct.photos?.details || []
-                  if (originalDetails[idx] && !data.deletedPhotos.detailsIndexes?.includes(idx)) {
-                    orderedUrls.push(originalDetails[idx])
+                  if (detailsUrls[idx]) {
+                    orderedUrls.push(detailsUrls[idx])
                   }
                 }
               }
