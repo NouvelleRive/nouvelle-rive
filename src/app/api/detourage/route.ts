@@ -134,7 +134,7 @@
           
           processedBuffer = await sharp(processedBuffer)
             .extract({ left, top, width: cropW, height: cropH })
-            .resize(1200, 1200, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+            .resize(960, 960, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
             .toBuffer()
         } else if (zoom < 1) {
           // Zoom out: réduire et ajouter du blanc
