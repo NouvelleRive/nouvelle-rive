@@ -179,13 +179,13 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               href={`/boutique/${produit.id}`}
               className="block"
             >
-              <div className="aspect-square bg-white overflow-hidden flex items-center justify-center p-6">
-                {produit.imageUrls?.[0] ? (
-                  <img
-                    src={getCloudinaryUrl(produit.imageUrls[0])}
-                    alt={produit.nom}
-                    className="max-w-full max-h-full object-contain group-hover:scale-105 transition duration-500"
-                  />
+              <div className="aspect-square bg-white overflow-hidden">
+              {produit.imageUrls?.[0] ? (
+                <img
+                  src={getCloudinaryUrl(produit.imageUrls[0])}
+                  alt={produit.nom}
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300">
                     Pas d'image
