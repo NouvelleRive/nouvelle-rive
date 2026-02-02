@@ -275,21 +275,32 @@
       const imageTargetSize = Math.round(1200 * 0.80) // = 960px
 
       // Créer l'image finale : fond blanc, carré 1200x1200, image centrée
-      const finalBuffer = await sharp(trimmedBuffer)
-        .resize(imageTargetSize, imageTargetSize, {
-          fit: 'inside'
-        })
-        .resize(1200, 1200, {
-          fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 1 }
+      // Resize à 80% (960px)
+      const resizedBuffer = await sharp(trimmedBuffer)
+        .resize(960, 960, { fit: 'inside' })
+        .toBuffer()
+
+      const finalMeta = await sharp(resizedBuffer).metadata()
+      const finalW = finalMeta.width || 960
+      const finalH = finalMeta.height || 960
+      const padLeft = Math.floor((1200 - finalW) / 2)
+      const padTop = Math.floor((1200 - finalH) / 2)
+
+      const finalBuffer = await sharp(resizedBuffer)
+        .extend({
+          top: padTop,
+          bottom: 1200 - finalH - padTop,
+          left: padLeft,
+          right: 1200 - finalW - padLeft,
+          background: { r: 255, g: 255, b: 255 }
         })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .modulate({
-          brightness: 1.08,  // e_brightness:8
-          saturation: 1.20,  // e_vibrance:20
+          brightness: 1.08,
+          saturation: 1.20,
         })
-        .gamma(1.05)  // e_gamma:105
-        .sharpen({ sigma: 1.5 })  // e_sharpen:40
+        .gamma(1.05)
+        .sharpen({ sigma: 1.5 })
         .png({ quality: 90 })
         .toBuffer()
 
