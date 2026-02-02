@@ -596,7 +596,7 @@
       let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
 
       // Gérer les photos détails existantes (filtrer les supprimées)
-      let detailsUrls = [...(editingProduct.photos?.details || [])]
+      let detailsUrls = [...(data.existingPhotos?.details || [])]
       if (data.deletedPhotos.detailsIndexes && data.deletedPhotos.detailsIndexes.length > 0) {
         detailsUrls = detailsUrls.filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
       }
