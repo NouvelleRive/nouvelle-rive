@@ -264,8 +264,8 @@
           throw new Error(data.error || 'Erreur upload')
         }
 
-        setProcessedUrl(data.url)
-        setRawUrl(data.url)
+        setProcessedUrl(data.maskUrl)
+        setRawUrl(data.maskUrl)
         setMode('view')
         setCanvasReady(false)
       } catch (err: any) {
