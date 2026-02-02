@@ -253,18 +253,19 @@
       const trimmedWidth = metadata.width || 1200
       const trimmedHeight = metadata.height || 1200
 
-      // Calculer la taille du carré (le plus grand côté + marge)
-      const maxDim = Math.max(trimmedWidth, trimmedHeight)
-      const targetSize = Math.min(Math.ceil(maxDim * 1.1), 1200) // 10% de marge, max 1200
+      // L'image détourée occupe 80% du carré final
+      const imageTargetSize = Math.round(1200 * 0.80) // = 960px
 
-      // Créer l'image finale : fond blanc, carré, centré
+      // Créer l'image finale : fond blanc, carré 1200x1200, image centrée
       const finalBuffer = await sharp(trimmedBuffer)
-        .resize(targetSize, targetSize, {
+        .resize(imageTargetSize, imageTargetSize, {
+          fit: 'inside'
+        })
+        .resize(1200, 1200, {
           fit: 'contain',
           background: { r: 255, g: 255, b: 255, alpha: 1 }
         })
-        .flatten({ background: { r: 255, g: 255, b: 255 } }) // Fond blanc opaque
-        .resize(1200, 1200) // Taille finale
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
         .modulate({
           brightness: 1.08,  // e_brightness:8
           saturation: 1.20,  // e_vibrance:20
