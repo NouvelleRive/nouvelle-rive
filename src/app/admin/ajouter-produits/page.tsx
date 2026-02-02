@@ -66,11 +66,15 @@ export default function AdminAjouterPage() {
       const deposantOriginal = deposants.find((d: any) => d.id === selectedChineuse.uid)
       const categorieRapport = readCategorieRapportLabel(deposantOriginal)
 
-      // Photos déjà traitées par PhotoEditor
-      const imageUrls: string[] = []
-      if (data.existingPhotos.face) imageUrls.push(data.existingPhotos.face)
-      if (data.existingPhotos.dos) imageUrls.push(data.existingPhotos.dos)
-      if (data.existingPhotos.details) imageUrls.push(...data.existingPhotos.details)
+      // Utiliser photoOrder si disponible, sinon fallback
+      let imageUrls: string[] = []
+      if (data.photoOrder && data.photoOrder.length > 0) {
+        imageUrls = data.photoOrder.map(item => item.url).filter(Boolean) as string[]
+      } else {
+        if (data.existingPhotos.face) imageUrls.push(data.existingPhotos.face)
+        if (data.existingPhotos.dos) imageUrls.push(data.existingPhotos.dos)
+        if (data.existingPhotos.details) imageUrls.push(...data.existingPhotos.details)
+      }
 
       const payload: any = {
         nom: fullName, description: data.description, categorie: data.categorie,
