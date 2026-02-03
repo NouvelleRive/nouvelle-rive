@@ -28,10 +28,9 @@ export default function VendeuseProduits() {
     
     const q = query(
       collection(db, 'produits'),
-      where('quantite', '>', 0),
-      orderBy('createdAt', 'desc'),
       limit(1000)
     )
+
     
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
