@@ -922,6 +922,15 @@ async function compressImage(file: File): Promise<string> {
           formulae: [`Listes!$C$2:$C$${MADE_IN_OPTIONS.length + 1}`],
         }
       }
+
+      // Validation matières (colonne H)
+      for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
+        wsProduits.getCell(`H${row}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`Listes!$D$2:$D$21`],
+        }
+      }
       
       for (let row = DATA_START_ROW; row <= DATA_END_ROW; row++) {
         wsProduits.getCell(`D${row}`).dataValidation = {
@@ -963,6 +972,13 @@ async function compressImage(file: File): Promise<string> {
       wsListes.getCell('C1').value = 'Made in'
       MADE_IN_OPTIONS.forEach((opt, i) => {
         wsListes.getCell(`C${i + 2}`).value = opt
+      })
+
+      // Matières (toutes pour simplifier)
+      const allMatieres = ['Cuir', 'Daim', 'Simili cuir', 'Soie', 'Coton', 'Lin', 'Laine', 'Cachemire', 'Angora', 'Polyester', 'Viscose', 'Satin', 'Velours', 'Tweed', 'Denim', 'Dentelle', 'Or', 'Argent', 'Plaqué or', 'Acier inoxydable']
+      wsListes.getCell('D1').value = 'Matières'
+      allMatieres.forEach((mat, i) => {
+        wsListes.getCell(`D${i + 2}`).value = mat
       })
       
       const wsAide = workbook.addWorksheet('Aide', { 
