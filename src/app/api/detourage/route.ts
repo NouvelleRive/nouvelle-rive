@@ -270,7 +270,7 @@
       // Créer l'image finale : fond blanc, carré 1200x1200, image centrée
       // Resize à 80% (960px)
       const resizedBuffer = await sharp(trimmedBuffer)
-        .resize(1080, 1080, { fit: 'inside' })
+        .resize(1140, 1140, { fit: 'inside' })
         .toBuffer()
 
       const finalMeta = await sharp(resizedBuffer).metadata()
