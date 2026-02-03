@@ -732,9 +732,16 @@ async function compressImage(file: File): Promise<string> {
       }
     }
 
-    const handlePhotoEditorConfirm = (processedUrl: string) => {
+    const handlePhotoEditorConfirm = async (processedUrl: string) => {
       if (photoToEdit) {
         if (photoToEdit.type === 'face') {
+          // Détecter la couleur si pas déjà rempli
+          if (!formData.color) {
+            const detectedColor = await detectDominantColor(processedUrl)
+            if (detectedColor) {
+              setFormData(prev => ({ ...prev, color: detectedColor }))
+            }
+          }
           setDetouredFaceUrl(processedUrl)
           setFormData(prev => ({
             ...prev,
@@ -1594,8 +1601,11 @@ async function compressImage(file: File): Promise<string> {
                         background: c.hex.startsWith('linear') ? c.hex : c.hex,
                         boxShadow: c.name === 'Blanc' ? 'inset 0 0 0 1px #ddd' : undefined
                       }}
-                      title={c.name}
-                    >
+                      >
+                      {/* Tooltip instantané */}
+                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        {c.name}
+                      </span>
                       {formData.color === c.name && (
                         <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
                           ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet'].includes(c.name) 
