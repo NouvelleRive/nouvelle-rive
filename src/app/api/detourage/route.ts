@@ -267,13 +267,10 @@
       const trimmedWidth = metadata.width || 1200
       const trimmedHeight = metadata.height || 1200
 
-      // L'image détourée occupe 80% du carré final
-      const imageTargetSize = Math.round(1200 * 0.80) // = 960px
-
       // Créer l'image finale : fond blanc, carré 1200x1200, image centrée
       // Resize à 80% (960px)
       const resizedBuffer = await sharp(trimmedBuffer)
-        .resize(960, 960, { fit: 'inside' })
+        .resize(1080, 1080, { fit: 'inside' })
         .toBuffer()
 
       const finalMeta = await sharp(resizedBuffer).metadata()
