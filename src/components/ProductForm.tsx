@@ -1686,15 +1686,16 @@ async function compressImage(file: File): Promise<string> {
                 )}
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Couleur</label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="grid grid-cols-7 md:grid-cols-11 gap-1.5">
                   {COLOR_PALETTE.map((c) => (
                     <button
                       key={c.name}
                       type="button"
+                      title={c.name}
                       onClick={() => setFormData({ ...formData, color: formData.color === c.name ? '' : c.name })}
-                      className={`group relative w-7 h-7 rounded-full border-2 transition-all ${
+                      className={`relative w-7 h-7 rounded-full border-2 transition-all ${
                         formData.color === c.name 
                           ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30' 
                           : 'border-gray-200 hover:border-gray-400 hover:scale-105'
@@ -1704,10 +1705,7 @@ async function compressImage(file: File): Promise<string> {
                         boxShadow: c.name === 'Blanc' ? 'inset 0 0 0 1px #ddd' : undefined
                       }}
                       >
-                      {/* Tooltip instantané */}
-                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                        {c.name}
-                      </span>
+                      
                       {formData.color === c.name && (
                         <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
                           ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet'].includes(c.name) 
