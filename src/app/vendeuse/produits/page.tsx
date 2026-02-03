@@ -31,14 +31,6 @@ export default function VendeuseProduits() {
       setProduits(data)
       setLoading(false)
     })
-
-    
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
-      setProduits(data)
-      setLoading(false)
-    })
-    
     return unsub
   }, [])
 
