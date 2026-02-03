@@ -551,7 +551,7 @@ async function compressImage(file: File): Promise<string> {
     const [detouredDosUrl, setDetouredDosUrl] = useState<string | null>(null)
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
     const [generatingDesc, setGeneratingDesc] = useState(false)
-
+    const [suggestedDesc, setSuggestedDesc] = useState<{fr: string, en: string} | null>(null)
     // État pour l'ordre des photos
   const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
 
@@ -771,8 +771,42 @@ async function compressImage(file: File): Promise<string> {
       setUploadedPhotoUrl(null)
     }
 
+    // Bouton rédiger manuel
+    const handleGenerateClick = async () => {
+      const descriptions = await generateDescription()
+      if (descriptions) {
+        const combined = `${descriptions.fr}\n\n🇬🇧 ${descriptions.en}`
+        setFormData(prev => ({ ...prev, description: combined }))
+      } else {
+        alert('Erreur lors de la génération')
+      }
+    }
+
+    // Accepter suggestion popup
+    const handleAcceptSuggestion = async () => {
+      if (suggestedDesc) {
+        const combined = `${suggestedDesc.fr}\n\n🇬🇧 ${suggestedDesc.en}`
+        const newFormData = { ...formData, description: combined }
+        setSuggestedDesc(null)
+        await onSubmit({ 
+          ...newFormData, 
+          photoOrder,
+          existingPhotos: {
+            ...formData.existingPhotos,
+            ...(detouredFaceUrl && { face: detouredFaceUrl }),
+            ...(detouredDosUrl && { dos: detouredDosUrl }),
+          }
+        })
+      }
+    }
+
+    // Refuser suggestion popup
+    const handleRejectSuggestion = () => {
+      setSuggestedDesc(null)
+    }
+
     // Générer description avec IA
-    const generateDescription = async () => {
+    const generateDescription = async (): Promise<{fr: string, en: string} | null> => {
       setGeneratingDesc(true)
       try {
         const response = await fetch('/api/generate-description', {
@@ -790,14 +824,12 @@ async function compressImage(file: File): Promise<string> {
         })
         const data = await response.json()
         if (data.success && data.descriptions) {
-          const combined = `${data.descriptions.fr}\n\n🇬🇧 ${data.descriptions.en}`
-          setFormData(prev => ({ ...prev, description: combined }))
-        } else {
-          alert('Erreur : ' + (data.error || 'Impossible de générer'))
+          return data.descriptions
         }
+        return null
       } catch (err) {
         console.error(err)
-        alert('Erreur de connexion')
+        return null
       } finally {
         setGeneratingDesc(false)
       }
@@ -1331,10 +1363,18 @@ async function compressImage(file: File): Promise<string> {
         }
       }
       
+      // Si description vide → générer avec IA + popup
+      if (!formData.description.trim() && formData.nom) {
+        const descriptions = await generateDescription()
+        if (descriptions) {
+          setSuggestedDesc(descriptions)
+          return // Attendre validation du popup
+        }
+      }
+      
       await onSubmit({ 
         ...formData, 
         photoOrder,
-        // Ajouter les URLs détourées
         existingPhotos: {
           ...formData.existingPhotos,
           ...(detouredFaceUrl && { face: detouredFaceUrl }),
@@ -1686,13 +1726,23 @@ async function compressImage(file: File): Promise<string> {
               </div>
 
               <div className="col-span-2 md:col-span-4">
-                <label className="block text-xs text-gray-600 mb-1">Description</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-gray-600">Description</label>
+                  <button
+                    type="button"
+                    onClick={generateDescription}
+                    disabled={generatingDesc || !formData.nom}
+                    className="text-xs text-[#22209C] hover:underline disabled:opacity-40 disabled:no-underline flex items-center gap-1"
+                  >
+                    {generatingDesc ? '⏳ Rédaction...' : '✍️ Rédiger'}
+                  </button>
+                </div>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full border rounded px-2 py-1.5 text-sm resize-none"
-                  rows={2}
-                  placeholder="État, époque, détails..."
+                  rows={4}
+                  placeholder="État, époque, détails... ou cliquez sur 'Rédiger'"
                 />
               </div>
             </div>
@@ -2082,6 +2132,44 @@ async function compressImage(file: File): Promise<string> {
             <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22209C]"></div>
               <p className="text-gray-700 font-medium">Chargement de l'image...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Popup suggestion description */}
+        {suggestedDesc && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl">
+              <h2 className="text-lg font-bold text-[#22209C] mb-4">✍️ Description suggérée</h2>
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">🇫🇷 Français</p>
+                  <p className="text-sm text-gray-800">{suggestedDesc.fr}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">🇬🇧 English</p>
+                  <p className="text-sm text-gray-600 italic">{suggestedDesc.en}</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleRejectSuggestion}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition"
+                >
+                  ✏️ Modifier
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAcceptSuggestion}
+                  disabled={loading}
+                  className="flex-1 bg-[#22209C] text-white py-2.5 rounded-lg font-semibold hover:opacity-90 transition"
+                >
+                  {loading ? '⏳...' : '✓ Valider et créer'}
+                </button>
+              </div>
             </div>
           </div>
         )}
