@@ -26,10 +26,11 @@ export default function VendeuseProduits() {
     setLoading(true)
     setHasSearched(true)
     
-    const q = query(
-      collection(db, 'produits'),
-      limit(1000)
-    )
+    const unsub = onSnapshot(collection(db, 'produits'), (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
+      setProduits(data)
+      setLoading(false)
+    })
 
     
     const unsub = onSnapshot(q, (snap) => {
