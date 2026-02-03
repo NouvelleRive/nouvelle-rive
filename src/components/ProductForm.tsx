@@ -8,6 +8,7 @@
   import * as XLSX from 'xlsx'
   import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
+  import { getMatieresForCategorie } from '@/lib/matieres'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -661,6 +662,7 @@ async function compressImage(file: File): Promise<string> {
 
     const typeTaille = detectTypeTaille(formData.categorie)
     const taillesDisponibles = getTaillesPourCategorie(formData.categorie)
+    const matieresDisponibles = getMatieresForCategorie(formData.categorie)
 
     // Catégories à afficher
     const displayCategories = isAdmin && selectedChineuse 
@@ -1573,15 +1575,27 @@ async function compressImage(file: File): Promise<string> {
                 />
               </div>
 
-              <div>
+              <div className="col-span-2">
                 <label className="block text-xs text-gray-600 mb-1">Matière</label>
-                <input
-                  type="text"
-                  value={formData.material}
-                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                  className="w-full border rounded px-2 py-1.5 text-sm"
-                  placeholder="Cuir, Soie..."
-                />
+                <div className="flex flex-wrap gap-1.5">
+                  {matieresDisponibles.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, material: formData.material === m ? '' : m })}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                        formData.material === m
+                          ? 'bg-[#22209C] text-white border-[#22209C]'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                {formData.material && !matieresDisponibles.includes(formData.material) && (
+                  <p className="text-xs text-gray-500 mt-1">Sélectionné : {formData.material}</p>
+                )}
               </div>
 
               <div className="col-span-2">
