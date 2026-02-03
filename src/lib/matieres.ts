@@ -5,7 +5,7 @@
 // =====================
 
 export const MATIERES = {
-  bijoux: ['Or', 'Argent', 'Plaqué or', 'Vermeil', 'Acier inoxydable', 'Laiton', 'Perles', 'Pierres', 'Fantaisie'],
+  bijoux: ['Or', 'Argent', 'Plaqué or', 'Vermeil', 'Acier inoxydable', 'Laiton', 'Perles d\'eau douce', 'Perles de culture', 'Perles de synthèse', 'Pierres', 'Fantaisie'],
   maille: ['Laine', 'Cachemire', 'Angora', 'Mohair', 'Mérinos', 'Alpaga', 'Coton', 'Acrylique'],
   cuir: ['Cuir', 'Cuir verni', 'Daim', 'Nubuck', 'Cuir grainé', 'Simili cuir', 'Cuir tressé'],
   tissus: ['Soie', 'Coton', 'Lin', 'Laine', 'Polyester', 'Viscose', 'Satin', 'Velours', 'Tweed', 'Denim', 'Dentelle'],

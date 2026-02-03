@@ -8,7 +8,7 @@
   import * as XLSX from 'xlsx'
   import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
-  import { getMatieresForCategorie } from '@/lib/matieres'
+  import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -928,7 +928,7 @@ async function compressImage(file: File): Promise<string> {
         wsProduits.getCell(`H${row}`).dataValidation = {
           type: 'list',
           allowBlank: true,
-          formulae: [`Listes!$D$2:$D$21`],
+          formulae: [`Listes!$D$2:$D$${ALL_MATIERES.length + 1}`],
         }
       }
       
@@ -974,10 +974,9 @@ async function compressImage(file: File): Promise<string> {
         wsListes.getCell(`C${i + 2}`).value = opt
       })
 
-      // Matières (toutes pour simplifier)
-      const allMatieres = ['Cuir', 'Daim', 'Simili cuir', 'Soie', 'Coton', 'Lin', 'Laine', 'Cachemire', 'Angora', 'Polyester', 'Viscose', 'Satin', 'Velours', 'Tweed', 'Denim', 'Dentelle', 'Or', 'Argent', 'Plaqué or', 'Acier inoxydable']
+      // Matières
       wsListes.getCell('D1').value = 'Matières'
-      allMatieres.forEach((mat, i) => {
+      ALL_MATIERES.forEach((mat, i) => {
         wsListes.getCell(`D${i + 2}`).value = mat
       })
       
