@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
     "cloudinary": "^2.8.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
