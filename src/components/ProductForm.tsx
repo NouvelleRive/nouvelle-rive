@@ -550,6 +550,7 @@ async function compressImage(file: File): Promise<string> {
     const [detouredFaceUrl, setDetouredFaceUrl] = useState<string | null>(null)
     const [detouredDosUrl, setDetouredDosUrl] = useState<string | null>(null)
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    const [generatingDesc, setGeneratingDesc] = useState(false)
 
     // État pour l'ordre des photos
   const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
@@ -768,6 +769,38 @@ async function compressImage(file: File): Promise<string> {
     const handlePhotoEditorCancel = () => {
       setPhotoToEdit(null)
       setUploadedPhotoUrl(null)
+    }
+
+    // Générer description avec IA
+    const generateDescription = async () => {
+      setGeneratingDesc(true)
+      try {
+        const response = await fetch('/api/generate-description', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nom: formData.nom,
+            marque: formData.marque,
+            categorie: formData.categorie,
+            matiere: formData.material,
+            couleur: formData.color,
+            taille: formData.taille,
+            madeIn: formData.madeIn,
+          }),
+        })
+        const data = await response.json()
+        if (data.success && data.descriptions) {
+          const combined = `${data.descriptions.fr}\n\n🇬🇧 ${data.descriptions.en}`
+          setFormData(prev => ({ ...prev, description: combined }))
+        } else {
+          alert('Erreur : ' + (data.error || 'Impossible de générer'))
+        }
+      } catch (err) {
+        console.error(err)
+        alert('Erreur de connexion')
+      } finally {
+        setGeneratingDesc(false)
+      }
     }
 
     // =====================
