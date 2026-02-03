@@ -324,7 +324,7 @@
 
       <div className="flex-1 flex flex-col md:flex-row min-h-0 p-2 md:p-3 gap-2 md:gap-4 overflow-hidden">
         {/* Image à gauche - maximum de place */}
-        <div className="h-[40vh] md:h-full md:aspect-square relative bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0">
+        <div className="h-[45vh] md:h-full md:aspect-square relative bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0">
           {(mode === 'erase' || mode === 'restore') ? (
             <canvas
               ref={canvasRef}
