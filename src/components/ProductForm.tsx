@@ -1700,11 +1700,7 @@ async function compressImage(file: File): Promise<string> {
                       >
                         <ImageIcon size={16} />
                       </button>
-                      <button type="button" onClick={() => {
-                        if (confirm('Supprimer cette photo ?')) {
-                          handleDeleteExistingPhoto('face')
-                        }
-                      }} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                      <button type="button" onClick={() => handleDeleteExistingPhoto('face')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                         <X size={16} />
                       </button>
                     </div>
@@ -1803,11 +1799,7 @@ async function compressImage(file: File): Promise<string> {
                       >
                         <ImageIcon size={16} />
                       </button>
-                      <button type="button" onClick={() => {
-                        if (confirm('Supprimer cette photo ?')) {
-                          handleDeleteExistingPhoto('dos')
-                        }
-                      }} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                      <button type="button" onClick={() => handleDeleteExistingPhoto('dos')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                         <X size={16} />
                       </button>
                     </div>
