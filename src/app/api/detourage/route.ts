@@ -41,7 +41,6 @@
         }
 
        const finalBuffer = await sharpInstance
-          .resize(1200, 1200, { fit: 'cover', position: 'center' })
           .flatten({ background: { r: 255, g: 255, b: 255 } })
           .png({ quality: 90 })
           .toBuffer()
