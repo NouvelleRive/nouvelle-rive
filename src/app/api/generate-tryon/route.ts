@@ -2,6 +2,7 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
 
 async function uploadToBunny(imageUrl: string): Promise<string> {
   const storageZone = process.env.BUNNY_STORAGE_ZONE
@@ -15,7 +16,14 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
   // Télécharger l'image depuis l'URL FASHN
   const imageResponse = await fetch(imageUrl)
   if (!imageResponse.ok) throw new Error('Erreur téléchargement image FASHN')
-  const buffer = await imageResponse.arrayBuffer()
+  const rawBuffer = await imageResponse.arrayBuffer()
+  
+  // Redimensionner en carré 1200x1200
+  const buffer = await sharp(Buffer.from(rawBuffer))
+    .resize(1200, 1200, { fit: 'cover', position: 'top' })
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .png()
+    .toBuffer()
 
   // Générer un nom de fichier unique
   const timestamp = Date.now()
@@ -75,7 +83,7 @@ export async function POST(req: NextRequest) {
       inputs: {
         product_image: imageUrl,
         resolution: '1k',
-        prompt: 'plain white studio background'
+        prompt: ['plain white studio background', 'plain white studio background, black model', 'plain white studio background, asian model', 'plain white studio background, mixed race model'][Math.floor(Math.random() * 4)]
       }
     }),
     })
