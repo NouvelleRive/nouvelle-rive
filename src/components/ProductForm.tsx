@@ -655,6 +655,12 @@ async function compressImage(file: File): Promise<string> {
             photoDos: null,
             deletedPhotos: { ...prev.deletedPhotos, dos: false }
           }))
+        } else if ((photoToEdit.type as any) === 'faceOnModel') {
+          setFormData(prev => ({
+            ...prev,
+            existingPhotos: { ...prev.existingPhotos, faceOnModel: processedUrl },
+            deletedPhotos: { ...prev.deletedPhotos, faceOnModel: false }
+          }))
         }
       }
       setPhotoToEdit(null)
@@ -1991,9 +1997,22 @@ async function compressImage(file: File): Promise<string> {
                 <label className="block text-xs font-medium text-purple-600 mb-2">📷 Photo portée (générée automatiquement)</label>
                 <div className="relative group w-32 h-32">
                   <img src={formData.existingPhotos.faceOnModel} alt="Photo portée" className="w-full h-full object-cover rounded border" />
-                  <button type="button" onClick={() => handleDeleteExistingPhoto('faceOnModel')} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X size={14} />
-                  </button>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setUploadedPhotoUrl(formData.existingPhotos.faceOnModel!)
+                        setPhotoToEdit({ file: new File([], 'existing'), type: 'faceOnModel' as any, alreadyProcessed: true } as any)
+                      }}
+                      className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600"
+                      title="Modifier"
+                    >
+                      <ImageIcon size={14} />
+                    </button>
+                    <button type="button" onClick={() => handleDeleteExistingPhoto('faceOnModel')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
