@@ -719,36 +719,6 @@ async function compressImage(file: File): Promise<string> {
       setSuggestedDesc(null)
     }
 
-    // Générer description avec IA
-    const generateDescription = async (): Promise<{fr: string, en: string} | null> => {
-      setGeneratingDesc(true)
-      try {
-        const response = await fetch('/api/generate-description', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nom: formData.nom,
-            marque: formData.marque,
-            categorie: formData.categorie,
-            matiere: formData.material,
-            couleur: formData.color,
-            taille: formData.taille,
-            madeIn: formData.madeIn,
-          }),
-        })
-        const data = await response.json()
-        if (data.success && data.descriptions) {
-          return data.descriptions
-        }
-        return null
-      } catch (err) {
-        console.error(err)
-        return null
-      } finally {
-        setGeneratingDesc(false)
-      }
-    }
-
     // =====================
     // EXCEL TEMPLATE GENERATION
     // =====================
@@ -1279,10 +1249,14 @@ async function compressImage(file: File): Promise<string> {
       
       // Si description vide → générer avec IA + popup
       if (!formData.description.trim() && formData.nom) {
-        const descriptions = await generateDescription()
-        if (descriptions) {
-          setSuggestedDesc(descriptions)
-          return // Attendre validation du popup
+        const imageUrl = formData.existingPhotos.face || detouredFaceUrl
+        if (imageUrl) {
+          const result = await analyzeProduct(imageUrl)
+          if (result?.descriptions) {
+            if (result.couleur && !formData.color) setFormData(prev => ({ ...prev, color: result.couleur! }))
+            setSuggestedDesc(result.descriptions)
+            return // Attendre validation du popup
+          }
         }
       }
       
@@ -1607,9 +1581,8 @@ async function compressImage(file: File): Promise<string> {
                     <button
                       key={c.name}
                       type="button"
-                      title={c.name}
                       onClick={() => setFormData({ ...formData, color: formData.color === c.name ? '' : c.name })}
-                      className={`relative w-7 h-7 rounded-full border-2 transition-all ${
+                      className={`group relative w-7 h-7 rounded-full border-2 transition-all ${
                         formData.color === c.name 
                           ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30' 
                           : 'border-gray-200 hover:border-gray-400 hover:scale-105'
@@ -1618,8 +1591,7 @@ async function compressImage(file: File): Promise<string> {
                         background: c.hex.startsWith('linear') ? c.hex : c.hex,
                         boxShadow: c.name === 'Blanc' ? 'inset 0 0 0 1px #ddd' : undefined
                       }}
-                      >
-                      
+                    >
                       {formData.color === c.name && (
                         <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
                           ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet'].includes(c.name) 
@@ -1629,6 +1601,9 @@ async function compressImage(file: File): Promise<string> {
                           ✓
                         </span>
                       )}
+                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        {c.name}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -1640,9 +1615,25 @@ async function compressImage(file: File): Promise<string> {
               <div className="col-span-2 md:col-span-4">
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs text-gray-600">Description</label>
-                  <button
+                 <button
                     type="button"
-                    onClick={generateDescription}
+                    onClick={async () => {
+                      const imageUrl = formData.existingPhotos.face || detouredFaceUrl
+                      if (!imageUrl) {
+                        alert('Ajoutez une photo face d\'abord')
+                        return
+                      }
+                      const result = await analyzeProduct(imageUrl)
+                      if (result) {
+                        if (result.couleur) setFormData(prev => ({ ...prev, color: result.couleur! }))
+                        if (result.descriptions) {
+                          const combined = `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}`
+                          setFormData(prev => ({ ...prev, description: combined }))
+                        }
+                      } else {
+                        alert('Erreur lors de l\'analyse')
+                      }
+                    }}
                     disabled={generatingDesc || !formData.nom}
                     className="text-xs text-[#22209C] hover:underline disabled:opacity-40 disabled:no-underline flex items-center gap-1"
                   >

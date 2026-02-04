@@ -1,0 +1,25 @@
+// lib/couleurs.ts
+
+export const COLOR_PALETTE = [
+  { name: 'Noir', hex: '#000000' },
+  { name: 'Blanc', hex: '#FFFFFF' },
+  { name: 'Écru', hex: '#F5F5DC' },
+  { name: 'Beige', hex: '#D4B896' },
+  { name: 'Camel', hex: '#C19A6B' },
+  { name: 'Marron', hex: '#5C4033' },
+  { name: 'Gris', hex: '#808080' },
+  { name: 'Anthracite', hex: '#3D3D3D' },
+  { name: 'Bleu marine', hex: '#1E3A5F' },
+  { name: 'Bleu ciel', hex: '#87CEEB' },
+  { name: 'Rouge', hex: '#C41E3A' },
+  { name: 'Bordeaux', hex: '#6B1C23' },
+  { name: 'Rose', hex: '#E8B4B8' },
+  { name: 'Vert', hex: '#228B22' },
+  { name: 'Kaki', hex: '#6B6B47' },
+  { name: 'Orange', hex: '#E86100' },
+  { name: 'Jaune', hex: '#E8C547' },
+  { name: 'Violet', hex: '#6B3FA0' },
+  { name: 'Doré', hex: '#C5A048' },
+  { name: 'Argenté', hex: '#A8A8A8' },
+  { name: 'Multicolore', hex: 'linear-gradient(135deg, #FF6B6B, #4ECDC4, #FFE66D, #A06CD5)' },
+]
