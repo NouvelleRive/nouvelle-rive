@@ -8,6 +8,7 @@
   import * as XLSX from 'xlsx'
   import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
+  import { COLOR_PALETTE } from '@/lib/couleurs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
 
   // Conversion base64 robuste pour gros fichiers
@@ -355,105 +356,6 @@ async function compressImage(file: File): Promise<string> {
   // =====================
   const MADE_IN_OPTIONS = ['', 'Made in France', 'Made in Italy', 'Made in USA', 'Made in UK', 'Made in Spain', 'Made in Germany', 'Made in Japan']
 
-  // =====================
-  // COULEURS
-  // =====================
-
-  const COLOR_PALETTE = [
-  { name: 'Noir', hex: '#000000' },
-  { name: 'Blanc', hex: '#FFFFFF' },
-  { name: 'Écru', hex: '#F5F5DC' },
-  { name: 'Beige', hex: '#D4B896' },
-  { name: 'Camel', hex: '#C19A6B' },
-  { name: 'Marron', hex: '#5C4033' },
-  { name: 'Gris', hex: '#808080' },
-  { name: 'Anthracite', hex: '#3D3D3D' },
-  { name: 'Bleu marine', hex: '#1E3A5F' },
-  { name: 'Bleu ciel', hex: '#87CEEB' },
-  { name: 'Rouge', hex: '#C41E3A' },
-  { name: 'Bordeaux', hex: '#6B1C23' },
-  { name: 'Rose', hex: '#E8B4B8' },
-  { name: 'Vert', hex: '#228B22' },
-  { name: 'Kaki', hex: '#6B6B47' },
-  { name: 'Orange', hex: '#E86100' },
-  { name: 'Jaune', hex: '#E8C547' },
-  { name: 'Violet', hex: '#6B3FA0' },
-  { name: 'Doré', hex: '#C5A048' },
-  { name: 'Argenté', hex: '#A8A8A8' },
-  { name: 'Multicolore', hex: 'linear-gradient(135deg, #FF6B6B, #4ECDC4, #FFE66D, #A06CD5)' },
-]
-  // Détecter la couleur dominante d'une image (côté client)
-  async function detectDominantColor(imageUrl: string): Promise<string | null> {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return resolve(null)
-        
-        // Réduire pour performance
-        const size = 100
-        canvas.width = size
-        canvas.height = size
-        ctx.drawImage(img, 0, 0, size, size)
-        
-        const imageData = ctx.getImageData(0, 0, size, size)
-        const pixels = imageData.data
-        
-        // Compter les couleurs (ignorer transparents et blancs/gris du fond)
-        const colorCounts: Record<string, number> = {}
-        
-        for (let i = 0; i < pixels.length; i += 4) {
-          const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2], a = pixels[i + 3]
-          
-          // Ignorer transparent et quasi-blanc (fond détouré)
-          if (a < 200) continue
-          if (r > 240 && g > 240 && b > 240) continue
-          
-          // Quantifier en buckets de 32 pour regrouper
-          const qr = Math.round(r / 32) * 32
-          const qg = Math.round(g / 32) * 32
-          const qb = Math.round(b / 32) * 32
-          const key = `${qr},${qg},${qb}`
-          colorCounts[key] = (colorCounts[key] || 0) + 1
-        }
-        
-        // Trouver la couleur dominante
-        let maxCount = 0
-        let dominantRgb = [128, 128, 128]
-        for (const [key, count] of Object.entries(colorCounts)) {
-          if (count > maxCount) {
-            maxCount = count
-            dominantRgb = key.split(',').map(Number)
-          }
-        }
-        
-        // Matcher avec notre palette
-        const [dr, dg, db] = dominantRgb
-        let bestMatch = ''
-        let bestDistance = Infinity
-        
-        for (const c of COLOR_PALETTE) {
-          if (c.hex.startsWith('linear')) continue // Skip multicolore
-          const hex = c.hex.replace('#', '')
-          const pr = parseInt(hex.slice(0, 2), 16)
-          const pg = parseInt(hex.slice(2, 4), 16)
-          const pb = parseInt(hex.slice(4, 6), 16)
-          
-          const distance = Math.sqrt((dr - pr) ** 2 + (dg - pg) ** 2 + (db - pb) ** 2)
-          if (distance < bestDistance) {
-            bestDistance = distance
-            bestMatch = c.name
-          }
-        }
-        
-        resolve(bestDistance < 150 ? bestMatch : null) // Seuil de confiance
-      }
-      img.onerror = () => resolve(null)
-      img.src = imageUrl
-    })
-  }
 
   // =====================
   // EXCEL HELPERS
@@ -738,13 +640,6 @@ async function compressImage(file: File): Promise<string> {
     const handlePhotoEditorConfirm = async (processedUrl: string) => {
       if (photoToEdit) {
         if (photoToEdit.type === 'face') {
-          // Détecter la couleur si pas déjà rempli
-          if (!formData.color) {
-            const detectedColor = await detectDominantColor(processedUrl)
-            if (detectedColor) {
-              setFormData(prev => ({ ...prev, color: detectedColor }))
-            }
-          }
           setDetouredFaceUrl(processedUrl)
           setFormData(prev => ({
             ...prev,
@@ -771,14 +666,33 @@ async function compressImage(file: File): Promise<string> {
       setUploadedPhotoUrl(null)
     }
 
-    // Bouton rédiger manuel
-    const handleGenerateClick = async () => {
-      const descriptions = await generateDescription()
-      if (descriptions) {
-        const combined = `${descriptions.fr}\n\n🇬🇧 ${descriptions.en}`
-        setFormData(prev => ({ ...prev, description: combined }))
-      } else {
-        alert('Erreur lors de la génération')
+    // Analyser produit avec IA (couleur, motif, modèle, description)
+    const analyzeProduct = async (imageUrl: string): Promise<{couleur?: string, motif?: string, modele?: string, descriptions?: {fr: string, en: string}} | null> => {
+      setGeneratingDesc(true)
+      try {
+        const response = await fetch('/api/analyze-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrl,
+            nom: formData.nom,
+            marque: formData.marque,
+            categorie: formData.categorie,
+            matiere: formData.material,
+            taille: formData.taille,
+            madeIn: formData.madeIn,
+          }),
+        })
+        const data = await response.json()
+        if (data.success) {
+          return data
+        }
+        return null
+      } catch (err) {
+        console.error(err)
+        return null
+      } finally {
+        setGeneratingDesc(false)
       }
     }
 
