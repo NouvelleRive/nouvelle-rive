@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import Link from 'next/link'
+import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
 
 type Produit = {
   id: string
@@ -107,7 +108,7 @@ export default function ProduitPage() {
   const router = useRouter()
   const [produit, setProduit] = useState<Produit | null>(null)
   const [loading, setLoading] = useState(true)
-  const [chineuseInfo, setChineuseInfo] = useState<{accroche?: string, description?: string, nom?: string} | null>(null)
+  const [chineuseInfo, setChineuseInfo] = useState<{accroche?: string, description?: string, nom?: string, texteEcoCirculaire?: number} | null>(null)
 
   useEffect(() => {
     async function fetchProduit() {
@@ -127,7 +128,7 @@ export default function ProduitPage() {
             const snap = await getDocs(q)
             if (!snap.empty) {
               const ch = snap.docs[0].data()
-              setChineuseInfo({ accroche: ch.accroche, description: ch.description, nom: ch.nom })
+              setChineuseInfo({ accroche: ch.accroche, description: ch.description, nom: ch.nom, texteEcoCirculaire: ch.texteEcoCirculaire || 1 })
             }
           }
         }
@@ -324,15 +325,28 @@ export default function ProduitPage() {
           {/* === SECTIONS DÉPLIABLES === */}
           
           {/* ÉCONOMIE CIRCULAIRE */}
-          <AccordionSection title="Économie circulaire">
-            <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
-              En choisissant une pièce de seconde main, vous participez activement à l'économie circulaire. 
-              Chaque vêtement qui trouve une nouvelle vie, c'est une production évitée, des ressources 
-              préservées et une empreinte carbone réduite. La mode vintage et seconde main représente 
-              une alternative responsable qui ne sacrifie ni le style ni la qualité. Chez Nouvelle Rive, 
-              nous croyons que le luxe de demain passe par la réutilisation des pièces d'exception d'hier.
-            </p>
-          </AccordionSection>
+          <AccordionSection title="Économie circulaire et engagement">
+  <div style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
+    {(() => {
+      const key = (chineuseInfo?.texteEcoCirculaire || 1) as TexteEcoKey
+      const texte = TEXTES_ECO_CIRCULAIRE[key]
+      return (
+        <>
+          <p style={{ marginBottom: '16px' }}>{texte.fr}</p>
+          <p style={{ marginBottom: '16px', color: '#999', fontStyle: 'italic' }}>{texte.en}</p>
+        </>
+      )
+    })()}
+    <p>
+      Chaque marque présente chez NOUVELLE RIVE est engagée,{' '}
+      <Link href="/creatrices" style={{ color: '#000', textDecoration: 'underline' }}>découvrez-les</Link>.
+    </p>
+    <p style={{ color: '#999', fontStyle: 'italic', marginTop: '4px' }}>
+      Every brand at NOUVELLE RIVE is committed,{' '}
+      <Link href="/creatrices" style={{ color: '#999', textDecoration: 'underline' }}>discover them</Link>.
+    </p>
+  </div>
+</AccordionSection>
 
           {/* TAILLE - seulement si pertinent */}
           {afficherTaille(produit.categorie) && produit.taille && (
@@ -351,14 +365,18 @@ export default function ProduitPage() {
           </AccordionSection>
 
           {/* HISTOIRE DE LA MAISON */}
-          {produit.marque && (
+          {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
             <AccordionSection title="Histoire de la maison">
-              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
-                {/* TODO: Récupérer l'histoire de la marque depuis une collection Firebase */}
-                {produit.marque} est une maison emblématique de la mode. Son histoire riche et son 
-                savoir-faire unique en font une référence incontournable dans l'univers du luxe. 
-                Chaque pièce témoigne d'un héritage artisanal et d'une vision créative singulière.
-              </p>
+              {chineuseInfo.accroche && (
+                <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>
+                  {chineuseInfo.accroche}
+                </p>
+              )}
+              {chineuseInfo.description && (
+                <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
+                  {chineuseInfo.description}
+                </p>
+              )}
             </AccordionSection>
           )}
 
