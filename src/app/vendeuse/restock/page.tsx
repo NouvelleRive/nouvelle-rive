@@ -67,7 +67,7 @@ export default function RestockPage() {
             Qui êtes-vous ?
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {VENDEUSES.map((prenom) => (
+            {vendeusesListe.map((prenom) => (
               <button
                 key={prenom}
                 onClick={() => {
