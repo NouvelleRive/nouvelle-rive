@@ -239,6 +239,7 @@ export default function ProduitPage() {
         style={{ borderRight: '1px solid #000' }}
       >
         {getAllImages(produit).length > 0 ? (
+          <>
           <div className="flex flex-col">
             {getAllImages(produit).map((url, index) => (
               <div 
@@ -254,6 +255,14 @@ export default function ProduitPage() {
               </div>
             ))}
           </div>
+          {produit.photos?.faceOnModel && (
+            <p style={{ fontSize: '10px', color: '#999', fontWeight: '300', padding: '8px 12px', textAlign: 'center', borderTop: '1px solid #000' }}>
+              Photo d'illustration générée par intelligence artificielle. Non contractuelle.
+              <br />
+              <span style={{ fontStyle: 'italic' }}>AI-generated illustrative photo. For reference only.</span>
+            </p>
+          )}
+          </>
         ) : (
           <div 
             className="w-full h-screen flex items-center justify-center"
@@ -322,6 +331,13 @@ export default function ProduitPage() {
                 {produit.description}
               </p>
             )}
+
+            {/* Disclaimer vintage */}
+            <p style={{ fontSize: '11px', lineHeight: '1.6', color: '#999', fontWeight: '300', marginTop: '16px' }}>
+              Pièce vintage ou upcyclée — peut présenter quelques défauts ou traces d'usure. Vendu en l'état.
+              <br />
+              <span style={{ fontStyle: 'italic' }}>Vintage or upcycled item — may show minor imperfections or signs of wear. Sold as is.</span>
+            </p>
 
             {/* === BOUTON ACHETER === */}
           <div className="mt-8 mb-6">
