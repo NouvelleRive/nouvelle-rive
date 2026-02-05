@@ -78,6 +78,7 @@ const EMPTY_FORM = {
   banqueAdresse: '',
   adresse1: '',
   adresse2: '',
+  texteEcoCirculaire: 1,
 }
 
 export default function AdminDeposantesPage() {
@@ -135,6 +136,7 @@ export default function AdminDeposantesPage() {
       banqueAdresse: d.banqueAdresse || '',
       adresse1: d.adresse1 || '',
       adresse2: d.adresse2 || '',
+      texteEcoCirculaire: (d as any).texteEcoCirculaire || 1,
     })
     setImageFile(null)
     setImagePreview(d.imageUrl || null)
@@ -235,6 +237,7 @@ export default function AdminDeposantesPage() {
         banqueAdresse: formData.banqueAdresse.trim(),
         adresse1: formData.adresse1.trim(),
         adresse2: formData.adresse2.trim(),
+        texteEcoCirculaire: formData.texteEcoCirculaire,
         // categorieRapport = JUSTE label + idsquare
         categorieRapport: {
           label: formData.categorieRapportLabel.trim(),
@@ -594,6 +597,19 @@ export default function AdminDeposantesPage() {
                     rows={3}
                     className="w-full border rounded px-3 py-2"
                   />
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium mb-1">Texte économie circulaire</label>
+                  <select
+                    value={formData.texteEcoCirculaire}
+                    onChange={(e) => setFormData({ ...formData, texteEcoCirculaire: parseInt(e.target.value) })}
+                    className="w-full border rounded px-3 py-2 text-sm"
+                  >
+                    <option value={1}>Seconde main (vintage)</option>
+                    <option value={2}>Upcycling</option>
+                    <option value={3}>Régénéré</option>
+                  </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
