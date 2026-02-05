@@ -3,11 +3,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, query, onSnapshot } from 'firebase/firestore'
+import { collection, query, onSnapshot, getDocs } from 'firebase/firestore'
 import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
 import InventaireList, { Produit, Deposant } from '@/components/InventaireList'
-
-const VENDEUSES = ['Hina', 'Sofia', 'Loah', 'Teo', 'Salomé']
 
 type Tab = 'reception' | 'destock'
 
@@ -18,6 +16,20 @@ export default function RestockPage() {
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [vendeusesListe, setVendeusesListe] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchVendeuses = async () => {
+      const snap = await getDocs(collection(db, 'vendeuses'))
+      const noms = snap.docs
+        .filter(d => d.data().actif)
+        .map(d => d.data().prenom)
+        .sort()
+      setVendeusesListe(noms)
+    }
+    fetchVendeuses()
+  }, [])
 
   useEffect(() => {
     const q = query(collection(db, 'produits'))

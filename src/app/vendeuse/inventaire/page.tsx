@@ -14,6 +14,7 @@ import {
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Calendar } from 'lucide-react'
+import { getDocs } from 'firebase/firestore'
 import InventaireList, { Produit, Deposant } from '@/components/InventaireList'
 
 type Inventaire = {
@@ -25,8 +26,6 @@ type Inventaire = {
   statut: 'en_cours' | 'termine'
 }
 
-const VENDEUSES = ['Hina', 'Sofia', 'Loah', 'Teo', 'Salomé']
-
 export default function InventairePage() {
   const [vendeusePrenom, setVendeusePrenom] = useState<string>('')
   const [showVendeuseModal, setShowVendeuseModal] = useState(true)
@@ -34,6 +33,20 @@ export default function InventairePage() {
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [inventaireActif, setInventaireActif] = useState<Inventaire | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const [vendeusesListe, setVendeusesListe] = useState<string[]>([])
+
+  useEffect(() => {
+    const fetchVendeuses = async () => {
+      const snap = await getDocs(collection(db, 'vendeuses'))
+      const noms = snap.docs
+        .filter(d => d.data().actif)
+        .map(d => d.data().prenom)
+        .sort()
+      setVendeusesListe(noms)
+    }
+    fetchVendeuses()
+  }, [])
 
   useEffect(() => {
     const q = query(collection(db, 'produits'))
@@ -77,7 +90,7 @@ export default function InventairePage() {
             Qui êtes-vous ?
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {VENDEUSES.map((prenom) => (
+            {vendeusesListe.map((prenom) => (
               <button
                 key={prenom}
                 onClick={() => {
