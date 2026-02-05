@@ -6,10 +6,10 @@
 
 export const MATIERES = {
   bijoux: ['Or', 'Argent', 'Plaqué or', 'Vermeil', 'Acier inoxydable', 'Laiton', 'Perles d\'eau douce', 'Perles de culture', 'Perles de synthèse', 'Pierres', 'Fantaisie'],
-  maille: ['Laine', 'Cachemire', 'Angora', 'Mohair', 'Mérinos', 'Alpaga', 'Coton', 'Acrylique'],
+  maille: ['Laine', 'Cachemire', 'Angora', 'Mohair', 'Mérinos', 'Alpaga', 'Coton', 'Acrylique', 'Fourrure', 'Fausse fourrure'],
   cuir: ['Cuir', 'Cuir verni', 'Daim', 'Nubuck', 'Cuir grainé', 'Simili cuir', 'Cuir tressé'],
   maro: ['Cuir', 'Cuir verni', 'Daim', 'Nubuck', 'Cuir grainé', 'Simili cuir', 'Toile', 'Tissu'],
-  tissus: ['Soie', 'Coton', 'Lin', 'Laine', 'Polyester', 'Viscose', 'Satin', 'Velours', 'Tweed', 'Denim', 'Dentelle'],
+  tissus: ['Soie', 'Coton', 'Lin', 'Laine', 'Polyester', 'Viscose', 'Satin', 'Velours', 'Tweed', 'Denim', 'Dentelle', 'Cuir', 'Simili cuir', 'Daim', 'Fourrure', 'Fausse fourrure', 'Fourrure de renard', 'Fourrure de vison', 'Fourrure de lapin', 'Fourrure de mouton', 'Shearling'],
   objets: ['Plastique recyclé', 'Acétate', 'Métal', 'Verre', 'Céramique', 'Résine'],
 }
 
