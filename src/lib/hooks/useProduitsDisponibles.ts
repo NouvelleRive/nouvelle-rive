@@ -54,9 +54,7 @@ export function useProduitsDisponibles() {
           })
           .map(doc => {
             const d = doc.data()
-            const imageUrls = d.photos?.face 
-              ? [d.photos.face, ...(d.imageUrls || [])]
-              : d.imageUrls || []
+            const imageUrls = d.imageUrls?.length > 0 ? d.imageUrls : d.photos?.face ? [d.photos.face] : []
             return { id: doc.id, ...d, imageUrls }
           }) as Produit[]
 
@@ -107,9 +105,7 @@ export function useProduitsDisponibles() {
         })
         .map(doc => {
           const d = doc.data()
-          const imageUrls = d.photos?.face 
-            ? [d.photos.face, ...(d.imageUrls || [])]
-            : d.imageUrls || []
+          const imageUrls = d.imageUrls?.length > 0 ? d.imageUrls : d.photos?.face ? [d.photos.face] : []
           return { id: doc.id, ...d, imageUrls }
         }) as Produit[]
 
