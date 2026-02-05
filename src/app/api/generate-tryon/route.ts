@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       rand -= m.weight
       if (rand <= 0) { selectedModel = m.desc; break }
     }
-    const prompt = `${selectedModel}, standing straight, simple natural pose, wearing loose or elegant trousers, no skinny jeans, plain white studio background`
+   const prompt = `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing elegant wide leg trousers and heels, professional editorial fashion shoot, no skinny jeans, plain white studio background`
     console.log('🎨 Prompt choisi:', prompt)
     
     const fashnResponse = await fetch('https://api.fashn.ai/v1/run', {
