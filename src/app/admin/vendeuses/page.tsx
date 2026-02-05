@@ -239,6 +239,42 @@ export default function VendeusesPage() {
 
   const activeVendeuses = vendeuses.filter(v => v.actif)
 
+  // Heures par créneau
+  const heuresCreneau = (cr: string) => cr === '12-20' ? 8 : cr === '11-17' ? 6 : 0
+
+  // Heures supposées (depuis jours fixes × semaines du mois)
+  const heuresSupposees = (v: Vendeuse) => {
+    if (!v.joursFixes) return 0
+    const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
+    let total = 0
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dow = new Date(currentMonth.year, currentMonth.month, day).getDay().toString()
+      const cr = v.joursFixes[dow]
+      if (cr) total += heuresCreneau(cr)
+    }
+    return total
+  }
+
+  // Heures réelles (depuis le planning)
+  const heuresReelles = (vendeuseId: string) => {
+    let total = 0
+    Object.entries(planningSlots).forEach(([key, vid]) => {
+      if (vid === vendeuseId) {
+        const cr = key.split('_')[1]
+        total += heuresCreneau(cr)
+      }
+    })
+    return total
+  }
+
+  // Jours de CP = jours supposés - jours réels travaillés
+  const joursCP = (v: Vendeuse) => {
+    const supposees = heuresSupposees(v)
+    const reelles = heuresReelles(v.id)
+    const diff = supposees - reelles
+    return diff > 0 ? diff : 0
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
