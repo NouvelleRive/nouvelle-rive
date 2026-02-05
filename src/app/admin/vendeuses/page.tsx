@@ -313,7 +313,8 @@ export default function VendeusesPage() {
                   className="w-4 h-4 rounded-full flex-shrink-0"
                   style={{ backgroundColor: v.couleur }}
                 />
-                <span className="font-semibold text-sm">{v.prenom.toUpperCase()}</span>
+               <span className="font-semibold text-sm">{v.prenom.toUpperCase()}</span>
+                <span className="text-xs text-gray-400">{heuresSupposees(v)}h prévues</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -478,7 +479,8 @@ export default function VendeusesPage() {
       {/* ======================== */}
       {/* CALENDRIER PLANNING      */}
       {/* ======================== */}
-      <div>
+      <div className="lg:flex lg:gap-6">
+        <div className="flex-1">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-[#22209C]">Planning</h2>
           <button
@@ -580,7 +582,40 @@ export default function VendeusesPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+
+        </div>
+
+        {/* Récap heures — sidebar droite */}
+        {activeVendeuses.length > 0 && (
+          <div className="lg:w-64 mt-6 lg:mt-14 flex-shrink-0">
+            <div className="bg-white rounded-xl border p-4 sticky top-20">
+              <h3 className="text-sm font-bold text-[#22209C] mb-3">Récap — {monthLabel}</h3>
+              <div className="space-y-3">
+                {activeVendeuses.map(v => {
+                  const prevues = heuresSupposees(v)
+                  const reelles = heuresReelles(v.id)
+                  const cp = joursCP(v)
+                  return (
+                    <div key={v.id} className="py-2 border-b border-gray-100 last:border-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.couleur }} />
+                        <span className="text-sm font-medium">{v.prenom}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs pl-5">
+                        <span className="text-gray-400">{prevues}h prévues</span>
+                        <span className="font-semibold">{reelles}h réelles</span>
+                        {cp > 0 && (
+                          <span className="text-orange-500 font-medium">{cp}h CP</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+        </div>
   )
 }
