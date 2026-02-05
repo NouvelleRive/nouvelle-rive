@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
       banqueAdresse,
       adresse1,
       adresse2,
+      texteEcoCirculaire,
     } = body
 
     if (!nom?.trim()) {
@@ -146,6 +147,7 @@ export async function POST(req: NextRequest) {
       banqueAdresse: banqueAdresse?.trim() || '',
       adresse1: adresse1?.trim() || '',
       adresse2: adresse2?.trim() || '',
+      texteEcoCirculaire: texteEcoCirculaire || 1,
     }
 
     // Ajouter l'UID Auth si on l'a
@@ -219,6 +221,7 @@ export async function PATCH(req: NextRequest) {
       banqueAdresse,
       adresse1,
       adresse2,
+      texteEcoCirculaire,
     } = body
 
     const authHeader = req.headers.get('authorization') || ''
@@ -261,6 +264,7 @@ export async function PATCH(req: NextRequest) {
     if (banqueAdresse !== undefined) updateData.banqueAdresse = banqueAdresse?.trim() || ''
     if (adresse1 !== undefined) updateData.adresse1 = adresse1?.trim() || ''
     if (adresse2 !== undefined) updateData.adresse2 = adresse2?.trim() || ''
+    if (texteEcoCirculaire !== undefined) updateData.texteEcoCirculaire = texteEcoCirculaire
 
     await docRef.update(updateData)
 
