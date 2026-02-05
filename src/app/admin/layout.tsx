@@ -1,7 +1,7 @@
 // app/admin/layout.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
@@ -18,6 +18,20 @@ function AdminNavbar() {
   const router = useRouter()
   const { selectedChineuse, setSelectedChineuse, chineusesList, produitsFiltres } = useAdmin()
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const [equipeOpen, setEquipeOpen] = useState(false)
+const equipeRef = useRef<HTMLDivElement>(null)
+
+// Fermer dropdown Équipe au clic extérieur
+useEffect(() => {
+  const handleClickOutside = (e: MouseEvent) => {
+    if (equipeRef.current && !equipeRef.current.contains(e.target as Node)) {
+      setEquipeOpen(false)
+    }
+  }
+  document.addEventListener('mousedown', handleClickOutside)
+  return () => document.removeEventListener('mousedown', handleClickOutside)
+}, [])
 
   // Fermer le menu quand on change de page
   useEffect(() => {
@@ -36,10 +50,8 @@ function AdminNavbar() {
     { key: 'ventes', label: 'Ventes', href: '/admin/nos-ventes' },
     { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
     { key: 'perf', label: 'Perf', href: '/admin/performance', adminOnly: true },
-    { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', isEbay: true, adminOnly: true },
     { key: 'site', label: 'Site', href: '/admin/site', adminOnly: true },
     { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
-    { key: 'deposants', label: 'Déposantes', href: '/admin/deposantes' },
     { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
     ]
 
@@ -48,14 +60,8 @@ function AdminNavbar() {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
-  const getTabClassName = (tab: typeof tabs[0], active: boolean) => {
-    if (tab.isEbay) {
-      return active 
-        ? 'text-yellow-600 underline decoration-yellow-500 bg-yellow-50 px-2 py-1 rounded' 
-        : 'text-yellow-600 hover:bg-yellow-50 px-2 py-1 rounded border border-yellow-300'
-    }
-    return active ? 'text-[#22209C] underline' : 'text-gray-600 hover:text-[#22209C]'
-  }
+  const getTabClassName = (active: boolean) =>
+    active ? 'text-[#22209C] underline' : 'text-gray-600 hover:text-[#22209C]'
 
   return (
     <>
@@ -68,20 +74,61 @@ function AdminNavbar() {
             </Link>
 
             {/* Tabs Desktop */}
-            <div className="hidden lg:flex space-x-6">
-              {visibleTabs.map((tab) => {
-                const active = isActive(tab.href)
-                return (
-                  <Link 
-                    key={tab.key} 
-                    href={tab.href} 
-                    className={`text-sm font-medium transition-all ${getTabClassName(tab, active)}`}
-                  >
-                    {tab.label}
-                  </Link>
-                )
-              })}
-            </div>
+            <div className="hidden lg:flex items-center space-x-6">
+  {visibleTabs.map((tab) => {
+    const active = isActive(tab.href)
+    return (
+      <Link 
+        key={tab.key} 
+        href={tab.href} 
+        className={`text-sm font-medium transition-all ${getTabClassName(tab, active)}`}
+      >
+        {tab.label}
+      </Link>
+    )
+  })}
+
+  {/* Dropdown Équipe */}
+  {!selectedChineuse && (
+    <div ref={equipeRef} className="relative">
+      <button
+        onClick={() => setEquipeOpen(!equipeOpen)}
+        className={`text-sm font-medium transition-all flex items-center gap-1 ${
+          isActive('/admin/deposantes') || isActive('/admin/vendeuses')
+            ? 'text-[#22209C] underline'
+            : 'text-gray-600 hover:text-[#22209C]'
+        }`}
+      >
+        Équipe
+        <svg className={`w-3 h-3 transition-transform ${equipeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {equipeOpen && (
+        <div className="absolute top-full left-0 mt-2 bg-white border rounded-lg shadow-lg py-1 min-w-[160px] z-50">
+          <Link
+            href="/admin/deposantes"
+            onClick={() => setEquipeOpen(false)}
+            className={`block px-4 py-2 text-sm transition-colors ${
+              isActive('/admin/deposantes') ? 'text-[#22209C] font-semibold bg-blue-50' : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Création
+          </Link>
+          <Link
+            href="/admin/vendeuses"
+            onClick={() => setEquipeOpen(false)}
+            className={`block px-4 py-2 text-sm transition-colors ${
+              isActive('/admin/vendeuses') ? 'text-[#22209C] font-semibold bg-blue-50' : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Vente
+          </Link>
+        </div>
+      )}
+    </div>
+  )}
+</div>
 
             {/* Filtre "Je suis" - Desktop */}
             <div className="hidden lg:flex items-center gap-3">
