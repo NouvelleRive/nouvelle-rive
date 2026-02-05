@@ -1,10 +1,11 @@
 // app/admin/deposantes/page.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import { Search, Plus, X, Trash2, Edit2 } from 'lucide-react'
 import { getAuth } from 'firebase/auth'
+
 
 type CategorieItem = {
   label: string
@@ -91,6 +92,13 @@ export default function AdminDeposantesPage() {
   const [newCategorieIdsquare, setNewCategorieIdsquare] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+    useEffect(() => {
+    const saved = sessionStorage.getItem('scrollPos')
+    if (saved) {
+      setTimeout(() => window.scrollTo(0, parseInt(saved)), 100)
+      sessionStorage.removeItem('scrollPos')
+    }
+  }, [])
 
   const deposantesFiltreesParChineuse = useMemo(() => {
     if (!selectedChineuse) return deposants
@@ -260,9 +268,11 @@ export default function AdminDeposantesPage() {
         throw new Error(data.error || 'Erreur')
       }
 
+      const scrollPos = window.scrollY
       alert(`✅ Déposante ${data.action === 'created' ? 'créée' : 'mise à jour'} !`)
       setShowModal(false)
       window.location.reload()
+      sessionStorage.setItem('scrollPos', String(scrollPos))
 
     } catch (err: any) {
       alert('❌ Erreur : ' + (err?.message || ''))

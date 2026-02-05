@@ -18,6 +18,7 @@ export default function ProfilFacturationPage() {
   const [iban, setIban] = useState('')
   const [bic, setBic] = useState('')
   const [banqueAdresse, setBanqueAdresse] = useState('')
+  const [texteEcoCirculaire, setTexteEcoCirculaire] = useState(1)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -38,6 +39,7 @@ export default function ProfilFacturationPage() {
         setIban(d?.iban || '')
         setBic(d?.bic || '')
         setBanqueAdresse(d?.banqueAdresse || '')
+        setTexteEcoCirculaire(d?.texteEcoCirculaire || 1)
       }
       setLoaded(true)
     })
@@ -71,6 +73,7 @@ export default function ProfilFacturationPage() {
           iban,
           bic,
           banqueAdresse,
+          texteEcoCirculaire,
         }),
       })
 
@@ -137,6 +140,20 @@ export default function ProfilFacturationPage() {
           <div>
             <label className="block text-sm font-medium mb-1">Adresse de la banque</label>
             <input value={banqueAdresse} onChange={e=>setBanqueAdresse(e.target.value)} className="w-full border rounded px-3 py-2" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Texte économie circulaire</label>
+            <select
+              value={texteEcoCirculaire}
+              onChange={(e) => setTexteEcoCirculaire(parseInt(e.target.value))}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value={1}>Seconde main (vintage)</option>
+              <option value={2}>Upcycling</option>
+              <option value={3}>Régénéré</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Ce texte s'affichera sur vos fiches produit dans "Économie circulaire et engagement".</p>
           </div>
 
           <div className="pt-2">

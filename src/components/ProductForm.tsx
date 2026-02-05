@@ -1569,9 +1569,13 @@ async function compressImage(file: File): Promise<string> {
                     <button
                       key={m}
                       type="button"
-                      onClick={() => setFormData({ ...formData, material: formData.material === m ? '' : m })}
+                      onClick={() => {
+                        const current = formData.material ? formData.material.split(', ').filter(Boolean) : []
+                        const updated = current.includes(m) ? current.filter(x => x !== m) : [...current, m]
+                        setFormData({ ...formData, material: updated.join(', ') })
+                      }}
                       className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                        formData.material === m
+                        formData.material.split(', ').includes(m)
                           ? 'bg-[#22209C] text-white border-[#22209C]'
                           : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                       }`}
@@ -1580,9 +1584,6 @@ async function compressImage(file: File): Promise<string> {
                     </button>
                   ))}
                 </div>
-                {formData.material && !matieresDisponibles.includes(formData.material) && (
-                  <p className="text-xs text-gray-500 mt-1">Sélectionné : {formData.material}</p>
-                )}
               </div>
 
               <div className="col-span-2 md:col-span-4">
@@ -1592,9 +1593,13 @@ async function compressImage(file: File): Promise<string> {
                     <button
                       key={c.name}
                       type="button"
-                      onClick={() => setFormData({ ...formData, color: formData.color === c.name ? '' : c.name })}
+                      onClick={() => {
+                        const current = formData.color ? formData.color.split(', ').filter(Boolean) : []
+                        const updated = current.includes(c.name) ? current.filter(x => x !== c.name) : [...current, c.name]
+                        setFormData({ ...formData, color: updated.join(', ') })
+                      }}
                       className={`group relative w-7 h-7 rounded-full border-2 transition-all ${
-                        formData.color === c.name 
+                        formData.color.split(', ').includes(c.name) 
                           ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30' 
                           : 'border-gray-200 hover:border-gray-400 hover:scale-105'
                       }`}
@@ -1603,7 +1608,7 @@ async function compressImage(file: File): Promise<string> {
                         boxShadow: c.name === 'Blanc' ? 'inset 0 0 0 1px #ddd' : undefined
                       }}
                     >
-                      {formData.color === c.name && (
+                      {formData.color.split(', ').includes(c.name) && (
                         <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
                           ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet'].includes(c.name) 
                             ? 'text-white' 
