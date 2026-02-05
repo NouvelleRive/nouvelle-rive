@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 
@@ -107,6 +107,7 @@ export default function ProduitPage() {
   const router = useRouter()
   const [produit, setProduit] = useState<Produit | null>(null)
   const [loading, setLoading] = useState(true)
+  const [chineuseInfo, setChineuseInfo] = useState<{accroche?: string, description?: string, nom?: string} | null>(null)
 
   useEffect(() => {
     async function fetchProduit() {
@@ -116,6 +117,19 @@ export default function ProduitPage() {
 
         if (docSnap.exists()) {
           setProduit({ id: docSnap.id, ...docSnap.data() } as Produit)
+          // Fetch chineuse
+          const data = docSnap.data()
+          const cat = data.categorie || ''
+          const triMatch = cat.match(/^([A-Z]{2,10})\s*[-–]/)
+          if (triMatch) {
+            const tri = triMatch[1]
+            const q = query(collection(db, 'chineuse'), where('trigramme', '==', tri))
+            const snap = await getDocs(q)
+            if (!snap.empty) {
+              const ch = snap.docs[0].data()
+              setChineuseInfo({ accroche: ch.accroche, description: ch.description, nom: ch.nom })
+            }
+          }
         }
       } catch (error) {
         console.error('Erreur:', error)
