@@ -119,34 +119,49 @@ export default function ProduitPage() {
         if (docSnap.exists()) {
           setProduit({ id: docSnap.id, ...docSnap.data() } as Produit)
           // Fetch chineuse
-          const data = docSnap.data()
-          const cat = data.categorie || ''
-          const triMatch = cat.match(/^([A-Z]{2,10})\s*[-–]/)
-          if (triMatch) {
-            const tri = triMatch[1]
-            const q = query(collection(db, 'chineuse'), where('trigramme', '==', tri))
-            const snap = await getDocs(q)
-            if (!snap.empty) {
-              const ch = snap.docs[0].data()
-              setChineuseInfo({ accroche: ch.accroche, description: ch.description, nom: ch.nom, texteEcoCirculaire: ch.texteEcoCirculaire || 1 })
+        const data = docSnap.data()
+        let chSnap = null
+
+        // 1. Essayer par trigramme dans la catégorie
+        const cat = data.categorie || ''
+        const triMatch = cat.match(/^([A-Z]{2,10})\s*[-–]/)
+        if (triMatch) {
+          const snap = await getDocs(query(collection(db, 'chineuse'), where('trigramme', '==', triMatch[1])))
+          if (!snap.empty) chSnap = snap.docs[0]
+        }
+
+        // 2. Fallback par chineurUid
+        if (!chSnap && data.chineurUid) {
+          const snap = await getDocs(query(collection(db, 'chineuse'), where('authUid', '==', data.chineurUid)))
+          if (!snap.empty) chSnap = snap.docs[0]
+        }
+
+        // 3. Fallback par email
+        if (!chSnap && data.chineur) {
+          const snap = await getDocs(query(collection(db, 'chineuse'), where('email', '==', data.chineur)))
+          if (!snap.empty) chSnap = snap.docs[0]
+        }
+
+        if (chSnap) {
+          const ch = chSnap.data()
+          setChineuseInfo({ accroche: ch.accroche, description: ch.description, nom: ch.nom, texteEcoCirculaire: ch.texteEcoCirculaire || 1 })
+        }
+                }
+              } catch (error) {
+                console.error('Erreur:', error)
+              } finally {
+                setLoading(false)
+              }
+            }
+
+            fetchProduit()
+          }, [params.id])
+
+          const handleAcheter = () => {
+            if (produit) {
+              router.push(`/checkout?productId=${produit.id}`)
             }
           }
-        }
-      } catch (error) {
-        console.error('Erreur:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProduit()
-  }, [params.id])
-
-  const handleAcheter = () => {
-    if (produit) {
-      router.push(`/checkout?productId=${produit.id}`)
-    }
-  }
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
