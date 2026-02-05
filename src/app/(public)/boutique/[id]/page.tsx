@@ -23,6 +23,9 @@ type Produit = {
   marque?: string
   description?: string
   taille?: string
+  color?: string
+  material?: string
+  madeIn?: string
   etat?: string
   composition?: string
   entretien?: string
@@ -363,12 +366,23 @@ export default function ProduitPage() {
   </div>
 </AccordionSection>
 
-          {/* TAILLE - seulement si pertinent */}
-          {afficherTaille(produit.categorie) && produit.taille && (
-            <AccordionSection title="Taille">
-              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
-                {produit.taille}
-              </p>
+          {/* TAILLE ET CARACTERISTIQUES - seulement si pertinent */}
+          {(produit.taille || produit.material || produit.color || produit.madeIn) && (
+            <AccordionSection title="Taille et caractéristiques" defaultOpen={true}>
+              <div style={{ fontSize: '13px', lineHeight: '2', color: '#666', fontWeight: '300' }}>
+                {afficherTaille(produit.categorie) && produit.taille && (
+                  <p><span style={{ color: '#999' }}>Taille :</span> {produit.taille}</p>
+                )}
+                {produit.material && (
+                  <p><span style={{ color: '#999' }}>Matière :</span> {produit.material}</p>
+                )}
+                {produit.color && (
+                  <p><span style={{ color: '#999' }}>Couleur :</span> {produit.color}</p>
+                )}
+                {produit.madeIn && (
+                  <p><span style={{ color: '#999' }}>Origine :</span> {produit.madeIn}</p>
+                )}
+              </div>
             </AccordionSection>
           )}
 
@@ -383,10 +397,10 @@ export default function ProduitPage() {
           {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
             <AccordionSection title="Histoire de la maison">
               {chineuseInfo.nom && (
-                <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
-                  {chineuseInfo.nom}
-                </p>
-              )}
+                  <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    {chineuseInfo.nom}
+                  </p>
+                )}
               {chineuseInfo.accroche && (
                 <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>
                   {chineuseInfo.accroche}
