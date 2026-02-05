@@ -123,7 +123,7 @@ export default function ProduitPage() {
         let chSnap = null
 
         // 1. Essayer par trigramme dans la catégorie
-        const cat = data.categorie || ''
+        const cat = typeof data.categorie === 'string' ? data.categorie : (data.categorie?.label || '')
         const triMatch = cat.match(/^([A-Z]{2,10})\s*[-–]/)
         if (triMatch) {
           const snap = await getDocs(query(collection(db, 'chineuse'), where('trigramme', '==', triMatch[1])))
