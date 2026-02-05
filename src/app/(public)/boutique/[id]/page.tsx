@@ -382,6 +382,11 @@ export default function ProduitPage() {
           {/* HISTOIRE DE LA MAISON */}
           {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
             <AccordionSection title="Histoire de la maison">
+              {chineuseInfo.nom && (
+                <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                  {chineuseInfo.nom}
+                </p>
+              )}
               {chineuseInfo.accroche && (
                 <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>
                   {chineuseInfo.accroche}
