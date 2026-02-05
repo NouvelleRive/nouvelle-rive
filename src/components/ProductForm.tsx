@@ -723,6 +723,10 @@ async function compressImage(file: File): Promise<string> {
 
     // Refuser suggestion popup
     const handleRejectSuggestion = () => {
+      if (suggestedDesc) {
+        const combined = `${suggestedDesc.fr}\n\n🇬🇧 ${suggestedDesc.en}`
+        setFormData(prev => ({ ...prev, description: combined }))
+      }
       setSuggestedDesc(null)
     }
 
@@ -1707,7 +1711,7 @@ async function compressImage(file: File): Promise<string> {
                       >
                         <ImageIcon size={16} />
                       </button>
-                      <button type="button" onClick={() => handleDeleteExistingPhoto('face')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                      <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'face' })} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                         <X size={16} />
                       </button>
                     </div>
@@ -1806,7 +1810,7 @@ async function compressImage(file: File): Promise<string> {
                       >
                         <ImageIcon size={16} />
                       </button>
-                      <button type="button" onClick={() => handleDeleteExistingPhoto('dos')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                      <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'dos' })} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                         <X size={16} />
                       </button>
                     </div>
@@ -1896,7 +1900,7 @@ async function compressImage(file: File): Promise<string> {
                       !isDetailDeleted(i) && (
                         <div key={i} className="relative group w-14 h-14">
                           <img src={url} alt={`Détail ${i + 1}`} className="w-full h-full object-cover rounded border" />
-                          <button type="button" onClick={() => handleDeleteExistingPhoto('detail', i)} className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'detail', index: i })} className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                             <X size={12} />
                           </button>
                         </div>
@@ -2010,7 +2014,7 @@ async function compressImage(file: File): Promise<string> {
                     >
                       <ImageIcon size={14} />
                     </button>
-                    <button type="button" onClick={() => handleDeleteExistingPhoto('faceOnModel')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                    <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'faceOnModel' })} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600">
                       <X size={14} />
                     </button>
                   </div>
