@@ -633,6 +633,9 @@
                   <p className="font-bold text-[#22209C] text-sm sm:text-base">
                     {typeof p.prix === 'number' ? `${p.prix} €` : '—'}
                   </p>
+                  <p className="text-xs text-gray-500">
+                    Qté: <span className="font-medium">{p.quantite ?? 1}</span>
+                  </p>
                   {isFound && (
                     <span className="text-[10px] text-green-600 flex items-center justify-end gap-1 mt-1">
                       <Check size={12} /> Trouvé
