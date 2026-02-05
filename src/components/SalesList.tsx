@@ -547,8 +547,10 @@ useEffect(() => {
     docPDF.text(ref, margin + 110, yMetaTop)
     docPDF.text('Période', margin, yMetaTop + 16)
     docPDF.text(periodeTxt, margin + 110, yMetaTop + 16)
+    docPDF.text("Date d'édition", margin, yMetaTop + 32)
+    docPDF.text(format(new Date(), 'dd/MM/yyyy', { locale: fr }), margin + 110, yMetaTop + 32)
 
-    const yHead = yMetaTop + 46
+    const yHead = yMetaTop + 62
     const hHead = 36
     docPDF.setFillColor(34, 32, 156)
     docPDF.rect(margin, yHead, contentW, hHead, 'F')
