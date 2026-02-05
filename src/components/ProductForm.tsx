@@ -453,6 +453,7 @@ async function compressImage(file: File): Promise<string> {
     const [detouredDosUrl, setDetouredDosUrl] = useState<string | null>(null)
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
     const [generatingDesc, setGeneratingDesc] = useState(false)
+    const [deletePhotoConfirm, setDeletePhotoConfirm] = useState<{type: 'face' | 'faceOnModel' | 'dos' | 'detail', index?: number} | null>(null)
     const [suggestedDesc, setSuggestedDesc] = useState<{fr: string, en: string} | null>(null)
     // État pour l'ordre des photos
   const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
@@ -2082,6 +2083,35 @@ async function compressImage(file: File): Promise<string> {
                   className="flex-1 bg-[#22209C] text-white py-2.5 rounded-lg font-semibold hover:opacity-90 transition"
                 >
                   {loading ? '⏳...' : '✓ Valider et créer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal confirmation suppression photo */}
+        {deletePhotoConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">Supprimer cette photo ?</h2>
+              <p className="text-sm text-gray-500 mb-6">Cette action est irréversible.</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeletePhotoConfirm(null)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteExistingPhoto(deletePhotoConfirm.type, deletePhotoConfirm.index)
+                    setDeletePhotoConfirm(null)
+                  }}
+                  className="flex-1 bg-red-500 text-white py-2.5 rounded-lg font-semibold hover:bg-red-600 transition"
+                >
+                  Supprimer
                 </button>
               </div>
             </div>
