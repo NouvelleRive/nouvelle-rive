@@ -70,6 +70,24 @@ export async function POST(req: NextRequest) {
 
     // 1. Appel FASHN.ai avec le nouvel endpoint /v1/run
     console.log('🤖 Appel FASHN.ai (product-to-model)...')
+
+    // Sélection pondérée du modèle (représentativité française approx.)
+    const modelPool = [
+      { weight: 70, desc: 'european woman' },
+      { weight: 12, desc: 'black african woman' },
+      { weight: 10, desc: 'north african woman' },
+      { weight: 5, desc: 'east asian woman' },
+      { weight: 3, desc: 'mixed race woman' },
+    ]
+    const totalWeight = modelPool.reduce((sum, m) => sum + m.weight, 0)
+    let rand = Math.random() * totalWeight
+    let selectedModel = modelPool[0].desc
+    for (const m of modelPool) {
+      rand -= m.weight
+      if (rand <= 0) { selectedModel = m.desc; break }
+    }
+    const prompt = `${selectedModel}, standing straight, simple natural pose, wearing loose casual trousers, relaxed fit, no skinny jeans, plain white studio background`
+    console.log('🎨 Prompt choisi:', prompt)
     
     const fashnResponse = await fetch('https://api.fashn.ai/v1/run', {
       method: 'POST',
@@ -83,7 +101,8 @@ export async function POST(req: NextRequest) {
       inputs: {
         product_image: imageUrl,
         resolution: '1k',
-        prompt: ['plain white studio background', 'plain white studio background, black model', 'plain white studio background, asian model', 'plain white studio background, mixed race model'][Math.floor(Math.random() * 4)]
+        prompt: prompt,
+        aspect_ratio: '3:4',
       }
     }),
     })
