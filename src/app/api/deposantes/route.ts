@@ -239,11 +239,18 @@ export async function PATCH(req: NextRequest) {
 
     const adminDb = getFirestore()
     
-    // Trouver le document par authUid
-    const snapshot = await adminDb.collection('chineuse')
+    // Trouver le document par authUid ou par email
+    let snapshot = await adminDb.collection('chineuse')
       .where('authUid', '==', decoded.uid)
       .limit(1)
       .get()
+
+    if (snapshot.empty && decoded.email) {
+      snapshot = await adminDb.collection('chineuse')
+        .where('email', '==', decoded.email)
+        .limit(1)
+        .get()
+    }
 
     if (snapshot.empty) {
       return NextResponse.json({ success: false, error: 'Profil introuvable' }, { status: 404 })
