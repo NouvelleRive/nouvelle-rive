@@ -28,10 +28,10 @@
 
   export async function POST(req: NextRequest) {
     try {
-      const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyTransform, offset, zoom = 1, formatOnly } = await req.json()
+      const { imageUrl, rotation = 0, base64, uploadOnly, mode, applyTransform, offset, zoom = 1, formatOnly } = await req.json()
 
-      // Mode skipDetourage avec base64 (caméra/conserver)
-      if (base64 && (skipDetourage || mode === 'erased')) {
+      // Mode uploadOnly avec base64 (upload brut avant PhotoEditor)
+      if (base64 && (uploadOnly || mode === 'erased')) {
         console.log('🔄 Conserver (base64, sans détourage), rotation:', rotation)
         
         let sharpInstance = sharp(Buffer.from(base64, 'base64'))
@@ -41,7 +41,6 @@
         }
 
        const finalBuffer = await sharpInstance
-        .resize(1200, 1200, { fit: 'cover' })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .png({ quality: 90 })
         .toBuffer()
