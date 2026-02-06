@@ -299,7 +299,7 @@
         const res = await fetch('/api/detourage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, offset, zoom, applyRotationOnly: true })
+          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, offset, zoom, applyTransform: true })
         })
         const data = await res.json()
         
