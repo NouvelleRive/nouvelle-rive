@@ -589,7 +589,7 @@ async function compressImage(file: File): Promise<string> {
           const response = await fetch('/api/detourage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ base64, skipDetourage: true })
+            body: JSON.stringify({ base64, uploadOnly: true })
           })
           const data = await response.json()
 
