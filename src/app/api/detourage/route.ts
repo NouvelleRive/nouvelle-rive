@@ -28,7 +28,7 @@
 
   export async function POST(req: NextRequest) {
     try {
-      const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyRotationOnly, offset, zoom = 1, formatOnly } = await req.json()
+      const { imageUrl, rotation = 0, base64, skipDetourage, mode, applyTransform, offset, zoom = 1, formatOnly } = await req.json()
 
       // Mode skipDetourage avec base64 (caméra/conserver)
       if (base64 && (skipDetourage || mode === 'erased')) {
@@ -41,9 +41,10 @@
         }
 
        const finalBuffer = await sharpInstance
-          .flatten({ background: { r: 255, g: 255, b: 255 } })
-          .png({ quality: 90 })
-          .toBuffer()
+        .resize(1200, 1200, { fit: 'cover' })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .png({ quality: 90 })
+        .toBuffer()
 
         const storageZone = process.env.BUNNY_STORAGE_ZONE
         const apiKey = process.env.BUNNY_API_KEY
@@ -63,7 +64,7 @@
         return NextResponse.json({ success: true, maskUrl: finalUrl, rawUrl: finalUrl, url: finalUrl })
       }
       // Mode rotation/position (après détourage)
-      if (imageUrl && applyRotationOnly) {
+      if (imageUrl && applyTransform) {
         const hasRotation = rotation !== 0
         const hasOffset = offset && (offset.x !== 0 || offset.y !== 0)
         const hasZoom = zoom !== 1
@@ -133,6 +134,11 @@
         } else {
           // zoom === 1, juste resize normal
           processedBuffer = await sharp(processedBuffer)
+            .resize(960, 960, { fit: 'inside' })
+            .extend({
+              top: 120, bottom: 120, left: 120, right: 120,
+              background: { r: 255, g: 255, b: 255 }
+            })
             .resize(1200, 1200, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
             .toBuffer()
                 }
