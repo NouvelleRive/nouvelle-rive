@@ -168,18 +168,18 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       )}
 
       {/* Grille produits */}
-      <div className={`grid ${gridCols[columns]}`} style={{ borderLeft: '1px solid #000' }}>
+      <div className={`grid ${gridCols[columns]} gap-[1px] bg-black`} style={{}}>
         {filteredProduits.map((produit) => (
           <div
             key={produit.id}
-            className="relative group p-2 md:p-4"
-            style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
+            className="relative group"
+            style={{}}
           >
             <Link 
               href={`/boutique/${produit.id}`}
               className="block"
             >
-              <div className="aspect-square bg-white overflow-hidden border border-gray-100">
+              <div className="aspect-square bg-white overflow-hidden">
               {produit.imageUrls?.[0] ? (
                 <img
                   src={getCloudinaryUrl(produit.imageUrls[0])}
