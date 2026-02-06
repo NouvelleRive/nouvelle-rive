@@ -172,14 +172,14 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
         {filteredProduits.map((produit) => (
           <div
             key={produit.id}
-            className="relative group"
+            className="relative group p-2 md:p-4"
             style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
             <Link 
               href={`/boutique/${produit.id}`}
               className="block"
             >
-              <div className="aspect-square bg-white overflow-hidden">
+              <div className="aspect-square bg-white overflow-hidden border border-gray-100">
               {produit.imageUrls?.[0] ? (
                 <img
                   src={getCloudinaryUrl(produit.imageUrls[0])}
