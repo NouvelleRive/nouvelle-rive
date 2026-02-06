@@ -148,6 +148,8 @@ export async function POST(req: NextRequest) {
       adresse1: adresse1?.trim() || '',
       adresse2: adresse2?.trim() || '',
       texteEcoCirculaire: texteEcoCirculaire || 1,
+      wearType: wearType || 'womenswear',
+      stockType: stockType || 'unique',
     }
 
     // Ajouter l'UID Auth si on l'a
@@ -222,6 +224,8 @@ export async function PATCH(req: NextRequest) {
       adresse1,
       adresse2,
       texteEcoCirculaire,
+      wearType,
+      stockType,
     } = body
 
     const authHeader = req.headers.get('authorization') || ''
@@ -272,6 +276,8 @@ export async function PATCH(req: NextRequest) {
     if (adresse1 !== undefined) updateData.adresse1 = adresse1?.trim() || ''
     if (adresse2 !== undefined) updateData.adresse2 = adresse2?.trim() || ''
     if (texteEcoCirculaire !== undefined) updateData.texteEcoCirculaire = texteEcoCirculaire
+    if (wearType !== undefined) updateData.wearType = wearType
+    if (stockType !== undefined) updateData.stockType = stockType
 
     await docRef.update(updateData)
 
