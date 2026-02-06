@@ -168,12 +168,12 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       )}
 
       {/* Grille produits */}
-      <div className={`grid ${gridCols[columns]} gap-[1px] bg-black`} style={{}}>
+      <div className={`grid ${gridCols[columns]}`} style={{ borderLeft: '1px solid #000' }}>
         {filteredProduits.map((produit) => (
           <div
             key={produit.id}
             className="relative group"
-            style={{}}
+            style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
             <Link 
               href={`/boutique/${produit.id}`}
