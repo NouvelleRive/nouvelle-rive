@@ -6,7 +6,6 @@ import { useAdmin } from '@/lib/admin/context'
 import { Search, Plus, X, Trash2, Edit2 } from 'lucide-react'
 import { getAuth } from 'firebase/auth'
 
-
 type CategorieItem = {
   label: string
   idsquare: string
@@ -80,6 +79,8 @@ const EMPTY_FORM = {
   adresse1: '',
   adresse2: '',
   texteEcoCirculaire: 1,
+  wearType: 'womenswear',
+  stockType: 'unique',
 }
 
 export default function AdminDeposantesPage() {
@@ -145,6 +146,8 @@ export default function AdminDeposantesPage() {
       adresse1: d.adresse1 || '',
       adresse2: d.adresse2 || '',
       texteEcoCirculaire: (d as any).texteEcoCirculaire || 1,
+      wearType: (d as any).wearType || 'womenswear',
+      stockType: (d as any).stockType || 'unique',
     })
     setImageFile(null)
     setImagePreview(d.imageUrl || null)
@@ -246,6 +249,8 @@ export default function AdminDeposantesPage() {
         adresse1: formData.adresse1.trim(),
         adresse2: formData.adresse2.trim(),
         texteEcoCirculaire: formData.texteEcoCirculaire,
+        wearType: formData.wearType,
+        stockType: formData.stockType,
         // categorieRapport = JUSTE label + idsquare
         categorieRapport: {
           label: formData.categorieRapportLabel.trim(),
@@ -304,6 +309,7 @@ export default function AdminDeposantesPage() {
       }
 
       alert('✅ Déposante supprimée')
+      sessionStorage.setItem('scrollPos', String(window.scrollY))
       window.location.reload()
 
     } catch (err: any) {
@@ -620,6 +626,32 @@ export default function AdminDeposantesPage() {
                     <option value={2}>Upcycling</option>
                     <option value={3}>Régénéré</option>
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Collection</label>
+                    <select
+                      value={formData.wearType}
+                      onChange={(e) => setFormData({ ...formData, wearType: e.target.value })}
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="womenswear">Womenswear</option>
+                      <option value="menswear">Menswear</option>
+                      <option value="unisex">Unisex</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Type de stock</label>
+                    <select
+                      value={formData.stockType}
+                      onChange={(e) => setFormData({ ...formData, stockType: e.target.value })}
+                      className="w-full border rounded px-3 py-2 text-sm"
+                    >
+                      <option value="unique">Pièce unique</option>
+                      <option value="smallBatch">Petite série</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
