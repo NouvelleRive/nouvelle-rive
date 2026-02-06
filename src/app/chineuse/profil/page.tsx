@@ -24,10 +24,16 @@ export default function ProfilFacturationPage() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) return
       
-      // Chercher par authUid
-      const snap = await getDocs(
+      // Chercher par authUid, puis fallback par email
+      let snap = await getDocs(
         query(collection(db, 'chineuse'), where('authUid', '==', u.uid))
       )
+
+      if (snap.empty && u.email) {
+        snap = await getDocs(
+          query(collection(db, 'chineuse'), where('email', '==', u.email))
+        )
+      }
       
       if (!snap.empty) {
         const d = snap.docs[0].data()
