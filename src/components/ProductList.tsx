@@ -508,7 +508,7 @@
         const res = await fetch('/api/generate-tryon', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: faceUrl, productName: p.nom }),
+          body: JSON.stringify({ imageUrl: faceUrl, productName: p.nom, gender }),
         })
         const data = await res.json()
 
@@ -1037,7 +1037,14 @@
                     )}
                     </div>
                     <div className="flex flex-col gap-0.5 flex-shrink-0">
-                      {canGenerateTryon && <button onClick={() => handleGenerateTryon(p)} disabled={generatingTryonId === p.id} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>}
+                      {canGenerateTryon && (() => {
+                        const wt = getWearTypeForProduct(p, chineusesList)
+                        if (wt === 'unisex') return (<>
+                          <button onClick={() => handleGenerateTryon(p, 'female')} disabled={generatingTryonId === p.id} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg disabled:opacity-50" title="Porté femme">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>
+                          <button onClick={() => handleGenerateTryon(p, 'male')} disabled={generatingTryonId === p.id} className="p-1.5 text-pink-500 hover:bg-pink-50 rounded-lg disabled:opacity-50" title="Porté homme">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>
+                        </>)
+                        return <button onClick={() => handleGenerateTryon(p, wt === 'menswear' ? 'male' : 'female')} disabled={generatingTryonId === p.id} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>
+                      })()}
                       <button onClick={() => handleEdit(p)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={16} /></button>
                       <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                       <button onClick={() => handleToggleForceDisplay(p)} className={`p-1.5 rounded-lg ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={16} /> : <Eye size={16} />}</button>
@@ -1093,7 +1100,14 @@
                       <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      {canGenerateTryon && <button onClick={() => handleGenerateTryon(p)} disabled={generatingTryonId === p.id} className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs animate-pulse">⏳</span> : <Sparkles size={20} />}</button>}
+                      {canGenerateTryon && (() => {
+                        const wt = getWearTypeForProduct(p, chineusesList)
+                        if (wt === 'unisex') return (<>
+                          <button onClick={() => handleGenerateTryon(p, 'female')} disabled={generatingTryonId === p.id} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg disabled:opacity-50" title="Porté femme">{generatingTryonId === p.id ? <span className="text-xs animate-pulse">⏳</span> : <Sparkles size={20} />}</button>
+                          <button onClick={() => handleGenerateTryon(p, 'male')} disabled={generatingTryonId === p.id} className="p-2 text-pink-500 hover:bg-pink-50 rounded-lg disabled:opacity-50" title="Porté homme">{generatingTryonId === p.id ? <span className="text-xs animate-pulse">⏳</span> : <Sparkles size={20} />}</button>
+                        </>)
+                        return <button onClick={() => handleGenerateTryon(p, wt === 'menswear' ? 'male' : 'female')} disabled={generatingTryonId === p.id} className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs animate-pulse">⏳</span> : <Sparkles size={20} />}</button>
+                      })()}
                       <button onClick={() => handleEdit(p)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={20} /></button>
                       <button onClick={() => handleDelete(p.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={20} /></button>
                       <button onClick={() => handleToggleForceDisplay(p)} className={`p-2 rounded-lg ${isHidden(p) ? 'text-gray-300 hover:text-gray-500 hover:bg-gray-100' : 'text-green-500 hover:bg-green-50'}`}>{isHidden(p) ? <EyeOff size={18} /> : <Eye size={18} />}</button>
