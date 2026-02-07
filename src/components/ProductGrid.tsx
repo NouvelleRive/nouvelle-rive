@@ -58,6 +58,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     prixMin: '',
     prixMax: '',
     categorie: '',
+      sousCats: [],
     taille: '',
     color: '',
     material: '',
@@ -89,13 +90,33 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     })
   )
 
-  const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))].sort()
+  const sousCategories = filters.categorie
+    ? [...new Set(produits
+        .filter(p => {
+          const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+          return label && getMacroCategorie(label) === filters.categorie
+        })
+        .map(p => {
+          const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+          if (!label) return null
+          const parts = label.split(' - ')
+          return parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
+        })
+        .filter(Boolean) as string[]
+      )].sort((a, b) => a.localeCompare(b, 'fr'))
+    : []
+
+  const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))].sort((a, b) => a!.localeCompare(b!, 'fr'))
 
   // Produits filtrés par catégorie pour les sous-filtres
   const produitsParCat = filters.categorie
     ? produits.filter(p => {
         const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-        return label && getMacroCategorie(label) === filters.categorie
+        if (!label || getMacroCategorie(label) !== filters.categorie) return false
+        if (filters.sousCats.length === 0) return true
+        const parts = label.split(' - ')
+        const sousCat = parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
+        return filters.sousCats.includes(sousCat)
       })
     : produits
 
@@ -111,8 +132,12 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   const couleurs = [...new Set(produitsParCat.map(p => p.color).filter(Boolean))].sort()
 
   // Matières et modèles depuis les libs si catégorie sélectionnée
-  const categorieComplete = filters.categorie ? `X - ${filters.categorie}` : ''
-  const matieresLib = categorieComplete ? getMatieresForCategorie(categorieComplete) : []
+  const matieresLib = filters.categorie
+    ? [...new Set(produitsParCat.flatMap(p => {
+        const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+        return label ? getMatieresForCategorie(label) : []
+      }))]
+    : []
   const matieresPresentes = [...new Set(produitsParCat.map(p => p.material).filter(Boolean))] as string[]
   const matieres = matieresLib.length > 0
     ? matieresLib.filter(m => matieresPresentes.includes(m))
@@ -137,7 +162,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   if (filters.categorie) {
     filteredProduits = filteredProduits.filter(p => {
       const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-      return label && getMacroCategorie(label) === filters.categorie
+      if (!label || getMacroCategorie(label) !== filters.categorie) return false
+      if (filters.sousCats.length === 0) return true
+      const parts = label.split(' - ')
+      const sousCat = parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
+      return filters.sousCats.includes(sousCat)
     })
   }
   
@@ -197,6 +226,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       prixMin: '',
       prixMax: '',
       categorie: '',
+    sousCats: [] as string[],
       taille: '',
       color: '',
       material: '',
@@ -376,7 +406,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     {categories.map((cat) => (
                       <button
                         key={cat}
-                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, taille: '', color: '', material: '', modele: '', motif: '' })}
+                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, sousCats: [], taille: '', color: '', material: '', modele: '', motif: '' })}
                         className="py-2 px-3 text-xs uppercase tracking-wide transition"
                         style={{
                           fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
@@ -389,6 +419,34 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                       </button>
                     ))}
                   </div>
+                  {/* Sous-catégories */}
+                  {sousCategories.length > 1 && (
+                    <div className="grid grid-cols-2 gap-2 mt-4 pt-4" style={{ borderTop: '1px solid #eee' }}>
+                      {sousCategories.map((sousCat) => {
+                        const isSelected = filters.sousCats.includes(sousCat)
+                        return (
+                          <button
+                            key={sousCat}
+                            onClick={() => {
+                              const newSousCats = isSelected
+                                ? filters.sousCats.filter(s => s !== sousCat)
+                                : [...filters.sousCats, sousCat]
+                              setFilters({ ...filters, sousCats: newSousCats, taille: '', color: '', material: '', modele: '', motif: '' })
+                            }}
+                            className="py-1.5 px-3 text-xs uppercase tracking-wide transition"
+                            style={{
+                              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                              border: '1px solid #999',
+                              backgroundColor: isSelected ? '#555' : '#fff',
+                              color: isSelected ? '#fff' : '#555',
+                            }}
+                          >
+                            {sousCat}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
