@@ -81,6 +81,8 @@ export async function POST(req: NextRequest) {
       adresse1,
       adresse2,
       texteEcoCirculaire,
+      wearType,
+      stockType,
     } = body
 
     if (!nom?.trim()) {
