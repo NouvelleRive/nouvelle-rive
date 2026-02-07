@@ -14,6 +14,7 @@ type Produit = {
   taille?: string
   color?: string
   material?: string
+  categorie?: any
   vendu: boolean
   promotion?: boolean
   createdAt?: any
@@ -49,6 +50,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     marque: '',
     prixMin: '',
     prixMax: '',
+    categorie: '',
     taille: '',
     color: '',
     material: '',
@@ -71,9 +73,28 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const categories = [...new Set(produits.map(p => {
+    const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+    if (!label) return null
+    const parts = label.split(' - ')
+    return parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
+  }).filter(Boolean) as string[])].sort()
+
   const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))]
+
+  // Produits filtrés par catégorie pour les sous-filtres
+  const produitsParCat = filters.categorie
+    ? produits.filter(p => {
+        const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+        if (!label) return false
+        const parts = label.split(' - ')
+        const catClean = parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
+        return catClean === filters.categorie
+      })
+    : produits
+
   const tailleOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'TAILLE UNIQUE']
-  const tailles = [...new Set(produits.map(p => p.taille).filter(Boolean))].sort((a, b) => {
+  const tailles = [...new Set(produitsParCat.map(p => p.taille).filter(Boolean))].sort((a, b) => {
     const iA = tailleOrder.indexOf(a!.toUpperCase())
     const iB = tailleOrder.indexOf(b!.toUpperCase())
     if (iA !== -1 && iB !== -1) return iA - iB
@@ -81,10 +102,20 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     if (iB !== -1) return 1
     return a!.localeCompare(b!)
   })
-  const couleurs = [...new Set(produits.map(p => p.color).filter(Boolean))].sort()
-  const matieres = [...new Set(produits.map(p => p.material).filter(Boolean))].sort()
+  const couleurs = [...new Set(produitsParCat.map(p => p.color).filter(Boolean))].sort()
+  const matieres = [...new Set(produitsParCat.map(p => p.material).filter(Boolean))].sort()
 
   let filteredProduits = [...produits]
+
+  if (filters.categorie) {
+    filteredProduits = filteredProduits.filter(p => {
+      const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+      if (!label) return false
+      const parts = label.split(' - ')
+      const catClean = parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
+      return catClean === filters.categorie
+    })
+  }
   
   if (filters.promotion) {
     filteredProduits = filteredProduits.filter(p => p.promotion)
@@ -133,6 +164,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       marque: '',
       prixMin: '',
       prixMax: '',
+      categorie: '',
       taille: '',
       color: '',
       material: '',
@@ -297,30 +329,34 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
 
             {/* Filtres - scrollable */}
             <div className="flex-1 overflow-y-auto">
-              {/* Promotion */}
-              <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                <h4 
-                  className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                  style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                >
-                  Promotion
-                </h4>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div 
-                    className="w-5 h-5 flex items-center justify-center"
-                    style={{ border: '1px solid #000' }}
-                    onClick={() => setFilters({ ...filters, promotion: !filters.promotion })}
-                  >
-                    {filters.promotion && <span className="text-sm">✓</span>}
-                  </div>
-                  <span 
-                    className="text-sm uppercase tracking-wide"
+              {/* Catégorie */}
+              {categories.length > 0 && (
+                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
+                  <h4 
+                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    En promotion uniquement
-                  </span>
-                </label>
-              </div>
+                    Catégorie
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, taille: '', color: '', material: '' })}
+                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                        style={{
+                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                          border: '1px solid #000',
+                          backgroundColor: filters.categorie === cat ? '#000' : '#fff',
+                          color: filters.categorie === cat ? '#fff' : '#000',
+                        }}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Marque */}
               {marques.length > 0 && (
@@ -422,9 +458,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                   </p>
                 )}
               </div>
-            </div>
 
-            {/* Couleur */}
+              {/* Couleur */}
               {couleurs.length > 0 && (
                 <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
                   <h4 
@@ -481,6 +516,32 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                   </div>
                 </div>
               )}
+
+              {/* Promotion */}
+              <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
+                <h4 
+                  className="uppercase text-xs tracking-widest mb-4 font-semibold"
+                  style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+                >
+                  Promotion
+                </h4>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div 
+                    className="w-5 h-5 flex items-center justify-center"
+                    style={{ border: '1px solid #000' }}
+                    onClick={() => setFilters({ ...filters, promotion: !filters.promotion })}
+                  >
+                    {filters.promotion && <span className="text-sm">✓</span>}
+                  </div>
+                  <span 
+                    className="text-sm uppercase tracking-wide"
+                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+                  >
+                    En promotion uniquement
+                  </span>
+                </label>
+              </div>
+            </div>
 
             {/* Footer sticky */}
             <div 
