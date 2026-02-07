@@ -48,7 +48,7 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, productName } = await req.json()
+    const { imageUrl, productName, gender = 'female' } = await req.json()
 
     console.log('📥 Génération photo portée pour:', productName || 'produit')
 
@@ -72,7 +72,13 @@ export async function POST(req: NextRequest) {
     console.log('🤖 Appel FASHN.ai (product-to-model)...')
 
     // Sélection pondérée du modèle (représentativité française approx.)
-    const modelPool = [
+    const modelPool = gender === 'male' ? [
+      { weight: 70, desc: 'european man' },
+      { weight: 12, desc: 'black african man' },
+      { weight: 10, desc: 'north african man' },
+      { weight: 5, desc: 'east asian man' },
+      { weight: 3, desc: 'mixed race man' },
+    ] : [
       { weight: 70, desc: 'european woman' },
       { weight: 12, desc: 'black african woman' },
       { weight: 10, desc: 'north african woman' },
@@ -86,7 +92,9 @@ export async function POST(req: NextRequest) {
       rand -= m.weight
       if (rand <= 0) { selectedModel = m.desc; break }
     }
-   const prompt = `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing elegant wide leg trousers and heels, professional editorial fashion shoot, no skinny jeans, plain white studio background`
+   const prompt = gender === 'male'
+      ? `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing tailored trousers and dress shoes, professional editorial fashion shoot, plain white studio background`
+      : `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing elegant wide leg trousers and heels, professional editorial fashion shoot, no skinny jeans, plain white studio background`
     console.log('🎨 Prompt choisi:', prompt)
     
     const fashnResponse = await fetch('https://api.fashn.ai/v1/run', {
