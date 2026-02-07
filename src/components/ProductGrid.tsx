@@ -88,7 +88,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     return parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
   }).filter(Boolean) as string[])].sort()
 
-  const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))]
+  const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))].sort()
 
   // Produits filtrés par catégorie pour les sous-filtres
   const produitsParCat = filters.categorie
