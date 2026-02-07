@@ -246,46 +246,33 @@
         sharpInstance = sharpInstance.rotate(rotation)
       }
 
-      // Trim (supprimer les bords transparents)
-      sharpInstance = sharpInstance.trim()
+      // Trim + resize 1140 + centrage 1200x1200 blanc + retouches couleur
+      const trimmedBuffer = await sharpInstance.trim().toBuffer()
 
-      // Récupérer les métadonnées après trim pour le padding
-      const trimmedBuffer = await sharpInstance.toBuffer()
-      const metadata = await sharp(trimmedBuffer).metadata()
-      const trimmedWidth = metadata.width || 1200
-      const trimmedHeight = metadata.height || 1200
-
-      // Créer l'image finale : fond blanc, carré 1200x1200, image centrée
-      // Resize à 80% (960px)
-      const resizedBuffer = await sharp(trimmedBuffer)
+      const resized = await sharp(trimmedBuffer)
         .resize(1140, 1140, { fit: 'inside' })
         .toBuffer()
 
-      const finalMeta = await sharp(resizedBuffer).metadata()
-      const finalW = finalMeta.width || 960
-      const finalH = finalMeta.height || 960
-      const padLeft = Math.floor((1200 - finalW) / 2)
-      const padTop = Math.floor((1200 - finalH) / 2)
+      const meta = await sharp(resized).metadata()
+      const w = meta.width || 1140
+      const h = meta.height || 1140
 
-      const finalBuffer = await sharp(resizedBuffer)
+      const finalBuffer = await sharp(resized)
         .extend({
-          top: padTop,
-          bottom: 1200 - finalH - padTop,
-          left: padLeft,
-          right: 1200 - finalW - padLeft,
+          top: Math.floor((1200 - h) / 2),
+          bottom: Math.ceil((1200 - h) / 2),
+          left: Math.floor((1200 - w) / 2),
+          right: Math.ceil((1200 - w) / 2),
           background: { r: 255, g: 255, b: 255 }
         })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
-        .modulate({
-          brightness: 1.08,
-          saturation: 1.20,
-        })
+        .modulate({ brightness: 1.08, saturation: 1.20 })
         .gamma(1.05)
         .sharpen({ sigma: 1.5 })
         .png({ quality: 90 })
         .toBuffer()
 
-      console.log('🖼️ Transformations Sharp appliquées')
+      console.log('🖼️ Image détourée:', w, 'x', h)
 
       // 4. Upload vers Bunny
       const storageZone = process.env.BUNNY_STORAGE_ZONE
