@@ -7,6 +7,7 @@ import FavoriteButton from '@/components/FavoriteButton'
 import { COLOR_PALETTE } from '@/lib/couleurs'
 import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
+import { MOTIFS } from '@/lib/motifs'
 
 type Produit = {
   id: string
@@ -18,6 +19,7 @@ type Produit = {
   color?: string
   material?: string
   modele?: string
+  motif?: string
   categorie?: any
   vendu: boolean
   promotion?: boolean
@@ -59,6 +61,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     color: '',
     material: '',
     modele: '',
+    motif: '',
   })
   const [tri, setTri] = useState('nouveautes')
 
@@ -123,6 +126,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     ? modelesLib.filter(m => modelesPresents.includes(m))
     : modelesPresents.sort()
 
+    const motifsPresents = [...new Set(produitsParCat.map(p => p.motif).filter(Boolean))] as string[]
+  const motifs = MOTIFS.filter(m => motifsPresents.includes(m))
+
   let filteredProduits = [...produits]
 
   if (filters.categorie) {
@@ -161,6 +167,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     filteredProduits = filteredProduits.filter(p => p.modele === filters.modele)
   }
 
+  if (filters.motif) {
+    filteredProduits = filteredProduits.filter(p => p.motif === filters.motif)
+  }
+
   if (tri === 'prix-asc') {
     filteredProduits.sort((a, b) => a.prix - b.prix)
   } else if (tri === 'prix-desc') {
@@ -191,6 +201,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       color: '',
       material: '',
       modele: '',
+      motif: '',
     })
   }
 
@@ -365,7 +376,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     {categories.map((cat) => (
                       <button
                         key={cat}
-                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, taille: '', color: '', material: '', modele: '' })}
+                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, taille: '', color: '', material: '', modele: '', motif: '' })}
                         className="py-2 px-3 text-xs uppercase tracking-wide transition"
                         style={{
                           fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
@@ -544,6 +555,64 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                         }}
                       >
                         {matiere}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Modèle */}
+              {modeles.length > 0 && (
+                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
+                  <h4 
+                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
+                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+                  >
+                    Modèle
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {modeles.map((modele) => (
+                      <button
+                        key={modele}
+                        onClick={() => setFilters({ ...filters, modele: filters.modele === modele ? '' : modele })}
+                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                        style={{
+                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                          border: '1px solid #000',
+                          backgroundColor: filters.modele === modele ? '#000' : '#fff',
+                          color: filters.modele === modele ? '#fff' : '#000',
+                        }}
+                      >
+                        {modele}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Motif */}
+              {motifs.length > 0 && (
+                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
+                  <h4 
+                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
+                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+                  >
+                    Motif
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {motifs.map((motif) => (
+                      <button
+                        key={motif}
+                        onClick={() => setFilters({ ...filters, motif: filters.motif === motif ? '' : motif })}
+                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                        style={{
+                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                          border: '1px solid #000',
+                          backgroundColor: filters.motif === motif ? '#000' : '#fff',
+                          color: filters.motif === motif ? '#fff' : '#000',
+                        }}
+                      >
+                        {motif}
                       </button>
                     ))}
                   </div>
