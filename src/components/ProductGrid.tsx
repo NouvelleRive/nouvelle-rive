@@ -8,6 +8,7 @@ import { COLOR_PALETTE } from '@/lib/couleurs'
 import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
+import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
 
 type Produit = {
   id: string
