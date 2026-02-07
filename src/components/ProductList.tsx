@@ -117,7 +117,7 @@
   }
 
   function getWearTypeForProduct(p: Produit, chineusesList: {trigramme: string, wearType: string}[]): string {
-      const tri = p.sku?.split('-')[0]?.trim().toUpperCase()
+      const tri = p.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
       if (!tri) return 'womenswear'
       const ch = chineusesList.find(c => c.trigramme?.toUpperCase() === tri)
       return ch?.wearType || 'womenswear'
