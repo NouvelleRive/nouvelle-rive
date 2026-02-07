@@ -12,6 +12,8 @@ type Produit = {
   imageUrls: string[]
   marque?: string
   taille?: string
+  color?: string
+  material?: string
   vendu: boolean
   promotion?: boolean
   createdAt?: any
@@ -48,6 +50,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     prixMin: '',
     prixMax: '',
     taille: '',
+    color: '',
+    material: '',
   })
   const [tri, setTri] = useState('nouveautes')
 
@@ -68,7 +72,17 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   }, [])
 
   const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))]
-  const tailles = [...new Set(produits.map(p => p.taille).filter(Boolean))]
+  const tailleOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'TAILLE UNIQUE']
+  const tailles = [...new Set(produits.map(p => p.taille).filter(Boolean))].sort((a, b) => {
+    const iA = tailleOrder.indexOf(a!.toUpperCase())
+    const iB = tailleOrder.indexOf(b!.toUpperCase())
+    if (iA !== -1 && iB !== -1) return iA - iB
+    if (iA !== -1) return -1
+    if (iB !== -1) return 1
+    return a!.localeCompare(b!)
+  })
+  const couleurs = [...new Set(produits.map(p => p.color).filter(Boolean))].sort()
+  const matieres = [...new Set(produits.map(p => p.material).filter(Boolean))].sort()
 
   let filteredProduits = [...produits]
   
@@ -86,6 +100,12 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   }
   if (filters.taille) {
     filteredProduits = filteredProduits.filter(p => p.taille === filters.taille)
+  }
+  if (filters.color) {
+    filteredProduits = filteredProduits.filter(p => p.color === filters.color)
+  }
+  if (filters.material) {
+    filteredProduits = filteredProduits.filter(p => p.material === filters.material)
   }
 
   if (tri === 'prix-asc') {
@@ -114,6 +134,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       prixMin: '',
       prixMax: '',
       taille: '',
+      color: '',
+      material: '',
     })
   }
 
@@ -401,6 +423,64 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                 )}
               </div>
             </div>
+
+            {/* Couleur */}
+              {couleurs.length > 0 && (
+                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
+                  <h4 
+                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
+                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+                  >
+                    Couleur
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    {couleurs.map((couleur) => (
+                      <button
+                        key={couleur}
+                        onClick={() => setFilters({ ...filters, color: filters.color === couleur ? '' : couleur! })}
+                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                        style={{
+                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                          border: '1px solid #000',
+                          backgroundColor: filters.color === couleur ? '#000' : '#fff',
+                          color: filters.color === couleur ? '#fff' : '#000',
+                        }}
+                      >
+                        {couleur}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Matière */}
+              {matieres.length > 0 && (
+                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
+                  <h4 
+                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
+                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+                  >
+                    Matière
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {matieres.map((matiere) => (
+                      <button
+                        key={matiere}
+                        onClick={() => setFilters({ ...filters, material: filters.material === matiere ? '' : matiere! })}
+                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                        style={{
+                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                          border: '1px solid #000',
+                          backgroundColor: filters.material === matiere ? '#000' : '#fff',
+                          color: filters.material === matiere ? '#fff' : '#000',
+                        }}
+                      >
+                        {matiere}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             {/* Footer sticky */}
             <div 
