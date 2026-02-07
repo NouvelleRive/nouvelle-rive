@@ -4,6 +4,9 @@
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import FavoriteButton from '@/components/FavoriteButton'
+import { COLOR_PALETTE } from '@/lib/couleurs'
+import { getModelesForCategorie } from '@/lib/modeles'
+import { getMatieresForCategorie } from '@/lib/matieres'
 
 type Produit = {
   id: string
@@ -14,6 +17,7 @@ type Produit = {
   taille?: string
   color?: string
   material?: string
+  modele?: string
   categorie?: any
   vendu: boolean
   promotion?: boolean
@@ -54,6 +58,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     taille: '',
     color: '',
     material: '',
+    modele: '',
   })
   const [tri, setTri] = useState('nouveautes')
 
@@ -103,7 +108,20 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     return a!.localeCompare(b!)
   })
   const couleurs = [...new Set(produitsParCat.map(p => p.color).filter(Boolean))].sort()
-  const matieres = [...new Set(produitsParCat.map(p => p.material).filter(Boolean))].sort()
+
+  // Matières et modèles depuis les libs si catégorie sélectionnée
+  const categorieComplete = filters.categorie ? `X - ${filters.categorie}` : ''
+  const matieresLib = categorieComplete ? getMatieresForCategorie(categorieComplete) : []
+  const matieresPresentes = [...new Set(produitsParCat.map(p => p.material).filter(Boolean))] as string[]
+  const matieres = matieresLib.length > 0
+    ? matieresLib.filter(m => matieresPresentes.includes(m))
+    : matieresPresentes.sort()
+
+  const modelesLib = categorieComplete ? getModelesForCategorie(categorieComplete) : []
+  const modelesPresents = [...new Set(produitsParCat.map(p => p.modele).filter(Boolean))] as string[]
+  const modeles = modelesLib.length > 0
+    ? modelesLib.filter(m => modelesPresents.includes(m))
+    : modelesPresents.sort()
 
   let filteredProduits = [...produits]
 
@@ -139,6 +157,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     filteredProduits = filteredProduits.filter(p => p.material === filters.material)
   }
 
+  if (filters.modele) {
+    filteredProduits = filteredProduits.filter(p => p.modele === filters.modele)
+  }
+
   if (tri === 'prix-asc') {
     filteredProduits.sort((a, b) => a.prix - b.prix)
   } else if (tri === 'prix-desc') {
@@ -168,6 +190,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
       taille: '',
       color: '',
       material: '',
+      modele: '',
     })
   }
 
@@ -342,7 +365,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     {categories.map((cat) => (
                       <button
                         key={cat}
-                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, taille: '', color: '', material: '' })}
+                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, taille: '', color: '', material: '', modele: '' })}
                         className="py-2 px-3 text-xs uppercase tracking-wide transition"
                         style={{
                           fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
@@ -469,21 +492,31 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     Couleur
                   </h4>
                   <div className="grid grid-cols-3 gap-2">
-                    {couleurs.map((couleur) => (
-                      <button
-                        key={couleur}
-                        onClick={() => setFilters({ ...filters, color: filters.color === couleur ? '' : couleur! })}
-                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                        style={{
-                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                          border: '1px solid #000',
-                          backgroundColor: filters.color === couleur ? '#000' : '#fff',
-                          color: filters.color === couleur ? '#fff' : '#000',
-                        }}
-                      >
-                        {couleur}
-                      </button>
-                    ))}
+                    {couleurs.map((couleur) => {
+                      const paletteEntry = COLOR_PALETTE.find(c => c.name === couleur)
+                      return (
+                        <button
+                          key={couleur}
+                          onClick={() => setFilters({ ...filters, color: filters.color === couleur ? '' : couleur! })}
+                          className="py-2 px-3 text-xs uppercase tracking-wide transition flex items-center gap-2"
+                          style={{
+                            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                            border: filters.color === couleur ? '2px solid #000' : '1px solid #000',
+                            backgroundColor: filters.color === couleur ? '#f3f4f6' : '#fff',
+                            color: '#000',
+                          }}
+                        >
+                          <span 
+                            className="w-4 h-4 rounded-full flex-shrink-0"
+                            style={{ 
+                              background: paletteEntry?.hex || '#ccc',
+                              border: couleur === 'Blanc' || couleur === 'Écru' || couleur === 'Crème' ? '1px solid #ccc' : 'none',
+                            }}
+                          />
+                          {couleur}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
