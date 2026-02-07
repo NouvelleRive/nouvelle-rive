@@ -82,12 +82,12 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const categories = [...new Set(produits.map(p => {
-    const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-    if (!label) return null
-    const parts = label.split(' - ')
-    return parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
-  }).filter(Boolean) as string[])].sort()
+  const categories = MACRO_ORDER.filter(macro =>
+    produits.some(p => {
+      const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+      return label && getMacroCategorie(label) === macro
+    })
+  )
 
   const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))].sort()
 
@@ -95,10 +95,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   const produitsParCat = filters.categorie
     ? produits.filter(p => {
         const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-        if (!label) return false
-        const parts = label.split(' - ')
-        const catClean = parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
-        return catClean === filters.categorie
+        return label && getMacroCategorie(label) === filters.categorie
       })
     : produits
 
@@ -121,7 +118,12 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     ? matieresLib.filter(m => matieresPresentes.includes(m))
     : matieresPresentes.sort()
 
-  const modelesLib = categorieComplete ? getModelesForCategorie(categorieComplete) : []
+  const modelesLib = filters.categorie
+    ? [...new Set(produitsParCat.flatMap(p => {
+        const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+        return label ? getModelesForCategorie(label) : []
+      }))]
+    : []
   const modelesPresents = [...new Set(produitsParCat.map(p => p.modele).filter(Boolean))] as string[]
   const modeles = modelesLib.length > 0
     ? modelesLib.filter(m => modelesPresents.includes(m))
@@ -135,10 +137,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   if (filters.categorie) {
     filteredProduits = filteredProduits.filter(p => {
       const label = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-      if (!label) return false
-      const parts = label.split(' - ')
-      const catClean = parts.length > 1 ? parts.slice(1).join(' - ').trim() : label.trim()
-      return catClean === filters.categorie
+      return label && getMacroCategorie(label) === filters.categorie
     })
   }
   
