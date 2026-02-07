@@ -116,6 +116,13 @@
       return createdAt.toDate() < twoMonthsAgo
   }
 
+  function getWearTypeForProduct(p: Produit, chineusesList: {trigramme: string, wearType: string}[]): string {
+      const tri = p.sku?.split('-')[0]?.trim().toUpperCase()
+      if (!tri) return 'womenswear'
+      const ch = chineusesList.find(c => c.trigramme?.toUpperCase() === tri)
+      return ch?.wearType || 'womenswear'
+    }
+
     // =====================
     // COMPONENT
     // =====================
@@ -132,7 +139,7 @@
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
 
       // Chineuses depuis Firestore
-      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string, trigramme: string, categories: {label: string, idsquare?: string}[]}[]>([])
+      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string, trigramme: string, wearType: string, categories: {label: string, idsquare?: string}[]}[]>([])
 
       useEffect(() => {
         const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
@@ -142,6 +149,7 @@
             authUid: d.data().authUid || '',
             email: d.data().email || '',
             trigramme: d.data().trigramme || '',
+            wearType: d.data().wearType || 'womenswear',
             categories: d.data()['Catégorie'] || d.data().categories || []
           }))
           setChineusesList(data)
@@ -488,7 +496,7 @@
       }
     }
 
-      const handleGenerateTryon = async (p: Produit) => {
+      const handleGenerateTryon = async (p: Produit, gender: 'male' | 'female' = 'female') => {
       const faceUrl = p.photos?.face || p.imageUrls?.[0] || p.imageUrl
       if (!faceUrl) {
         alert('Aucune photo face disponible')
