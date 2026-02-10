@@ -10,6 +10,7 @@
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
   import { COLOR_PALETTE } from '@/lib/couleurs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
+  import { detectMarque } from '@/lib/marques'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
