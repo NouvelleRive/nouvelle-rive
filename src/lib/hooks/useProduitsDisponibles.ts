@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { collection, query, where, getDocs, orderBy, limit, startAfter, DocumentSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
@@ -32,6 +32,7 @@ export function useProduitsDisponibles() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
+  const loadingRef = useRef(false)
 
   useEffect(() => {
     async function fetchProduits() {
@@ -82,8 +83,8 @@ export function useProduitsDisponibles() {
   }, [])
 
   const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore || !lastDoc) return
-    
+    if (loadingRef.current || !hasMore || !lastDoc) return
+    loadingRef.current = true
     setLoadingMore(true)
     try {
       const q = query(
@@ -118,12 +119,17 @@ export function useProduitsDisponibles() {
         return false
       })
 
-      setProduits(prev => [...prev, ...produitsVisibles])
+      setProduits(prev => {
+        const existingIds = new Set(prev.map(p => p.id))
+        const newOnly = produitsVisibles.filter(p => !existingIds.has(p.id))
+        return [...prev, ...newOnly]
+      })
       setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null)
       setHasMore(snapshot.docs.length === 100)
     } catch (error) {
       console.error('Erreur:', error)
     } finally {
+      loadingRef.current = false
       setLoadingMore(false)
     }
   }, [loadingMore, hasMore, lastDoc])
