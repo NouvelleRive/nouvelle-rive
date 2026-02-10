@@ -11,6 +11,7 @@
   import { COLOR_PALETTE } from '@/lib/couleurs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
+  import { detectModele } from '@/lib/modeles'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -268,6 +269,8 @@ async function compressImage(file: File): Promise<string> {
     material: string
     color: string
     madeIn: string
+    modele: string
+    motif: string
     sku?: string
     // Nouvelles photos (File)
     photoFace: File | null
@@ -336,6 +339,8 @@ async function compressImage(file: File): Promise<string> {
       material?: string
       color?: string
       madeIn?: string
+      modele?: string
+      motif?: string
       sku?: string
       photos?: ExistingPhotos
     }
@@ -429,6 +434,8 @@ async function compressImage(file: File): Promise<string> {
       material: initialData?.material || '',
       color: initialData?.color || '',
       madeIn: initialData?.madeIn || '',
+      modele: initialData?.modele || '',
+      motif: initialData?.motif || '',
       sku: initialData?.sku || '',
       photoFace: null,
       photoDos: null,
@@ -474,6 +481,8 @@ async function compressImage(file: File): Promise<string> {
           material: initialData.material || '',
           color: initialData.color || '',
           madeIn: initialData.madeIn || '',
+          modele: initialData.modele || '',
+          motif: initialData.motif || '',
           sku: initialData.sku || '',
           photoFace: null,
           photoDos: null,
@@ -1449,6 +1458,10 @@ async function compressImage(file: File): Promise<string> {
                     if (!formData.marque) {
                       const detected = detectMarque(nom)
                       if (detected) updates.marque = detected
+                    }
+                    if (!formData.modele) {
+                      const detected = detectModele(nom)
+                      if (detected) updates.modele = detected
                     }
                     setFormData(prev => ({ ...prev, ...updates }))
                   }}
