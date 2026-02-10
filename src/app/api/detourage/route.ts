@@ -247,7 +247,12 @@
       }
 
       // Trim + resize 1140 + centrage 1200x1200 blanc + retouches couleur
-      const trimmedBuffer = await sharpInstance.trim().toBuffer()
+      const trimResult = await sharpInstance.trim().toBuffer({ resolveWithObject: true })
+      const trimmedBuffer = trimResult.data
+      const trimLeft = Math.abs(trimResult.info.trimOffsetLeft || 0)
+      const trimTop = Math.abs(trimResult.info.trimOffsetTop || 0)
+      const trimW = trimResult.info.width
+      const trimH = trimResult.info.height
 
       const resized = await sharp(trimmedBuffer)
         .resize(1000, 1000, { fit: 'inside' })
@@ -305,10 +310,40 @@
       const finalUrl = `${cdnUrl}/${path}`
       console.log('✅ Upload Bunny réussi:', finalUrl)
 
+      // Source alignée pour restauration (même cadrage que le détouré)
+      let sourceSharp = sharp(preBuffer)
+      if (rotation !== 0) sourceSharp = sourceSharp.rotate(rotation)
+      const croppedSource = await sourceSharp
+        .extract({ left: trimLeft, top: trimTop, width: trimW, height: trimH })
+        .resize(1000, 1000, { fit: 'inside' })
+        .toBuffer()
+      const smeta = await sharp(croppedSource).metadata()
+      const sw = smeta.width || 1000
+      const sh = smeta.height || 1000
+      const sourceBuffer = await sharp(croppedSource)
+        .extend({
+          top: Math.floor((1200 - sh) / 2),
+          bottom: Math.ceil((1200 - sh) / 2),
+          left: Math.floor((1200 - sw) / 2),
+          right: Math.ceil((1200 - sw) / 2),
+          background: { r: 255, g: 255, b: 255 }
+        })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .png({ quality: 90 })
+        .toBuffer()
+      const sourcePath = `produits/source_${timestamp}_${random}.png`
+      await fetch(`https://storage.bunnycdn.com/${storageZone}/${sourcePath}`, {
+        method: 'PUT',
+        headers: { 'AccessKey': apiKey, 'Content-Type': 'image/png' },
+        body: sourceBuffer,
+      })
+      const sourceUrl = `${cdnUrl}/${sourcePath}`
+
       return NextResponse.json({ 
         success: true, 
         maskUrl: finalUrl,
-        rawUrl: outputUrl // URL brute de Replicate (temporaire)
+        rawUrl: outputUrl,
+        sourceUrl: sourceUrl,
       })
 
     } catch (error: any) {
