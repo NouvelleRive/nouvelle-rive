@@ -1443,7 +1443,15 @@ async function compressImage(file: File): Promise<string> {
                   <input
                     type="text"
                     value={formData.nom}
-                    onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                    onChange={(e) => {
+                    const nom = e.target.value
+                    const updates: any = { nom }
+                    if (!formData.marque) {
+                      const detected = detectMarque(nom)
+                      if (detected) updates.marque = detected
+                    }
+                    setFormData(prev => ({ ...prev, ...updates }))
+                  }}
                     required
                     className={`w-full border rounded px-2 py-1.5 text-sm ${mode === 'create' && sku ? 'rounded-l-none' : ''}`}
                     placeholder="Nom du produit"
