@@ -202,42 +202,16 @@
     const handleConserver = async () => {
       setProcessing(true)
       try {
-        // Crop carré côté client
-        const img = new Image()
-        img.crossOrigin = 'anonymous'
-        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = imageUrl })
-
-        const size = Math.min(img.width, img.height)
-        const cropX = (img.width - size) / 2
-        const cropY = (img.height - size) / 2
-
-        const canvas = document.createElement('canvas')
-        canvas.width = 1200
-        canvas.height = 1200
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, cropX, cropY, size, size, 0, 0, 1200, 1200)
-
-        const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.92))
-        const arrayBuffer = await blob.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
-        let binary = ''
-        const chunkSize = 8192
-        for (let i = 0; i < uint8Array.length; i += chunkSize) {
-          binary += String.fromCharCode(...uint8Array.slice(i, i + chunkSize))
-        }
-        const base64 = btoa(binary)
-
         const res = await fetch('/api/detourage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, mode: 'erased' })
+          body: JSON.stringify({ imageUrl, formatOnly: true })
         })
         const data = await res.json()
-
         if (data.success && data.maskUrl) {
           onConfirm(data.maskUrl)
         } else {
-          throw new Error(data.error || 'Erreur upload')
+          throw new Error(data.error || 'Erreur')
         }
       } catch (err: any) {
         console.error('Erreur conserver:', err)
