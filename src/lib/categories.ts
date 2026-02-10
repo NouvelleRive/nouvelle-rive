@@ -3,11 +3,7 @@
 import { extractCategorie } from './tailles'
 
 export const MACRO_CATEGORIES: Record<string, string> = {
-  'sac': 'Maroquinerie',
-  'gants': 'Maroquinerie',
-  'portefeuille': 'Maroquinerie',
-  'porte clef': 'Maroquinerie',
-  'porte briquet': 'Maroquinerie',
+  // Prêt-à-porter
   'haut': 'Prêt-à-porter',
   'chemise': 'Prêt-à-porter',
   'pull': 'Prêt-à-porter',
@@ -23,12 +19,27 @@ export const MACRO_CATEGORIES: Record<string, string> = {
   'short': 'Prêt-à-porter',
   'ensemble': 'Prêt-à-porter',
   'combinaison': 'Prêt-à-porter',
-  'ceinture': 'Prêt-à-porter',
-  'chapeau': 'Prêt-à-porter',
-  'casquette': 'Prêt-à-porter',
-  'accessoires': 'Prêt-à-porter',
-  'accesoires': 'Prêt-à-porter',
+
+  // Sacs & Maroquinerie
+  'sac': 'Sacs & Maroquinerie',
+  'portefeuille': 'Sacs & Maroquinerie',
+  'porte clef': 'Sacs & Maroquinerie',
+  'porte briquet': 'Sacs & Maroquinerie',
+
+  // Accessoires
+  'ceinture': 'Accessoires',
+  'chapeau': 'Accessoires',
+  'casquette': 'Accessoires',
+  'écharpe': 'Accessoires',
+  'foulard': 'Accessoires',
+  'gants': 'Accessoires',
+  'accessoires': 'Accessoires',
+  'accesoires': 'Accessoires',
+
+  // Chaussures
   'chaussures': 'Chaussures',
+
+  // Bijoux
   'bague': 'Bijoux',
   "boucles d'oreilles": 'Bijoux',
   'bracelet': 'Bijoux',
@@ -39,10 +50,12 @@ export const MACRO_CATEGORIES: Record<string, string> = {
   'piercing': 'Bijoux',
   'bijoux': 'Bijoux',
   'bijou de cravates et foulards': 'Bijoux',
+
+  // Lunettes
   'lunettes': 'Lunettes',
 }
 
-export const MACRO_ORDER = ['Prêt-à-porter', 'Maroquinerie', 'Chaussures', 'Bijoux', 'Lunettes']
+export const MACRO_ORDER = ['Prêt-à-porter', 'Sacs & Maroquinerie', 'Accessoires', 'Chaussures', 'Bijoux', 'Lunettes']
 
 export function getMacroCategorie(categorieComplete: string): string | null {
   const cat = extractCategorie(categorieComplete).toLowerCase()
