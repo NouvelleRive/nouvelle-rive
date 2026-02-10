@@ -496,59 +496,44 @@
       }
     }
 
-      const openTryonModal = (p: Produit, gender: 'male' | 'female' = 'female') => {
+      const openTryonModal = async (p: Produit, gender: 'male' | 'female' = 'female') => {
       const faceUrl = p.photos?.face || p.imageUrls?.[0] || p.imageUrl
       if (!faceUrl) {
         alert('Aucune photo face disponible')
         return
       }
-
-      setTryonViews(new Set(['front']))
-      setTryonModal({ product: p, gender })
-    }
-
-    const handleConfirmTryon = async () => {
-      if (!tryonModal) return
-      const { product: p, gender } = tryonModal
-      const views = Array.from(tryonViews)
-      if (views.length === 0) return
-
-      setTryonModal(null)
       setGeneratingTryonId(p.id)
-
       try {
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie || ''
         const matiere = p.material || ''
+        const views: {view: string, imageUrl: string}[] = [
+          { view: 'front', imageUrl: faceUrl }
+        ]
+        if (p.photos?.dos) {
+          views.push({ view: 'back', imageUrl: p.photos.dos })
+        }
 
-        const promises = views.map(async (view) => {
-          const imageUrl = view === 'back'
-            ? (p.photos?.dos || p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
-            : (p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
-          if (!imageUrl) throw new Error(`Pas de photo ${view === 'back' ? 'dos' : 'face'}`)
-
+        const results = await Promise.all(views.map(async (v) => {
           const res = await fetch('/api/generate-tryon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl, productName: p.nom, gender, categorie: cat, matiere, view }),
+            body: JSON.stringify({ imageUrl: v.imageUrl, productName: p.nom, gender, categorie: cat, matiere, view: v.view }),
           })
           const data = await res.json()
           if (!data.success || !data.onModelUrl) throw new Error(data.error || 'Erreur génération')
-          return { view, url: data.onModelUrl }
-        })
+          return { view: v.view, url: data.onModelUrl }
+        }))
 
-        const results = await Promise.all(promises)
         const updateData: Record<string, any> = {}
         const currentImages = getAllImages(p)
         const newUrls = [...currentImages]
-
         for (const r of results) {
           if (r.view === 'front') updateData['photos.faceOnModel'] = r.url
           else updateData['photos.dosOnModel'] = r.url
-          if (!newUrls.includes(r.url)) newUrls.unshift(r.url)
+          if (!newUrls.includes(r.url)) newUrls.push(r.url)
         }
         updateData.imageUrls = newUrls
         updateData.imageUrl = newUrls[0]
-
         await updateDoc(doc(db, 'produits', p.id), updateData)
         alert(`${results.length} photo(s) portée(s) générée(s) !`)
       } catch (err: any) {
@@ -1311,33 +1296,6 @@
                     showExcelImport={false}
                     loading={savingProduct}
                   />
-                </div>
-              </div>
-            </div>
-          )}
-
-    {/* Modal try-on */}
-          {tryonModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl max-w-sm w-full p-6">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Générer photo(s) portée(s)</h3>
-                <p className="text-sm text-gray-500 mb-4">Sélectionnez les vues (max 2)</p>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-gray-300" style={{ borderColor: tryonViews.has('front') ? '#22209C' : undefined, backgroundColor: tryonViews.has('front') ? '#22209C10' : undefined }}>
-                    <input type="checkbox" checked={tryonViews.has('front')} onChange={() => setTryonViews(prev => { const n = new Set(prev); n.has('front') ? n.delete('front') : n.add('front'); return n })} className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]" />
-                    <span className="font-medium text-gray-900">Face</span>
-                  </label>
-                  <label className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-all ${tryonModal.product.photos?.dos ? 'cursor-pointer hover:border-gray-300' : 'opacity-40 cursor-not-allowed'}`} style={{ borderColor: tryonViews.has('back') ? '#22209C' : undefined, backgroundColor: tryonViews.has('back') ? '#22209C10' : undefined }}>
-                    <input type="checkbox" checked={tryonViews.has('back')} disabled={!tryonModal.product.photos?.dos} onChange={() => { if (!tryonModal.product.photos?.dos) return; setTryonViews(prev => { const n = new Set(prev); n.has('back') ? n.delete('back') : n.add('back'); return n }) }} className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]" />
-                    <div>
-                      <span className="font-medium text-gray-900">Dos</span>
-                      {!tryonModal.product.photos?.dos && <p className="text-xs text-gray-400">Photo dos manquante</p>}
-                    </div>
-                  </label>
-                </div>
-                <div className="flex gap-3 justify-end mt-6">
-                  <button onClick={() => setTryonModal(null)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
-                  <button onClick={handleConfirmTryon} disabled={tryonViews.size === 0} className="px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm disabled:opacity-50 hover:bg-[#1a1a7a]">Générer ({tryonViews.size} crédit{tryonViews.size > 1 ? 's' : ''})</button>
                 </div>
               </div>
             </div>
