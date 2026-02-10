@@ -162,13 +162,6 @@
     const handleAutoRemove = async () => {
       setProcessing(true)
       setError(null)
-      
-      // Sauvegarder l'image source avant détourage
-      const srcImg = new Image()
-      srcImg.crossOrigin = 'anonymous'
-      srcImg.src = imageUrl
-      await new Promise(resolve => { srcImg.onload = resolve })
-      sourceImageRef.current = srcImg
 
       try {
         const res = await fetch('/api/detourage', {
@@ -182,6 +175,13 @@
         if (data.success && data.maskUrl) {
           setProcessedUrl(data.maskUrl)
           setRawUrl(data.rawUrl || data.maskUrl)
+          if (data.sourceUrl) {
+            const srcImg = new Image()
+            srcImg.crossOrigin = 'anonymous'
+            srcImg.src = data.sourceUrl
+            await new Promise(resolve => { srcImg.onload = resolve })
+            sourceImageRef.current = srcImg
+          }
         } else {
           setError(data.error || 'Erreur lors du détourage')
         }
