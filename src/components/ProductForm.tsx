@@ -251,6 +251,7 @@ async function compressImage(file: File): Promise<string> {
     face?: string
     faceOnModel?: string
     dos?: string
+    dosOnModel?: string
     details?: string[]
   }
 
@@ -519,6 +520,9 @@ async function compressImage(file: File): Promise<string> {
       }
       if (formData.existingPhotos.dos && !formData.deletedPhotos.dos) {
         items.push({ id: 'existing-dos', url: formData.existingPhotos.dos, type: 'dos', label: 'Dos' })
+      }
+      if (formData.existingPhotos.dosOnModel) {
+        items.push({ id: 'existing-dosOnModel', url: formData.existingPhotos.dosOnModel, type: 'faceOnModel', label: 'Portée dos' })
       }
       (formData.existingPhotos.details || []).forEach((url, i) => {
         if (!isDetailDeleted(i)) {

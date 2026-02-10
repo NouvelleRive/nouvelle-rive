@@ -49,6 +49,7 @@
         face?: string
         faceOnModel?: string
         dos?: string
+        dosOnModel?: string
         details?: string[]
       }
       imageUrl?: string
@@ -222,6 +223,7 @@
           if (p.photos.face) imgs.push(p.photos.face)
           if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
           if (p.photos.dos) imgs.push(p.photos.dos)
+          if (p.photos.dosOnModel) imgs.push(p.photos.dosOnModel)
           if (p.photos.details) imgs.push(...p.photos.details)
           return imgs
         }
