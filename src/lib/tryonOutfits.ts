@@ -92,6 +92,13 @@ const OUTFITS: Record<string, OutfitConfig> = {
       'wearing fur chapka hat, square black sunglasses, plain white studio background',
     ],
   },
+  'blazer': {
+    label: 'Blazer',
+    accessories: [
+      'wearing nothing underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
+      'wearing black turtleneck underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
+    ],
+  },
   'veste / manteau': {
     label: 'Veste / Manteau',
     accessories: [
@@ -196,6 +203,12 @@ export function getOutfitPrompt(
   // Veste en cuir
   if (isCuir && (cat.includes('veste') || cat.includes('veste / manteau'))) {
     return pickRandom(OUTFITS['veste_cuir'].accessories)
+  }
+
+  // Blazer
+  const isBlazer = nom.includes('blazer')
+  if (isBlazer) {
+    return pickRandom(OUTFITS['blazer'].accessories)
   }
 
   // Recherche par catégorie exacte
