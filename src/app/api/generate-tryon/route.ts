@@ -3,6 +3,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
+import { getOutfitPrompt } from '@/lib/tryonOutfits'
 
 async function uploadToBunny(imageUrl: string): Promise<string> {
   const storageZone = process.env.BUNNY_STORAGE_ZONE
@@ -48,7 +49,7 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, productName, gender = 'female' } = await req.json()
+    const { imageUrl, productName, gender = 'female', categorie = '', matiere = '' } = await req.json()
 
     console.log('📥 Génération photo portée pour:', productName || 'produit')
 
@@ -92,9 +93,12 @@ export async function POST(req: NextRequest) {
       rand -= m.weight
       if (rand <= 0) { selectedModel = m.desc; break }
     }
+
+    const outfitAccessories = getOutfitPrompt(categorie, { nom: productName, matiere })
+
    const prompt = gender === 'male'
       ? `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing relaxed fit trousers and dress shoes, professional editorial fashion shoot, plain white studio background`
-      : `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing elegant wide leg trousers and heels, professional editorial fashion shoot, no skinny jeans, plain white studio background`
+      : `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, professional editorial fashion shoot, ${outfitAccessories}`
     console.log('🎨 Prompt choisi:', prompt)
     
     const fashnResponse = await fetch('https://api.fashn.ai/v1/run', {

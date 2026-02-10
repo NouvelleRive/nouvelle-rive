@@ -1,4 +1,5 @@
 // app/api/deposantes/route.ts
+// v2 - wearType + stockType
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
