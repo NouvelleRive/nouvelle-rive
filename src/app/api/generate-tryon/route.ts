@@ -49,7 +49,7 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, productName, gender = 'female', categorie = '', matiere = '' } = await req.json()
+    const { imageUrl, productName, gender = 'female', categorie = '', matiere = '', view = 'front' } = await req.json()
 
     console.log('📥 Génération photo portée pour:', productName || 'produit')
 
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
    const prompt = gender === 'male'
       ? `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing relaxed fit trousers and dress shoes, professional editorial fashion shoot, plain white studio background`
-      : `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, professional editorial fashion shoot, ${outfitAccessories}`
+      : `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, professional editorial fashion shoot, ${view === 'back' ? 'seen from behind, back view, ' : ''}${outfitAccessories}`
     console.log('🎨 Prompt choisi:', prompt)
     
     const fashnResponse = await fetch('https://api.fashn.ai/v1/run', {
