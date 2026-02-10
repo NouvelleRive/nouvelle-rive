@@ -178,7 +178,7 @@
         const imgBuffer = Buffer.from(await imgResponse.arrayBuffer())
         
         const finalBuffer = await sharp(imgBuffer)
-          .resize(1200, 1200, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+          .resize(1200, 1200, { fit: 'cover', position: 'centre' })
           .flatten({ background: { r: 255, g: 255, b: 255 } })
           .modulate({ brightness: 1.05, saturation: 1.15 })
           .sharpen({ sigma: 1.2 })
