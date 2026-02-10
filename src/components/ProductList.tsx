@@ -1344,17 +1344,6 @@
               </div>
             </div>
           )}
-```
-
----
-
-**Modif 6** — Dans `route.ts`, ligne du destructuring, cherche :
-```
-const { imageUrl, productName, gender = 'female', categorie = '', matiere = '' } = await req.json()
-```
-Remplace par :
-```
-const { imageUrl, productName, gender = 'female', categorie = '', matiere = '', view = 'front' } = await req.json()
 
     {/* Modal suppression */}
     {showDeleteModal && (
