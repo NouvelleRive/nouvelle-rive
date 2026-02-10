@@ -250,7 +250,7 @@
       const trimmedBuffer = await sharpInstance.trim().toBuffer()
 
       const resized = await sharp(trimmedBuffer)
-        .resize(1140, 1140, { fit: 'inside' })
+        .resize(1000, 1000, { fit: 'inside' })
         .toBuffer()
 
       const meta = await sharp(resized).metadata()
