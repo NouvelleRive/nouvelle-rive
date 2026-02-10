@@ -67,7 +67,7 @@ const OUTFITS: Record<string, OutfitConfig> = {
   'fourrure_longue': {
     label: 'Fourrure longue',
     accessories: [
-      'wearing sheer black tights, high heels, stylish sunglasses, plain white studio background',
+      'wearing sheer black tights, high heels, square black sunglasses with blue lenses, plain white studio background',
     ],
   },
   'fourrure_courte': {
@@ -88,8 +88,8 @@ const OUTFITS: Record<string, OutfitConfig> = {
   'veste_cuir': {
     label: 'Veste en cuir',
     accessories: [
-      'wearing fur chapka hat, colorful fine square sunglasses, plain white studio background',
-      'wearing fur chapka hat, oversized colorful sunglasses, plain white studio background',
+      'wearing fur chapka hat, square black sunglasses with blue lenses, plain white studio background',
+      'wearing fur chapka hat, square black sunglasses, plain white studio background',
     ],
   },
   'veste / manteau': {
