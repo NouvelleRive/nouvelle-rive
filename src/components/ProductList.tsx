@@ -198,8 +198,6 @@
       // Actions
       const [updatingSquare, setUpdatingSquare] = useState(false)
       const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
-      const [tryonModal, setTryonModal] = useState<{ product: Produit; gender: 'male' | 'female' } | null>(null)
-      const [tryonViews, setTryonViews] = useState<Set<'front' | 'back'>>(new Set(['front']))
       const [savingProduct, setSavingProduct] = useState(false)
       const [saveMessage, setSaveMessage] = useState<string | null>(null)
       const [localHidden, setLocalHidden] = useState<Record<string, boolean>>({})
