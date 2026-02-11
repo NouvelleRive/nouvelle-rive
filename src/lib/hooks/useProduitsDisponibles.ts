@@ -51,6 +51,7 @@ export function useProduitsDisponibles() {
             if ((d.quantite ?? 1) <= 0) return false
             if (d.statut === 'retour' || d.statut === 'supprime') return false
             if (d.recu === false) return false
+            if (d.hidden === true) return false
             return true
           })
           .map(doc => {
@@ -102,6 +103,7 @@ export function useProduitsDisponibles() {
           if ((d.quantite ?? 1) <= 0) return false
           if (d.statut === 'retour' || d.statut === 'supprime') return false
           if (d.recu === false) return false
+          if (d.hidden === true) return false
           return true
         })
         .map(doc => {
