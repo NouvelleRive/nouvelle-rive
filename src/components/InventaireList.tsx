@@ -182,7 +182,8 @@
         if (mode === 'inventaire') {
           if (p.vendu || (p.quantite ?? 1) <= 0 || p.statut === 'retour') return false
         } else if (mode === 'reception') {
-          if (p.recu !== false) return false
+          const isRestock = (p as any).statutRestock === 'enAttente'
+          if (!isRestock && p.recu !== false) return false
         } else if (mode === 'destock') {
           if (p.statutRecuperation !== 'aRecuperer') return false
         }
@@ -679,21 +680,50 @@
 
                 {mode === 'reception' && (
                   <>
-                    <button
-                      onClick={() => handleMarkReceived(p)}
-                      disabled={isProcessing}
-                      className="flex-1 sm:flex-none px-3 py-1.5 bg-[#22209C] text-white rounded-lg text-xs sm:text-sm hover:bg-[#1a1878] disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <PackageCheck size={14} />
-                      Reçu
-                    </button>
-                    <button
-                      onClick={() => handleMarkNotReceived(p)}
-                      disabled={isProcessing}
-                      className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs sm:text-sm hover:bg-red-200 disabled:opacity-50 transition-colors"
-                    >
-                      Non reçu
-                    </button>
+                    {(p as any).statutRestock === 'enAttente' ? (
+                      <button
+                        onClick={async () => {
+                          const qteRestock = (p as any).quantiteRestock || 0
+                          const nouvelleQte = (p.quantite ?? 0) + qteRestock
+                          try {
+                            await updateDoc(doc(db, 'produits', p.id), {
+                              quantite: nouvelleQte,
+                              statut: 'active',
+                              statutRestock: null,
+                              quantiteRestock: null,
+                              dateDemandeRestock: null,
+                              dateRestock: Timestamp.now(),
+                              restockParVendeuse: vendeusePrenom,
+                            })
+                          } catch (err) {
+                            alert('Erreur lors du restock')
+                          }
+                        }}
+                        disabled={isProcessing}
+                        className="flex-1 sm:flex-none px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs sm:text-sm hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <PackageCheck size={14} />
+                        Reçu (+{(p as any).quantiteRestock})
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleMarkReceived(p)}
+                          disabled={isProcessing}
+                          className="flex-1 sm:flex-none px-3 py-1.5 bg-[#22209C] text-white rounded-lg text-xs sm:text-sm hover:bg-[#1a1878] disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                        >
+                          <PackageCheck size={14} />
+                          Reçu
+                        </button>
+                        <button
+                          onClick={() => handleMarkNotReceived(p)}
+                          disabled={isProcessing}
+                          className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs sm:text-sm hover:bg-red-200 disabled:opacity-50 transition-colors"
+                        >
+                          Non reçu
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
 
