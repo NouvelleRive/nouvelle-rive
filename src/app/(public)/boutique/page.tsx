@@ -6,6 +6,39 @@
   import ProductGrid from '@/components/ProductGrid'
   import CountdownPromo from '@/components/CountdownPromo'
 
+  const MARQUES_LUXE = ['chanel', 'dior', 'hermès', 'hermes', 'louis vuitton', 'prada', 'gucci', 'yves saint laurent', 'ysl', 'saint laurent', 'balenciaga', 'celine', 'céline', 'fendi', 'givenchy', 'valentino', 'versace', 'burberry', 'loewe', 'bottega veneta', 'miu miu', 'dolce & gabbana', 'cartier', 'bvlgari', 'van cleef', 'tiffany']
+
+function smartSort(produits: Produit[]): Produit[] {
+  const scored = produits.map(p => {
+    let score = 0
+    const nom = (p.nom || '').toLowerCase()
+    const marque = (p.marque || '').toLowerCase()
+    const cat = (p.categorie || '').toLowerCase()
+    const desc = (p.description || '').toLowerCase()
+
+    if (nom.includes('fourrure') || desc.includes('fourrure')) score += 50
+    if (nom.includes('cuir') || desc.includes('cuir')) score += 40
+    if (MARQUES_LUXE.some(m => marque.includes(m) || nom.includes(m))) score += 30
+    if (p.prix >= 200) score += 10
+    if (p.prix >= 400) score += 10
+
+    const isBijou = cat.includes('bague') || cat.includes('boucle') || cat.includes('collier') || cat.includes('bracelet') || cat.includes('broche') || cat.includes('bijou')
+    const isAccessoire = cat.includes('sac') || cat.includes('ceinture') || cat.includes('foulard') || cat.includes('lunettes')
+
+    return { ...p, _score: score, _isBijou: isBijou || isAccessoire }
+  })
+
+  const bijoux = scored.filter(p => p._isBijou).sort((a, b) => b._score - a._score)
+  const vetements = scored.filter(p => !p._isBijou).sort((a, b) => b._score - a._score)
+
+  const result: Produit[] = []
+  let bIdx = 0, vIdx = 0
+  while (vIdx < vetements.length || bIdx < bijoux.length) {
+    for (let i = 0; i < 5 && vIdx < vetements.length; i++) result.push(vetements[vIdx++])
+    if (bIdx < bijoux.length) result.push(bijoux[bIdx++])
+  }
+  return result
+}
 
   function matchesSearch(produit: Produit, searchTerms: string[]): boolean {
   if (searchTerms.length === 0) return true
@@ -31,7 +64,7 @@
     }, [searchQuery])
 
     const produitsFiltres = useMemo(() => {
-      if (searchTerms.length === 0) return produits
+      if (searchTerms.length === 0) return smartSort(produits)
       return produits.filter(p => matchesSearch(p, searchTerms))
     }, [produits, searchTerms])
 
