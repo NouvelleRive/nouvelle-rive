@@ -13,7 +13,7 @@ function smartSort(produits: Produit[]): Produit[] {
     let score = 0
     const nom = (p.nom || '').toLowerCase()
     const marque = (p.marque || '').toLowerCase()
-    const cat = (p.categorie || '').toLowerCase()
+    const cat = (typeof p.categorie === 'object' ? (p.categorie as any)?.label : p.categorie || '').toLowerCase()
     const desc = (p.description || '').toLowerCase()
 
     if (nom.includes('fourrure') || desc.includes('fourrure')) score += 50
