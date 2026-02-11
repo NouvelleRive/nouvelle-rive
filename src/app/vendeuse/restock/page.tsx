@@ -131,68 +131,13 @@ export default function RestockPage() {
       </div>
 
       {activeTab === 'restock' && (
-        <>
-          {/* Demandes de restock */}
-          {produits.filter((p) => (p as any).statutRestock === 'enAttente' && p.statut !== 'supprime').length > 0 && (
-            <div className="max-w-4xl mx-auto px-4 pt-4">
-              <h3 className="text-sm font-semibold text-green-700 mb-2">📦 Restock en attente</h3>
-              {produits
-                .filter((p) => (p as any).statutRestock === 'enAttente' && p.statut !== 'supprime')
-                .map((p) => {
-                  const img = p.imageUrls?.[0] || (p.photos as any)?.face || p.imageUrl
-                  return (
-                    <div key={p.id} className="bg-green-50 rounded-xl border border-green-200 p-4 mb-3">
-                      <div className="flex items-center gap-4">
-                        {img ? (
-                          <img src={img} alt={p.nom} className="w-16 h-16 object-cover rounded-lg" />
-                        ) : (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">{p.sku}</div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 text-sm">
-                            <span className="text-[#22209C]">{p.sku}</span> - {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
-                          </h3>
-                          <p className="text-xs text-gray-500">Qté actuelle: {p.quantite ?? 0}</p>
-                          <p className="text-sm text-green-600 font-medium">+ {(p as any).quantiteRestock} demandé(s)</p>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            const qteRestock = (p as any).quantiteRestock || 0
-                            const nouvelleQte = (p.quantite ?? 0) + qteRestock
-                            try {
-                              await updateDoc(doc(db, 'produits', p.id), {
-                                quantite: nouvelleQte,
-                                statut: 'active',
-                                statutRestock: null,
-                                quantiteRestock: null,
-                                dateDemandeRestock: null,
-                                dateRestock: Timestamp.now(),
-                                restockParVendeuse: vendeusePrenom,
-                              })
-                              alert(`✅ ${p.sku} restocké: ${nouvelleQte} unités`)
-                            } catch (err) {
-                              alert('Erreur lors du restock')
-                            }
-                          }}
-                          className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition flex-shrink-0"
-                        >
-                          ✓ Reçu
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-            </div>
-          )}
-
-          <InventaireList
-            mode="reception"
-            produits={produits}
-            deposants={deposants}
-            vendeusePrenom={vendeusePrenom}
-            loading={loading}
-          />
-        </>
+        <InventaireList
+          mode="reception"
+          produits={produits}
+          deposants={deposants}
+          vendeusePrenom={vendeusePrenom}
+          loading={loading}
+        />
       )}
 
       {activeTab === 'destock' && (
