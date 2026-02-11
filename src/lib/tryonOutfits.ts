@@ -134,21 +134,24 @@ const OUTFITS: Record<string, OutfitConfig> = {
   'jupe': {
     label: 'Jupe',
     accessories: [
-      'wearing a crop top, sheer dark blue tights, square toe heeled boots, plain white studio background',
+      'wearing a white turtleneck, sheer dark blue tights, square toe heeled boots, plain white studio background',
+'wearing a black turtleneck, sheer dark blue tights, square toe heeled boots, plain white studio background',
       'wearing a lace-up top, pointed toe heeled boots, bare legs, plain white studio background',
     ],
   },
   'jupe / short': {
     label: 'Jupe / Short',
     accessories: [
-      'wearing a crop top, sheer dark blue tights, square toe heeled boots, plain white studio background',
+      'wearing a white turtleneck, sheer dark blue tights, square toe heeled boots, plain white studio background',
+'wearing a black turtleneck, sheer dark blue tights, square toe heeled boots, plain white studio background',
       'wearing a lace-up top, pointed toe heeled boots, bare legs, plain white studio background',
     ],
   },
   'short': {
     label: 'Short',
     accessories: [
-      'wearing a crop top, sheer dark blue tights, square toe heeled boots, plain white studio background',
+      'wearing a white turtleneck, sheer dark blue tights, square toe heeled boots, plain white studio background',
+'wearing a black turtleneck, sheer dark blue tights, square toe heeled boots, plain white studio background',
       'wearing a lace-up top, pointed toe heeled boots, bare legs, plain white studio background',
     ],
   },
