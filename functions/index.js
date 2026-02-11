@@ -280,6 +280,31 @@ exports.onProductReceived = functions
       }
     }
 
+    // CAS 3b: Produit passe en outOfStock (petite série) → stock Square à 0 mais garder le produit
+    if (after.statut === 'outOfStock' && before.statut !== 'outOfStock') {
+      console.log(`📦 Produit en rupture (petite série): ${productId} (${after.sku})`);
+      if (after.variationId) {
+        try {
+          await squareClient.inventoryApi.batchChangeInventory({
+            idempotencyKey: uuidv4(),
+            changes: [{
+              type: 'PHYSICAL_COUNT',
+              physicalCount: {
+                catalogObjectId: after.variationId,
+                locationId,
+                quantity: '0',
+                state: 'IN_STOCK',
+                occurredAt: new Date().toISOString(),
+              },
+            }],
+          });
+          console.log(`✅ Stock Square mis à 0 (produit conservé): ${after.sku}`);
+        } catch (err) {
+          console.error(`❌ Erreur stock Square:`, err?.message);
+        }
+      }
+    }
+
     // CAS 3: Produit passe en retour → supprimer de Square
     if (before.statut !== "retour" && after.statut === "retour") {
       console.log(`📤 Produit retourné: ${productId} (${after.sku})`);
