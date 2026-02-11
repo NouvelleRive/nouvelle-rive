@@ -3,11 +3,12 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, query, onSnapshot, getDocs } from 'firebase/firestore'
-import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react'
+import { collection, query, onSnapshot, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore'
+import { ArrowDownToLine, ArrowUpFromLine, RefreshCw } from 'lucide-react'
 import InventaireList, { Produit, Deposant } from '@/components/InventaireList'
 
-type Tab = 'reception' | 'destock'
+
+type Tab = 'reception' | 'destock' | 'restock'
 
 export default function RestockPage() {
   const [vendeusePrenom, setVendeusePrenom] = useState<string>('')
@@ -56,7 +57,10 @@ export default function RestockPage() {
     const aRecuperer = produits.filter(
       (p) => p.statutRecuperation === 'aRecuperer' && p.statut !== 'supprime'
     ).length
-    return { nonRecus, aRecuperer }
+    const restockEnAttente = produits.filter(
+      (p) => (p as any).statutRestock === 'enAttente' && p.statut !== 'supprime'
+    ).length
+    return { nonRecus, aRecuperer, restockEnAttente }
   }, [produits])
 
   if (showVendeuseModal) {
@@ -122,11 +126,27 @@ export default function RestockPage() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('restock')}
+              className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                activeTab === 'restock'
+                  ? 'border-green-600 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <RefreshCw size={18} />
+              <span>Restock</span>
+              {counts.restockEnAttente > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded-full">
+                  {counts.restockEnAttente}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      {activeTab === 'reception' ? (
+      {activeTab === 'reception' && (
         <InventaireList
           mode="reception"
           produits={produits}
@@ -134,7 +154,9 @@ export default function RestockPage() {
           vendeusePrenom={vendeusePrenom}
           loading={loading}
         />
-      ) : (
+      )}
+
+      {activeTab === 'destock' && (
         <InventaireList
           mode="destock"
           produits={produits}
@@ -142,6 +164,70 @@ export default function RestockPage() {
           vendeusePrenom={vendeusePrenom}
           loading={loading}
         />
+      )}
+
+      {activeTab === 'restock' && (
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Demandes de restock ({counts.restockEnAttente})
+          </h2>
+          {produits
+            .filter((p) => (p as any).statutRestock === 'enAttente' && p.statut !== 'supprime')
+            .map((p) => {
+              const img = p.imageUrls?.[0] || (p.photos as any)?.face || p.imageUrl
+              return (
+                <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-4 mb-3 shadow-sm">
+                  <div className="flex items-center gap-4">
+                    {img ? (
+                      <img src={img} alt={p.nom} className="w-16 h-16 object-cover rounded-lg" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">{p.sku}</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900">
+                        <span className="text-[#22209C]">{p.sku}</span> - {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {typeof p.prix === 'number' ? `${p.prix} €` : '—'} · Qté actuelle: {p.quantite ?? 0}
+                      </p>
+                      <p className="text-sm text-green-600 font-medium mt-1">
+                        + {(p as any).quantiteRestock} demandé(s)
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const qteRestock = (p as any).quantiteRestock || 0
+                        const nouvelleQte = (p.quantite ?? 0) + qteRestock
+                        try {
+                          await updateDoc(doc(db, 'produits', p.id), {
+                            quantite: nouvelleQte,
+                            statut: 'active',
+                            statutRestock: null,
+                            quantiteRestock: null,
+                            dateDemandeRestock: null,
+                            dateRestock: Timestamp.now(),
+                            restockParVendeuse: vendeusePrenom,
+                          })
+                          alert(`✅ ${p.sku} restocké: ${nouvelleQte} unités`)
+                        } catch (err) {
+                          alert('Erreur lors du restock')
+                          console.error(err)
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition flex-shrink-0"
+                    >
+                      ✓ Valider
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          {counts.restockEnAttente === 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <p className="text-gray-400">Aucune demande de restock en attente</p>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto">
