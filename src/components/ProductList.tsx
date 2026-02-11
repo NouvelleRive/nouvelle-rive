@@ -254,7 +254,8 @@
       const needle = recherche.trim().toLowerCase()
       return produits.filter((p) => {
         if (p.statut === 'supprime') return false
-        if ((p.quantite ?? 1) <= 0 || p.statut === 'retour' || p.statutRecuperation === 'aRecuperer') return false
+        if (p.statut === 'retour' || p.statutRecuperation === 'aRecuperer') return false
+        if ((p.quantite ?? 1) <= 0 && p.statut !== 'outOfStock') return false
 
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
         if (filtreCategorie && cat !== filtreCategorie) return false
@@ -970,18 +971,6 @@
                     </button>
                     <button
                       onClick={() => {
-                        const qte = prompt('Nouvelle quantité ?')
-                        if (qte !== null) {
-                          handleBatchUpdate('quantite', qte === '' ? '' : parseInt(qte))
-                          setMenuOuvert(false)
-                        }
-                      }}
-                      className="block w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm transition-colors"
-                    >
-                      Modifier la quantité
-                    </button>
-                    <button
-                      onClick={() => {
                         setMenuOuvert(false)
                         handleDeleteBulk(Array.from(selectedIds))
                       }}
@@ -1072,10 +1061,31 @@
                       <button onClick={() => handleToggleForceDisplay(p)} className={`p-1.5 rounded-lg ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                     </div>
                   </div>
-                  <div className="sm:hidden flex gap-4 mt-3 pt-3 border-t border-gray-100 text-sm">
+                  <div className="sm:hidden flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100 text-sm">
                     <span><span className="text-gray-400">SKU:</span> <span className="font-medium">{p.sku || '—'}</span></span>
                     <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
                     <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
+                    {p.statut === 'outOfStock' && (
+                      <button
+                        onClick={async () => {
+                          const qte = prompt('Quantité à restocker ?', '1')
+                          if (!qte || isNaN(parseInt(qte))) return
+                          try {
+                            await updateDoc(doc(db, 'produits', p.id), {
+                              statutRestock: 'enAttente',
+                              quantiteRestock: parseInt(qte),
+                              dateDemandeRestock: Timestamp.now(),
+                            })
+                            alert('Demande de restock envoyée ✓')
+                          } catch (err) {
+                            alert('Erreur lors de la demande')
+                          }
+                        }}
+                        className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium"
+                      >
+                        Rupture · + Restock
+                      </button>
+                    )}
                   </div>
                   {isExpanded && allImages.length > 2 && (
                     <div className="sm:hidden mt-3 pt-3 border-t border-gray-100">
@@ -1120,6 +1130,30 @@
                       <p><span className="text-gray-400">SKU:</span> <span className="font-medium text-gray-700">{p.sku || '—'}</span></p>
                       <p><span className="text-gray-400">Prix:</span> <span className="font-medium text-gray-700">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></p>
                       <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
+                      {p.statut === 'outOfStock' && (
+                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
+                      )}
+                      {p.statut === 'outOfStock' && (
+                        <button
+                          onClick={async () => {
+                            const qte = prompt('Quantité à restocker ?', '1')
+                            if (!qte || isNaN(parseInt(qte))) return
+                            try {
+                              await updateDoc(doc(db, 'produits', p.id), {
+                                statutRestock: 'enAttente',
+                                quantiteRestock: parseInt(qte),
+                                dateDemandeRestock: Timestamp.now(),
+                              })
+                              alert('Demande de restock envoyée ✓')
+                            } catch (err) {
+                              alert('Erreur lors de la demande')
+                            }
+                          }}
+                          className="text-xs bg-[#22209C] text-white px-2 py-1 rounded hover:opacity-90 transition"
+                        >
+                          + Restock
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {canGenerateTryon && (() => {
