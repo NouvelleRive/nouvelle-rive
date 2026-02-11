@@ -159,21 +159,40 @@ export async function POST(request: Request) {
       // 1. Mettre à jour le produit dans Firebase
       const nouvelleQuantite = Math.max(0, quantiteActuelle - 1)
       
+      // Vérifier si la chineuse est en petite série
+      const tri = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+      let isSmallBatch = false
+      if (tri && nouvelleQuantite === 0) {
+        const chineuseSnap = await adminDb.collection('chineuse')
+          .where('trigramme', '==', tri)
+          .limit(1)
+          .get()
+        if (!chineuseSnap.empty) {
+          isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
+        }
+      }
+
       const updateData: any = {
         quantite: nouvelleQuantite
       }
 
       if (nouvelleQuantite === 0) {
-        updateData.vendu = true
-        updateData.dateVente = Timestamp.now()
-        updateData.squareOrderId = orderId
+        if (isSmallBatch) {
+          updateData.statut = 'outOfStock'
+          updateData.dateRupture = Timestamp.now()
+          updateData.squareOrderId = orderId
+        } else {
+          updateData.vendu = true
+          updateData.dateVente = Timestamp.now()
+          updateData.squareOrderId = orderId
+        }
       }
 
       await produitRef.update(updateData)
       console.log('✅ Produit mis à jour:', productId, '- Nouvelle quantité:', nouvelleQuantite)
 
-      // 🆕 Si quantité = 0, supprimer/archiver dans Square
-      if (nouvelleQuantite === 0 && (produitData.catalogObjectId || produitData.variationId || produitData.itemId)) {
+      // 🆕 Si quantité = 0 ET pièce unique, supprimer de Square
+      if (nouvelleQuantite === 0 && !isSmallBatch && (produitData.catalogObjectId || produitData.variationId || produitData.itemId)) {
         try {
           console.log('🗑️ Suppression du produit dans Square...')
           
@@ -231,7 +250,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // 🇺🇸 Retirer d'eBay si quantité = 0
+      // 🇺🇸 Retirer d'eBay si quantité = 0 (pièce unique OU petite série)
       if (nouvelleQuantite === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
         try {
           console.log('🇺🇸 Retrait du produit d\'eBay...')
