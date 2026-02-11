@@ -617,8 +617,8 @@
       let faceOriginalUrl: string | undefined = (data.existingPhotos as any)?.faceOriginal || (editingProduct.photos as any)?.faceOriginal
       let dosUrl: string | undefined = data.existingPhotos?.dos || editingProduct.photos?.dos
       let dosOriginalUrl: string | undefined = (data.existingPhotos as any)?.dosOriginal || (editingProduct.photos as any)?.dosOriginal
-      let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
-      let dosOnModelUrl: string | undefined = editingProduct.photos?.dosOnModel
+      let faceOnModelUrl: string | undefined = data.existingPhotos?.faceOnModel || editingProduct.photos?.faceOnModel
+      let dosOnModelUrl: string | undefined = (data.existingPhotos as any)?.dosOnModel || editingProduct.photos?.dosOnModel
 
       // Gérer les photos détails - ProductForm gère déjà l'ajout et la suppression
       let detailsUrls = [...(data.existingPhotos?.details || [])]
