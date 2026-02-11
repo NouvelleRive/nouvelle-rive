@@ -99,6 +99,20 @@ const OUTFITS: Record<string, OutfitConfig> = {
       'wearing black turtleneck underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
     ],
   },
+'perfecto': {
+    label: 'Perfecto',
+    accessories: [
+      'wearing oversized, wide leg trousers, square toe heels, plain white studio background',
+      'wearing oversized, wide leg trousers, pointed toe heels, plain white studio background',
+    ],
+  },
+  'veste_racing': {
+    label: 'Veste Racing',
+    accessories: [
+      'wearing oversized, wide leg trousers, square toe heels, square black sunglasses, plain white studio background',
+      'wearing oversized, wide leg trousers, pointed toe heels, square black sunglasses, plain white studio background',
+    ],
+  },
   'veste / manteau': {
     label: 'Veste / Manteau',
     accessories: [
@@ -204,18 +218,25 @@ export function getOutfitPrompt(
   if (isCuir && (cat.includes('veste') || cat.includes('veste / manteau'))) {
     return pickRandom(OUTFITS['veste_cuir'].accessories)
   }
-
   // Blazer
   const isBlazer = nom.includes('blazer')
   if (isBlazer) {
     return pickRandom(OUTFITS['blazer'].accessories)
   }
-
+  // Perfecto
+  const isPerfecto = nom.includes('perfecto')
+  if (isPerfecto) {
+    return pickRandom(OUTFITS['perfecto'].accessories)
+  }
+  // Racing
+  const isRacing = nom.includes('racing')
+  if (isRacing) {
+    return pickRandom(OUTFITS['veste_racing'].accessories)
+  }
   // Recherche par catégorie exacte
   if (OUTFITS[cat]) {
     return pickRandom(OUTFITS[cat].accessories)
   }
-
   // Recherche partielle (ex: "FRU - Jupe / Short" → contient "jupe")
   for (const [key, config] of Object.entries(OUTFITS)) {
     if (!key.includes('_') && cat.includes(key)) {
