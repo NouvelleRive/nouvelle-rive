@@ -49,7 +49,7 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageUrl, productName, gender = 'female', categorie = '', matiere = '', view = 'front' } = await req.json()
+    const { imageUrl, productName, gender = 'female', categorie = '', matiere = '', view = 'front', seed } = await req.json()
 
     console.log('📥 Génération photo portée pour:', productName || 'produit')
 
@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
         resolution: '1k',
         prompt: prompt,
         aspect_ratio: '3:4',
+...(seed ? { seed } : {}),
       }
     }),
     })

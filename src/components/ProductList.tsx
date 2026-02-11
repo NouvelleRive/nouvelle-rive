@@ -508,6 +508,7 @@
       try {
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie || ''
         const matiere = p.material || ''
+        const seed = Math.floor(Math.random() * 4294967295)
         const views: {view: string, imageUrl: string}[] = [
           { view: 'front', imageUrl: faceUrl }
         ]
@@ -519,7 +520,7 @@
           const res = await fetch('/api/generate-tryon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl: v.imageUrl, productName: p.nom, gender, categorie: cat, matiere, view: v.view }),
+            body: JSON.stringify({ imageUrl: v.imageUrl, productName: p.nom, gender, categorie: cat, matiere, view: v.view, seed }),
           })
           const data = await res.json()
           if (!data.success || !data.onModelUrl) throw new Error(data.error || 'Erreur génération')
@@ -617,6 +618,7 @@
       let dosUrl: string | undefined = data.existingPhotos?.dos || editingProduct.photos?.dos
       let dosOriginalUrl: string | undefined = (data.existingPhotos as any)?.dosOriginal || (editingProduct.photos as any)?.dosOriginal
       let faceOnModelUrl: string | undefined = editingProduct.photos?.faceOnModel
+      let dosOnModelUrl: string | undefined = editingProduct.photos?.dosOnModel
 
       // Gérer les photos détails - ProductForm gère déjà l'ajout et la suppression
       let detailsUrls = [...(data.existingPhotos?.details || [])]
@@ -667,6 +669,9 @@
           
           if (faceOnModelUrl) updateData['photos.faceOnModel'] = faceOnModelUrl
           else updateData['photos.faceOnModel'] = deleteField()
+
+          if (dosOnModelUrl) updateData['photos.dosOnModel'] = dosOnModelUrl
+          else updateData['photos.dosOnModel'] = deleteField()
           
           if (detailsUrls.length > 0) updateData['photos.details'] = detailsUrls
           else updateData['photos.details'] = deleteField()
@@ -690,6 +695,7 @@
                 // Pour les photos existantes
                 else if (item.id === 'existing-face' && faceUrl) orderedUrls.push(faceUrl)
                 else if (item.id === 'existing-faceOnModel' && faceOnModelUrl) orderedUrls.push(faceOnModelUrl)
+                else if (item.id === 'existing-dosOnModel' && dosOnModelUrl) orderedUrls.push(dosOnModelUrl)
                 else if (item.id === 'existing-dos' && dosUrl) orderedUrls.push(dosUrl)
                 else if (item.id.startsWith('existing-detail-')) {
                   const idx = parseInt(item.id.replace('existing-detail-', ''))
@@ -719,6 +725,7 @@
             if (faceUrl) defaultUrls.push(faceUrl)
             if (faceOnModelUrl) defaultUrls.push(faceOnModelUrl)
             if (dosUrl) defaultUrls.push(dosUrl)
+            if (dosOnModelUrl) defaultUrls.push(dosOnModelUrl)
             defaultUrls.push(...detailsUrls)
             if (defaultUrls.length > 0) {
               updateData.imageUrls = defaultUrls
