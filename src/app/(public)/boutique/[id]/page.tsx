@@ -45,6 +45,7 @@ function getAllImages(p: Produit): string[] {
     if (p.photos.face) imgs.push(p.photos.face)
     if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
     if (p.photos.dos) imgs.push(p.photos.dos)
+    if ((p.photos as any).dosOnModel) imgs.push((p.photos as any).dosOnModel)
     if (p.photos.details) imgs.push(...p.photos.details)
   }
   return imgs

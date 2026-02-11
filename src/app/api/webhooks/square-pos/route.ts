@@ -158,11 +158,30 @@ export async function POST(request: Request) {
         }
 
         if (nouvelleQuantite === 0) {
-          updateData.vendu = true
-          updateData.dateVente = Timestamp.now()
-          updateData.squareOrderId = orderId
-          if (prixVenteReel) {
-            updateData.prixVenteReel = prixVenteReel
+          // Vérifier si la chineuse est en petite série
+          const tri = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+          let isSmallBatch = false
+          if (tri) {
+            const chineuseSnap = await adminDb.collection('chineuse')
+              .where('trigramme', '==', tri)
+              .limit(1)
+              .get()
+            if (!chineuseSnap.empty) {
+              isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
+            }
+          }
+
+          if (isSmallBatch) {
+            updateData.statut = 'outOfStock'
+            updateData.dateRupture = Timestamp.now()
+            updateData.squareOrderId = orderId
+            if (prixVenteReel) updateData.prixVenteReel = prixVenteReel
+            // PAS de vendu = true → le produit reste dans l'admin
+          } else {
+            updateData.vendu = true
+            updateData.dateVente = Timestamp.now()
+            updateData.squareOrderId = orderId
+            if (prixVenteReel) updateData.prixVenteReel = prixVenteReel
           }
         }
 

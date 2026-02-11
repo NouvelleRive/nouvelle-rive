@@ -1566,7 +1566,6 @@ async function compressImage(file: File): Promise<string> {
                   readOnly
                   className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
                 />
-                <p className="text-[10px] text-gray-400 mt-0.5">Modifiable via restock/destock</p>
               </div>
             </div>
           </div>
