@@ -1066,6 +1066,15 @@
                     <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
                     <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
                     {p.statut === 'outOfStock' && (
+                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
+                    )}
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="text-[10px] bg-red-50 text-red-600 border border-red-200 rounded px-1.5 py-0.5 hover:bg-red-100 transition"
+                      >
+                        − Destock
+                      </button>
                       <button
                         onClick={async () => {
                           const qte = prompt('Quantité à restocker ?', '1')
@@ -1081,13 +1090,13 @@
                             alert('Erreur lors de la demande')
                           }
                         }}
-                        className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium"
+                        className="text-[10px] bg-green-50 text-green-600 border border-green-200 rounded px-1.5 py-0.5 hover:bg-green-100 transition"
                       >
-                        Rupture · + Restock
+                        + Restock
                       </button>
-                    )}
+                    </div>
                   </div>
-                  {isExpanded && allImages.length > 2 && (
+                  {isExpanded && allImages.lengths > 2 && (
                     <div className="sm:hidden mt-3 pt-3 border-t border-gray-100">
                       <div className="flex gap-2 flex-wrap">
                         {allImages.slice(2).map((url, idx) => <img key={idx} src={url} alt={`${p.nom} ${idx + 3}`} className="w-12 h-12 object-cover rounded-lg cursor-pointer" onClick={() => window.open(url, '_blank')} />)}
@@ -1133,7 +1142,13 @@
                       {p.statut === 'outOfStock' && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                       )}
-                      {p.statut === 'outOfStock' && (
+                      <div className="flex gap-1 mt-1">
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="text-[10px] bg-red-50 text-red-600 border border-red-200 rounded px-1.5 py-0.5 hover:bg-red-100 transition"
+                        >
+                          − Destock
+                        </button>
                         <button
                           onClick={async () => {
                             const qte = prompt('Quantité à restocker ?', '1')
@@ -1149,11 +1164,11 @@
                               alert('Erreur lors de la demande')
                             }
                           }}
-                          className="text-xs bg-[#22209C] text-white px-2 py-1 rounded hover:opacity-90 transition"
+                          className="text-[10px] bg-green-50 text-green-600 border border-green-200 rounded px-1.5 py-0.5 hover:bg-green-100 transition"
                         >
                           + Restock
                         </button>
-                      )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {canGenerateTryon && (() => {
