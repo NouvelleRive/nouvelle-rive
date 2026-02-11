@@ -45,7 +45,7 @@ function smartSort(produits: Produit[]): Produit[] {
   const searchableText = [
     produit.nom,
     produit.marque,
-    produit.categorie,
+    typeof produit.categorie === 'object' ? (produit.categorie as any)?.label : produit.categorie,
     produit.description,
     produit.couleur,
     produit.taille
