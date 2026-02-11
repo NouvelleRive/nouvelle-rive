@@ -459,9 +459,28 @@ export async function syncVentesDepuisSquare(
         const newQty = Math.max(0, (p.quantite || 1) - quantity)
         const updateData: any = { quantite: newQty }
         if (newQty === 0) {
-          updateData.vendu = true
-          updateData.dateVente = Timestamp.fromDate(orderDate)
-          updateData.prixVenteReel = prix
+          // Vérifier si la chineuse est en petite série
+          const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+          let isSmallBatch = false
+          if (tri) {
+            const chineuseSnap = await adminDb.collection('chineuse')
+              .where('trigramme', '==', tri)
+              .limit(1)
+              .get()
+            if (!chineuseSnap.empty) {
+              isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
+            }
+          }
+
+          if (isSmallBatch) {
+            updateData.statut = 'outOfStock'
+            updateData.dateRupture = Timestamp.fromDate(orderDate)
+            if (prix) updateData.prixVenteReel = prix
+          } else {
+            updateData.vendu = true
+            updateData.dateVente = Timestamp.fromDate(orderDate)
+            if (prix) updateData.prixVenteReel = prix
+          }
         }
         produitsToUpdate.push({ ref: produitDoc.ref, data: updateData })
         nbAttribuees++
