@@ -260,7 +260,7 @@ export default function PerformancePage() {
       map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prix || 0), count: current.count + 1 })
     })
 
-    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 10)
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 12)
     const maxCA = sorted[0]?.[1].ca || 1
 
     return sorted.map(([cat, data]) => ({
@@ -667,7 +667,7 @@ export default function PerformancePage() {
                 const maxCount = bestHours[0]?.count || 1
                 return (
                   <div key={item.hour} className="flex items-center gap-2 py-0.5">
-                    <span className="text-xs text-gray-500 w-10 shrink-0">{item.hour}h-{item.hour + 1}h</span>
+                    <span className="text-xs text-gray-500 w-14 shrink-0 whitespace-nowrap">{item.hour}h-{item.hour + 1}h</span>
                     <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
                       <div className="h-full bg-[#22209C]/80 rounded" style={{ width: `${Math.round((item.count / maxCount) * 100)}%` }} />
                     </div>
