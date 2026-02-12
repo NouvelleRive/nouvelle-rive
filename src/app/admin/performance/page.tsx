@@ -272,39 +272,54 @@ export default function PerformancePage() {
         if (!dateVente || !dateEntree) return null
         const jours = differenceInDays(dateVente, dateEntree)
         if (jours < 0) return null
+        const photos = (v as any).photos || {}
+        const photo = photos.face || photos.main || Object.values(photos).find((p: any) => typeof p === 'string' && p.startsWith('http')) || null
         return {
           id: v.id,
           nom: v.nom || v.sku || 'Sans nom',
           prix: v.prixVenteReel || v.prix || 0,
           jours,
           dateVente,
+          photo: photo as string | null,
         }
       })
       .filter(Boolean)
       .sort((a, b) => a!.jours - b!.jours)
-      .slice(0, 8) as { id: string; nom: string; prix: number; jours: number; dateVente: Date }[]
+      .slice(0, 20) as { id: string; nom: string; prix: number; jours: number; dateVente: Date; photo: string | null }[]
   }, [ventesCurrentMonth])
 
-  // Meilleurs jours (top 10 par CA)
-  const bestDays = useMemo(() => {
-    const dayMap = new Map<string, { date: Date; ca: number; count: number }>()
-    
-    ventes.forEach(v => {
+  // Moyenne CA par jour de la semaine (filtré par mois sélectionné)
+  const bestWeekdays = useMemo(() => {
+    const joursSemaine = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+    const days = eachDayOfInterval({ start: currentMonthStart, end: currentMonthEnd })
+    const dayCountInMonth = new Map<number, number>()
+    days.forEach(d => {
+      const dow = d.getDay()
+      dayCountInMonth.set(dow, (dayCountInMonth.get(dow) || 0) + 1)
+    })
+
+    const map = new Map<number, { ca: number; count: number }>()
+    ventesCurrentMonth.forEach(v => {
       const date = getDateVente(v)
       if (!date) return
-      const key = format(date, 'yyyy-MM-dd')
-      const current = dayMap.get(key) || { date, ca: 0, count: 0 }
-      dayMap.set(key, {
-        date,
+      const dow = date.getDay()
+      const current = map.get(dow) || { ca: 0, count: 0 }
+      map.set(dow, {
         ca: current.ca + (v.prixVenteReel || v.prix || 0),
         count: current.count + 1,
       })
     })
 
-    return Array.from(dayMap.values())
-      .sort((a, b) => b.ca - a.ca)
-      .slice(0, 10)
-  }, [ventes])
+    return Array.from(map.entries())
+      .map(([dow, data]) => ({
+        dow,
+        label: joursSemaine[dow],
+        ca: data.ca,
+        moyenne: Math.round(data.ca / (dayCountInMonth.get(dow) || 1)),
+        count: data.count,
+      }))
+      .sort((a, b) => b.moyenne - a.moyenne)
+  }, [ventesCurrentMonth, currentMonthStart, currentMonthEnd])
 
   // Meilleures heures de vente
   const bestHours = useMemo(() => {
@@ -608,52 +623,61 @@ export default function PerformancePage() {
         </div>
 
         {/* Top Fast Sellers */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 lg:col-span-2">
           <div className="flex items-center gap-1.5 mb-3">
             <Zap className="text-orange-500" size={14} />
             <h3 className="text-sm font-semibold text-gray-900">Fast Sellers</h3>
+            <span className="text-xs text-gray-400">top 20</span>
           </div>
           {topFastSellers.length === 0 ? (
             <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
           ) : (
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[400px] overflow-y-auto">
               {topFastSellers.map((item, i) => (
-                <div key={item.id} className="flex items-center gap-2 py-1 border-b border-gray-50 last:border-0">
-                  <span className="text-xs text-gray-400 w-4 shrink-0">{i + 1}.</span>
-                  <div className="flex-1 min-w-0">
+                <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                  {item.photo ? (
+                    <img src={item.photo} alt={item.nom} className="w-full h-24 object-cover" />
+                  ) : (
+                    <div className="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-300 text-xs">No photo</div>
+                  )}
+                  <div className="p-1.5">
                     <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
-                    <p className="text-gray-400" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} € • vendu le {format(item.dateVente, 'd MMM', { locale: fr })}</p>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
+                      <span className={`text-xs font-semibold px-1 py-0.5 rounded ${item.jours === 0 ? 'bg-green-100 text-green-700' : item.jours <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {item.jours === 0 ? '0j' : `${item.jours}j`}
+                      </span>
+                    </div>
                   </div>
-                  <span className={`text-xs font-semibold shrink-0 px-1.5 py-0.5 rounded ${item.jours === 0 ? 'bg-green-100 text-green-700' : item.jours <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {item.jours === 0 ? 'Même jour' : `${item.jours}j`}
-                  </span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Meilleurs Jours (all time) */}
+        {/* Meilleurs Jours de la semaine */}
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-1.5 mb-3">
             <Star className="text-yellow-500" size={14} />
             <h3 className="text-sm font-semibold text-gray-900">Meilleurs Jours</h3>
-            <span className="text-xs text-gray-400">all time</span>
           </div>
-          {bestDays.length === 0 ? (
+          {bestWeekdays.length === 0 ? (
             <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
           ) : (
-            <div className="space-y-1.5">
-              {bestDays.map((day, i) => (
-                <div key={format(day.date, 'yyyy-MM-dd')} className="flex items-center gap-2 py-1 border-b border-gray-50 last:border-0">
-                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-900">{format(day.date, 'EEEE d MMMM yyyy', { locale: fr })}</p>
-                    <p className="text-gray-400" style={{ fontSize: '10px' }}>{day.count} vente{day.count > 1 ? 's' : ''}</p>
+            <div className="space-y-2">
+              {bestWeekdays.map((day, i) => {
+                const maxMoy = bestWeekdays[0]?.moyenne || 1
+                return (
+                  <div key={day.dow} className="flex items-center gap-2">
+                    <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                    <span className="text-xs font-medium text-gray-700 w-16 shrink-0">{day.label}</span>
+                    <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
+                      <div className="h-full bg-amber-400 rounded" style={{ width: `${Math.round((day.moyenne / maxMoy) * 100)}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-gray-900 w-14 text-right">{day.moyenne.toLocaleString('fr-FR')} €</span>
                   </div>
-                  <span className="text-xs font-bold text-gray-900 shrink-0">{day.ca.toLocaleString('fr-FR')} €</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
