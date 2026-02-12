@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -36,6 +36,12 @@ type Deposant = {
   type?: string
 }
 
+type VendeusePerf = {
+  id: string
+  prenom: string
+  couleur: string
+}
+
 const moisLabels = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 const moisCourt = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
 
@@ -46,6 +52,8 @@ export default function PerformancePage() {
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
+  const [vendeusesList, setVendeusesList] = useState<VendeusePerf[]>([])
+  const [planningSlots, setPlanningSlots] = useState<Record<string, string>>({})
 
   // Charger les déposants
   useEffect(() => {
@@ -64,6 +72,24 @@ export default function PerformancePage() {
     })
     return () => unsub()
   }, [])
+
+  // Charger les vendeuses
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'vendeuses'), (snap) => {
+      setVendeusesList(snap.docs.map(d => ({ id: d.id, ...d.data() } as VendeusePerf)))
+    })
+    return () => unsub()
+  }, [])
+
+  // Charger le planning du mois sélectionné
+  useEffect(() => {
+    const fetchPlanning = async () => {
+      const mKey = `${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}`
+      const snap = await getDoc(doc(db, 'planning', mKey))
+      setPlanningSlots(snap.exists() ? (snap.data().slots || {}) : {})
+    }
+    fetchPlanning()
+  }, [selectedMonth, selectedYear])
 
   // Générer tous les mois disponibles depuis les données
   const availableMonths = useMemo(() => {
@@ -300,6 +326,44 @@ export default function PerformancePage() {
       .sort((a, b) => b.count - a.count)
   }, [ventesCurrentMonth])
 
+  // Classement vendeuses par CA (réconciliation planning + ventes)
+  const classementVendeuses = useMemo(() => {
+    const map = new Map<string, { ca: number; ventes: number }>()
+
+    ventesCurrentMonth.forEach(v => {
+      const date = getDateVente(v)
+      if (!date) return
+      const dateStr = format(date, 'yyyy-MM-dd')
+      const hour = date.getHours()
+
+      // Trouver la vendeuse qui bossait ce jour
+      const slot1220 = planningSlots[`${dateStr}_12-20`]
+      const slot1117 = planningSlots[`${dateStr}_11-17`]
+
+      let vendeuseId: string | null = null
+      if (slot1220 && slot1117) {
+        // 2 vendeuses ce jour : attribuer selon l'heure
+        vendeuseId = hour < 12 ? slot1117 : hour >= 17 ? slot1220 : slot1220
+      } else {
+        vendeuseId = slot1220 || slot1117 || null
+      }
+
+      if (!vendeuseId) return
+      const current = map.get(vendeuseId) || { ca: 0, ventes: 0 }
+      map.set(vendeuseId, {
+        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        ventes: current.ventes + 1,
+      })
+    })
+
+    return Array.from(map.entries())
+      .map(([id, data]) => {
+        const vend = vendeusesList.find(v => v.id === id)
+        return { id, nom: vend?.prenom || id, couleur: vend?.couleur || '#999', ...data }
+      })
+      .sort((a, b) => b.ca - a.ca)
+  }, [ventesCurrentMonth, planningSlots, vendeusesList])
+
   // Chineuses actives ce mois
   const chineusesActives = new Set(ventesCurrentMonth.map(v => v.chineur).filter(Boolean)).size
 
@@ -448,8 +512,50 @@ export default function PerformancePage() {
         )}
       </div>
 
+      {/* Classement Vendeuses */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="text-purple-500" size={16} />
+          <h2 className="text-sm font-semibold text-gray-900">CA Vendeuses</h2>
+          <span className="text-xs text-gray-400">{moisCourt[selectedMonth]} {selectedYear}</span>
+        </div>
+        {classementVendeuses.length === 0 ? (
+          <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée (planning non rempli ?)</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th>
+                  <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Vendeuse</th>
+                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
+                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
+                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Moy.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {classementVendeuses.map((v, i) => (
+                  <tr key={v.id} className={`border-b border-gray-50 ${i < 3 ? 'bg-purple-50/30' : ''}`}>
+                    <td className="py-1.5 px-1.5 text-sm">{getMedal(i)}</td>
+                    <td className="py-1.5 px-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: v.couleur }} />
+                        <span className="font-medium text-gray-900">{v.nom}</span>
+                      </div>
+                    </td>
+                    <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{v.ca.toLocaleString('fr-FR')} €</td>
+                    <td className="py-1.5 px-1.5 text-right text-gray-600">{v.ventes}</td>
+                    <td className="py-1.5 px-1.5 text-right text-gray-600">{v.ventes > 0 ? Math.round(v.ca / v.ventes) : 0} €</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Row: Top Catégories + Top Fast Sellers + Meilleurs Jours */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         {/* Top Catégories - en colonne */}
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Catégories</h3>
@@ -471,6 +577,32 @@ export default function PerformancePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Heures de vente */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Calendar className="text-blue-500" size={14} />
+            <h3 className="text-sm font-semibold text-gray-900">Heures de vente</h3>
+          </div>
+          {bestHours.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-1.5">
+              {bestHours.map((item) => {
+                const maxCount = bestHours[0]?.count || 1
+                return (
+                  <div key={item.hour} className="flex items-center gap-2 py-0.5">
+                    <span className="text-xs text-gray-500 w-10 shrink-0">{item.hour}h-{item.hour + 1}h</span>
+                    <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
+                      <div className="h-full bg-[#22209C]/80 rounded" style={{ width: `${Math.round((item.count / maxCount) * 100)}%` }} />
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 w-8 text-right">{item.count}</span>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
