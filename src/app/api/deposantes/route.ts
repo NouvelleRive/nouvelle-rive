@@ -177,6 +177,7 @@ export async function POST(req: NextRequest) {
       docData['Catégorie de rapport'] = [{
         label: categorieRapport.label?.trim() || '',
         idsquare: categorieRapport.idsquare?.trim() || '',
+        taux: typeof categorieRapport.taux === 'number' ? categorieRapport.taux : 0,
       }]
     } else {
       docData['Catégorie de rapport'] = []

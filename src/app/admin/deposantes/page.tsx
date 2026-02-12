@@ -255,6 +255,7 @@ export default function AdminDeposantesPage() {
         categorieRapport: {
           label: formData.categorieRapportLabel.trim(),
           idsquare: formData.categorieRapportIdsquare.trim(),
+          taux: formData.taux,
         },
       }
 
