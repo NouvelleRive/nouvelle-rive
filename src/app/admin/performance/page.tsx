@@ -604,6 +604,32 @@ export default function PerformancePage() {
         </div>
       </div>
 
+      {/* Répartition CA par tranche de prix */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition CA par prix</h2>
+        <div className="flex flex-col lg:flex-row items-center gap-4">
+          <div className="w-48 h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" outerRadius={80} strokeWidth={1}>
+                  {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
+                </Pie>
+                <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1">
+            {prixParTranche.map(d => (
+              <div key={d.name} className="flex items-center gap-2 text-xs">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                <span className="text-gray-700">{d.name}</span>
+                <span className="ml-auto font-semibold text-gray-900">{d.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* ============================== */}
       {/* ÉQUIPE VENTE                   */}
       {/* ============================== */}
@@ -703,32 +729,6 @@ export default function PerformancePage() {
               })}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Répartition CA par tranche de prix */}
-      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition CA par prix</h2>
-        <div className="flex flex-col lg:flex-row items-center gap-4">
-          <div className="w-48 h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" outerRadius={80} strokeWidth={1}>
-                  {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
-                </Pie>
-                <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1">
-            {prixParTranche.map(d => (
-              <div key={d.name} className="flex items-center gap-2 text-xs">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                <span className="text-gray-700">{d.name}</span>
-                <span className="ml-auto font-semibold text-gray-900">{d.pct}%</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
