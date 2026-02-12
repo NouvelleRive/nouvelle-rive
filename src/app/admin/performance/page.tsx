@@ -430,7 +430,6 @@ export default function PerformancePage() {
             {ventes.length} ventes totales • {ventesCurrentMonth.length} ce mois
           </p>
         </div>
-
         <div className="flex items-center gap-1.5">
           <Calendar size={14} className="text-gray-400" />
           <select
@@ -451,38 +450,15 @@ export default function PerformancePage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard
-          title="Chiffre d'affaires"
-          value={totalCA.toLocaleString('fr-FR')}
-          unit="€"
-          evolution={caEvolution}
-          icon={Euro}
-          color="bg-[#22209C]"
-        />
-        <KpiCard
-          title="Ventes"
-          value={totalVentes}
-          unit="articles"
-          evolution={ventesEvolution}
-          icon={ShoppingBag}
-          color="bg-emerald-500"
-        />
-        <KpiCard
-          title="Panier moyen"
-          value={panierMoyen}
-          unit="€"
-          evolution={panierEvolution}
-          icon={TrendingUp}
-          color="bg-amber-500"
-        />
-        <KpiCard
-          title="Chineuses actives"
-          value={chineusesActives}
-          unit="ce mois"
-          icon={Users}
-          color="bg-pink-500"
-        />
+        <KpiCard title="Chiffre d'affaires" value={totalCA.toLocaleString('fr-FR')} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
+        <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
+        <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
+        <KpiCard title="Chineuses actives" value={chineusesActives} unit="ce mois" icon={Users} color="bg-pink-500" />
       </div>
+
+      {/* ============================== */}
+      {/* SOURCING : Chineuses & Produit */}
+      {/* ============================== */}
 
       {/* Classement Chineuses */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
@@ -491,43 +467,114 @@ export default function PerformancePage() {
           <h2 className="text-sm font-semibold text-gray-900">Classement Chineuses</h2>
           <span className="text-xs text-gray-400">{moisCourt[selectedMonth]} {selectedYear}</span>
         </div>
-
         {classementChineuses.length === 0 ? (
           <p className="text-gray-400 text-center py-4 text-xs">Aucune vente ce mois</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th>
-                  <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th>
-                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
-                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
-                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Moy.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {classementChineuses.map((c, i) => (
-                  <tr key={c.key} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''}`}>
-                    <td className="py-1.5 px-1.5 text-sm">{getMedal(i)}</td>
-                    <td className="py-1.5 px-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>
-                          {c.trigramme}
-                        </div>
-                        <span className="font-medium text-gray-900">{c.nom}</span>
-                      </div>
-                    </td>
-                    <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{c.ca.toLocaleString('fr-FR')} €</td>
-                    <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td>
-                    <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes > 0 ? Math.round(c.ca / c.ventes) : 0} €</td>
+          <div className="grid grid-cols-2 gap-4">
+            {[0, 1].map(col => (
+              <table key={col} className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th>
+                    <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th>
+                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
+                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
+                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Moy.</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {classementChineuses
+                    .slice(col * Math.ceil(classementChineuses.length / 2), (col + 1) * Math.ceil(classementChineuses.length / 2))
+                    .map((c, i) => {
+                      const realIndex = col * Math.ceil(classementChineuses.length / 2) + i
+                      return (
+                        <tr key={c.key} className={`border-b border-gray-50 ${realIndex < 3 ? 'bg-amber-50/30' : ''}`}>
+                          <td className="py-1.5 px-1.5 text-sm">{getMedal(realIndex)}</td>
+                          <td className="py-1.5 px-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>
+                                {c.trigramme}
+                              </div>
+                              <span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span>
+                            </div>
+                          </td>
+                          <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{c.ca.toLocaleString('fr-FR')} €</td>
+                          <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td>
+                          <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes > 0 ? Math.round(c.ca / c.ventes) : 0} €</td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              </table>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Top Catégories + Fast Sellers */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* Top Catégories */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Catégories</h3>
+          {topCategories.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-2.5">
+              {topCategories.map((item, i) => (
+                <div key={item.cat} className="flex items-center gap-2">
+                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-gray-700 font-medium truncate">{item.cat}</span>
+                      <span className="text-gray-500 shrink-0 ml-2">{item.ca.toLocaleString('fr-FR')} €</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Fast Sellers */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 lg:col-span-2">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Zap className="text-orange-500" size={14} />
+            <h3 className="text-sm font-semibold text-gray-900">Fast Sellers</h3>
+            <span className="text-xs text-gray-400">top 20</span>
+          </div>
+          {topFastSellers.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[400px] overflow-y-auto">
+              {topFastSellers.map((item, i) => (
+                <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                  {item.photo ? (
+                    <img src={item.photo} alt={item.nom} className="w-full h-24 object-cover" />
+                  ) : (
+                    <div className="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-300 text-xs">No photo</div>
+                  )}
+                  <div className="p-1.5">
+                    <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
+                      <span className={`text-xs font-semibold px-1 py-0.5 rounded ${item.jours === 0 ? 'bg-green-100 text-green-700' : item.jours <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {item.jours === 0 ? '0j' : `${item.jours}j`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ============================== */}
+      {/* ÉQUIPE VENTE                   */}
+      {/* ============================== */}
 
       {/* Classement Vendeuses */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
@@ -571,29 +618,31 @@ export default function PerformancePage() {
         )}
       </div>
 
-      {/* Row: Top Catégories + Top Fast Sellers + Meilleurs Jours */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-        {/* Top Catégories - en colonne */}
+      {/* Meilleurs Jours + Heures de vente */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Meilleurs Jours de la semaine */}
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Catégories</h3>
-          {topCategories.length === 0 ? (
+          <div className="flex items-center gap-1.5 mb-3">
+            <Star className="text-yellow-500" size={14} />
+            <h3 className="text-sm font-semibold text-gray-900">Meilleurs Jours</h3>
+          </div>
+          {bestWeekdays.length === 0 ? (
             <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
           ) : (
-            <div className="space-y-2.5">
-              {topCategories.map((item, i) => (
-                <div key={item.cat} className="flex items-center gap-2">
-                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between text-xs mb-0.5">
-                      <span className="text-gray-700 font-medium truncate">{item.cat}</span>
-                      <span className="text-gray-500 shrink-0 ml-2">{item.ca.toLocaleString('fr-FR')} €</span>
+            <div className="space-y-2">
+              {bestWeekdays.map((day, i) => {
+                const maxMoy = bestWeekdays[0]?.moyenne || 1
+                return (
+                  <div key={day.dow} className="flex items-center gap-2">
+                    <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                    <span className="text-xs font-medium text-gray-700 w-16 shrink-0">{day.label}</span>
+                    <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
+                      <div className="h-full bg-amber-400 rounded" style={{ width: `${Math.round((day.moyenne / maxMoy) * 100)}%` }} />
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
-                    </div>
+                    <span className="text-xs font-bold text-gray-900 w-14 text-right">{day.moyenne.toLocaleString('fr-FR')} €</span>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -623,66 +672,6 @@ export default function PerformancePage() {
             </div>
           )}
         </div>
-
-        {/* Top Fast Sellers */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 lg:col-span-2">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Zap className="text-orange-500" size={14} />
-            <h3 className="text-sm font-semibold text-gray-900">Fast Sellers</h3>
-            <span className="text-xs text-gray-400">top 20</span>
-          </div>
-          {topFastSellers.length === 0 ? (
-            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[400px] overflow-y-auto">
-              {topFastSellers.map((item, i) => (
-                <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
-                  {item.photo ? (
-                    <img src={item.photo} alt={item.nom} className="w-full h-24 object-cover" />
-                  ) : (
-                    <div className="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-300 text-xs">No photo</div>
-                  )}
-                  <div className="p-1.5">
-                    <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
-                      <span className={`text-xs font-semibold px-1 py-0.5 rounded ${item.jours === 0 ? 'bg-green-100 text-green-700' : item.jours <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {item.jours === 0 ? '0j' : `${item.jours}j`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Meilleurs Jours de la semaine */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Star className="text-yellow-500" size={14} />
-            <h3 className="text-sm font-semibold text-gray-900">Meilleurs Jours</h3>
-          </div>
-          {bestWeekdays.length === 0 ? (
-            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
-          ) : (
-            <div className="space-y-2">
-              {bestWeekdays.map((day, i) => {
-                const maxMoy = bestWeekdays[0]?.moyenne || 1
-                return (
-                  <div key={day.dow} className="flex items-center gap-2">
-                    <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
-                    <span className="text-xs font-medium text-gray-700 w-16 shrink-0">{day.label}</span>
-                    <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
-                      <div className="h-full bg-amber-400 rounded" style={{ width: `${Math.round((day.moyenne / maxMoy) * 100)}%` }} />
-                    </div>
-                    <span className="text-xs font-bold text-gray-900 w-14 text-right">{day.moyenne.toLocaleString('fr-FR')} €</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Graphique CA par jour */}
@@ -699,28 +688,12 @@ export default function PerformancePage() {
                 contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '12px' }}
               />
               <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Line
-                type="monotone"
-                dataKey="ca"
-                name={moisCourt[selectedMonth]}
-                stroke="#22209C"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="caPrecedent"
-                name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]}
-                stroke="#d1d5db"
-                strokeWidth={1.5}
-                strokeDasharray="5 5"
-                dot={false}
-              />
+              <Line type="monotone" dataKey="ca" name={moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="caPrecedent" name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
     </div>
   )
-}
+  }
