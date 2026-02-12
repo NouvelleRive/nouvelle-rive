@@ -1037,7 +1037,7 @@
               return (
                 <div
                   key={p.id}
-                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false ? 'opacity-50 bg-gray-50' : ''} p-4 shadow-sm hover:shadow-md transition-all`}
+                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false || (p as any).statutRestock === 'enAttente' ? 'opacity-50 bg-gray-50' : ''} p-4 shadow-sm hover:shadow-md transition-all`}
                 >
                   {/* MOBILE */}
                   <div className="sm:hidden flex gap-3">
@@ -1061,6 +1061,7 @@
                       <h3 className="font-semibold text-gray-900 text-sm leading-tight">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente</span>}
+                      {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                       {isOlderThan2Months(p.createdAt) && !p.statutRecuperation && (
                       <button
                         onClick={() => handleDelete(p.id)}
@@ -1113,6 +1114,7 @@
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
                       {isAdmin && <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>}
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente de réception</span>}
+                    {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {isOlderThan2Months(p.createdAt) && !p.statutRecuperation && (
                       <button
                         onClick={() => handleDelete(p.id)}
