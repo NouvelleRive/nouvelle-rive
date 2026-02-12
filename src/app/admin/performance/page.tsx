@@ -27,6 +27,11 @@ type Produit = {
   dateEntree?: Timestamp
   createdAt?: Timestamp
   updatedAt?: Timestamp
+  marque?: string
+  material?: string
+  color?: string
+  motif?: string
+  modele?: string
 }
 
 type Deposant = {
@@ -395,6 +400,71 @@ export default function PerformancePage() {
     return data.map(d => ({ ...d, pct: total > 0 ? Math.round(d.ca / total * 100) : 0 }))
   }, [ventesCurrentMonth, deposants])
 
+  const topMarques = useMemo(() => {
+    const map = new Map<string, { ca: number; count: number }>()
+    ventesCurrentMonth.forEach(v => {
+      const m = v.marque || ''
+      if (!m) return
+      const cur = map.get(m) || { ca: 0, count: 0 }
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+    })
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 12)
+    const maxCA = sorted[0]?.[1].ca || 1
+    return sorted.map(([name, data]) => ({ name, ...data, pct: Math.round((data.ca / maxCA) * 100) }))
+  }, [ventesCurrentMonth])
+
+  const topCouleurs = useMemo(() => {
+    const map = new Map<string, { ca: number; count: number }>()
+    ventesCurrentMonth.forEach(v => {
+      const c = v.color || ''
+      if (!c) return
+      const cur = map.get(c) || { ca: 0, count: 0 }
+      map.set(c, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+    })
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
+    const maxCount = sorted[0]?.[1].count || 1
+    return sorted.map(([name, data]) => ({ name, ...data, pct: Math.round((data.count / maxCount) * 100) }))
+  }, [ventesCurrentMonth])
+
+  const topMatieres = useMemo(() => {
+    const map = new Map<string, { ca: number; count: number }>()
+    ventesCurrentMonth.forEach(v => {
+      const m = v.material || ''
+      if (!m) return
+      const cur = map.get(m) || { ca: 0, count: 0 }
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+    })
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
+    const maxCount = sorted[0]?.[1].count || 1
+    return sorted.map(([name, data]) => ({ name, ...data, pct: Math.round((data.count / maxCount) * 100) }))
+  }, [ventesCurrentMonth])
+
+  const topMotifs = useMemo(() => {
+    const map = new Map<string, { ca: number; count: number }>()
+    ventesCurrentMonth.forEach(v => {
+      const m = v.motif || ''
+      if (!m) return
+      const cur = map.get(m) || { ca: 0, count: 0 }
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+    })
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
+    const maxCount = sorted[0]?.[1].count || 1
+    return sorted.map(([name, data]) => ({ name, ...data, pct: Math.round((data.count / maxCount) * 100) }))
+  }, [ventesCurrentMonth])
+
+  const topModeles = useMemo(() => {
+    const map = new Map<string, { ca: number; count: number }>()
+    ventesCurrentMonth.forEach(v => {
+      const m = v.modele || ''
+      if (!m) return
+      const cur = map.get(m) || { ca: 0, count: 0 }
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+    })
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
+    const maxCount = sorted[0]?.[1].count || 1
+    return sorted.map(([name, data]) => ({ name, ...data, pct: Math.round((data.count / maxCount) * 100) }))
+  }, [ventesCurrentMonth])
+
   // Classement vendeuses par CA (réconciliation planning + ventes)
   const classementVendeuses = useMemo(() => {
     const map = new Map<string, { ca: number; ventes: number }>()
@@ -670,6 +740,140 @@ export default function PerformancePage() {
         </div>
       </div>
       </div>{/* fin grid row 2 */}
+
+      {/* ============================== */}
+      {/* ANALYTICS PRODUIT              */}
+      {/* ============================== */}
+
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Marques</h3>
+        {topMarques.length === 0 ? (
+          <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2">
+            {topMarques.map((item, i) => (
+              <div key={item.name} className="flex items-center gap-2">
+                <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="text-gray-700 font-medium truncate">{item.name}</span>
+                    <span className="text-gray-500 shrink-0 ml-2">{item.count} pcs · {item.ca.toLocaleString('fr-FR')} €</span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Couleurs</h3>
+          {topCouleurs.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-2">
+              {topCouleurs.map((item, i) => {
+                const colorMap: Record<string,string> = {'Noir':'#000','Blanc':'#fff','Écru':'#F5F5DC','Beige':'#D4B896','Camel':'#C19A6B','Marron':'#5C4033','Gris':'#808080','Anthracite':'#3D3D3D','Bleu marine':'#1E3A5F','Bleu ciel':'#87CEEB','Rouge':'#C41E3A','Bordeaux':'#6B1C23','Rose':'#E8B4B8','Vert':'#228B22','Kaki':'#6B6B47','Orange':'#E86100','Jaune':'#E8C547','Violet':'#6B3FA0','Doré':'#C5A048','Argenté':'#A8A8A8'}
+                const bg = item.name === 'Multicolore' ? 'linear-gradient(135deg, #FF6B6B, #4ECDC4, #FFE66D, #A06CD5)' : undefined
+                const bgColor = !bg ? (colorMap[item.name] || '#ccc') : undefined
+                return (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                    <div className="w-4 h-4 rounded-full border border-gray-200 shrink-0" style={{ background: bg, backgroundColor: bgColor }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="text-gray-700 font-medium">{item.name}</span>
+                        <span className="text-gray-500 shrink-0 ml-2">{item.count} pcs</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gray-800 rounded-full" style={{ width: `${item.pct}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Matières</h3>
+          {topMatieres.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-2">
+              {topMatieres.map((item, i) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-gray-700 font-medium">{item.name}</span>
+                      <span className="text-gray-500 shrink-0 ml-2">{item.count} pcs · {item.ca.toLocaleString('fr-FR')} €</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${item.pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Modèles</h3>
+          {topModeles.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-2">
+              {topModeles.map((item, i) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-gray-700 font-medium">{item.name}</span>
+                      <span className="text-gray-500 shrink-0 ml-2">{item.count} pcs · {item.ca.toLocaleString('fr-FR')} €</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-500 rounded-full" style={{ width: `${item.pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Motifs</h3>
+          {topMotifs.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée (champ motif peu rempli)</p>
+          ) : (
+            <div className="space-y-2">
+              {topMotifs.map((item, i) => (
+                <div key={item.name} className="flex items-center gap-2">
+                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-gray-700 font-medium">{item.name}</span>
+                      <span className="text-gray-500 shrink-0 ml-2">{item.count} pcs</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-pink-500 rounded-full" style={{ width: `${item.pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ============================== */}
       {/* ÉQUIPE VENTE                   */}
