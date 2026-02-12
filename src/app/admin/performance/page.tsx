@@ -354,6 +354,23 @@ export default function PerformancePage() {
 
   const monthEvents = useMemo(() => getMonthEvents(selectedMonth, selectedYear), [selectedMonth, selectedYear])
 
+  const prixParTranche = useMemo(() => {
+    const tranches = [
+      [0,50],[50,100],[100,200],[200,300],[300,400],[400,500],
+      [500,600],[600,700],[700,800],[800,900],[900,1000],
+      [1000,2000],[2000,3000],[3000,Infinity]
+    ]
+    const colors = ['#6366f1','#8b5cf6','#a78bfa','#c4b5fd','#22209C','#3b82f6','#60a5fa','#93c5fd','#f59e0b','#f97316','#ef4444','#dc2626','#991b1b','#111']
+    const data = tranches.map(([min,max], i) => {
+      const ca = ventesCurrentMonth
+        .filter(v => { const p = v.prixVenteReel || v.prix || 0; return p >= min && p < max })
+        .reduce((s, v) => s + (v.prixVenteReel || v.prix || 0), 0)
+      return { name: max === Infinity ? `${min}€+` : `${min}-${max}€`, ca, color: colors[i] }
+    }).filter(d => d.ca > 0)
+    const total = data.reduce((s, d) => s + d.ca, 0)
+    return data.map(d => ({ ...d, pct: total > 0 ? Math.round(d.ca / total * 100) : 0 }))
+  }, [ventesCurrentMonth])
+
   // Classement vendeuses par CA (réconciliation planning + ventes)
   const classementVendeuses = useMemo(() => {
     const map = new Map<string, { ca: number; ventes: number }>()
@@ -686,6 +703,32 @@ export default function PerformancePage() {
               })}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Répartition CA par tranche de prix */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition CA par prix</h2>
+        <div className="flex flex-col lg:flex-row items-center gap-4">
+          <div className="w-48 h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" outerRadius={80} strokeWidth={1}>
+                  {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
+                </Pie>
+                <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-1">
+            {prixParTranche.map(d => (
+              <div key={d.name} className="flex items-center gap-2 text-xs">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                <span className="text-gray-700">{d.name}</span>
+                <span className="ml-auto font-semibold text-gray-900">{d.pct}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
