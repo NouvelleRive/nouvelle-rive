@@ -776,7 +776,7 @@ export default function PerformancePage() {
       {/* Graphique CA par jour */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">CA journalier</h2>
-        <div className="h-56">
+        <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -790,7 +790,7 @@ export default function PerformancePage() {
               <Line type="monotone" dataKey="ca" name={moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               <Line type="monotone" dataKey="caPrecedent" name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
               {monthEvents.map((evt, i) => (
-                <ReferenceArea key={i} x1={evt.dayStart} x2={evt.dayEnd} fill={evt.color} label={{ value: evt.label, position: 'top', fontSize: 8 }} />
+                <ReferenceArea key={i} x1={evt.dayStart} x2={evt.dayEnd} fill={evt.color} label={{ value: evt.label, position: 'insideTop', fontSize: 7, fill: '#6b7280' }} />
               ))}
             </LineChart>
           </ResponsiveContainer>
