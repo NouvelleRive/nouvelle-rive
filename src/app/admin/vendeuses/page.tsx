@@ -680,6 +680,12 @@ useEffect(() => {
                           <span className="text-gray-400">{caParVendeuse.get(v.id)!.ventes} ventes</span>
                         </div>
                       )}
+                      {caParVendeuse.get(v.id) && (
+                        <div className="flex items-center gap-3 text-xs pl-5 mt-1">
+                          <span className="font-bold text-[#22209C]">{caParVendeuse.get(v.id)!.ca.toLocaleString('fr-FR')} € CA</span>
+                          <span className="text-gray-400">{caParVendeuse.get(v.id)!.ventes} ventes</span>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
