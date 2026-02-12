@@ -261,7 +261,7 @@ export default function PerformancePage() {
       map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prix || 0), count: current.count + 1 })
     })
 
-    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 6)
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 10)
     const maxCA = sorted[0]?.[1].ca || 1
 
     return sorted.map(([cat, data]) => ({
