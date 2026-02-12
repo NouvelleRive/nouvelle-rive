@@ -263,7 +263,7 @@ export default function PerformancePage() {
       map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prix || 0), count: current.count + 1 })
     })
 
-    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 12)
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 15)
     const maxCA = sorted[0]?.[1].ca || 1
 
     return sorted.map(([cat, data]) => ({
@@ -572,9 +572,9 @@ export default function PerformancePage() {
         </div>
 
         </div>{/* fin grid row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Fast Sellers */}
-        <div className="lg:col-span-3">
+        <div>
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-1.5 mb-3">
             <Zap className="text-orange-500" size={14} />
