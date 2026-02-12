@@ -762,7 +762,7 @@ export default function PerformancePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1">{item.count}</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
@@ -790,7 +790,7 @@ export default function PerformancePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between text-xs mb-0.5">
                         <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                        <span className="text-gray-400 shrink-0 ml-1">{item.count}</span>
+                        <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
                       </div>
                       <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-gray-800 rounded-full" style={{ width: `${item.pct}%` }} />
@@ -815,7 +815,7 @@ export default function PerformancePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1">{item.count}</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-amber-500 rounded-full" style={{ width: `${item.pct}%` }} />
@@ -839,7 +839,7 @@ export default function PerformancePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1">{item.count}</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-purple-500 rounded-full" style={{ width: `${item.pct}%` }} />
@@ -863,7 +863,7 @@ export default function PerformancePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1">{item.count}</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-pink-500 rounded-full" style={{ width: `${item.pct}%` }} />
