@@ -2057,9 +2057,20 @@ async function compressImage(file: File): Promise<string> {
               <div className="relative group w-32 h-32 mt-2">
                 <img src={formData.existingPhotos.dosOnModel} alt="Photo portée dos" className="w-full h-full object-cover rounded border" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setUploadedPhotoUrl(formData.existingPhotos.dosOnModel!)
+                      setPhotoToEdit({ file: new File([], 'existing'), type: 'dos', alreadyProcessed: true } as any)
+                    }}
+                    className="p-2 bg-purple-500 text-white rounded-full hover:bg-purple-600"
+                    title="Modifier"
+                  >
+                    <ImageIcon size={14} />
+                  </button>
                   <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'dosOnModel' })} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"><X size={14} /></button>
                 </div>
-                <span className="absolute bottom-1 left-1 text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded">Portée dos</span>
+                                <span className="absolute bottom-1 left-1 text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded">Portée dos</span>
               </div>
             )}
             {/* Section réordonnancement */}
