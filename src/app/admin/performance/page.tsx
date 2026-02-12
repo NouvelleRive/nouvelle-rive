@@ -238,7 +238,7 @@ export default function PerformancePage() {
       .map(([tri, data]) => {
         const dep = deposants.find(d => d.trigramme === tri)
         const isNR = tri === 'NR'
-        const taux = dep?.['Catégorie de rapport']?.[0]?.taux ?? 40
+        const taux = dep?.['Catégorie de rapport']?.[0]?.taux ?? dep?.taux ?? 0
         const benef = isNR ? data.ca : Math.round(data.ca * taux / 100)
         return {
           key: tri,
@@ -481,13 +481,14 @@ export default function PerformancePage() {
         <KpiCard title="Chiffre d'affaires" value={totalCA.toLocaleString('fr-FR')} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
         <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
         <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
-        <KpiCard title="Bénéfice NR" value={classementChineuses.reduce((s, c) => s + c.benef, 0).toLocaleString('fr-FR')} unit={`€ · ${totalCA > 0 ? Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100) : 0}%`} icon={Award} color="bg-pink-500" />
+        <KpiCard title="Bénéfice NR" value={classementChineuses.reduce((s, c) => s + c.benef, 0).toLocaleString('fr-FR')} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
       </div>
 
       {/* ============================== */}
       {/* SOURCING : Chineuses & Produit */}
       {/* ============================== */}
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {/* Classement Chineuses */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 mb-3">
@@ -543,9 +544,7 @@ export default function PerformancePage() {
         )}
       </div>
 
-      {/* Top Catégories + Fast Sellers */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Top Catégories */}
+      {/* Top Catégories */}
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Catégories</h3>
           {topCategories.length === 0 ? (
@@ -570,8 +569,10 @@ export default function PerformancePage() {
           )}
         </div>
 
+        </div>{/* fin grid row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Fast Sellers */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 lg:col-span-2">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-1.5 mb-3">
             <Zap className="text-orange-500" size={14} />
             <h3 className="text-sm font-semibold text-gray-900">Fast Sellers</h3>
@@ -602,8 +603,6 @@ export default function PerformancePage() {
             </div>
           )}
         </div>
-      </div>
-
       {/* Répartition CA par tranche de prix */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition CA par prix</h2>
@@ -620,6 +619,7 @@ export default function PerformancePage() {
           </div>
         </div>
       </div>
+      </div>{/* fin grid row 2 */}
 
       {/* ============================== */}
       {/* ÉQUIPE VENTE                   */}
