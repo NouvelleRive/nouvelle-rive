@@ -1563,8 +1563,9 @@ async function compressImage(file: File): Promise<string> {
                 <input
                   type="number"
                   value={formData.quantite}
-                  readOnly
-                  className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                  onChange={(e) => setFormData({ ...formData, quantite: e.target.value })}
+                  min="1"
+                  className="w-full border rounded px-2 py-1.5 text-sm"
                 />
               </div>
             </div>
