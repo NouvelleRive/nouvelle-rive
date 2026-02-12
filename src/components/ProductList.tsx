@@ -635,6 +635,7 @@
         dosOriginalUrl = undefined
       }
       if (data.deletedPhotos.faceOnModel) faceOnModelUrl = undefined
+      if ((data.deletedPhotos as any).dosOnModel) dosOnModelUrl = undefined
           
           // Trouver la catégorie avec idsquare
           const catObj = categories.find((c) => c.label === data.categorie)
@@ -1093,7 +1094,7 @@
                       <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                     )}
                   </div>
-                  {isExpanded && allImages.lengths > 2 && (
+                  {isExpanded && allImages.length > 2 && (
                     <div className="sm:hidden mt-3 pt-3 border-t border-gray-100">
                       <div className="flex gap-2 flex-wrap">
                         {allImages.slice(2).map((url, idx) => <img key={idx} src={url} alt={`${p.nom} ${idx + 3}`} className="w-12 h-12 object-cover rounded-lg cursor-pointer" onClick={() => window.open(url, '_blank')} />)}
