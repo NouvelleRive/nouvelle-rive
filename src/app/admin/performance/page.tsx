@@ -280,6 +280,26 @@ export default function PerformancePage() {
       .slice(0, 10)
   }, [ventes])
 
+  // Meilleures heures de vente
+  const bestHours = useMemo(() => {
+    const hourMap = new Map<number, { ca: number; count: number }>()
+    
+    ventesCurrentMonth.forEach(v => {
+      const date = getDateVente(v)
+      if (!date) return
+      const hour = date.getHours()
+      const current = hourMap.get(hour) || { ca: 0, count: 0 }
+      hourMap.set(hour, {
+        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        count: current.count + 1,
+      })
+    })
+
+    return Array.from(hourMap.entries())
+      .map(([hour, data]) => ({ hour, ...data }))
+      .sort((a, b) => b.count - a.count)
+  }, [ventesCurrentMonth])
+
   // Chineuses actives ce mois
   const chineusesActives = new Set(ventesCurrentMonth.map(v => v.chineur).filter(Boolean)).size
 
