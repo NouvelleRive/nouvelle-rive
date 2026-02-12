@@ -34,6 +34,7 @@ type Deposant = {
   nom?: string
   trigramme?: string
   type?: string
+  parametre?: number
 }
 
 type VendeusePerf = {
@@ -233,10 +234,16 @@ export default function PerformancePage() {
     return Array.from(map.entries())
       .map(([tri, data]) => {
         const dep = deposants.find(d => d.trigramme === tri)
+        const isNR = dep?.type === 'NR' || dep?.type === 'nr' || tri === 'NR'
+        const parametre = dep?.parametre || 0
+        const benef = isNR ? data.ca : Math.round(data.ca * parametre / 100)
         return {
           key: tri,
           nom: dep?.nom || tri,
           trigramme: tri,
+          parametre: isNR ? 'nr' : (parametre || '-'),
+          benef,
+          isNR,
           ...data,
         }
       })
@@ -479,7 +486,8 @@ export default function PerformancePage() {
                     <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th>
                     <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
                     <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
-                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Moy.</th>
+                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Com</th>
+                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Bénéf.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -500,7 +508,8 @@ export default function PerformancePage() {
                           </td>
                           <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{c.ca.toLocaleString('fr-FR')} €</td>
                           <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td>
-                          <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes > 0 ? Math.round(c.ca / c.ventes) : 0} €</td>
+                          <td className="py-1.5 px-1.5 text-right text-gray-400">{c.parametre}{c.parametre !== 'nr' && c.parametre !== '-' ? '%' : ''}</td>
+                          <td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{c.benef.toLocaleString('fr-FR')} €</td>
                         </tr>
                       )
                     })}
@@ -594,7 +603,8 @@ export default function PerformancePage() {
                   <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Vendeuse</th>
                   <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
                   <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
-                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Moy.</th>
+                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Com</th>
+                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Bénéf.</th>
                 </tr>
               </thead>
               <tbody>
