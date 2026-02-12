@@ -48,8 +48,8 @@ const moisCourt = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 
 
 export default function PerformancePage() {
   const now = new Date()
-  const [selectedMonth, setSelectedMonth] = useState(10)
-  const [selectedYear, setSelectedYear] = useState(2025)
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth())
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
