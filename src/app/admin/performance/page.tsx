@@ -217,27 +217,29 @@ export default function PerformancePage() {
     return dep?.trigramme || chineuseKey.substring(0, 3).toUpperCase()
   }
 
-  // Classement chineuses - groupé par ID déposant
+  // Classement chineuses - groupé par trigramme
   const classementChineuses = useMemo(() => {
     const map = new Map<string, { ca: number; ventes: number }>()
     
     ventesCurrentMonth.forEach(v => {
-      const email = v.chineur || 'unknown'
-      const key = resolveChineuse(email)
-      const current = map.get(key) || { ca: 0, ventes: 0 }
-      map.set(key, {
+      const tri = (v as any).trigramme || 'unknown'
+      const current = map.get(tri) || { ca: 0, ventes: 0 }
+      map.set(tri, {
         ca: current.ca + (v.prixVenteReel || v.prix || 0),
         ventes: current.ventes + 1,
       })
     })
 
     return Array.from(map.entries())
-      .map(([key, data]) => ({
-        key,
-        nom: getChineuseDisplayName(key),
-        trigramme: getChineuseTrigramme(key),
-        ...data,
-      }))
+      .map(([tri, data]) => {
+        const dep = deposants.find(d => d.trigramme === tri)
+        return {
+          key: tri,
+          nom: dep?.nom || tri,
+          trigramme: tri,
+          ...data,
+        }
+      })
       .filter(c => c.key !== 'unknown')
       .sort((a, b) => b.ca - a.ca)
   }, [ventesCurrentMonth, deposants])
