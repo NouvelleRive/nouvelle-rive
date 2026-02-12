@@ -280,11 +280,12 @@ async function compressImage(file: File): Promise<string> {
     existingPhotos: ExistingPhotos
     // Photos existantes supprimées (pour édition)
     deletedPhotos: {
-      face?: boolean
-      faceOnModel?: boolean
-      dos?: boolean
-      detailsIndexes?: number[]
-    }
+    face?: boolean
+        faceOnModel?: boolean
+        dos?: boolean
+        dosOnModel?: boolean
+        detailsIndexes?: number[]
+      }
     // Ordre des photos pour l'affichage
     photoOrder?: PhotoItem[]
   }
@@ -462,7 +463,7 @@ async function compressImage(file: File): Promise<string> {
     const [detouredDosUrl, setDetouredDosUrl] = useState<string | null>(null)
     const [uploadingPhoto, setUploadingPhoto] = useState(false)
     const [generatingDesc, setGeneratingDesc] = useState(false)
-    const [deletePhotoConfirm, setDeletePhotoConfirm] = useState<{type: 'face' | 'faceOnModel' | 'dos' | 'detail', index?: number} | null>(null)
+    const [deletePhotoConfirm, setDeletePhotoConfirm] = useState<{type: 'face' | 'faceOnModel' | 'dos' | 'dosOnModel' | 'detail', index?: number} | null>(null)
     const [suggestedDesc, setSuggestedDesc] = useState<{fr: string, en: string} | null>(null)
     // État pour l'ordre des photos
   const [photoOrder, setPhotoOrder] = useState<PhotoItem[]>([])
@@ -1221,7 +1222,7 @@ async function compressImage(file: File): Promise<string> {
     // =====================
     // GESTION PHOTOS
     // =====================
-    const handleDeleteExistingPhoto = (type: 'face' | 'faceOnModel' | 'dos' | 'detail', index?: number) => {
+    const handleDeleteExistingPhoto = (type: 'face' | 'faceOnModel' | 'dos' | 'dosOnModel' | 'detail', index?: number) => {
       setFormData(prev => {
         const newDeletedPhotos = { ...prev.deletedPhotos }
         const newExistingPhotos = { ...prev.existingPhotos }
@@ -1239,6 +1240,9 @@ async function compressImage(file: File): Promise<string> {
         } else if (type === 'dos') {
           newDeletedPhotos.dos = true
           delete newExistingPhotos.dos
+        } else if (type === 'dosOnModel') {
+          newDeletedPhotos.dosOnModel = true
+          delete newExistingPhotos.dosOnModel
         }
         
         return { ...prev, deletedPhotos: newDeletedPhotos, existingPhotos: newExistingPhotos }
@@ -2049,11 +2053,11 @@ async function compressImage(file: File): Promise<string> {
                 </div>
               </div>
             )}
-            {formData.existingPhotos.dosOnModel && (
+            {formData.existingPhotos.dosOnModel && !formData.deletedPhotos.dosOnModel && (
               <div className="relative group w-32 h-32 mt-2">
                 <img src={formData.existingPhotos.dosOnModel} alt="Photo portée dos" className="w-full h-full object-cover rounded border" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-2">
-                  <button type="button" onClick={() => handleDeleteExistingPhoto('dos')} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"><X size={14} /></button>
+                  <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'dosOnModel' })} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"><X size={14} /></button>
                 </div>
                 <span className="absolute bottom-1 left-1 text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded">Portée dos</span>
               </div>
