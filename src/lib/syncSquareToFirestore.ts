@@ -427,6 +427,39 @@ export async function syncVentesDepuisSquare(
         produitDoc = produitsBySku.get(skuNorm) || null
       }
 
+      // FALLBACK: Si pas trouvé, chercher d'autres SKUs dans le nom/note
+      if (!produitDoc) {
+        const sources = [itemName, itemNote, orderNote].filter(Boolean)
+        const candidates: string[] = []
+
+        for (const src of sources) {
+          // Extraire la partie après " - " (ex: "375800Q - IP23_BA06" → "IP23_BA06")
+          const afterDash = src.match(/\s[-–]\s(.+)/)?.[1]?.trim()
+          if (afterDash) {
+            const dashSku = afterDash.match(/^([A-Za-z0-9_\-]+)/)?.[1]
+            if (dashSku && dashSku.length >= 3) candidates.push(dashSku)
+          }
+          // Extraire tous les patterns SKU: 2-4 lettres + chiffres (+ optionnel _suffix)
+          const patterns = src.match(/\b[A-Za-z]{2,4}\d{1,4}(?:[_][A-Za-z0-9]+)*\b/gi) || []
+          candidates.push(...patterns)
+        }
+
+        // Tester chaque candidat (en évitant celui déjà testé)
+        const alreadyTried = sku?.toLowerCase().replace(/\s+/g, '') || ''
+        for (const candidate of candidates) {
+          const norm = candidate.toLowerCase().replace(/\s+/g, '')
+          if (norm === alreadyTried) continue
+          const found = produitsBySku.get(norm)
+          if (found) {
+            produitDoc = found
+            sku = candidate.toUpperCase()
+            skuSource = 'fallback_name'
+            console.log(`🔗 Fallback match: "${itemName}" → SKU ${sku}`)
+            break
+          }
+        }
+      }
+
       // Créer la vente
       const venteData: any = {
         orderId: order.id,
