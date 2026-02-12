@@ -4,10 +4,10 @@
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot, Timestamp } from 'firebase/firestore'
-import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval } from 'date-fns'
+import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, ArrowLeft } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star } from 'lucide-react'
 import Link from 'next/link'
 
 type Produit = {
@@ -17,11 +17,13 @@ type Produit = {
   prix?: number
   prixVenteReel?: number
   chineur?: string
+  chinpieces?: string
   categorie?: any
   vendu?: boolean
   quantite?: number
   statut?: string
   dateVente?: Timestamp
+  dateEntree?: Timestamp
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }
@@ -31,14 +33,16 @@ type Deposant = {
   email: string
   nom?: string
   trigramme?: string
+  type?: string
 }
 
 const moisLabels = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+const moisCourt = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
 
 export default function PerformancePage() {
   const now = new Date()
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth())
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(10)
+  const [selectedYear, setSelectedYear] = useState(2025)
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,6 +65,20 @@ export default function PerformancePage() {
     return () => unsub()
   }, [])
 
+  // Générer tous les mois disponibles depuis les données
+  const availableMonths = useMemo(() => {
+    const months: { year: number; month: number; label: string }[] = []
+    // Partir de 2024 janvier jusqu'au mois courant
+    const startYear = 2024
+    for (let y = startYear; y <= now.getFullYear(); y++) {
+      const maxMonth = y === now.getFullYear() ? now.getMonth() : 11
+      for (let m = 0; m <= maxMonth; m++) {
+        months.push({ year: y, month: m, label: `${moisCourt[m]} ${y}` })
+      }
+    }
+    return months.reverse() // Plus récent en premier
+  }, [])
+
   // Filtrer les ventes (produits vendus)
   const ventes = useMemo(() => {
     return produits.filter(p => 
@@ -80,6 +98,13 @@ export default function PerformancePage() {
   const getDateVente = (p: Produit): Date | null => {
     if (p.dateVente instanceof Timestamp) return p.dateVente.toDate()
     if (p.updatedAt instanceof Timestamp) return p.updatedAt.toDate()
+    if (p.createdAt instanceof Timestamp) return p.createdAt.toDate()
+    return null
+  }
+
+  // Helper pour obtenir la date d'entrée
+  const getDateEntree = (p: Produit): Date | null => {
+    if (p.dateEntree instanceof Timestamp) return p.dateEntree.toDate()
     if (p.createdAt instanceof Timestamp) return p.createdAt.toDate()
     return null
   }
@@ -146,53 +171,114 @@ export default function PerformancePage() {
     })
   }, [ventesCurrentMonth, ventesPreviousMonth, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd])
 
-  // Classement chineuses
+  // Résoudre le nom d'une chineuse (grouper par ID déposant, pas par email)
+  const resolveChineuse = (email: string) => {
+    const dep = deposants.find(d => d.email === email)
+    return dep?.id || email // On groupe par ID si trouvé, sinon par email
+  }
+
+  const getChineuseDisplayName = (chineuseKey: string) => {
+    // Chercher par ID d'abord, puis par email
+    const dep = deposants.find(d => d.id === chineuseKey) || deposants.find(d => d.email === chineuseKey)
+    if (dep?.nom) return dep.nom
+    if (dep?.email) return dep.email.split('@')[0].charAt(0).toUpperCase() + dep.email.split('@')[0].slice(1)
+    if (chineuseKey.includes('@')) return chineuseKey.split('@')[0].charAt(0).toUpperCase() + chineuseKey.split('@')[0].slice(1)
+    return chineuseKey
+  }
+
+  const getChineuseTrigramme = (chineuseKey: string) => {
+    const dep = deposants.find(d => d.id === chineuseKey) || deposants.find(d => d.email === chineuseKey)
+    return dep?.trigramme || chineuseKey.substring(0, 3).toUpperCase()
+  }
+
+  // Classement chineuses - groupé par ID déposant
   const classementChineuses = useMemo(() => {
     const map = new Map<string, { ca: number; ventes: number }>()
     
     ventesCurrentMonth.forEach(v => {
       const email = v.chineur || 'unknown'
-      const current = map.get(email) || { ca: 0, ventes: 0 }
-      map.set(email, {
+      const key = resolveChineuse(email)
+      const current = map.get(key) || { ca: 0, ventes: 0 }
+      map.set(key, {
         ca: current.ca + (v.prixVenteReel || v.prix || 0),
         ventes: current.ventes + 1,
       })
     })
 
     return Array.from(map.entries())
-        .map(([email, data]) => {
-            const dep = deposants.find(d => d.email === email)
-            // Nom propre : utilise le nom de la déposante, sinon capitalise la première partie de l'email
-            const nomAffiche = dep?.nom || (email !== 'unknown' ? email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) : 'Non attribué')
-            return {
-            email,
-            nom: nomAffiche,
-            trigramme: dep?.trigramme || (email !== 'unknown' ? email.substring(0, 3).toUpperCase() : '?'),
-            ...data,
-            }
-        })
-  .filter(c => c.email !== 'unknown') // Optionnel : masquer les ventes non attribuées
+      .map(([key, data]) => ({
+        key,
+        nom: getChineuseDisplayName(key),
+        trigramme: getChineuseTrigramme(key),
+        ...data,
+      }))
+      .filter(c => c.key !== 'unknown')
       .sort((a, b) => b.ca - a.ca)
   }, [ventesCurrentMonth, deposants])
 
   // Top catégories
   const topCategories = useMemo(() => {
-    const map = new Map<string, number>()
+    const map = new Map<string, { ca: number; count: number }>()
     
     ventesCurrentMonth.forEach(v => {
       const cat = typeof v.categorie === 'object' ? v.categorie?.label : v.categorie || 'Autre'
-      map.set(cat, (map.get(cat) || 0) + (v.prixVenteReel || v.prix || 0))
+      const current = map.get(cat) || { ca: 0, count: 0 }
+      map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prix || 0), count: current.count + 1 })
     })
 
-    const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5)
-    const maxCA = sorted[0]?.[1] || 1
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 6)
+    const maxCA = sorted[0]?.[1].ca || 1
 
-    return sorted.map(([cat, ca]) => ({
+    return sorted.map(([cat, data]) => ({
       cat,
-      ca,
-      pct: Math.round((ca / maxCA) * 100),
+      ca: data.ca,
+      count: data.count,
+      pct: Math.round((data.ca / maxCA) * 100),
     }))
   }, [ventesCurrentMonth])
+
+  // Top Fast Sellers - pièces vendues le plus vite
+  const topFastSellers = useMemo(() => {
+    return ventesCurrentMonth
+      .map(v => {
+        const dateVente = getDateVente(v)
+        const dateEntree = getDateEntree(v)
+        if (!dateVente || !dateEntree) return null
+        const jours = differenceInDays(dateVente, dateEntree)
+        if (jours < 0) return null
+        return {
+          id: v.id,
+          nom: v.nom || v.sku || 'Sans nom',
+          prix: v.prixVenteReel || v.prix || 0,
+          jours,
+          dateVente,
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => a!.jours - b!.jours)
+      .slice(0, 8) as { id: string; nom: string; prix: number; jours: number; dateVente: Date }[]
+  }, [ventesCurrentMonth])
+
+  // Meilleurs jours (top 10 par CA)
+  const bestDays = useMemo(() => {
+    const dayMap = new Map<string, { date: Date; ca: number; count: number }>()
+    
+    ventes.forEach(v => {
+      const date = getDateVente(v)
+      if (!date) return
+      const key = format(date, 'yyyy-MM-dd')
+      const current = dayMap.get(key) || { date, ca: 0, count: 0 }
+      dayMap.set(key, {
+        date,
+        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        count: current.count + 1,
+      })
+    })
+
+    return Array.from(dayMap.values())
+      .sort((a, b) => b.ca - a.ca)
+      .slice(0, 10)
+  }, [ventes])
 
   // Chineuses actives ce mois
   const chineusesActives = new Set(ventesCurrentMonth.map(v => v.chineur).filter(Boolean)).size
@@ -205,21 +291,21 @@ export default function PerformancePage() {
   }
 
   const KpiCard = ({ title, value, unit, evolution, icon: Icon, color }: any) => (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-gray-500">{title}</span>
-        <div className={`p-2 rounded-lg ${color}`}>
-          <Icon size={18} className="text-white" />
+    <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs text-gray-500">{title}</span>
+        <div className={`p-1.5 rounded-md ${color}`}>
+          <Icon size={14} className="text-white" />
         </div>
       </div>
-      <div className="flex items-end gap-2">
-        <span className="text-2xl font-bold text-gray-900">{value}</span>
-        <span className="text-gray-400 text-sm mb-1">{unit}</span>
+      <div className="flex items-end gap-1.5">
+        <span className="text-xl font-bold text-gray-900">{value}</span>
+        <span className="text-gray-400 text-xs mb-0.5">{unit}</span>
       </div>
       {evolution !== null && evolution !== undefined && (
-        <div className={`flex items-center gap-1 mt-2 text-sm ${parseFloat(evolution) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-          {parseFloat(evolution) >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-          <span>{parseFloat(evolution) >= 0 ? '+' : ''}{evolution}% vs mois précédent</span>
+        <div className={`flex items-center gap-1 mt-1 text-xs ${parseFloat(evolution) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+          {parseFloat(evolution) >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+          <span>{parseFloat(evolution) >= 0 ? '+' : ''}{evolution}%</span>
         </div>
       )}
     </div>
@@ -234,18 +320,18 @@ export default function PerformancePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Performance</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="text-lg font-bold text-gray-900">Performance</h1>
+          <p className="text-gray-400 text-xs">
             {ventes.length} ventes totales • {ventesCurrentMonth.length} ce mois
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Calendar size={18} className="text-gray-400" />
+        <div className="flex items-center gap-1.5">
+          <Calendar size={14} className="text-gray-400" />
           <select
             value={`${selectedYear}-${selectedMonth}`}
             onChange={(e) => {
@@ -253,20 +339,17 @@ export default function PerformancePage() {
               setSelectedYear(parseInt(y))
               setSelectedMonth(parseInt(m))
             }}
-            className="border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
+            className="border border-gray-200 rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
           >
-            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((m) => (
-              <option key={m} value={`${selectedYear}-${m}`}>{moisLabels[m]} {selectedYear}</option>
-            ))}
-            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((m) => (
-              <option key={`prev-${m}`} value={`${selectedYear - 1}-${m}`}>{moisLabels[m]} {selectedYear - 1}</option>
+            {availableMonths.map(({ year, month, label }) => (
+              <option key={`${year}-${month}`} value={`${year}-${month}`}>{label}</option>
             ))}
           </select>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
           title="Chiffre d'affaires"
           value={totalCA.toLocaleString('fr-FR')}
@@ -300,50 +383,43 @@ export default function PerformancePage() {
         />
       </div>
 
-      {/* Classement Chineuses - EN PREMIER */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-2 mb-4">
-          <Award className="text-amber-500" size={22} />
-          <h2 className="text-lg font-semibold text-gray-900">Classement Chineuses</h2>
-          <span className="text-sm text-gray-400 ml-2">{moisLabels[selectedMonth]} {selectedYear}</span>
+      {/* Classement Chineuses */}
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-3">
+          <Award className="text-amber-500" size={16} />
+          <h2 className="text-sm font-semibold text-gray-900">Classement Chineuses</h2>
+          <span className="text-xs text-gray-400">{moisCourt[selectedMonth]} {selectedYear}</span>
         </div>
 
         {classementChineuses.length === 0 ? (
-          <p className="text-gray-400 text-center py-8">Aucune vente ce mois</p>
+          <p className="text-gray-400 text-center py-4 text-xs">Aucune vente ce mois</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase">Rang</th>
-                  <th className="text-left py-3 px-2 text-xs font-medium text-gray-400 uppercase">Chineuse</th>
-                  <th className="text-right py-3 px-2 text-xs font-medium text-gray-400 uppercase">CA</th>
-                  <th className="text-right py-3 px-2 text-xs font-medium text-gray-400 uppercase">Ventes</th>
-                  <th className="text-right py-3 px-2 text-xs font-medium text-gray-400 uppercase">Panier moy.</th>
+                  <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th>
+                  <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th>
+                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
+                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
+                  <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Moy.</th>
                 </tr>
               </thead>
               <tbody>
                 {classementChineuses.map((c, i) => (
-                  <tr key={c.email} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''} hover:bg-gray-50 transition-colors`}>
-                    <td className="py-3 px-2">
-                      <span className="text-lg">{getMedal(i)}</span>
-                    </td>
-                    <td className="py-3 px-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                  <tr key={c.key} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''}`}>
+                    <td className="py-1.5 px-1.5 text-sm">{getMedal(i)}</td>
+                    <td className="py-1.5 px-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>
                           {c.trigramme}
                         </div>
-                        <div>
-                          <span className="font-medium text-gray-900">{c.nom}</span>
-                          <p className="text-xs text-gray-400">{c.email}</p>
-                        </div>
+                        <span className="font-medium text-gray-900">{c.nom}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-2 text-right">
-                      <span className="font-semibold text-gray-900">{c.ca.toLocaleString('fr-FR')} €</span>
-                    </td>
-                    <td className="py-3 px-2 text-right text-gray-600">{c.ventes}</td>
-                    <td className="py-3 px-2 text-right text-gray-600">{c.ventes > 0 ? Math.round(c.ca / c.ventes) : 0} €</td>
+                    <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{c.ca.toLocaleString('fr-FR')} €</td>
+                    <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td>
+                    <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes > 0 ? Math.round(c.ca / c.ventes) : 0} €</td>
                   </tr>
                 ))}
               </tbody>
@@ -352,66 +428,120 @@ export default function PerformancePage() {
         )}
       </div>
 
+      {/* Row: Top Catégories + Top Fast Sellers + Meilleurs Jours */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* Top Catégories - en colonne */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Top Catégories</h3>
+          {topCategories.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-2.5">
+              {topCategories.map((item, i) => (
+                <div key={item.cat} className="flex items-center gap-2">
+                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between text-xs mb-0.5">
+                      <span className="text-gray-700 font-medium truncate">{item.cat}</span>
+                      <span className="text-gray-500 shrink-0 ml-2">{item.ca.toLocaleString('fr-FR')} €</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Top Fast Sellers */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Zap className="text-orange-500" size={14} />
+            <h3 className="text-sm font-semibold text-gray-900">Fast Sellers</h3>
+          </div>
+          {topFastSellers.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-1.5">
+              {topFastSellers.map((item, i) => (
+                <div key={item.id} className="flex items-center gap-2 py-1 border-b border-gray-50 last:border-0">
+                  <span className="text-xs text-gray-400 w-4 shrink-0">{i + 1}.</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
+                    <p className="text-gray-400" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} € • vendu le {format(item.dateVente, 'd MMM', { locale: fr })}</p>
+                  </div>
+                  <span className={`text-xs font-semibold shrink-0 px-1.5 py-0.5 rounded ${item.jours === 0 ? 'bg-green-100 text-green-700' : item.jours <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {item.jours === 0 ? 'Même jour' : `${item.jours}j`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Meilleurs Jours (all time) */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Star className="text-yellow-500" size={14} />
+            <h3 className="text-sm font-semibold text-gray-900">Meilleurs Jours</h3>
+            <span className="text-xs text-gray-400">all time</span>
+          </div>
+          {bestDays.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
+          ) : (
+            <div className="space-y-1.5">
+              {bestDays.map((day, i) => (
+                <div key={format(day.date, 'yyyy-MM-dd')} className="flex items-center gap-2 py-1 border-b border-gray-50 last:border-0">
+                  <span className="text-sm w-5 shrink-0">{getMedal(i)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-900">{format(day.date, 'EEEE d MMMM yyyy', { locale: fr })}</p>
+                    <p className="text-gray-400" style={{ fontSize: '10px' }}>{day.count} vente{day.count > 1 ? 's' : ''}</p>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900 shrink-0">{day.ca.toLocaleString('fr-FR')} €</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Graphique CA par jour */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">CA journalier</h2>
-        <div className="h-72">
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">CA journalier</h2>
+        <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#9ca3af" />
-              <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#9ca3af" />
+              <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} />
               <Tooltip
                 formatter={(value: number) => [`${value} €`, '']}
-                contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '12px' }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
               <Line
                 type="monotone"
                 dataKey="ca"
-                name={moisLabels[selectedMonth]}
+                name={moisCourt[selectedMonth]}
                 stroke="#22209C"
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 6 }}
+                activeDot={{ r: 4 }}
               />
               <Line
                 type="monotone"
                 dataKey="caPrecedent"
-                name={moisLabels[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]}
+                name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]}
                 stroke="#d1d5db"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 strokeDasharray="5 5"
                 dot={false}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      {/* Top Catégories */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Catégories</h3>
-        {topCategories.length === 0 ? (
-          <p className="text-gray-400 text-center py-8">Aucune donnée</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {topCategories.map((item, i) => (
-              <div key={item.cat} className="flex items-center gap-3">
-                <span className="text-lg w-6">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`}</span>
-                <div className="flex-1">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-700 font-medium">{item.cat}</span>
-                    <span className="text-gray-500">{item.ca.toLocaleString('fr-FR')} €</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#22209C] rounded-full transition-all" style={{ width: `${item.pct}%` }} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )
