@@ -1,10 +1,11 @@
 // app/admin/vendeuses/page.tsx
 'use client'
 
+import { format } from 'date-fns'
 import { useEffect, useState, useMemo } from 'react'
 import {
   collection, getDocs, addDoc, updateDoc, deleteDoc, doc,
-  serverTimestamp, getDoc, setDoc, Timestamp
+  serverTimestamp, getDoc, setDoc, Timestamp, onSnapshot
 } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
@@ -22,6 +23,18 @@ type Vendeuse = {
 }
 
 type PlanningSlots = Record<string, string> // "2026-02-05_12-20": vendeuse_id
+
+type ProduitVente = {
+  id: string
+  prix?: number
+  prixVenteReel?: number
+  vendu?: boolean
+  statut?: string
+  quantite?: number
+  dateVente?: Timestamp
+  updatedAt?: Timestamp
+  createdAt?: Timestamp
+}
 
 const CRENEAUX = ['12-20', '11-17'] as const
 const JOURS_SEMAINE = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
@@ -61,6 +74,7 @@ export default function VendeusesPage() {
   })
   const [planningSlots, setPlanningSlots] = useState<PlanningSlots>({})
   const [planningLoading, setPlanningLoading] = useState(false)
+  const [ventesAll, setVentesAll] = useState<ProduitVente[]>([])
 
   // =====================
   // FETCH VENDEUSES
@@ -103,6 +117,17 @@ export default function VendeusesPage() {
   useEffect(() => {
     fetchPlanning()
   }, [monthKey])
+
+  // Charger les ventes
+useEffect(() => {
+  const unsub = onSnapshot(collection(db, 'produits'), (snap) => {
+    const sold = snap.docs
+      .map(d => ({ id: d.id, ...d.data() } as ProduitVente))
+      .filter(p => p.vendu === true || p.statut === 'vendu' || (p.quantite !== undefined && p.quantite <= 0))
+    setVentesAll(sold)
+  })
+  return () => unsub()
+}, [])
 
   // =====================
   // AJOUTER VENDEUSE
@@ -266,6 +291,47 @@ export default function VendeusesPage() {
     })
     return total
   }
+
+  // CA par vendeuse (réconciliation planning + ventes du mois)
+  const caParVendeuse = useMemo(() => {
+    const map = new Map<string, { ca: number; ventes: number }>()
+
+    const getDate = (p: ProduitVente): Date | null => {
+      if (p.dateVente instanceof Timestamp) return p.dateVente.toDate()
+      if (p.updatedAt instanceof Timestamp) return p.updatedAt.toDate()
+      if (p.createdAt instanceof Timestamp) return p.createdAt.toDate()
+      return null
+    }
+
+    ventesAll.forEach(v => {
+      const date = getDate(v)
+      if (!date) return
+      const m = date.getMonth()
+      const y = date.getFullYear()
+      if (m !== currentMonth.month || y !== currentMonth.year) return
+
+      const dateStr = format(date, 'yyyy-MM-dd')
+      const hour = date.getHours()
+      const slot1220 = planningSlots[`${dateStr}_12-20`]
+      const slot1117 = planningSlots[`${dateStr}_11-17`]
+
+      let vendeuseId: string | null = null
+      if (slot1220 && slot1117) {
+        vendeuseId = hour < 12 ? slot1117 : hour >= 17 ? slot1220 : slot1220
+      } else {
+        vendeuseId = slot1220 || slot1117 || null
+      }
+
+      if (!vendeuseId) return
+      const cur = map.get(vendeuseId) || { ca: 0, ventes: 0 }
+      map.set(vendeuseId, {
+        ca: cur.ca + (v.prixVenteReel || v.prix || 0),
+        ventes: cur.ventes + 1,
+      })
+    })
+
+    return map
+  }, [ventesAll, planningSlots, currentMonth])
 
   // Jours de CP = jours supposés - jours réels travaillés
   const joursCP = (v: Vendeuse) => {
@@ -608,6 +674,12 @@ export default function VendeusesPage() {
                           <span className="text-orange-500 font-medium">{cp}h CP</span>
                         )}
                       </div>
+                      {caParVendeuse.get(v.id) && (
+                        <div className="flex items-center gap-3 text-xs pl-5 mt-1">
+                          <span className="font-bold text-[#22209C]">{caParVendeuse.get(v.id)!.ca.toLocaleString('fr-FR')} € CA</span>
+                          <span className="text-gray-400">{caParVendeuse.get(v.id)!.ventes} ventes</span>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
