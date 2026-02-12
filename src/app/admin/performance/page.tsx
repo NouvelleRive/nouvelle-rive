@@ -34,7 +34,7 @@ type Deposant = {
   nom?: string
   trigramme?: string
   type?: string
-  'Catégorie de rapport'?: { taux?: number }[]
+  taux?: number
 }
 
 type VendeusePerf = {
