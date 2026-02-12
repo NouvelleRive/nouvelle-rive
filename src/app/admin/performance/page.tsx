@@ -404,14 +404,18 @@ export default function PerformancePage() {
     const map = new Map<string, { ca: number; count: number }>()
     ventesCurrentMonth.forEach(v => {
       const m = v.marque || ''
-      if (!m || m.toLowerCase().startsWith('made in') || m.toLowerCase().startsWith('vintage') || m.length < 2) return
+      if (!m || m.length < 2) return
+      const ml = m.toLowerCase()
+      if (ml.startsWith('made in') || ml.startsWith('vintage') || ml === 'bombardier' || ml === 'morgan' || ml === 'âge paris' || ml === 'age paris') return
+      const isChineuse = deposants.some(d => d.nom?.toLowerCase() === ml || d.email?.split('@')[0]?.toLowerCase() === ml)
+      if (isChineuse) return
       const cur = map.get(m) || { ca: 0, count: 0 }
       map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 12)
     const maxCA = sorted[0]?.[1].ca || 1
     return sorted.map(([name, data]) => ({ name, ...data, pct: Math.round((data.ca / maxCA) * 100) }))
-  }, [ventesCurrentMonth])
+  }, [ventesCurrentMonth, deposants])
 
   const topCouleurs = useMemo(() => {
     const map = new Map<string, { ca: number; count: number }>()
