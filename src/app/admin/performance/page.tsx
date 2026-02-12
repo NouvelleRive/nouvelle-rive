@@ -6,9 +6,10 @@ import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts'
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star } from 'lucide-react'
 import Link from 'next/link'
+import { getMonthEvents } from '@/lib/retailEvents'
 
 type Produit = {
   id: string
@@ -50,6 +51,7 @@ export default function PerformancePage() {
   const now = new Date()
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth())
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
+  const [showAllChineuses, setShowAllChineuses] = useState(false)
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
@@ -235,7 +237,7 @@ export default function PerformancePage() {
       .map(([tri, data]) => {
         const dep = deposants.find(d => d.trigramme === tri)
         const isNR = tri === 'NR'
-        const taux = dep?.['Catégorie de rapport']?.[0]?.taux ?? 0
+        const taux = dep?.taux ?? 0
         const benef = isNR ? data.ca : Math.round(data.ca * taux / 100)
         return {
           key: tri,
@@ -348,6 +350,8 @@ export default function PerformancePage() {
       .map(([hour, data]) => ({ hour, ...data }))
       .sort((a, b) => b.count - a.count)
   }, [ventesCurrentMonth])
+
+  const monthEvents = useMemo(() => getMonthEvents(selectedMonth, selectedYear), [selectedMonth, selectedYear])
 
   // Classement vendeuses par CA (réconciliation planning + ventes)
   const classementVendeuses = useMemo(() => {
@@ -476,7 +480,7 @@ export default function PerformancePage() {
         {classementChineuses.length === 0 ? (
           <p className="text-gray-400 text-center py-4 text-xs">Aucune vente ce mois</p>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div><div className="hidden lg:grid grid-cols-2 gap-4">
             {[0, 1].map(col => (
               <table key={col} className="w-full text-xs">
                 <thead>
@@ -513,6 +517,10 @@ export default function PerformancePage() {
                 </tbody>
               </table>
             ))}
+          </div>
+          <div className="lg:hidden">
+              <table className="w-full text-xs"><thead><tr className="border-b border-gray-100"><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Bénéf.</th></tr></thead><tbody>{(showAllChineuses ? classementChineuses : classementChineuses.slice(0, 10)).map((c, i) => (<tr key={c.key} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''}`}><td className="py-1.5 px-1.5 text-sm">{getMedal(i)}</td><td className="py-1.5 px-1.5"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>{c.trigramme}</div><span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span></div></td><td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{c.ca.toLocaleString('fr-FR')} €</td><td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td><td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{c.benef.toLocaleString('fr-FR')} €</td></tr>))}</tbody></table>{classementChineuses.length > 10 && (<button onClick={() => setShowAllChineuses(!showAllChineuses)} className="w-full mt-2 py-2 text-xs text-[#22209C] font-medium border border-gray-200 rounded-lg hover:bg-gray-50">{showAllChineuses ? 'Réduire ▲' : `Voir tout (${classementChineuses.length}) ▼`}</button>)}
+            </div>
           </div>
         )}
       </div>
@@ -696,6 +704,9 @@ export default function PerformancePage() {
               <Legend wrapperStyle={{ fontSize: '11px' }} />
               <Line type="monotone" dataKey="ca" name={moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               <Line type="monotone" dataKey="caPrecedent" name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+              {monthEvents.map((evt, i) => (
+                <ReferenceLine key={i} x={`${evt.day}/${selectedMonth + 1}`} stroke={evt.color} strokeDasharray="4 4" strokeWidth={1} label={{ value: evt.label, position: 'top', fontSize: 9, fill: evt.color }} />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         </div>
