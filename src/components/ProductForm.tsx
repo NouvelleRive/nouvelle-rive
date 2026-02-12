@@ -1489,7 +1489,6 @@ async function compressImage(file: File): Promise<string> {
                   <input
                     type="text"
                     value={sku || '—'}
-                    readOnly
                     className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-gray-600"
                   />
                 )}
@@ -1564,7 +1563,6 @@ async function compressImage(file: File): Promise<string> {
                   type="number"
                   value={formData.quantite}
                   onChange={(e) => setFormData({ ...formData, quantite: e.target.value })}
-                  min="1"
                   className="w-full border rounded px-2 py-1.5 text-sm"
                 />
               </div>
