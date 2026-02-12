@@ -508,7 +508,7 @@ export default function PerformancePage() {
                               <span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span>
                             </div>
                           </td>
-                          <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{c.ca.toLocaleString('fr-FR')} €</td>
+                          <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900"><span className="whitespace-nowrap">{c.ca.toLocaleString('fr-FR')}€</span></td>
                           <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td>
                           <td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{c.benef.toLocaleString('fr-FR')} €</td>
                         </tr>
