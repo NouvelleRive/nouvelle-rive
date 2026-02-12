@@ -6,7 +6,7 @@ import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star } from 'lucide-react'
 import Link from 'next/link'
 import { getMonthEvents } from '@/lib/retailEvents'
@@ -505,7 +505,7 @@ export default function PerformancePage() {
         <KpiCard title="Chiffre d'affaires" value={totalCA.toLocaleString('fr-FR')} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
         <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
         <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
-        <KpiCard title="Bénéfice NR" value={classementChineuses.reduce((s, c) => s + c.benef, 0).toLocaleString('fr-FR')} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+        <KpiCard title="Marge" value={classementChineuses.reduce((s, c) => s + c.benef, 0).toLocaleString('fr-FR')} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
       </div>
 
       {/* ============================== */}
@@ -533,7 +533,7 @@ export default function PerformancePage() {
                     <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th>
                     <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
                     <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
-                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Bénéf.</th>
+                    <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Marge</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -563,7 +563,7 @@ export default function PerformancePage() {
             ))}
           </div>
           <div className="lg:hidden">
-              <table className="w-full text-xs"><thead><tr className="border-b border-gray-100"><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Bénéf.</th></tr></thead><tbody>{(showAllChineuses ? classementChineuses : classementChineuses.slice(0, 10)).map((c, i) => (<tr key={c.key} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''}`}><td className="py-1.5 px-1.5 text-sm">{getMedal(i)}</td><td className="py-1.5 px-1.5"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>{c.trigramme}</div><span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span></div></td><td className="py-1.5 px-1.5 text-right font-semibold text-gray-900 whitespace-nowrap">{c.ca.toLocaleString('fr-FR')}€</td><td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td><td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{c.benef.toLocaleString('fr-FR')} €</td></tr>))}</tbody></table>{classementChineuses.length > 10 && (<button onClick={() => setShowAllChineuses(!showAllChineuses)} className="w-full mt-2 py-2 text-xs text-[#22209C] font-medium border border-gray-200 rounded-lg hover:bg-gray-50">{showAllChineuses ? 'Réduire ▲' : `Voir tout (${classementChineuses.length}) ▼`}</button>)}
+              <table className="w-full text-xs"><thead><tr className="border-b border-gray-100"><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Marge</th></tr></thead><tbody>{(showAllChineuses ? classementChineuses : classementChineuses.slice(0, 10)).map((c, i) => (<tr key={c.key} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''}`}><td className="py-1.5 px-1.5 text-sm">{getMedal(i)}</td><td className="py-1.5 px-1.5"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>{c.trigramme}</div><span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span></div></td><td className="py-1.5 px-1.5 text-right font-semibold text-gray-900 whitespace-nowrap">{c.ca.toLocaleString('fr-FR')}€</td><td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td><td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{c.benef.toLocaleString('fr-FR')} €</td></tr>))}</tbody></table>{classementChineuses.length > 10 && (<button onClick={() => setShowAllChineuses(!showAllChineuses)} className="w-full mt-2 py-2 text-xs text-[#22209C] font-medium border border-gray-200 rounded-lg hover:bg-gray-50">{showAllChineuses ? 'Réduire ▲' : `Voir tout (${classementChineuses.length}) ▼`}</button>)}
             </div>
           </div>
         )}
@@ -641,8 +641,9 @@ export default function PerformancePage() {
               <div className="w-[420px] h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" outerRadius={100} strokeWidth={1} label={({ name, pct, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); return (<text x={x} y={y} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={13} fontWeight="600" fill="#111827">{name} {pct}%</text>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
                       {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
+                      <Label value={`${totalCA.toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
                     </Pie>
                     <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
                   </PieChart>
@@ -651,13 +652,14 @@ export default function PerformancePage() {
             </div>
           </div>
           <div>
-            <p className="text-xs text-gray-500 font-medium text-center mb-1">Bénéfice NR</p>
+            <p className="text-xs text-gray-500 font-medium text-center mb-1">Marge</p>
             <div className="flex justify-center">
               <div className="w-[420px] h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={benefParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" outerRadius={100} strokeWidth={1} label={({ name, pct, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); return (<text x={x} y={y} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={13} fontWeight="600" fill="#111827">{name} {pct}%</text>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    <Pie data={benefParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
                       {benefParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
+                      <Label value={`${benefParTranche.reduce((s, d) => s + d.ca, 0).toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
                     </Pie>
                     <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
                   </PieChart>
@@ -778,7 +780,7 @@ export default function PerformancePage() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#9ca3af" />
+              <XAxis dataKey="jour" tick={{ fontSize: 10 }} stroke="#9ca3af" />
               <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} />
               <Tooltip
                 formatter={(value: number) => [`${value} €`, '']}
@@ -788,7 +790,7 @@ export default function PerformancePage() {
               <Line type="monotone" dataKey="ca" name={moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               <Line type="monotone" dataKey="caPrecedent" name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
               {monthEvents.map((evt, i) => (
-                <ReferenceArea key={i} x1={`${evt.dayStart}/${selectedMonth + 1}`} x2={`${evt.dayEnd}/${selectedMonth + 1}`} fill={evt.color} label={{ value: evt.label, position: 'top', fontSize: 8 }} />
+                <ReferenceArea key={i} x1={evt.dayStart} x2={evt.dayEnd} fill={evt.color} label={{ value: evt.label, position: 'top', fontSize: 8 }} />
               ))}
             </LineChart>
           </ResponsiveContainer>
