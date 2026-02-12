@@ -360,7 +360,7 @@ export default function PerformancePage() {
       [500,600],[600,700],[700,800],[800,900],[900,1000],
       [1000,2000],[2000,3000],[3000,Infinity]
     ]
-    const colors = ['#6366f1','#8b5cf6','#a78bfa','#c4b5fd','#22209C','#3b82f6','#60a5fa','#93c5fd','#f59e0b','#f97316','#ef4444','#dc2626','#991b1b','#111']
+    const colors = ['#e0e7ff','#c7d2fe','#a5b4fc','#818cf8','#6366f1','#4f46e5','#4338ca','#3730a3','#312e81','#22209C','#1e1b4b','#171533','#100e24','#0a0914']
     const data = tranches.map(([min,max], i) => {
       const ca = ventesCurrentMonth
         .filter(v => { const p = v.prixVenteReel || v.prix || 0; return p >= min && p < max })
@@ -377,7 +377,7 @@ export default function PerformancePage() {
       [500,600],[600,700],[700,800],[800,900],[900,1000],
       [1000,2000],[2000,3000],[3000,Infinity]
     ]
-    const colors = ['#10b981','#059669','#047857','#065f46','#34d399','#6ee7b7','#a7f3d0','#d1fae5','#f59e0b','#f97316','#ef4444','#dc2626','#991b1b','#111']
+    const colors = ['#d1fae5','#a7f3d0','#6ee7b7','#34d399','#10b981','#059669','#047857','#065f46','#064e3b','#022c22','#1a1a2e','#111827','#0f0f1a','#0a0a12']
     const data = tranches.map(([min,max], i) => {
       const items = ventesCurrentMonth.filter(v => { const p = v.prixVenteReel || v.prix || 0; return p >= min && p < max })
       const benef = items.reduce((s, v) => {
@@ -641,7 +641,7 @@ export default function PerformancePage() {
               <div className="w-[420px] h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
                       {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
                       <Label value={`${totalCA.toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
                     </Pie>
@@ -657,7 +657,7 @@ export default function PerformancePage() {
               <div className="w-[420px] h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={benefParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    <Pie data={benefParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; if (pct < 4) return null; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {Math.round(value).toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
                       {benefParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
                       <Label value={`${benefParTranche.reduce((s, d) => s + d.ca, 0).toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
                     </Pie>
