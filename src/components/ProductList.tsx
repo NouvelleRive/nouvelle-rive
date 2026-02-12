@@ -151,6 +151,7 @@
             email: d.data().email || '',
             trigramme: d.data().trigramme || '',
             wearType: d.data().wearType || 'womenswear',
+            stockType: d.data().stockType || 'unique',
             categories: d.data()['Catégorie'] || d.data().categories || []
           }))
           setChineusesList(data)
@@ -646,7 +647,17 @@
             description: data.description || '',
             categorie: catObj || { label: data.categorie },
             prix: parseFloat(data.prix) || 0,
-            quantite: parseInt(data.quantite) || 1,
+            quantite: (() => {
+              const newQte = parseInt(data.quantite) || 1
+              const oldQte = editingProduct.quantite ?? 1
+              const tri = editingProduct.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+              const ch = chineusesList.find(c => c.trigramme?.toUpperCase() === tri)
+              if ((ch as any)?.stockType === 'smallBatch' && newQte > oldQte) {
+                // Ne pas modifier la quantité, créer une demande de restock
+                return oldQte
+              }
+              return newQte
+            })(),
             marque: data.marque || '',
             taille: data.taille || '',
             material: data.material || '',
@@ -735,6 +746,18 @@
           }
           
           await updateDoc(doc(db, 'produits', productId), updateData)
+          // Demande de restock si smallBatch et quantité augmentée
+          const newQte = parseInt(data.quantite) || 1
+          const oldQte = editingProduct.quantite ?? 1
+          const triSku = editingProduct.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+          const chineuse = chineusesList.find(c => c.trigramme?.toUpperCase() === triSku)
+          if ((chineuse as any)?.stockType === 'smallBatch' && newQte > oldQte) {
+            await updateDoc(doc(db, 'produits', productId), {
+              statutRestock: 'enAttente',
+              quantiteRestock: newQte - oldQte,
+              dateDemandeRestock: Timestamp.now(),
+            })
+          }
       
           setShowForm(false)
           setEditingProduct(null)
@@ -1068,33 +1091,6 @@
                     {p.statut === 'outOfStock' && (
                       <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                     )}
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="text-[10px] bg-red-50 text-red-600 border border-red-200 rounded px-1.5 py-0.5 hover:bg-red-100 transition"
-                      >
-                        − Destock
-                      </button>
-                      <button
-                        onClick={async () => {
-                          const qte = prompt('Quantité à restocker ?', '1')
-                          if (!qte || isNaN(parseInt(qte))) return
-                          try {
-                            await updateDoc(doc(db, 'produits', p.id), {
-                              statutRestock: 'enAttente',
-                              quantiteRestock: parseInt(qte),
-                              dateDemandeRestock: Timestamp.now(),
-                            })
-                            alert('Demande de restock envoyée ✓')
-                          } catch (err) {
-                            alert('Erreur lors de la demande')
-                          }
-                        }}
-                        className="text-[10px] bg-green-50 text-green-600 border border-green-200 rounded px-1.5 py-0.5 hover:bg-green-100 transition"
-                      >
-                        + Restock
-                      </button>
-                    </div>
                   </div>
                   {isExpanded && allImages.lengths > 2 && (
                     <div className="sm:hidden mt-3 pt-3 border-t border-gray-100">
@@ -1142,33 +1138,6 @@
                       {p.statut === 'outOfStock' && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                       )}
-                      <div className="flex gap-1 mt-1">
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          className="text-[10px] bg-red-50 text-red-600 border border-red-200 rounded px-1.5 py-0.5 hover:bg-red-100 transition"
-                        >
-                          − Destock
-                        </button>
-                        <button
-                          onClick={async () => {
-                            const qte = prompt('Quantité à restocker ?', '1')
-                            if (!qte || isNaN(parseInt(qte))) return
-                            try {
-                              await updateDoc(doc(db, 'produits', p.id), {
-                                statutRestock: 'enAttente',
-                                quantiteRestock: parseInt(qte),
-                                dateDemandeRestock: Timestamp.now(),
-                              })
-                              alert('Demande de restock envoyée ✓')
-                            } catch (err) {
-                              alert('Erreur lors de la demande')
-                            }
-                          }}
-                          className="text-[10px] bg-green-50 text-green-600 border border-green-200 rounded px-1.5 py-0.5 hover:bg-green-100 transition"
-                        >
-                          + Restock
-                        </button>
-                      </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {canGenerateTryon && (() => {
