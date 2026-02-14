@@ -1102,7 +1102,7 @@
     onClick={() => handleDelete(p.id)}
     className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200"
   >
-    🔄 2 mois+ – rotation ?
+    🔄 2 mois+ – rotation / baisse de prix ?
   </button>
 )}
 {getPriceBadgeStatus(p) === 'blue' && (
@@ -1166,7 +1166,7 @@
     onClick={() => handleDelete(p.id)}
     className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200 transition-colors"
   >
-    🔄 En surface depuis 2 mois+ – demande de rotation ?
+    🔄 En surface depuis 2 mois+ – rotation / baisse de prix nécessaire
   </button>
 )}
 {getPriceBadgeStatus(p) === 'blue' && (
