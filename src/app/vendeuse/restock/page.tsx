@@ -55,7 +55,7 @@ export default function RestockPage() {
       (p) => p.recu === false && p.statut !== 'supprime'
     ).length
     const aRecuperer = produits.filter(
-      (p) => p.statutRecuperation === 'aRecuperer' && p.statut !== 'supprime'
+      (p) => (p.statutRecuperation === 'aRecuperer' || (p as any).statutDestock === 'enAttente') && p.statut !== 'supprime'
     ).length
     const restockEnAttente = produits.filter(
       (p) => (p as any).statutRestock === 'enAttente' && p.statut !== 'supprime'
