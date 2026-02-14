@@ -185,7 +185,7 @@
           const isRestock = (p as any).statutRestock === 'enAttente'
           if (!isRestock && p.recu !== false) return false
         } else if (mode === 'destock') {
-          if (p.statutRecuperation !== 'aRecuperer') return false
+          if (p.statutRecuperation !== 'aRecuperer' && (p as any).statutDestock !== 'enAttente') return false
         }
 
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
