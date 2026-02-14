@@ -93,7 +93,32 @@ export async function POST(request: Request) {
       const itemName = item.name || 'Produit inconnu'
       
       if (!catalogObjectId) {
-        console.warn('⚠️ [POS] Article sans catalogObjectId:', itemName)
+        console.log('📝 [POS] Article sans catalogObjectId (montant perso):', itemName)
+        
+        const prixVenteReel = item.total_money?.amount 
+          ? Number(item.total_money.amount) / 100 
+          : null
+
+        for (let i = 0; i < quantiteVendue; i++) {
+          await adminDb.collection('ventes').add({
+            produitId: null,
+            nom: itemName,
+            sku: null,
+            trigramme: null,
+            chineur: null,
+            chineurUid: null,
+            prixInitial: null,
+            prixVenteReel: prixVenteReel ? prixVenteReel / quantiteVendue : null,
+            dateVente: Timestamp.now(),
+            orderId: orderId,
+            lineItemUid: item.uid || null,
+            source: 'boutique',
+            attribue: false,
+            createdAt: Timestamp.now(),
+          })
+        }
+        console.log(`✅ [POS] ${quantiteVendue} vente(s) montant perso enregistrée(s)`)
+        nbProduitsTraites++
         continue
       }
 
