@@ -70,6 +70,8 @@
       recu?: boolean
       statutRecuperation?: 'aRecuperer' | 'vole' | null
       forceDisplay?: boolean
+      prixBaisseLe?: Timestamp
+      ancienPrix?: number
     }
 
     export type Deposant = {
@@ -115,6 +117,19 @@
       const twoMonthsAgo = new Date()
       twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
       return createdAt.toDate() < twoMonthsAgo
+  }
+
+  function getPriceBadgeStatus(p: Produit): 'none' | 'orange' | 'blue' | 'red' {
+    // Si prix baissé, vérifier le délai depuis la baisse
+    if (p.prixBaisseLe) {
+      const oneMonthAgo = new Date()
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+      if (p.prixBaisseLe.toDate() < oneMonthAgo) return 'red'
+      return 'blue'
+    }
+    // Sinon, vérifier si > 2 mois
+    if (isOlderThan2Months(p.createdAt) && !p.statutRecuperation) return 'orange'
+    return 'none'
   }
 
   function getWearTypeForProduct(p: Produit, chineusesList: {trigramme: string, wearType: string}[]): string {
@@ -665,6 +680,15 @@
             color: data.color || '',
             madeIn: data.madeIn || '',
             updatedAt: Timestamp.now(),
+            // Si le prix baisse, on enregistre la date et l'ancien prix
+...((() => {
+  const newPrix = parseFloat(data.prix) || 0
+  const oldPrix = editingProduct.prix ?? 0
+  if (newPrix < oldPrix && newPrix > 0) {
+    return { prixBaisseLe: Timestamp.now(), ancienPrix: oldPrix }
+  }
+  return {}
+})()),
           }
           
           // Photos - utiliser dot notation
@@ -1073,14 +1097,24 @@
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente</span>}
                       {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                       {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1"><RefreshCw size={12} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
-                      {isOlderThan2Months(p.createdAt) && !p.statutRecuperation && (
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200"
-                      >
-                        🔄 2 mois+ – rotation ?
-                      </button>
-                    )}
+                      {getPriceBadgeStatus(p) === 'orange' && (
+  <button
+    onClick={() => handleDelete(p.id)}
+    className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200"
+  >
+    🔄 2 mois+ – rotation ?
+  </button>
+)}
+{getPriceBadgeStatus(p) === 'blue' && (
+  <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
+    💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {p.ancienPrix} €)
+  </span>
+)}
+{getPriceBadgeStatus(p) === 'red' && (
+  <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
+    🚨 À récupérer – prix baissé il y a 1 mois+
+  </span>
+)}
                     </div>
                     <div className="flex flex-col gap-0.5 flex-shrink-0">
                       {canGenerateTryon && (() => {
@@ -1127,14 +1161,24 @@
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente de réception</span>}
                       {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1"><RefreshCw size={12} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
-                    {isOlderThan2Months(p.createdAt) && !p.statutRecuperation && (
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200 transition-colors"
-                      >
-                        🔄 En surface depuis 2 mois+ – demande de rotation ?
-                      </button>
-                    )}
+                    {getPriceBadgeStatus(p) === 'orange' && (
+  <button
+    onClick={() => handleDelete(p.id)}
+    className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200 transition-colors"
+  >
+    🔄 En surface depuis 2 mois+ – demande de rotation ?
+  </button>
+)}
+{getPriceBadgeStatus(p) === 'blue' && (
+  <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
+    💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {p.ancienPrix} €)
+  </span>
+)}
+{getPriceBadgeStatus(p) === 'red' && (
+  <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
+    🚨 À récupérer – prix baissé il y a 1 mois+
+  </span>
+)}
                     </div>
                     <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[120px]">
                       <p><span className="text-gray-400">Cat:</span> <span className="font-medium text-gray-700">{cat || '—'}</span></p>
