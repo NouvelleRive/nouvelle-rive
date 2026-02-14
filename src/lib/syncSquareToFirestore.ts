@@ -139,7 +139,6 @@ export async function syncVentesDepuisSquare(
 
   // 2. Charger ventes existantes pour déduplication AMÉLIORÉE
   const ventesExistantesParOrder = new Set<string>()
-  const ventesExistantesParJour = new Map<string, any[]>() // clé: "prix-dateJour", valeur: array de ventes
   const ventesSnap = await adminDb.collection('ventes').get()
   
   for (const doc of ventesSnap.docs) {
@@ -149,25 +148,8 @@ export async function syncVentesDepuisSquare(
     if (data.orderId && data.lineItemUid) {
       ventesExistantesParOrder.add(`order-${data.orderId}-${data.lineItemUid}`)
     }
-    
-    // Clé 2: prix + date arrondie à la JOURNÉE - stocker les détails pour comparaison intelligente
-    if (data.prixVenteReel && data.dateVente) {
-      const dateObj = data.dateVente.toDate ? data.dateVente.toDate() : new Date(data.dateVente)
-      const dateJour = `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`
-      const key = `${data.prixVenteReel}-${dateJour}`
-      
-      if (!ventesExistantesParJour.has(key)) {
-        ventesExistantesParJour.set(key, [])
-      }
-      ventesExistantesParJour.get(key)!.push({
-        nom: data.nom || '',
-        sku: data.sku || '',
-        trigramme: data.trigramme || '',
-        attribue: data.attribue || false,
-      })
-    }
   }
-  console.log(`📋 ${ventesExistantesParOrder.size} ventes par orderId, ${ventesExistantesParJour.size} groupes prix/date`)
+  console.log(`📋 ${ventesExistantesParOrder.size} ventes existantes (par orderId+lineItemUid)`)
 
   // 3. Récupérer commandes Square
   const startDate = startDateStr ? new Date(startDateStr) : undefined
@@ -283,90 +265,11 @@ export async function syncVentesDepuisSquare(
         continue
       }
       
-      // Clé de déduplication 2: prix + date arrondie à la JOURNÉE
-      const dateJour = `${orderDate.getFullYear()}-${orderDate.getMonth()}-${orderDate.getDate()}`
-      const keyPrixDate = `${prix}-${dateJour}`
-      
       const itemName = item.name || ''
       const itemNote = item.note || ''
-      
-      // Vérifier si une vente similaire existe déjà pour ce prix/date
-      const ventesMemePrixDate = ventesExistantesParJour.get(keyPrixDate) || []
-      if (ventesMemePrixDate.length > 0) {
-        // Vérifier si c'est un vrai doublon avec la logique intelligente
-        const nomSquare = `${itemName} ${itemNote}`.toLowerCase()
-        const trigrammesFromSquare = extractTrigrammesFromName(nomSquare)
-        
-        let estDoublon = false
-        for (const venteExistante of ventesMemePrixDate) {
-          // Si même SKU → doublon
-          const skuExistant = venteExistante.sku?.toLowerCase() || ''
-          const nomExistant = venteExistante.nom || ''
-          
-          // Si la vente existante est attribuée, vérifier correspondance
-          if (venteExistante.attribue) {
-            const trigrammeExistant = venteExistante.trigramme?.toLowerCase() || ''
-            
-            // Match par trigramme extrait du nom Square
-            if (trigrammeExistant && trigrammesFromSquare.some(t => t.toLowerCase() === trigrammeExistant)) {
-              estDoublon = true
-              break
-            }
-            
-            // Match par SKU dans le nom
-            if (skuExistant && nomSquare.includes(skuExistant)) {
-              estDoublon = true
-              break
-            }
-            
-            // Match par nom similaire (sans le SKU)
-            const nomExistantSansSku = nomExistant.toLowerCase().replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
-            const nomSquareSansSku = nomSquare.replace(/^[a-z0-9_\-\s]+\s*-\s*/i, '').trim()
-            if (nomExistantSansSku && nomSquareSansSku && nomExistantSansSku === nomSquareSansSku) {
-              estDoublon = true
-              break
-            }
-            
-            // NOUVEAU: Match par mots significatifs en commun
-            // Ex: "blazer amadora gris" vs "AGE35 - BLAZER AMADORA GRIS S/M"
-            if (hasSignificantWordsInCommon(nomSquare, nomExistant)) {
-              estDoublon = true
-              break
-            }
-          }
-          
-          // Vérifier correspondance SKU même si pas attribuée
-          if (skuExistant) {
-            // Extraire SKU potentiel du nom Square (ex: "AN104" dans "anashi an104")
-            const skuMatch = nomSquare.match(/\b([a-z]{2,4})(\d{1,4})\b/i)
-            if (skuMatch) {
-              const skuSquare = (skuMatch[1] + skuMatch[2]).toLowerCase()
-              if (skuExistant === skuSquare || skuExistant.includes(skuSquare) || skuSquare.includes(skuExistant)) {
-                estDoublon = true
-                break
-              }
-            }
-          }
-          
-          // NOUVEAU: Match par mots significatifs même si pas attribuée
-          if (hasSignificantWordsInCommon(nomSquare, nomExistant)) {
-            estDoublon = true
-            break
-          }
-        }
-        
-        if (estDoublon) {
-          nbSkipped++
-          continue
-        }
-      }
-      
-      // Ajouter les clés pour éviter les doublons dans le même batch
+
+      // Ajouter la clé pour éviter les doublons dans le même batch
       ventesExistantesParOrder.add(dedupeKeyOrder)
-      if (!ventesExistantesParJour.has(keyPrixDate)) {
-        ventesExistantesParJour.set(keyPrixDate, [])
-      }
-      ventesExistantesParJour.get(keyPrixDate)!.push({ nom: itemName, sku: '', trigramme: '', attribue: false })
 
       const itemVariationName = item.variationName || ''
       const quantity = parseInt(item.quantity) || 1
