@@ -729,21 +729,69 @@
 
                 {mode === 'destock' && (
                   <>
-                    <button
-                      onClick={() => handleMarkCollected(p)}
-                      disabled={isProcessing}
-                      className="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs sm:text-sm hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
-                    >
-                      <Package size={14} />
-                      Récupéré
-                    </button>
-                    <button
-                      onClick={() => handleCancelDestock(p)}
-                      disabled={isProcessing}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs sm:text-sm hover:bg-gray-200 disabled:opacity-50 transition-colors"
-                    >
-                      Annuler
-                    </button>
+                    {(p as any).statutDestock === 'enAttente' ? (
+                      <>
+                        <button
+                          onClick={async () => {
+                            const qteDestock = (p as any).quantiteDestock || 0
+                            const nouvelleQte = Math.max(0, (p.quantite ?? 1) - qteDestock)
+                            try {
+                              await updateDoc(doc(db, 'produits', p.id), {
+                                quantite: nouvelleQte,
+                                statutDestock: null,
+                                quantiteDestock: null,
+                                dateDemandeDestock: null,
+                                dateDestock: Timestamp.now(),
+                                destockParVendeuse: vendeusePrenom,
+                                ...(nouvelleQte === 0 ? { statut: 'outOfStock', dateRupture: Timestamp.now() } : {}),
+                              })
+                            } catch (err) {
+                              alert('Erreur lors du déstockage')
+                            }
+                          }}
+                          disabled={isProcessing}
+                          className="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs sm:text-sm hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Package size={14} />
+                          Validé (-{(p as any).quantiteDestock})
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await updateDoc(doc(db, 'produits', p.id), {
+                                statutDestock: null,
+                                quantiteDestock: null,
+                                dateDemandeDestock: null,
+                              })
+                            } catch (err) {
+                              alert('Erreur annulation')
+                            }
+                          }}
+                          disabled={isProcessing}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs sm:text-sm hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleMarkCollected(p)}
+                          disabled={isProcessing}
+                          className="flex-1 sm:flex-none px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs sm:text-sm hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Package size={14} />
+                          Récupéré
+                        </button>
+                        <button
+                          onClick={() => handleCancelDestock(p)}
+                          disabled={isProcessing}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs sm:text-sm hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
 
