@@ -15,11 +15,11 @@ export async function checkSkuUnique(sku: string, currentProduitId?: string): Pr
   
   // Si on édite un produit existant, vérifier que c'est bien le même
   if (currentProduitId) {
-    return snap.docs.every(doc => doc.id === currentProduitId)
+    return snap.docs.filter(d => d.id !== currentProduitId).every(d => d.data().statut === 'supprime')
   }
   
   // Sinon → doublon !
-  return false
+  return snap.docs.every(d => d.data().statut === 'supprime')
 }
 
 // Trouver le prochain SKU disponible pour un trigramme
