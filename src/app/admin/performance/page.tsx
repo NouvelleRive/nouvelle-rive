@@ -44,6 +44,21 @@ type Deposant = {
   'Catégorie de rapport'?: { taux?: number }[]
 }
 
+type VenteDoc = {
+  id: string
+  produitId?: string
+  nom?: string
+  sku?: string
+  trigramme?: string
+  chineur?: string
+  chineurUid?: string
+  prixVenteReel?: number
+  prixInitial?: number
+  dateVente?: Timestamp
+  createdAt?: Timestamp
+  source?: string
+}
+
 type VendeusePerf = {
   id: string
   prenom: string
@@ -63,7 +78,8 @@ export default function PerformancePage() {
   const [loading, setLoading] = useState(true)
   const [vendeusesList, setVendeusesList] = useState<VendeusePerf[]>([])
   const [planningSlots, setPlanningSlots] = useState<Record<string, string>>({})
-
+  const [ventesData, setVentesData] = useState<VenteDoc[]>([])  
+  
   // Charger les déposants
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
@@ -161,9 +177,9 @@ export default function PerformancePage() {
   }, [ventes, previousMonthStart, previousMonthEnd])
 
   // KPIs
-  const totalCA = ventesCurrentMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
+  const totalCA = ventesCurrentMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
   const totalVentes = ventesCurrentMonth.length
-  const previousCA = ventesPreviousMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
+  const previousCA = ventesPreviousMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
   const previousVentes = ventesPreviousMonth.length
 
   const caEvolution = previousCA > 0 ? ((totalCA - previousCA) / previousCA * 100).toFixed(1) : null
@@ -186,7 +202,7 @@ export default function PerformancePage() {
           const d = getDateVente(v)
           return d && format(d, 'yyyy-MM-dd') === dayStr
         })
-        .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
+        .reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
 
       const prevDay = previousDays[index]
       const prevDayStr = prevDay ? format(prevDay, 'yyyy-MM-dd') : ''
@@ -195,7 +211,7 @@ export default function PerformancePage() {
           const d = getDateVente(v)
           return d && format(d, 'yyyy-MM-dd') === prevDayStr
         })
-        .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0) : 0
+        .reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0) : 0
 
       return {
         jour: index + 1,
@@ -234,7 +250,7 @@ export default function PerformancePage() {
       const tri = (v as any).trigramme || 'unknown'
       const current = map.get(tri) || { ca: 0, ventes: 0 }
       map.set(tri, {
-        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
         ventes: current.ventes + 1,
       })
     })
@@ -265,7 +281,7 @@ export default function PerformancePage() {
     ventesCurrentMonth.forEach(v => {
       const cat = typeof v.categorie === 'object' ? v.categorie?.label : v.categorie || 'Autre'
       const current = map.get(cat) || { ca: 0, count: 0 }
-      map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prix || 0), count: current.count + 1 })
+      map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: current.count + 1 })
     })
 
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 15)
@@ -293,7 +309,7 @@ export default function PerformancePage() {
         return {
           id: v.id,
           nom: v.nom || v.sku || 'Sans nom',
-          prix: v.prixVenteReel || v.prix || 0,
+          prix: v.prixVenteReel || v.prixInitialInitial || 0,
           jours,
           dateVente,
           photo: photo as string | null,
@@ -321,7 +337,7 @@ export default function PerformancePage() {
       const dow = date.getDay()
       const current = map.get(dow) || { ca: 0, count: 0 }
       map.set(dow, {
-        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
         count: current.count + 1,
       })
     })
@@ -347,7 +363,7 @@ export default function PerformancePage() {
       const hour = date.getHours()
       const current = hourMap.get(hour) || { ca: 0, count: 0 }
       hourMap.set(hour, {
-        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
         count: current.count + 1,
       })
     })
@@ -368,8 +384,8 @@ export default function PerformancePage() {
     const colors = ['#e0e7ff','#c7d2fe','#a5b4fc','#818cf8','#6366f1','#4f46e5','#4338ca','#3730a3','#312e81','#22209C','#1e1b4b','#171533','#100e24','#0a0914']
     const data = tranches.map(([min,max], i) => {
       const ca = ventesCurrentMonth
-        .filter(v => { const p = v.prixVenteReel || v.prix || 0; return p >= min && p < max })
-        .reduce((s, v) => s + (v.prixVenteReel || v.prix || 0), 0)
+        .filter(v => { const p = v.prixVenteReel || v.prixInitialInitial || 0; return p >= min && p < max })
+        .reduce((s, v) => s + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
       return { name: max === Infinity ? `${min}€+` : `${min}-${max}€`, ca, color: colors[i] }
     }).filter(d => d.ca > 0)
     const total = data.reduce((s, d) => s + d.ca, 0)
@@ -384,9 +400,9 @@ export default function PerformancePage() {
     ]
     const colors = ['#d1fae5','#a7f3d0','#6ee7b7','#34d399','#10b981','#059669','#047857','#065f46','#064e3b','#022c22','#1a1a2e','#111827','#0f0f1a','#0a0a12']
     const data = tranches.map(([min,max], i) => {
-      const items = ventesCurrentMonth.filter(v => { const p = v.prixVenteReel || v.prix || 0; return p >= min && p < max })
+      const items = ventesCurrentMonth.filter(v => { const p = v.prixVenteReel || v.prixInitialInitial || 0; return p >= min && p < max })
       const benef = items.reduce((s, v) => {
-        const prix = v.prixVenteReel || v.prix || 0
+        const prix = v.prixVenteReel || v.prixInitialInitial || 0
         const tri = (v as any).trigramme || ''
         const isNR = tri === 'NR'
         if (isNR) return s + prix
@@ -410,7 +426,7 @@ export default function PerformancePage() {
       const isChineuse = deposants.some(d => d.nom?.toLowerCase() === ml || d.email?.split('@')[0]?.toLowerCase() === ml)
       if (isChineuse) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 12)
     const maxCA = sorted[0]?.[1].ca || 1
@@ -423,7 +439,7 @@ export default function PerformancePage() {
       const c = v.color || ''
       if (!c) return
       const cur = map.get(c) || { ca: 0, count: 0 }
-      map.set(c, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+      map.set(c, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -436,7 +452,7 @@ export default function PerformancePage() {
       const m = v.material || ''
       if (!m) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -449,7 +465,7 @@ export default function PerformancePage() {
       const m = v.motif || ''
       if (!m) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -462,7 +478,7 @@ export default function PerformancePage() {
       const m = v.modele || ''
       if (!m) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -494,7 +510,7 @@ export default function PerformancePage() {
       if (!vendeuseId) return
       const current = map.get(vendeuseId) || { ca: 0, ventes: 0 }
       map.set(vendeuseId, {
-        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
         ventes: current.ventes + 1,
       })
     })
