@@ -21,7 +21,7 @@ if (!getApps().length) {
 
 const adminDb = getFirestore()
 const resend = new Resend(process.env.RESEND_API_KEY)
-const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY
+const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY_SITE
 
 // Initialiser Square Client (réutilisé pour suppression)
 const squareClient = new Client({

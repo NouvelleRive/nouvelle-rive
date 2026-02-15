@@ -22,7 +22,7 @@ if (!getApps().length) {
 }
 
 const adminDb = getFirestore()
-const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY
+const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY_POS
 
 // Initialiser Square Client
 const squareClient = new Client({
