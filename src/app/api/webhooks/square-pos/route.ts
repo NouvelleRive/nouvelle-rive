@@ -41,9 +41,10 @@ export async function POST(request: Request) {
     const signature = headersList.get('x-square-hmacsha256-signature')
     
     if (webhookSignatureKey && signature) {
+      const notificationUrl = 'https://www.nouvellerive.eu/api/webhooks/square-pos'
       const hash = crypto
         .createHmac('sha256', webhookSignatureKey)
-        .update(body)
+        .update(notificationUrl + body)
         .digest('base64')
       
       if (hash !== signature) {
