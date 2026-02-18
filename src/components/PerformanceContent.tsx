@@ -902,7 +902,6 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Fast Sellers */}
-        <div>
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-1.5 mb-3">
             <Zap className="text-orange-500" size={14} />
@@ -934,10 +933,9 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
             </div>
           )}
         </div>
-      </div>
 
       {/* Invendus */}
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 mt-3">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <div className="flex items-center gap-1.5 mb-3">
             <Package className="text-red-400" size={14} />
             <h3 className="text-sm font-semibold text-gray-900">{isAdmin ? 'Invendus récupérés' : 'Mes invendus récupérés'}</h3>
