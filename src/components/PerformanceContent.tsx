@@ -185,6 +185,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       console.error('Erreur sauvegarde note:', err)
     }
     setNoteSaving(false)
+    setNoteUpdatedBy(isAdmin ? 'admin' : 'vendeuse')
+    setNoteUpdatedAt(new Date())
   }
 
   // Générer tous les mois disponibles depuis les données
