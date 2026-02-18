@@ -1010,7 +1010,6 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         </div>
       </div>
       </div>
-      {/* fin grid row 2 */}
 
       {/* ============================== */}
       {/* ANALYTICS PRODUIT              */}
