@@ -228,7 +228,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       if (!date) return false
       if (date < currentMonthStart || date > currentMonthEnd) return false
       if (!isAdmin && chineuseTrigramme) {
-        return (v as any).trigramme === chineuseTrigramme
+        if ((v as any).trigramme === chineuseTrigramme) return true
+        const skuPrefix = v.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || ''
+        if (skuPrefix === chineuseTrigramme) return true
+        const dep = deposants.find(d => d.trigramme === chineuseTrigramme)
+        if (dep && (v.chineur === dep.email || v.chineurUid === dep.id || (dep as any).authUid && v.chineurUid === (dep as any).authUid)) return true
+        return false
       }
       return true
     })
@@ -240,7 +245,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       if (!date) return false
       if (date < previousMonthStart || date > previousMonthEnd) return false
       if (!isAdmin && chineuseTrigramme) {
-        return (v as any).trigramme === chineuseTrigramme
+        if ((v as any).trigramme === chineuseTrigramme) return true
+        const skuPrefix = v.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || ''
+        if (skuPrefix === chineuseTrigramme) return true
+        const dep = deposants.find(d => d.trigramme === chineuseTrigramme)
+        if (dep && (v.chineur === dep.email || v.chineurUid === dep.id || (dep as any).authUid && v.chineurUid === (dep as any).authUid)) return true
+        return false
       }
       return true
     })
