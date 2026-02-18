@@ -77,6 +77,7 @@ const moisCourt = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 
 
 export default function PerformanceContent({ role, chineuseTrigramme }: PerformanceContentProps) {
   const isAdmin = role === 'admin'
+  console.log('PERF DEBUG - role:', role, 'chineuseTrigramme:', chineuseTrigramme)
   const now = new Date()
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth())
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
@@ -138,6 +139,10 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     }
     fetchPlanning()
   }, [selectedMonth, selectedYear, isAdmin])
+
+  useEffect(() => {
+    console.log('PERF DEBUG - role:', role, 'trigramme:', chineuseTrigramme, 'ventesTotal:', ventesData.length)
+  }, [ventesData, role, chineuseTrigramme])
 
   // Charger la note chineuse
   const noteTrigramme = isAdmin ? selectedNoteTrigramme : (chineuseTrigramme || '')
