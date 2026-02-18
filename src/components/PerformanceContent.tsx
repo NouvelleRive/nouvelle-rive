@@ -411,6 +411,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         return {
           id: v.id,
           nom: v.nom || v.sku || 'Sans nom',
+          marque: produit?.marque || '',
           prix: v.prixVenteReel || v.prix || 0,
           jours,
           dateVente,
@@ -419,7 +420,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       })
       .filter(Boolean)
       .sort((a, b) => a!.jours - b!.jours)
-      .slice(0, 20) as { id: string; nom: string; prix: number; jours: number; dateVente: Date; photo: string | null }[]
+      .slice(0, 20) as { id: string; nom: string; marque: string; prix: number; jours: number; dateVente: Date; photo: string | null }[]
   }, [ventesCurrentMonth])
 
   // Invendus - pièces récupérées par la chineuse ce mois
@@ -450,6 +451,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         return {
           id: p.id,
           nom: p.nom || p.sku || 'Sans nom',
+          marque: p.marque || '',
           prix: p.prix || 0,
           jours,
           photo: photo as string | null,
@@ -960,6 +962,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   )}
                   <div className="p-1.5">
                     <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
+                    {item.marque && <p className="text-gray-400 truncate" style={{ fontSize: '9px' }}>{item.marque}</p>}
                     <div className="flex items-center justify-between mt-0.5">
                       <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
                       <span className={`text-xs font-semibold px-1 py-0.5 rounded ${item.jours === 0 ? 'bg-green-100 text-green-700' : item.jours <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
@@ -993,6 +996,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   )}
                   <div className="p-1.5">
                     <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
+                    {item.marque && <p className="text-gray-400 truncate" style={{ fontSize: '9px' }}>{item.marque}</p>}
                     <div className="flex items-center justify-between mt-0.5">
                       <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
                       <span className="text-xs font-semibold px-1 py-0.5 rounded bg-red-100 text-red-700">
