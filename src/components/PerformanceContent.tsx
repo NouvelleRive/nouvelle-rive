@@ -970,7 +970,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       {/* Répartition CA par tranche de prix */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition par tranche de prix</h2>
-        <div className={`grid grid-cols-1 ${isAdmin ? 'gap-6' : ''}`}>
+        <div className={`grid ${isAdmin ? 'grid-cols-1 lg:grid-cols-2 gap-6' : 'grid-cols-1'}`}>
           <div>
             <p className="text-xs text-gray-500 font-medium text-center mb-1">Chiffre d&apos;affaires</p>
             <div className="flex justify-center">
