@@ -50,7 +50,7 @@
       { key: 'ventes', label: 'Ventes', href: '/admin/nos-ventes' },
       { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
       { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', adminOnly: true },
-      { key: 'perf', label: 'Perf', href: '/admin/performance', adminOnly: true },
+      { key: 'perf', label: 'Perf', href: '/admin/performance' },
       { key: 'site', label: 'Site', href: '/admin/site', adminOnly: true },
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
       { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
