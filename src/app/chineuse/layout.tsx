@@ -44,6 +44,7 @@ function ChineuseNavbar() {
     { href: '/chineuse/mes-produits', label: 'Mes produits' },
     { href: '/chineuse/mes-ventes', label: 'Mes ventes' },
     { href: '/chineuse/profil', label: 'Mon profil' },
+    { href: '/chineuse/performance', label: 'Performance' },
   ]
 
   // Ajouter Ateliers pour admin ET animatrices
