@@ -3,11 +3,11 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore'
+import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
-import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle } from 'lucide-react'
 import { getMonthEvents } from '@/lib/retailEvents'
 
 type Produit = {
@@ -87,6 +87,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const [vendeusesList, setVendeusesList] = useState<VendeusePerf[]>([])
   const [planningSlots, setPlanningSlots] = useState<Record<string, string>>({})
   const [ventesData, setVentesData] = useState<VenteDoc[]>([])
+  const [noteText, setNoteText] = useState('')
+  const [noteSaving, setNoteSaving] = useState(false)
+  const [noteLoaded, setNoteLoaded] = useState(false)
+  const [selectedNoteTrigramme, setSelectedNoteTrigramme] = useState('')
+  const [noteUpdatedBy, setNoteUpdatedBy] = useState('')
+  const [noteUpdatedAt, setNoteUpdatedAt] = useState<Date | null>(null)
 
   // Charger les déposants
   useEffect(() => {
@@ -132,6 +138,46 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     }
     fetchPlanning()
   }, [selectedMonth, selectedYear, isAdmin])
+
+  // Charger la note chineuse
+  const noteTrigramme = isAdmin ? selectedNoteTrigramme : (chineuseTrigramme || '')
+  useEffect(() => {
+    if (!noteTrigramme) {
+      setNoteText('')
+      setNoteLoaded(false)
+      return
+    }
+    const fetchNote = async () => {
+      const snap = await getDoc(doc(db, 'notes-chineuses', noteTrigramme))
+      if (snap.exists()) {
+        const data = snap.data()
+        setNoteText(data.message || '')
+        setNoteUpdatedBy(data.updatedBy || '')
+        setNoteUpdatedAt(data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : null)
+      } else {
+        setNoteText('')
+        setNoteUpdatedBy('')
+        setNoteUpdatedAt(null)
+      }
+      setNoteLoaded(true)
+    }
+    fetchNote()
+  }, [noteTrigramme])
+
+  const saveNote = async () => {
+    if (!noteTrigramme) return
+    setNoteSaving(true)
+    try {
+      await setDoc(doc(db, 'notes-chineuses', noteTrigramme), {
+        message: noteText,
+        updatedBy: isAdmin ? 'admin' : 'vendeuse',
+        updatedAt: new Date(),
+      })
+    } catch (err) {
+      console.error('Erreur sauvegarde note:', err)
+    }
+    setNoteSaving(false)
+  }
 
   // Générer tous les mois disponibles depuis les données
   const availableMonths = useMemo(() => {
@@ -680,6 +726,64 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           <KpiCard title="Marge" value={classementChineuses.reduce((s, c) => s + c.benef, 0).toLocaleString('fr-FR')} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         )}
       </div>
+
+      {/* Note de l'équipe */}
+      {isAdmin ? (
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <MessageCircle className="text-[#22209C]" size={16} />
+            <h2 className="text-sm font-semibold text-gray-900">Note pour les chineuses</h2>
+          </div>
+          <div className="flex items-center gap-2 mb-3">
+            <select
+              value={selectedNoteTrigramme}
+              onChange={(e) => { setSelectedNoteTrigramme(e.target.value); setNoteLoaded(false) }}
+              className="border border-gray-200 rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
+            >
+              <option value="">Sélectionner une chineuse…</option>
+              {deposants.filter(d => d.trigramme).map(d => (
+                <option key={d.id} value={d.trigramme}>{d.trigramme} — {d.nom || d.email}</option>
+              ))}
+            </select>
+          </div>
+          {selectedNoteTrigramme && noteLoaded && (
+            <div className="space-y-2">
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Écrire un mot pour cette chineuse…"
+                className="w-full border border-gray-200 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 resize-none"
+                rows={3}
+              />
+              <div className="flex items-center justify-between">
+                {noteUpdatedAt && (
+                  <span className="text-xs text-gray-400">
+                    Modifié par {noteUpdatedBy} le {format(noteUpdatedAt, 'd MMM yyyy à HH:mm', { locale: fr })}
+                  </span>
+                )}
+                <button
+                  onClick={saveNote}
+                  disabled={noteSaving}
+                  className="ml-auto px-4 py-1.5 bg-[#22209C] text-white text-xs font-medium rounded-md hover:bg-[#22209C]/90 disabled:opacity-50"
+                >
+                  {noteSaving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : noteLoaded && noteText ? (
+        <div className="bg-gradient-to-r from-[#22209C]/5 to-purple-50 rounded-lg p-4 border border-[#22209C]/10">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageCircle className="text-[#22209C]" size={14} />
+            <h3 className="text-sm font-semibold text-gray-900">Mot de l&apos;équipe</h3>
+          </div>
+          <p className="text-sm text-gray-700 whitespace-pre-wrap">{noteText}</p>
+          {noteUpdatedAt && (
+            <p className="text-xs text-gray-400 mt-2">{format(noteUpdatedAt, 'd MMM yyyy', { locale: fr })}</p>
+          )}
+        </div>
+      ) : null}
 
       {/* ============================== */}
       {/* SOURCING : Chineuses & Produit */}
