@@ -7,8 +7,7 @@ import { collection, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firesto
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
-import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star } from 'lucide-react'
-import Link from 'next/link'
+import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package } from 'lucide-react'
 import { getMonthEvents } from '@/lib/retailEvents'
 
 type Produit = {
@@ -32,6 +31,9 @@ type Produit = {
   color?: string
   motif?: string
   modele?: string
+  dateRetour?: Timestamp | string
+  statutRecuperation?: string
+  imageUrls?: string[]
 }
 
 type Deposant = {
@@ -106,6 +108,13 @@ export default function PerformancePage() {
     return () => unsub()
   }, [])
 
+    useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'ventes'), (snap) => {
+      setVentesData(snap.docs.map(d => ({ id: d.id, ...d.data() } as VenteDoc)))
+    })
+    return () => unsub()
+  }, [])
+
   // Charger le planning du mois sélectionné
   useEffect(() => {
     const fetchPlanning = async () => {
@@ -130,14 +139,14 @@ export default function PerformancePage() {
     return months.reverse() // Plus récent en premier
   }, [])
 
-  // Filtrer les ventes (produits vendus)
-  const ventes = useMemo(() => {
-    return produits.filter(p => 
-      p.vendu === true || 
-      p.statut === 'vendu' || 
-      (p.quantite !== undefined && p.quantite <= 0)
-    )
+  const produitsMap = useMemo(() => {
+    const map = new Map<string, Produit>()
+    produits.forEach(p => map.set(p.id, p))
+    return map
   }, [produits])
+
+  // Filtrer les ventes (produits vendus)
+  const ventes = ventesData
 
   // Filtrer par mois
   const currentMonthStart = startOfMonth(new Date(selectedYear, selectedMonth))
@@ -146,10 +155,9 @@ export default function PerformancePage() {
   const previousMonthEnd = endOfMonth(subMonths(currentMonthStart, 1))
 
   // Helper pour obtenir la date de vente
-  const getDateVente = (p: Produit): Date | null => {
-    if (p.dateVente instanceof Timestamp) return p.dateVente.toDate()
-    if (p.updatedAt instanceof Timestamp) return p.updatedAt.toDate()
-    if (p.createdAt instanceof Timestamp) return p.createdAt.toDate()
+  const getDateVente = (v: any): Date | null => {
+    if (v.dateVente instanceof Timestamp) return v.dateVente.toDate()
+    if (v.createdAt instanceof Timestamp) return v.createdAt.toDate()
     return null
   }
 
@@ -177,17 +185,26 @@ export default function PerformancePage() {
   }, [ventes, previousMonthStart, previousMonthEnd])
 
   // KPIs
-  const totalCA = ventesCurrentMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
+  const totalCA = ventesCurrentMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
   const totalVentes = ventesCurrentMonth.length
-  const previousCA = ventesPreviousMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
+  const previousCA = ventesPreviousMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
   const previousVentes = ventesPreviousMonth.length
+  // Pro-rata : nb jours écoulés du mois sélectionné vs nb jours total du mois précédent
+  const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear()
+  const joursEcoules = isCurrentMonth
+    ? now.getDate()
+    : differenceInDays(currentMonthEnd, currentMonthStart) + 1
+  const joursMoisPrecedent = differenceInDays(previousMonthEnd, previousMonthStart) + 1
+  const prorata = joursEcoules / joursMoisPrecedent
+  const previousCAProrata = Math.round(previousCA * prorata)
+  const previousVentesProrata = Math.round(previousVentes * prorata)
+  const previousPanierMoyenProrata = previousVentesProrata > 0 ? Math.round(previousCAProrata / previousVentesProrata) : 0
 
-  const caEvolution = previousCA > 0 ? ((totalCA - previousCA) / previousCA * 100).toFixed(1) : null
-  const ventesEvolution = previousVentes > 0 ? ((totalVentes - previousVentes) / previousVentes * 100).toFixed(1) : null
+  const caEvolution = previousCAProrata > 0 ? ((totalCA - previousCAProrata) / previousCAProrata * 100).toFixed(1) : null
+  const ventesEvolution = previousVentesProrata > 0 ? ((totalVentes - previousVentesProrata) / previousVentesProrata * 100).toFixed(1) : null
   const panierMoyen = totalVentes > 0 ? Math.round(totalCA / totalVentes) : 0
-  const previousPanierMoyen = previousVentes > 0 ? Math.round(previousCA / previousVentes) : 0
-  const panierEvolution = previousPanierMoyen > 0 
-    ? ((panierMoyen - previousPanierMoyen) / previousPanierMoyen * 100).toFixed(1) 
+  const panierEvolution = previousPanierMoyenProrata > 0 
+    ? ((panierMoyen - previousPanierMoyenProrata) / previousPanierMoyenProrata * 100).toFixed(1) 
     : null
 
   // CA par jour
@@ -202,7 +219,7 @@ export default function PerformancePage() {
           const d = getDateVente(v)
           return d && format(d, 'yyyy-MM-dd') === dayStr
         })
-        .reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
+        .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
 
       const prevDay = previousDays[index]
       const prevDayStr = prevDay ? format(prevDay, 'yyyy-MM-dd') : ''
@@ -211,7 +228,7 @@ export default function PerformancePage() {
           const d = getDateVente(v)
           return d && format(d, 'yyyy-MM-dd') === prevDayStr
         })
-        .reduce((sum, v) => sum + (v.prixVenteReel || v.prixInitialInitial || 0), 0) : 0
+        .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0) : 0
 
       return {
         jour: index + 1,
@@ -250,7 +267,7 @@ export default function PerformancePage() {
       const tri = (v as any).trigramme || 'unknown'
       const current = map.get(tri) || { ca: 0, ventes: 0 }
       map.set(tri, {
-        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
+        ca: current.ca + (v.prixVenteReel || v.prix || 0),
         ventes: current.ventes + 1,
       })
     })
@@ -279,9 +296,11 @@ export default function PerformancePage() {
     const map = new Map<string, { ca: number; count: number }>()
     
     ventesCurrentMonth.forEach(v => {
-      const cat = typeof v.categorie === 'object' ? v.categorie?.label : v.categorie || 'Autre'
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const rawCat = produit?.categorie
+      const cat = typeof rawCat === 'object' ? rawCat?.label : rawCat || 'Autre'
       const current = map.get(cat) || { ca: 0, count: 0 }
-      map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: current.count + 1 })
+      map.set(cat, { ca: current.ca + (v.prixVenteReel || v.prix || 0), count: current.count + 1 })
     })
 
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 15)
@@ -300,16 +319,17 @@ export default function PerformancePage() {
     return ventesCurrentMonth
       .map(v => {
         const dateVente = getDateVente(v)
-        const dateEntree = getDateEntree(v)
+        const produit = v.produitId ? produitsMap.get(v.produitId) : null
+        const dateEntree = produit ? getDateEntree(produit) : null
         if (!dateVente || !dateEntree) return null
         const jours = differenceInDays(dateVente, dateEntree)
         if (jours < 0) return null
-        const photos = (v as any).photos || {}
+        const photos = produit?.photos || {} as any
         const photo = photos.face || photos.main || Object.values(photos).find((p: any) => typeof p === 'string' && p.startsWith('http')) || null
         return {
           id: v.id,
           nom: v.nom || v.sku || 'Sans nom',
-          prix: v.prixVenteReel || v.prixInitialInitial || 0,
+          prix: v.prixVenteReel || v.prix || 0,
           jours,
           dateVente,
           photo: photo as string | null,
@@ -319,6 +339,39 @@ export default function PerformancePage() {
       .sort((a, b) => a!.jours - b!.jours)
       .slice(0, 20) as { id: string; nom: string; prix: number; jours: number; dateVente: Date; photo: string | null }[]
   }, [ventesCurrentMonth])
+
+  // Invendus - pièces récupérées par la chineuse ce mois
+  const topInvendus = useMemo(() => {
+    return produits
+      .filter(p => {
+        if (p.statut !== 'retour') return false
+        const dateRetour = p.dateRetour instanceof Timestamp
+          ? p.dateRetour.toDate()
+          : p.dateRetour ? new Date(p.dateRetour as any) : null
+        if (!dateRetour) return false
+        return dateRetour >= currentMonthStart && dateRetour <= currentMonthEnd
+      })
+      .map(p => {
+        const dateEntree = getDateEntree(p)
+        const dateRetour = p.dateRetour instanceof Timestamp
+          ? p.dateRetour.toDate()
+          : new Date(p.dateRetour as any)
+        const jours = dateEntree ? differenceInDays(dateRetour, dateEntree) : null
+        const photos = (p as any).photos || {}
+        const imgUrls = p.imageUrls || []
+        const photo = photos.face || imgUrls[0] || (p as any).imageUrl || null
+        return {
+          id: p.id,
+          nom: p.nom || p.sku || 'Sans nom',
+          prix: p.prix || 0,
+          jours,
+          photo: photo as string | null,
+          trigramme: (p as any).trigramme || p.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || '',
+        }
+      })
+      .sort((a, b) => (b.jours ?? 0) - (a.jours ?? 0))
+      .slice(0, 20)
+  }, [produits, currentMonthStart, currentMonthEnd])
 
   // Moyenne CA par jour de la semaine (filtré par mois sélectionné)
   const bestWeekdays = useMemo(() => {
@@ -337,7 +390,7 @@ export default function PerformancePage() {
       const dow = date.getDay()
       const current = map.get(dow) || { ca: 0, count: 0 }
       map.set(dow, {
-        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
+        ca: current.ca + (v.prixVenteReel || v.prix || 0),
         count: current.count + 1,
       })
     })
@@ -363,7 +416,7 @@ export default function PerformancePage() {
       const hour = date.getHours()
       const current = hourMap.get(hour) || { ca: 0, count: 0 }
       hourMap.set(hour, {
-        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
+        ca: current.ca + (v.prixVenteReel || v.prix || 0),
         count: current.count + 1,
       })
     })
@@ -384,8 +437,8 @@ export default function PerformancePage() {
     const colors = ['#e0e7ff','#c7d2fe','#a5b4fc','#818cf8','#6366f1','#4f46e5','#4338ca','#3730a3','#312e81','#22209C','#1e1b4b','#171533','#100e24','#0a0914']
     const data = tranches.map(([min,max], i) => {
       const ca = ventesCurrentMonth
-        .filter(v => { const p = v.prixVenteReel || v.prixInitialInitial || 0; return p >= min && p < max })
-        .reduce((s, v) => s + (v.prixVenteReel || v.prixInitialInitial || 0), 0)
+        .filter(v => { const p = v.prixVenteReel || v.prix || 0; return p >= min && p < max })
+        .reduce((s, v) => s + (v.prixVenteReel || v.prix || 0), 0)
       return { name: max === Infinity ? `${min}€+` : `${min}-${max}€`, ca, color: colors[i] }
     }).filter(d => d.ca > 0)
     const total = data.reduce((s, d) => s + d.ca, 0)
@@ -400,9 +453,9 @@ export default function PerformancePage() {
     ]
     const colors = ['#d1fae5','#a7f3d0','#6ee7b7','#34d399','#10b981','#059669','#047857','#065f46','#064e3b','#022c22','#1a1a2e','#111827','#0f0f1a','#0a0a12']
     const data = tranches.map(([min,max], i) => {
-      const items = ventesCurrentMonth.filter(v => { const p = v.prixVenteReel || v.prixInitialInitial || 0; return p >= min && p < max })
+      const items = ventesCurrentMonth.filter(v => { const p = v.prixVenteReel || v.prix || 0; return p >= min && p < max })
       const benef = items.reduce((s, v) => {
-        const prix = v.prixVenteReel || v.prixInitialInitial || 0
+        const prix = v.prixVenteReel || v.prix || 0
         const tri = (v as any).trigramme || ''
         const isNR = tri === 'NR'
         if (isNR) return s + prix
@@ -419,14 +472,15 @@ export default function PerformancePage() {
   const topMarques = useMemo(() => {
     const map = new Map<string, { ca: number; count: number }>()
     ventesCurrentMonth.forEach(v => {
-      const m = v.marque || ''
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const m = produit?.marque || ''
       if (!m || m.length < 2) return
       const ml = m.toLowerCase()
       if (ml.startsWith('made in') || ml.startsWith('vintage') || ml === 'bombardier' || ml === 'morgan' || ml === 'âge paris' || ml === 'age paris') return
       const isChineuse = deposants.some(d => d.nom?.toLowerCase() === ml || d.email?.split('@')[0]?.toLowerCase() === ml)
       if (isChineuse) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 12)
     const maxCA = sorted[0]?.[1].ca || 1
@@ -436,10 +490,11 @@ export default function PerformancePage() {
   const topCouleurs = useMemo(() => {
     const map = new Map<string, { ca: number; count: number }>()
     ventesCurrentMonth.forEach(v => {
-      const c = v.color || ''
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const c = produit?.color || ''
       if (!c) return
       const cur = map.get(c) || { ca: 0, count: 0 }
-      map.set(c, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
+      map.set(c, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -449,10 +504,11 @@ export default function PerformancePage() {
   const topMatieres = useMemo(() => {
     const map = new Map<string, { ca: number; count: number }>()
     ventesCurrentMonth.forEach(v => {
-      const m = v.material || ''
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const m = produit?.material || ''
       if (!m) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -462,10 +518,11 @@ export default function PerformancePage() {
   const topMotifs = useMemo(() => {
     const map = new Map<string, { ca: number; count: number }>()
     ventesCurrentMonth.forEach(v => {
-      const m = v.motif || ''
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const m = produit?.motif || ''
       if (!m) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -475,10 +532,11 @@ export default function PerformancePage() {
   const topModeles = useMemo(() => {
     const map = new Map<string, { ca: number; count: number }>()
     ventesCurrentMonth.forEach(v => {
-      const m = v.modele || ''
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const m = produit?.modele || ''
       if (!m) return
       const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prixInitialInitial || 0), count: cur.count + 1 })
+      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 10)
     const maxCount = sorted[0]?.[1].count || 1
@@ -510,7 +568,7 @@ export default function PerformancePage() {
       if (!vendeuseId) return
       const current = map.get(vendeuseId) || { ca: 0, ventes: 0 }
       map.set(vendeuseId, {
-        ca: current.ca + (v.prixVenteReel || v.prixInitialInitial || 0),
+        ca: current.ca + (v.prixVenteReel || v.prix || 0),
         ventes: current.ventes + 1,
       })
     })
@@ -721,6 +779,40 @@ export default function PerformancePage() {
           )}
         </div>
       </div>
+
+      {/* Invendus */}
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 mt-3">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Package className="text-red-400" size={14} />
+            <h3 className="text-sm font-semibold text-gray-900">Invendus récupérés</h3>
+            <span className="text-xs text-gray-400">{topInvendus.length} pièce{topInvendus.length > 1 ? 's' : ''}</span>
+          </div>
+          {topInvendus.length === 0 ? (
+            <p className="text-gray-400 text-center py-4 text-xs">Aucun invendu ce mois</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-[700px] overflow-y-auto">
+              {topInvendus.map((item) => (
+                <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                  {item.photo ? (
+                    <img src={item.photo} alt={item.nom} className="w-full h-24 object-cover opacity-70" />
+                  ) : (
+                    <div className="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-300 text-xs">No photo</div>
+                  )}
+                  <div className="p-1.5">
+                    <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
+                      <span className="text-xs font-semibold px-1 py-0.5 rounded bg-red-100 text-red-700">
+                        {item.jours !== null ? `${item.jours}j` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div></div>
+
       {/* Répartition CA par tranche de prix */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition par tranche de prix</h2>
