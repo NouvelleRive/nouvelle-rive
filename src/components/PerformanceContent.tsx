@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc, query, where } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
@@ -123,11 +123,14 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   }, [isAdmin])
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'ventes'), (snap) => {
+    const q = !isAdmin && chineuseTrigramme
+      ? query(collection(db, 'ventes'), where('trigramme', '==', chineuseTrigramme))
+      : collection(db, 'ventes')
+    const unsub = onSnapshot(q, (snap) => {
       setVentesData(snap.docs.map(d => ({ id: d.id, ...d.data() } as VenteDoc)))
     })
     return () => unsub()
-  }, [])
+  }, [isAdmin, chineuseTrigramme])
 
   // Charger le planning du mois sélectionné (admin only)
   useEffect(() => {
