@@ -874,7 +874,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           </div>
         </div>
       ) : (
-        /* CHINEUSE: Top Catégories seul, pleine largeur */
+        /* CHINEUSE: Top Catégories + Répartition côte à côte */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Mes Top Catégories</h3>
           {topCategories.length === 0 ? (
@@ -897,6 +898,24 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
               ))}
             </div>
           )}
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition par tranche de prix</h2>
+          <p className="text-xs text-gray-500 font-medium text-center mb-1">Chiffre d&apos;affaires</p>
+          <div className="flex justify-center">
+            <div className="w-[420px] h-[420px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    <Label value={`${totalCA.toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
+                  </Pie>
+                  <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
         </div>
       )}
 
@@ -967,8 +986,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           )}
         </div></div>
 
-      {/* Répartition CA par tranche de prix */}
-      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+      {/* Répartition CA par tranche de prix (admin only, chineuse l'a dans le bloc catégories) */}
+      {isAdmin && (<div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition par tranche de prix</h2>
         <div className={`grid ${isAdmin ? 'grid-cols-1 lg:grid-cols-2 gap-6' : 'grid-cols-1'}`}>
           <div>
@@ -1006,7 +1025,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           </div>
           )}
         </div>
-      </div>
+      </div>)}
 
       {/* ============================== */}
       {/* ANALYTICS PRODUIT              */}
