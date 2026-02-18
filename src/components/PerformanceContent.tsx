@@ -1009,7 +1009,6 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           )}
         </div>
       </div>
-      </div>
 
       {/* ============================== */}
       {/* ANALYTICS PRODUIT              */}
