@@ -101,7 +101,8 @@ export default function AdminEbayPage() {
         alert(`✅ ${successCount} produit(s) publié(s) sur eBay !`)
         await loadData()
       } else {
-        alert(`❌ Erreur : ${data.error || 'Erreur inconnue'}`)
+        const errMsg = data.error || data.results?.find((r: any) => !r.success)?.error || data.message || 'Erreur inconnue'
+alert(`❌ Erreur : ${errMsg}`)
       }
     } catch (err: any) {
       alert(`❌ Erreur réseau : ${err.message}`)
