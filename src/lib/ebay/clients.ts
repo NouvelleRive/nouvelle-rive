@@ -75,7 +75,7 @@ export async function getAccessToken(): Promise<string> {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Authorization': `Basic ${credentials}`,
     },
-    body: `grant_type=client_credentials&scope=${encodeURIComponent(EBAY_SCOPES)}`,
+    body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(process.env.EBAY_REFRESH_TOKEN!)}&scope=${encodeURIComponent(EBAY_SCOPES)}`,
   })
 
   if (!response.ok) {
