@@ -54,12 +54,18 @@ export async function POST(request: NextRequest) {
     for (const productId of productIds) {
       try {
         // Récupérer le produit Firebase
-        const docRef = db.collection('produits').doc(productId)
-        const docSnap = await docRef.get()
+        let docRef = db.collection('produits').doc(productId)
+        let docSnap = await docRef.get()
 
+        // Si pas trouvé par ID, chercher par SKU
         if (!docSnap.exists) {
-          results.push({ productId, success: false, error: 'Produit non trouvé' })
-          continue
+          const skuQuery = await db.collection('produits').where('sku', '==', productId).limit(1).get()
+          if (skuQuery.empty) {
+            results.push({ productId, success: false, error: 'Produit non trouvé' })
+            continue
+          }
+          docSnap = skuQuery.docs[0]
+          docRef = docSnap.ref
         }
 
         const produitData: any = { id: docSnap.id, ...docSnap.data() }
