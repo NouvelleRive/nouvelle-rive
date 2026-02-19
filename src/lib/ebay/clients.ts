@@ -123,7 +123,8 @@ export async function ebayApiCall<T = any>(
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
-      'Content-Language': 'en-US',
+      'Accept-Language': 'en-US',
+      'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
       'Accept': 'application/json',
       ...headers,
     },
