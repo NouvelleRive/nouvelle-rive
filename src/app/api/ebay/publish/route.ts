@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
     const failCount = results.filter(r => !r.success).length
 
     return NextResponse.json({
+      success: successCount > 0,
       message: `${successCount} publié(s), ${failCount} échec(s)`,
       results,
     })
