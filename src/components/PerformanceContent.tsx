@@ -961,7 +961,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     <div className="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-300 text-xs">No photo</div>
                   )}
                   <div className="p-1.5">
-                    <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
+                    <p className="text-xs font-medium text-gray-900 line-clamp-2 leading-tight">{item.nom}</p>
                     {item.marque && <p className="text-gray-400 truncate" style={{ fontSize: '9px' }}>{item.marque}</p>}
                     <div className="flex items-center justify-between mt-0.5">
                       <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
@@ -995,7 +995,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     <div className="w-full h-24 bg-gray-100 flex items-center justify-center text-gray-300 text-xs">No photo</div>
                   )}
                   <div className="p-1.5">
-                    <p className="text-xs font-medium text-gray-900 truncate">{item.nom}</p>
+                    <p className="text-xs font-medium text-gray-900 line-clamp-2 leading-tight">{item.nom}</p>
                     {item.marque && <p className="text-gray-400 truncate" style={{ fontSize: '9px' }}>{item.marque}</p>}
                     <div className="flex items-center justify-between mt-0.5">
                       <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
