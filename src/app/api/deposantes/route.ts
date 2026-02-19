@@ -219,7 +219,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
     const {
-      nom,
+      raisonSociale,
       siret,
       tva,
       iban,
@@ -269,7 +269,7 @@ export async function PATCH(req: NextRequest) {
         authUid: decoded.uid,
         email: decoded.email || '',
         emails: decoded.email ? [decoded.email] : [],
-        nom: nom?.trim() || '',
+        raisonSociale: raisonSociale?.trim() || '',
         siret: siret?.trim() || '',
         tva: tva?.trim() || '',
         iban: iban?.trim() || '',
@@ -296,7 +296,7 @@ export async function PATCH(req: NextRequest) {
       updatedAt: FieldValue.serverTimestamp(),
     }
 
-    if (nom !== undefined) updateData.nom = nom?.trim() || ''
+    if (raisonSociale !== undefined) updateData.raisonSociale = raisonSociale?.trim() || ''
     if (siret !== undefined) updateData.siret = siret?.trim() || ''
     if (tva !== undefined) updateData.tva = tva?.trim() || ''
     if (iban !== undefined) updateData.iban = iban?.trim() || ''

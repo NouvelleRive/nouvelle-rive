@@ -37,7 +37,7 @@ export default function ProfilFacturationPage() {
       
       if (!snap.empty) {
         const d = snap.docs[0].data()
-        setRaisonSociale(d?.nom || '')
+        setRaisonSociale(d?.raisonSociale || d?.nom || '')
         setSiret(d?.siret || '')
         setAdresse1(d?.adresse1 || '')
         setAdresse2(d?.adresse2 || '')
@@ -71,7 +71,7 @@ export default function ProfilFacturationPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          nom: raisonSociale,
+          raisonSociale,
           siret,
           adresse1,
           adresse2,
