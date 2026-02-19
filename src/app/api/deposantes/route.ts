@@ -261,7 +261,32 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (snapshot.empty) {
-      return NextResponse.json({ success: false, error: 'Profil introuvable' }, { status: 404 })
+      // Nouvelle chineuse — créer le document
+      const slug = generateSlug(decoded.email || decoded.uid)
+      const docRef = adminDb.collection('chineuse').doc(slug)
+      
+      const newDoc: Record<string, any> = {
+        authUid: decoded.uid,
+        email: decoded.email || '',
+        emails: decoded.email ? [decoded.email] : [],
+        nom: nom?.trim() || '',
+        siret: siret?.trim() || '',
+        tva: tva?.trim() || '',
+        iban: iban?.trim() || '',
+        bic: bic?.trim() || '',
+        banqueAdresse: banqueAdresse?.trim() || '',
+        adresse1: adresse1?.trim() || '',
+        adresse2: adresse2?.trim() || '',
+        texteEcoCirculaire: texteEcoCirculaire || 1,
+        wearType: wearType || 'womenswear',
+        stockType: stockType || 'unique',
+        slug,
+        displayOnWebsite: true,
+        createdAt: FieldValue.serverTimestamp(),
+      }
+
+      await docRef.set(newDoc)
+      return NextResponse.json({ success: true, action: 'created', id: slug })
     }
 
     const docRef = snapshot.docs[0].ref
