@@ -198,28 +198,38 @@ async function ensureMerchantLocation(): Promise<void> {
 
 /**
  * Prépare le titre pour eBay (max 80 caractères)
+ * Format: "Vintage [Marque] - [Nom du produit]" sans SKU
  */
 function formatEbayTitle(nom: string, marque?: string): string {
   let title = nom
-  
-  // Ajouter la marque si pas déjà dans le nom
-  if (marque && !nom.toLowerCase().includes(marque.toLowerCase())) {
-    title = `${marque} ${nom}`
-  }
-  
-  // Enlever le SKU du début (ex: "GIGI18 - ")
+
+  // Enlever le SKU du début (ex: "GIGI18 - " ou "PS102 - ")
   title = title.replace(/^[A-Z]{2,4}\d+\s*-\s*/i, '')
-  
+
+  // Enlever le SKU au milieu du titre (ex: "Louis Vuitton PS102 - Sac" → "Louis Vuitton - Sac")
+  title = title.replace(/\s+[A-Z]{2,4}\d+\s*-\s*/gi, ' - ')
+
+  // Enlever le SKU seul sans tiret (ex: "Sac PS102 bandoulière" → "Sac bandoulière")
+  title = title.replace(/\s+[A-Z]{2,4}\d+\s+/gi, ' ')
+
+  // Nettoyer les espaces multiples et tirets en double
+  title = title.replace(/\s+/g, ' ').replace(/\s*-\s*-\s*/g, ' - ').trim()
+
+  // Ajouter la marque si pas déjà dans le titre
+  if (marque && !title.toLowerCase().includes(marque.toLowerCase())) {
+    title = `${marque} ${title}`
+  }
+
   // Ajouter "Vintage" si pas présent
   if (!title.toLowerCase().includes('vintage')) {
     title = `Vintage ${title}`
   }
-  
+
   // Tronquer à 80 caractères
   if (title.length > 80) {
     title = title.substring(0, 77) + '...'
   }
-  
+
   return title
 }
 
@@ -701,6 +711,10 @@ export function prepareProductForEbay(firebaseProduct: any, gender?: EbayGender)
     imageUrls = [firebaseProduct.imageUrl]
   }
 
+  // Extraire couleur et matière (peut être en FR ou EN selon les produits)
+  const color = firebaseProduct.color || firebaseProduct.couleur || ''
+  const material = firebaseProduct.material || firebaseProduct.matiere || firebaseProduct.matière || ''
+
   return {
     firebaseId: firebaseProduct.id,
     sku: firebaseProduct.sku || firebaseProduct.id,
@@ -713,8 +727,8 @@ export function prepareProductForEbay(firebaseProduct: any, gender?: EbayGender)
     gender,
     imageUrls,
     brand: firebaseProduct.marque,
-    material: firebaseProduct.material,
-    color: firebaseProduct.color,
+    material,
+    color,
     size: firebaseProduct.taille,
   }
 }
