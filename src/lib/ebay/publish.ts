@@ -129,7 +129,7 @@ async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> 
   await ebayApiCall(`/sell/inventory/v1/inventory_item/${produit.sku}`, {
     method: 'PUT',
     body: inventoryItem,
-    headers: { 'Content-Language': 'en-US' },
+    headers: {},
   })
   
   console.log(`✅ InventoryItem créé: ${produit.sku}`)
