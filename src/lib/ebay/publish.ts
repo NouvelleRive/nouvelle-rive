@@ -128,25 +128,31 @@ function formatEbayDescription(description: string, produit: Partial<EbayProduct
 
 /**
  * Construit les aspects (attributs) du produit
+ * Inclut tous les item specifics requis par eBay pour les vêtements
  */
 function buildProductAspects(produit: EbayProduct): Record<string, string[]> {
   const aspects: Record<string, string[]> = {}
-  
+
+  // Aspects obligatoires pour vêtements eBay
+  aspects['Department'] = ['Women']
+  aspects['Type'] = ['Jacket'] // Default pour Coats & Jackets
+  aspects['Style'] = ['Vintage']
   aspects['Brand'] = [produit.brand || 'Unbranded']
-  
-  if (produit.color) {
-    aspects['Color'] = [produit.color]
-  }
+  aspects['Size'] = [produit.size || 'M']
+  aspects['Size Type'] = ['Regular']
+  aspects['Color'] = [produit.color || 'Multicolor']
+  aspects['Pattern'] = ['Solid']
+  aspects['Closure'] = ['Button']
+  aspects['Outer Shell Material'] = [produit.material || 'Cotton Blend']
+  aspects['Lining Material'] = ['Polyester']
+  aspects['Country/Region of Manufacture'] = ['France']
+  aspects['Vintage'] = ['Yes']
+  aspects['Handmade'] = ['No']
+
+  // Surcharger Material si fourni
   if (produit.material) {
     aspects['Material'] = [produit.material]
   }
-  if (produit.size) {
-    aspects['Size'] = [produit.size]
-  }
-  
-  aspects['Style'] = ['Vintage']
-  aspects['Department'] = ['Women']
-  aspects['Country/Region of Manufacture'] = ['France']
 
   return aspects
 }
