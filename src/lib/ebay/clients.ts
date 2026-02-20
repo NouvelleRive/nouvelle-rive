@@ -125,6 +125,7 @@ export async function ebayApiCall<T = any>(
       'Content-Type': 'application/json',
       'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
       'Content-Language': 'en-US',
+      'Accept-Language': 'en-US',
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
