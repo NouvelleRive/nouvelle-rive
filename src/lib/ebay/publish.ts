@@ -145,8 +145,9 @@ function buildProductAspects(produit: EbayProduct): Record<string, string[]> {
   }
   
   aspects['Style'] = ['Vintage']
+  aspects['Department'] = ['Women']
   aspects['Country/Region of Manufacture'] = ['France']
-  
+
   return aspects
 }
 
