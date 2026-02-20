@@ -179,11 +179,30 @@ async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> 
 }
 
 /**
+ * Récupère l'offerId existant pour un SKU
+ */
+async function getExistingOfferId(sku: string): Promise<string | null> {
+  try {
+    const response = await ebayApiCall<{ offers: Array<{ offerId: string; status: string }> }>(
+      `/sell/inventory/v1/offer?sku=${encodeURIComponent(sku)}`,
+      { method: 'GET' }
+    )
+
+    if (response.offers && response.offers.length > 0) {
+      return response.offers[0].offerId
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Crée une offer pour un inventoryItem
  */
 async function createOffer(produit: EbayProduct, categoryId: string): Promise<string> {
   const priceUSD = produit.priceUSD || calculateEbayPrice(produit.priceEUR)
-  
+
   const offer = {
     sku: produit.sku,
     marketplaceId: EBAY_MARKETPLACE_ID,
@@ -204,26 +223,68 @@ async function createOffer(produit: EbayProduct, categoryId: string): Promise<st
       },
     },
   }
-  
-  const response = await ebayApiCall<{ offerId: string }>('/sell/inventory/v1/offer', {
-    method: 'POST',
-    body: offer,
-  })
-  
-  console.log(`✅ Offer créée: ${response.offerId}`)
-  return response.offerId
+
+  try {
+    const response = await ebayApiCall<{ offerId: string }>('/sell/inventory/v1/offer', {
+      method: 'POST',
+      body: offer,
+    })
+
+    console.log(`✅ Offer créée: ${response.offerId}`)
+    return response.offerId
+  } catch (error: any) {
+    // Si l'offer existe déjà, récupérer l'offerId existant
+    if (error?.message?.includes('already exists') || error?.message?.includes('Offer entity already exists')) {
+      console.log(`ℹ️ Offer existe déjà pour SKU: ${produit.sku}, récupération...`)
+      const existingOfferId = await getExistingOfferId(produit.sku)
+      if (existingOfferId) {
+        console.log(`✅ Offer existante récupérée: ${existingOfferId}`)
+        return existingOfferId
+      }
+    }
+    throw error
+  }
+}
+
+/**
+ * Récupère le listingId d'une offer existante
+ */
+async function getOfferListingId(offerId: string): Promise<string | null> {
+  try {
+    const response = await ebayApiCall<{ listingId?: string; status: string }>(
+      `/sell/inventory/v1/offer/${offerId}`,
+      { method: 'GET' }
+    )
+
+    return response.listingId || null
+  } catch {
+    return null
+  }
 }
 
 /**
  * Publie une offer pour créer le listing
  */
 async function publishOffer(offerId: string): Promise<string> {
-  const response = await ebayApiCall<{ listingId: string }>(`/sell/inventory/v1/offer/${offerId}/publish`, {
-    method: 'POST',
-  })
-  
-  console.log(`✅ Listing publié: ${response.listingId}`)
-  return response.listingId
+  try {
+    const response = await ebayApiCall<{ listingId: string }>(`/sell/inventory/v1/offer/${offerId}/publish`, {
+      method: 'POST',
+    })
+
+    console.log(`✅ Listing publié: ${response.listingId}`)
+    return response.listingId
+  } catch (error: any) {
+    // Si l'offer est déjà publiée, récupérer le listingId existant
+    if (error?.message?.includes('already published') || error?.message?.includes('PUBLISHED')) {
+      console.log(`ℹ️ Offer déjà publiée: ${offerId}, récupération du listingId...`)
+      const existingListingId = await getOfferListingId(offerId)
+      if (existingListingId) {
+        console.log(`✅ ListingId existant récupéré: ${existingListingId}`)
+        return existingListingId
+      }
+    }
+    throw error
+  }
 }
 
 /**
