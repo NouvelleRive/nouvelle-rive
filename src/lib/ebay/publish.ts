@@ -161,7 +161,7 @@ async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> 
         quantity: 1,
       },
     },
-    condition: 'USED_VERY_GOOD',
+    condition: 'USED_EXCELLENT',
     product: {
       title: formatEbayTitle(produit.title, produit.brand),
       description: formatEbayDescription(produit.description, produit),
@@ -414,7 +414,7 @@ export function prepareProductForEbay(firebaseProduct: any): EbayProduct {
     sku: firebaseProduct.sku || firebaseProduct.id,
     title: firebaseProduct.nom || 'Vintage Item',
     description: firebaseProduct.description || '',
-    condition: 'USED_VERY_GOOD',
+    condition: 'USED_EXCELLENT',
     priceEUR: firebaseProduct.prix || 0,
     categoryId: localCategory || '',
     imageUrls,
