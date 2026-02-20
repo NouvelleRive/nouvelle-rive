@@ -12,6 +12,49 @@ const EBAY_MARKETPLACE_ID = 'EBAY_US'
 const EBAY_CURRENCY = 'USD'
 const EBAY_MERCHANT_LOCATION_KEY = process.env.EBAY_MERCHANT_LOCATION_KEY || 'PARIS_STORE'
 
+// Flag pour s'assurer que la location est créée une seule fois
+let locationInitialized = false
+
+/**
+ * S'assure que la location marchande existe (appelé automatiquement)
+ */
+async function ensureMerchantLocation(): Promise<void> {
+  if (locationInitialized) return
+
+  try {
+    const locationKey = EBAY_MERCHANT_LOCATION_KEY
+
+    const locationData = {
+      location: {
+        address: {
+          city: 'Paris',
+          postalCode: '75004',
+          country: 'FR',
+        },
+      },
+      name: 'Nouvelle Rive - Le Marais',
+      merchantLocationStatus: 'ENABLED',
+      locationTypes: ['STORE'],
+    }
+
+    await ebayApiCall(`/sell/inventory/v1/location/${locationKey}`, {
+      method: 'POST',
+      body: locationData,
+    })
+
+    console.log(`✅ Location eBay créée: ${locationKey}`)
+  } catch (error: any) {
+    // Si la location existe déjà, ce n'est pas une erreur
+    if (error?.message?.includes('already exists') || error?.message?.includes('Location already exists')) {
+      console.log(`ℹ️ Location eBay existe déjà: ${EBAY_MERCHANT_LOCATION_KEY}`)
+    } else {
+      console.warn(`⚠️ Erreur création location eBay: ${error?.message}`)
+    }
+  }
+
+  locationInitialized = true
+}
+
 /**
  * Prépare le titre pour eBay (max 80 caractères)
  */
@@ -191,31 +234,36 @@ export async function publishToEbay(produit: EbayProduct): Promise<EbayListingRe
     if (!isEbayConfigured()) {
       return { success: false, error: 'eBay non configuré' }
     }
-    
+
     if (!produit.sku || !produit.title || !produit.priceEUR) {
       return { success: false, error: 'Données incomplètes (sku, title, priceEUR requis)' }
     }
-    
+
     if (!produit.imageUrls || produit.imageUrls.length === 0) {
       return { success: false, error: 'Au moins une image requise' }
     }
-    
+
+    // Créer la location marchande si pas encore fait
+    if (!locationInitialized) {
+      await ensureMerchantLocation()
+    }
+
     console.log(`📤 Publication eBay: ${produit.title}`)
-    
+
     // Trouver la catégorie eBay
     const category = findEbayCategory(produit.categoryId)
-    
+
     // 1. Créer l'inventoryItem
     await createOrUpdateInventoryItem(produit)
-    
+
     // 2. Créer l'offer
     const offerId = await createOffer(produit, category.ebayCategoryId)
-    
+
     // 3. Publier
     const listingId = await publishOffer(offerId)
-    
+
     return { success: true, listingId, offerId }
-    
+
   } catch (error: any) {
     console.error('❌ Erreur publication eBay:', error?.message)
     return { success: false, error: error?.message }
