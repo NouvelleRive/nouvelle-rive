@@ -5,12 +5,105 @@
  */
 
 import { ebayApiCall, calculateEbayPrice, isEbayConfigured } from './clients'
-import { findEbayCategory, estimateShippingByCategory } from './categories'
 import { EbayProduct, EbayListingResponse } from './types'
 
 const EBAY_MARKETPLACE_ID = 'EBAY_US'
 const EBAY_CURRENCY = 'USD'
 const EBAY_MERCHANT_LOCATION_KEY = process.env.EBAY_MERCHANT_LOCATION_KEY || 'PARIS_STORE'
+
+// ============================================================================
+// MAPPING CATÉGORIES FIREBASE → EBAY US
+// ============================================================================
+
+const EBAY_CATEGORY_MAP: Record<string, { categoryId: string; type: string }> = {
+  // Sacs
+  'sac': { categoryId: '169291', type: 'bags' },
+  'pochette': { categoryId: '169291', type: 'bags' },
+  'sac à main': { categoryId: '169291', type: 'bags' },
+  'besace': { categoryId: '169291', type: 'bags' },
+
+  // Manteaux / Vestes
+  'manteau': { categoryId: '57988', type: 'coats' },
+  'veste': { categoryId: '57988', type: 'coats' },
+  'blazer': { categoryId: '57988', type: 'coats' },
+  'blouson': { categoryId: '57988', type: 'coats' },
+  'parka': { categoryId: '57988', type: 'coats' },
+  'trench': { categoryId: '57988', type: 'coats' },
+
+  // Robes
+  'robe': { categoryId: '63861', type: 'dresses' },
+
+  // Hauts
+  'haut': { categoryId: '53159', type: 'tops' },
+  'chemise': { categoryId: '53159', type: 'tops' },
+  'chemisier': { categoryId: '53159', type: 'tops' },
+  'blouse': { categoryId: '53159', type: 'tops' },
+  't-shirt': { categoryId: '53159', type: 'tops' },
+  'top': { categoryId: '53159', type: 'tops' },
+  'débardeur': { categoryId: '53159', type: 'tops' },
+
+  // Pantalons
+  'pantalon': { categoryId: '63863', type: 'pants' },
+  'jean': { categoryId: '63863', type: 'pants' },
+  'jeans': { categoryId: '63863', type: 'pants' },
+  'short': { categoryId: '63863', type: 'pants' },
+
+  // Jupes
+  'jupe': { categoryId: '63864', type: 'skirts' },
+
+  // Pulls
+  'pull': { categoryId: '63866', type: 'sweaters' },
+  'gilet': { categoryId: '63866', type: 'sweaters' },
+  'cardigan': { categoryId: '63866', type: 'sweaters' },
+  'maille': { categoryId: '63866', type: 'sweaters' },
+  'tricot': { categoryId: '63866', type: 'sweaters' },
+
+  // Chaussures
+  'chaussures': { categoryId: '55793', type: 'shoes' },
+  'escarpins': { categoryId: '55793', type: 'shoes' },
+  'bottes': { categoryId: '55793', type: 'shoes' },
+  'bottines': { categoryId: '55793', type: 'shoes' },
+  'sandales': { categoryId: '55793', type: 'shoes' },
+  'mocassins': { categoryId: '55793', type: 'shoes' },
+
+  // Accessoires
+  'accessoire': { categoryId: '4251', type: 'accessories' },
+  'accessoires': { categoryId: '4251', type: 'accessories' },
+  'ceinture': { categoryId: '4251', type: 'accessories' },
+  'écharpe': { categoryId: '4251', type: 'accessories' },
+  'foulard': { categoryId: '4251', type: 'accessories' },
+  'chapeau': { categoryId: '4251', type: 'accessories' },
+  'bijoux': { categoryId: '4251', type: 'accessories' },
+}
+
+const DEFAULT_EBAY_CATEGORY = { categoryId: '11450', type: 'default' }
+
+/**
+ * Trouve la catégorie eBay à partir de la catégorie/sous-catégorie Firebase
+ */
+function findEbayCategoryFromFirebase(categoryId?: string, sousCat?: string): { categoryId: string; type: string } {
+  // Chercher d'abord dans sousCat, puis dans categoryId
+  const searchTerms = [sousCat, categoryId].filter(Boolean)
+
+  for (const term of searchTerms) {
+    if (!term) continue
+    const normalizedTerm = term.toLowerCase().trim()
+
+    // Chercher une correspondance exacte
+    if (EBAY_CATEGORY_MAP[normalizedTerm]) {
+      return EBAY_CATEGORY_MAP[normalizedTerm]
+    }
+
+    // Chercher une correspondance partielle
+    for (const [key, value] of Object.entries(EBAY_CATEGORY_MAP)) {
+      if (normalizedTerm.includes(key) || key.includes(normalizedTerm)) {
+        return value
+      }
+    }
+  }
+
+  return DEFAULT_EBAY_CATEGORY
+}
 
 // Flag pour s'assurer que la location est créée une seule fois
 let locationInitialized = false
@@ -127,31 +220,141 @@ function formatEbayDescription(description: string, produit: Partial<EbayProduct
 }
 
 /**
- * Construit les aspects (attributs) du produit
- * Inclut tous les item specifics requis par eBay pour les vêtements
+ * Construit les aspects (attributs) du produit selon la catégorie eBay
  */
-function buildProductAspects(produit: EbayProduct): Record<string, string[]> {
+function buildProductAspects(produit: EbayProduct, categoryType: string): Record<string, string[]> {
   const aspects: Record<string, string[]> = {}
 
-  // Aspects obligatoires pour vêtements eBay
-  aspects['Department'] = ['Women']
-  aspects['Type'] = ['Jacket'] // Default pour Coats & Jackets
-  aspects['Style'] = ['Vintage']
+  // Aspects communs à toutes les catégories
   aspects['Brand'] = [produit.brand || 'Unbranded']
-  aspects['Size'] = [produit.size || 'M']
-  aspects['Size Type'] = ['Regular']
   aspects['Color'] = [produit.color || 'Multicolor']
-  aspects['Pattern'] = ['Solid']
-  aspects['Closure'] = ['Button']
-  aspects['Outer Shell Material'] = [produit.material || 'Cotton Blend']
-  aspects['Lining Material'] = ['Polyester']
-  aspects['Country/Region of Manufacture'] = ['France']
   aspects['Vintage'] = ['Yes']
-  aspects['Handmade'] = ['No']
+  aspects['Country/Region of Manufacture'] = ['France']
 
-  // Surcharger Material si fourni
-  if (produit.material) {
-    aspects['Material'] = [produit.material]
+  switch (categoryType) {
+    case 'bags':
+      // Sacs et pochettes (169291)
+      aspects['Department'] = ['Women']
+      aspects['Style'] = ['Shoulder Bag']
+      aspects['Size'] = ['Medium']
+      aspects['Exterior Material'] = [produit.material || 'Leather']
+      aspects['Closure'] = ['Zip']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'coats':
+      // Manteaux, vestes, blazers (57988)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['Jacket']
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Size Type'] = ['Regular']
+      aspects['Pattern'] = ['Solid']
+      aspects['Closure'] = ['Button']
+      aspects['Outer Shell Material'] = [produit.material || 'Cotton Blend']
+      aspects['Lining Material'] = ['Polyester']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'dresses':
+      // Robes (63861)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['Shift Dress']
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Size Type'] = ['Regular']
+      aspects['Sleeve Length'] = ['Long Sleeve']
+      aspects['Pattern'] = ['Solid']
+      aspects['Neckline'] = ['Round Neck']
+      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'tops':
+      // Hauts, chemises, t-shirts (53159)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['Blouse']
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Size Type'] = ['Regular']
+      aspects['Sleeve Length'] = ['Long Sleeve']
+      aspects['Pattern'] = ['Solid']
+      aspects['Neckline'] = ['Round Neck']
+      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'pants':
+      // Pantalons, jeans (63863)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['Casual Pants']
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Size Type'] = ['Regular']
+      aspects['Rise'] = ['Mid']
+      aspects['Inseam'] = ['Regular']
+      aspects['Pattern'] = ['Solid']
+      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Closure'] = ['Zip']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'skirts':
+      // Jupes (63864)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['A-Line Skirt']
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Size Type'] = ['Regular']
+      aspects['Skirt Length'] = ['Knee-Length']
+      aspects['Pattern'] = ['Solid']
+      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'sweaters':
+      // Pulls, gilets (63866)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['Pullover']
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Size Type'] = ['Regular']
+      aspects['Sleeve Length'] = ['Long Sleeve']
+      aspects['Pattern'] = ['Solid']
+      aspects['Neckline'] = ['Round Neck']
+      aspects['Material'] = [produit.material || 'Wool Blend']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'shoes':
+      // Chaussures (55793)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['Heels']
+      aspects['Style'] = ['Vintage']
+      aspects['US Shoe Size'] = [produit.size || '8']
+      aspects['Upper Material'] = [produit.material || 'Leather']
+      aspects['Heel Height'] = ['Mid Heel (1.5-3 in)']
+      aspects['Occasion'] = ['Casual']
+      aspects['Handmade'] = ['No']
+      break
+
+    case 'accessories':
+      // Accessoires (4251)
+      aspects['Department'] = ['Women']
+      aspects['Type'] = ['Scarf']
+      aspects['Style'] = ['Vintage']
+      aspects['Material'] = [produit.material || 'Silk']
+      aspects['Handmade'] = ['No']
+      break
+
+    default:
+      // Catégorie par défaut (11450)
+      aspects['Department'] = ['Women']
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Handmade'] = ['No']
+      break
   }
 
   return aspects
@@ -160,8 +363,8 @@ function buildProductAspects(produit: EbayProduct): Record<string, string[]> {
 /**
  * Crée ou met à jour un inventoryItem sur eBay
  */
-async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> {
-  
+async function createOrUpdateInventoryItem(produit: EbayProduct, categoryType: string): Promise<void> {
+
   const inventoryItem = {
     availability: {
       shipToLocationAvailability: {
@@ -173,15 +376,15 @@ async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> 
       title: formatEbayTitle(produit.title, produit.brand),
       description: formatEbayDescription(produit.description, produit),
       imageUrls: produit.imageUrls.slice(0, 12),
-      aspects: buildProductAspects(produit),
+      aspects: buildProductAspects(produit, categoryType),
     },
   }
-  
+
   await ebayApiCall(`/sell/inventory/v1/inventory_item/${produit.sku}`, {
     method: 'PUT',
     body: inventoryItem,
   })
-  
+
   console.log(`✅ InventoryItem créé: ${produit.sku}`)
 }
 
@@ -351,14 +554,15 @@ export async function publishToEbay(produit: EbayProduct): Promise<EbayListingRe
 
     console.log(`📤 Publication eBay: ${produit.title}`)
 
-    // Trouver la catégorie eBay
-    const category = findEbayCategory(produit.categoryId)
+    // Trouver la catégorie eBay à partir de la catégorie Firebase
+    const ebayCategory = findEbayCategoryFromFirebase(produit.categoryId, produit.sousCat)
+    console.log(`📂 Catégorie eBay: ${ebayCategory.categoryId} (${ebayCategory.type})`)
 
-    // 1. Créer l'inventoryItem
-    await createOrUpdateInventoryItem(produit)
+    // 1. Créer l'inventoryItem avec les aspects adaptés à la catégorie
+    await createOrUpdateInventoryItem(produit, ebayCategory.type)
 
     // 2. Créer l'offer
-    const offerId = await createOffer(produit, category.ebayCategoryId)
+    const offerId = await createOffer(produit, ebayCategory.categoryId)
 
     // 3. Publier
     const listingId = await publishOffer(offerId)
@@ -382,11 +586,12 @@ export async function updateEbayListing(
     if (!isEbayConfigured()) {
       return { success: false, error: 'eBay non configuré' }
     }
-    
-    await createOrUpdateInventoryItem(produit)
-    
+
+    const ebayCategory = findEbayCategoryFromFirebase(produit.categoryId, produit.sousCat)
+    await createOrUpdateInventoryItem(produit, ebayCategory.type)
+
     return { success: true, offerId: existingOfferId }
-    
+
   } catch (error: any) {
     return { success: false, error: error?.message }
   }
@@ -395,12 +600,17 @@ export async function updateEbayListing(
 /**
  * Prépare un produit Firebase pour publication eBay
  */
-
 export function prepareProductForEbay(firebaseProduct: any): EbayProduct {
-  const localCategory = typeof firebaseProduct.categorie === 'object' 
-    ? firebaseProduct.categorie?.label 
+  // Extraire la catégorie principale
+  const localCategory = typeof firebaseProduct.categorie === 'object'
+    ? firebaseProduct.categorie?.label
     : firebaseProduct.categorie
-  
+
+  // Extraire la sous-catégorie
+  const sousCat = typeof firebaseProduct.sousCat === 'object'
+    ? firebaseProduct.sousCat?.label
+    : firebaseProduct.sousCat
+
   // Collecter toutes les images
   let imageUrls: string[] = []
   if (firebaseProduct.imageUrls?.length > 0) {
@@ -415,7 +625,7 @@ export function prepareProductForEbay(firebaseProduct: any): EbayProduct {
   } else if (firebaseProduct.imageUrl) {
     imageUrls = [firebaseProduct.imageUrl]
   }
-  
+
   return {
     firebaseId: firebaseProduct.id,
     sku: firebaseProduct.sku || firebaseProduct.id,
@@ -424,6 +634,7 @@ export function prepareProductForEbay(firebaseProduct: any): EbayProduct {
     condition: 'USED_EXCELLENT',
     priceEUR: firebaseProduct.prix || 0,
     categoryId: localCategory || '',
+    sousCat: sousCat || '',
     imageUrls,
     brand: firebaseProduct.marque,
     material: firebaseProduct.material,

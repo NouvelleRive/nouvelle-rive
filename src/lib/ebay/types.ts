@@ -40,6 +40,7 @@ export interface EbayProduct {
   
   // Catégorie eBay
   categoryId: string
+  sousCat?: string  // Sous-catégorie Firebase pour mapping eBay
   
   // Images (URLs Cloudinary)
   imageUrls: string[]
