@@ -110,7 +110,6 @@ function buildProductAspects(produit: EbayProduct): Record<string, string[]> {
  * Crée ou met à jour un inventoryItem sur eBay
  */
 async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> {
-  const shipping = estimateShippingByCategory(produit.sku)
   
   const inventoryItem = {
     availability: {
@@ -119,21 +118,11 @@ async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> 
       },
     },
     condition: 'USED_VERY_GOOD',
-    conditionDescription: produit.conditionDescription || 'Vintage piece in very good condition.',
     product: {
       title: formatEbayTitle(produit.title, produit.brand),
       description: formatEbayDescription(produit.description, produit),
       imageUrls: produit.imageUrls.slice(0, 12),
       aspects: buildProductAspects(produit),
-    },
-    packageWeightAndSize: {
-      weight: {
-        value: shipping.weightGrams / 1000,
-        unit: 'KILOGRAM',
-      },
-      packageType: shipping.packageType === 'ENVELOPE' ? 'LETTER' : 
-                   shipping.packageType === 'SMALL_BOX' ? 'PACKAGE_THICK_ENVELOPE' :
-                   'LARGE_ENVELOPE',
     },
   }
   
