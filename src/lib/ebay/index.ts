@@ -33,7 +33,11 @@ export {
   publishToEbay,
   updateEbayListing,
   prepareProductForEbay,
+  wearTypeToGender,
 } from './publish'
+
+// Types de publication
+export type { EbayGender } from './publish'
 
 // Retrait
 export {

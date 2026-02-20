@@ -41,6 +41,7 @@ export interface EbayProduct {
   // Catégorie eBay
   categoryId: string
   sousCat?: string  // Sous-catégorie Firebase pour mapping eBay
+  gender?: 'women' | 'men'  // Genre pour catégories eBay (womenswear/menswear)
   
   // Images (URLs Cloudinary)
   imageUrls: string[]

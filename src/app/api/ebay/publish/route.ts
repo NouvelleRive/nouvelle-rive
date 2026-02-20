@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getFirestore } from 'firebase-admin/firestore'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { publishToEbay, prepareProductForEbay, isEbayConfigured } from '@/lib/ebay'
+import { publishToEbay, prepareProductForEbay, wearTypeToGender, isEbayConfigured, type EbayGender } from '@/lib/ebay'
 
 // Init Firebase Admin
 if (!getApps().length) {
@@ -18,11 +18,46 @@ if (!getApps().length) {
 
 const db = getFirestore()
 
+// Cache des wearType par trigramme pour éviter les requêtes répétées
+const chineuseWearTypeCache: Map<string, string> = new Map()
+
+/**
+ * Récupère le wearType d'une chineuse par son trigramme
+ */
+async function getWearTypeByTrigramme(trigramme: string): Promise<string | null> {
+  if (!trigramme) return null
+
+  const normalizedTri = trigramme.toUpperCase().trim()
+
+  // Vérifier le cache
+  if (chineuseWearTypeCache.has(normalizedTri)) {
+    return chineuseWearTypeCache.get(normalizedTri) || null
+  }
+
+  try {
+    const snapshot = await db.collection('chineuse')
+      .where('trigramme', '==', normalizedTri)
+      .limit(1)
+      .get()
+
+    if (!snapshot.empty) {
+      const wearType = snapshot.docs[0].data().wearType || 'womenswear'
+      chineuseWearTypeCache.set(normalizedTri, wearType)
+      return wearType
+    }
+  } catch (error) {
+    console.error('Erreur récupération chineuse:', error)
+  }
+
+  return null
+}
+
 /**
  * POST /api/ebay/publish
  * Publie un ou plusieurs produits sur eBay
- * 
- * Body: { productId: string } ou { productIds: string[] }
+ *
+ * Body: { productId: string, gender?: 'women' | 'men' } ou { productIds: string[], gender?: 'women' | 'men' }
+ * gender est optionnel - si non fourni, sera déterminé par le wearType de la chineuse
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +71,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const productIds: string[] = body.productIds || (body.productId ? [body.productId] : [])
+    const forcedGender: EbayGender | undefined = body.gender // Genre forcé par le frontend
 
     if (productIds.length === 0) {
       return NextResponse.json(
@@ -86,8 +122,23 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Préparer et publier
-        const ebayProduct = prepareProductForEbay(produitData)
+        // Déterminer le genre du produit
+        let gender: EbayGender | undefined = forcedGender
+
+        if (!gender) {
+          // Récupérer le trigramme du produit (champ chineuse ou extrait du SKU)
+          const trigramme = produitData.chineuse ||
+            produitData.trigramme ||
+            (produitData.sku ? produitData.sku.match(/^([A-Z]{2,4})/i)?.[1] : null)
+
+          if (trigramme) {
+            const wearType = await getWearTypeByTrigramme(trigramme)
+            gender = wearTypeToGender(wearType || undefined) || undefined
+          }
+        }
+
+        // Préparer et publier avec le genre
+        const ebayProduct = prepareProductForEbay(produitData, gender)
 
         if (ebayProduct.imageUrls.length === 0) {
           results.push({ productId, success: false, error: 'Aucune image disponible' })
