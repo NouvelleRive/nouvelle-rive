@@ -10,6 +10,7 @@ import { EbayProduct, EbayListingResponse } from './types'
 
 const EBAY_MARKETPLACE_ID = 'EBAY_US'
 const EBAY_CURRENCY = 'USD'
+const EBAY_MERCHANT_LOCATION_KEY = process.env.EBAY_MERCHANT_LOCATION_KEY || 'PARIS_STORE'
 
 /**
  * Prépare le titre pour eBay (max 80 caractères)
@@ -147,6 +148,7 @@ async function createOffer(produit: EbayProduct, categoryId: string): Promise<st
     listingDescription: formatEbayDescription(produit.description, produit),
     availableQuantity: 1,
     categoryId: categoryId,
+    merchantLocationKey: EBAY_MERCHANT_LOCATION_KEY,
     listingPolicies: {
       fulfillmentPolicyId: process.env.EBAY_FULFILLMENT_POLICY_ID,
       paymentPolicyId: process.env.EBAY_PAYMENT_POLICY_ID,
@@ -278,5 +280,49 @@ export function prepareProductForEbay(firebaseProduct: any): EbayProduct {
     material: firebaseProduct.material,
     color: firebaseProduct.color,
     size: firebaseProduct.taille,
+  }
+}
+
+/**
+ * Crée la location marchande sur eBay (setup initial, à exécuter une fois)
+ * Nécessaire pour que les offers aient un pays d'expédition
+ */
+export async function createEbayMerchantLocation(): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!isEbayConfigured()) {
+      return { success: false, error: 'eBay non configuré' }
+    }
+
+    const locationKey = EBAY_MERCHANT_LOCATION_KEY
+
+    const locationData = {
+      location: {
+        address: {
+          city: 'Paris',
+          postalCode: '75004',
+          country: 'FR',
+        },
+      },
+      name: 'Nouvelle Rive - Le Marais',
+      merchantLocationStatus: 'ENABLED',
+      locationTypes: ['STORE'],
+    }
+
+    await ebayApiCall(`/sell/inventory/v1/location/${locationKey}`, {
+      method: 'POST',
+      body: locationData,
+    })
+
+    console.log(`✅ Location eBay créée: ${locationKey}`)
+    return { success: true }
+
+  } catch (error: any) {
+    // Si la location existe déjà, ce n'est pas une erreur
+    if (error?.message?.includes('already exists')) {
+      console.log(`ℹ️ Location eBay existe déjà: ${EBAY_MERCHANT_LOCATION_KEY}`)
+      return { success: true }
+    }
+    console.error('❌ Erreur création location eBay:', error?.message)
+    return { success: false, error: error?.message }
   }
 }
