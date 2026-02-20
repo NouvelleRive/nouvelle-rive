@@ -179,22 +179,55 @@ async function createOrUpdateInventoryItem(produit: EbayProduct): Promise<void> 
 }
 
 /**
- * Récupère l'offerId existant pour un SKU
+ * Récupère l'offer existante pour un SKU
  */
-async function getExistingOfferId(sku: string): Promise<string | null> {
+async function getExistingOffer(sku: string): Promise<{ offerId: string; offer: any } | null> {
   try {
-    const response = await ebayApiCall<{ offers: Array<{ offerId: string; status: string }> }>(
+    const response = await ebayApiCall<{ offers: Array<any> }>(
       `/sell/inventory/v1/offer?sku=${encodeURIComponent(sku)}`,
       { method: 'GET' }
     )
 
     if (response.offers && response.offers.length > 0) {
-      return response.offers[0].offerId
+      const offer = response.offers[0]
+      return { offerId: offer.offerId, offer }
     }
     return null
   } catch {
     return null
   }
+}
+
+/**
+ * Met à jour une offer existante avec les nouvelles valeurs
+ */
+async function updateOffer(offerId: string, produit: EbayProduct, categoryId: string): Promise<void> {
+  const priceUSD = produit.priceUSD || calculateEbayPrice(produit.priceEUR)
+
+  const offerUpdate = {
+    availableQuantity: 1,
+    categoryId: categoryId,
+    merchantLocationKey: EBAY_MERCHANT_LOCATION_KEY,
+    listingDescription: formatEbayDescription(produit.description, produit),
+    listingPolicies: {
+      fulfillmentPolicyId: process.env.EBAY_FULFILLMENT_POLICY_ID,
+      paymentPolicyId: process.env.EBAY_PAYMENT_POLICY_ID,
+      returnPolicyId: process.env.EBAY_RETURN_POLICY_ID,
+    },
+    pricingSummary: {
+      price: {
+        value: priceUSD.toString(),
+        currency: EBAY_CURRENCY,
+      },
+    },
+  }
+
+  await ebayApiCall(`/sell/inventory/v1/offer/${offerId}`, {
+    method: 'PUT',
+    body: offerUpdate,
+  })
+
+  console.log(`✅ Offer mise à jour: ${offerId}`)
 }
 
 /**
@@ -233,13 +266,13 @@ async function createOffer(produit: EbayProduct, categoryId: string): Promise<st
     console.log(`✅ Offer créée: ${response.offerId}`)
     return response.offerId
   } catch (error: any) {
-    // Si l'offer existe déjà, récupérer l'offerId existant
+    // Si l'offer existe déjà, récupérer et mettre à jour avec merchantLocationKey
     if (error?.message?.includes('already exists') || error?.message?.includes('Offer entity already exists')) {
-      console.log(`ℹ️ Offer existe déjà pour SKU: ${produit.sku}, récupération...`)
-      const existingOfferId = await getExistingOfferId(produit.sku)
-      if (existingOfferId) {
-        console.log(`✅ Offer existante récupérée: ${existingOfferId}`)
-        return existingOfferId
+      console.log(`ℹ️ Offer existe déjà pour SKU: ${produit.sku}, mise à jour...`)
+      const existing = await getExistingOffer(produit.sku)
+      if (existing) {
+        await updateOffer(existing.offerId, produit, categoryId)
+        return existing.offerId
       }
     }
     throw error
