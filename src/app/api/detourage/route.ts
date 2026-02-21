@@ -225,18 +225,18 @@ export async function POST(req: NextRequest) {
       const rgbBuffer = await sharp(preBuffer).toColorspace('srgb').png().toBuffer()
       const base64Image = `data:image/png;base64,${rgbBuffer.toString('base64')}`
 
-      // Choisir le modèle selon la catégorie
+      // Choisir le modèle selon la catégorie (sans version = dernière version auto)
       let output
       if (useObjectModel) {
         // Modèle optimisé pour les objets (sacs, chaussures, bijoux, etc.)
         output = await replicate.run(
-          "851-labs/background-remover:a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf1a1f6427a1d7e36d0be05",
+          "851-labs/background-remover",
           { input: { image: base64Image } }
         )
       } else {
         // Modèle par défaut pour les vêtements
         output = await replicate.run(
-          "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+          "lucataco/remove-bg",
           { input: { image: base64Image } }
         )
       }
