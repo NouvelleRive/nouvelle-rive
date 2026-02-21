@@ -449,6 +449,9 @@ async function compressImage(file: File): Promise<string> {
     const [showExcelSection, setShowExcelSection] = useState(false)
     const [excelFile, setExcelFile] = useState<File | null>(null)
     const [importLoading, setImportLoading] = useState(false)
+
+    // État dropdown matière
+    const [showMatiereDropdown, setShowMatiereDropdown] = useState(false)
     
     // État validation SKU
     const [skuValidating, setSkuValidating] = useState(false)
@@ -1592,25 +1595,41 @@ async function compressImage(file: File): Promise<string> {
 
               <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Matière</label>
-                <div className="w-full flex flex-wrap gap-2">
-                  {matieresDisponibles.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        const current = formData.material ? formData.material.split(', ').filter(Boolean) : []
-                        const updated = current.includes(m) ? current.filter(x => x !== m) : [...current, m]
-                        setFormData({ ...formData, material: updated.join(', ') })
-                      }}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                        formData.material.split(', ').includes(m)
-                          ? 'bg-[#22209C] text-white border-[#22209C]'
-                          : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
+                <div className="relative">
+                  <div
+                    className="w-full border rounded px-2 py-1.5 text-sm cursor-pointer flex items-center justify-between bg-white min-h-[34px]"
+                    onClick={() => setShowMatiereDropdown(!showMatiereDropdown)}
+                  >
+                    <span className={formData.material ? 'text-gray-900' : 'text-gray-400'}>
+                      {formData.material || '— Sélectionner —'}
+                    </span>
+                    <span className="text-gray-400">{showMatiereDropdown ? '▲' : '▼'}</span>
+                  </div>
+                  {showMatiereDropdown && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {matieresDisponibles.map((m) => {
+                        const isSelected = formData.material?.split(', ').includes(m)
+                        return (
+                          <label
+                            key={m}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                const current = formData.material ? formData.material.split(', ').filter(Boolean) : []
+                                const updated = isSelected ? current.filter(x => x !== m) : [...current, m]
+                                setFormData({ ...formData, material: updated.join(', ') })
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+                            />
+                            <span>{m}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 

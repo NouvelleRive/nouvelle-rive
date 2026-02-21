@@ -1374,12 +1374,12 @@
           {/* Modal formulaire */}
           {showForm && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white rounded-t-xl">
-                  <h2 className="text-lg font-semibold text-gray-900">{editingProduct ? 'Modifier le produit' : 'Nouveau produit'}</h2>
-                  <button onClick={() => { setShowForm(false); setEditingProduct(null) }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+              <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0 bg-white rounded-t-xl">
+                  <h2 className="text-lg font-semibold text-gray-900 truncate">{editingProduct ? 'Modifier le produit' : 'Nouveau produit'}</h2>
+                  <button onClick={() => { setShowForm(false); setEditingProduct(null) }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none flex-shrink-0 ml-2">&times;</button>
                 </div>
-                <div className="p-4">
+                <div className="p-4 overflow-y-auto flex-1">
                   <ProductForm
                       mode={editingProduct ? 'edit' : 'create'}
                       isAdmin={isAdmin}
