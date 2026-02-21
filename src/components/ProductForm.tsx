@@ -1519,23 +1519,6 @@ async function compressImage(file: File): Promise<string> {
                 </select>
               </div>
 
-              {/* Modèle (optionnel) */}
-              {modelesDisponibles.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Modèle</label>
-                  <select
-                    value={formData.modele}
-                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
-                    className="w-full border rounded px-2 py-1.5 text-sm"
-                  >
-                    <option value="">— Optionnel —</option>
-                    {modelesDisponibles.map((m, i) => (
-                      <option key={i} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
               {/* Taille */}
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -1607,9 +1590,9 @@ async function compressImage(file: File): Promise<string> {
                 />
               </div>
 
-              <div className="col-span-2">
+              <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Matière</label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="w-full flex flex-wrap gap-2">
                   {matieresDisponibles.map((m) => (
                     <button
                       key={m}
@@ -1630,6 +1613,23 @@ async function compressImage(file: File): Promise<string> {
                   ))}
                 </div>
               </div>
+
+              {/* Modèle (optionnel) */}
+              {modelesDisponibles.length > 0 && (
+                <div className="col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">Modèle</label>
+                  <select
+                    value={formData.modele}
+                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                  >
+                    <option value="">—</option>
+                    {modelesDisponibles.map((m, i) => (
+                      <option key={i} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Couleur</label>
