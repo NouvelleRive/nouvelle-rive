@@ -244,6 +244,18 @@ export function getOutfitPrompt(
   if (isRacing) {
     return pickRandom(OUTFITS['veste_racing'].accessories)
   }
+  // Jupes/shorts : collants nude si pas noir
+  if (cat.includes('jupe') || cat.includes('short')) {
+    const isNoir = nom.includes('noir') || nom.includes('black')
+    if (!isNoir) {
+      return pickRandom([
+        'wearing a white turtleneck, bare legs, square toe heeled boots, plain white studio background',
+        'wearing a black turtleneck, sheer nude tights, square toe heeled boots, plain white studio background',
+        'wearing a lace-up top, pointed toe heeled boots, bare legs, plain white studio background',
+      ])
+    }
+    return pickRandom(OUTFITS['jupe'].accessories)
+  }
   // Recherche par catégorie exacte
   if (OUTFITS[cat]) {
     return pickRandom(OUTFITS[cat].accessories)
