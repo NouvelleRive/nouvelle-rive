@@ -26,9 +26,18 @@
     auth: process.env.REPLICATE_API_TOKEN,
   })
 
-  export async function POST(req: NextRequest) {
+  // Catégories qui utilisent le modèle "objets" (851-labs/background-remover)
+const OBJECT_CATEGORIES = ['sac', 'pochette', 'ceinture', 'chaussures', 'bijoux', 'accessoire', 'botte', 'chapeau', 'lunettes', 'porte']
+
+function isObjectCategory(categorie?: string): boolean {
+  if (!categorie) return false
+  const cat = categorie.toLowerCase()
+  return OBJECT_CATEGORIES.some(keyword => cat.includes(keyword))
+}
+
+export async function POST(req: NextRequest) {
     try {
-      const { imageUrl, rotation = 0, base64, uploadOnly, mode, applyTransform, offset, zoom = 1, formatOnly } = await req.json()
+      const { imageUrl, rotation = 0, base64, uploadOnly, mode, applyTransform, offset, zoom = 1, formatOnly, categorie } = await req.json()
 
       // Mode uploadOnly avec base64 (upload brut avant PhotoEditor)
       if (base64 && (uploadOnly || mode === 'erased')) {
@@ -207,7 +216,8 @@
         return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
       }
 
-      console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation)
+      const useObjectModel = isObjectCategory(categorie)
+      console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation, 'categorie:', categorie, 'modèle:', useObjectModel ? 'objets' : 'vêtements')
 
       // Télécharger et convertir en RGB avant Replicate
       const preResponse = await fetch(imageUrl)
@@ -215,10 +225,21 @@
       const rgbBuffer = await sharp(preBuffer).toColorspace('srgb').png().toBuffer()
       const base64Image = `data:image/png;base64,${rgbBuffer.toString('base64')}`
 
-      const output = await replicate.run(
-        "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
-        { input: { image: base64Image } }
-      )
+      // Choisir le modèle selon la catégorie
+      let output
+      if (useObjectModel) {
+        // Modèle optimisé pour les objets (sacs, chaussures, bijoux, etc.)
+        output = await replicate.run(
+          "851-labs/background-remover:a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf1a1f6427a1d7e36d0be05",
+          { input: { image: base64Image } }
+        )
+      } else {
+        // Modèle par défaut pour les vêtements
+        output = await replicate.run(
+          "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+          { input: { image: base64Image } }
+        )
+      }
 
       console.log('📦 Output Replicate:', output, typeof output)
 

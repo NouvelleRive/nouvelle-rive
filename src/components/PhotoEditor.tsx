@@ -9,9 +9,10 @@
     onConfirm: (processedUrl: string) => void
     onCancel: () => void
     alreadyProcessed?: boolean
+    categorie?: string
   }
 
-  export default function PhotoEditor({ imageUrl, onConfirm, onCancel, alreadyProcessed = false }: PhotoEditorProps) {
+  export default function PhotoEditor({ imageUrl, onConfirm, onCancel, alreadyProcessed = false, categorie }: PhotoEditorProps) {
     const [processing, setProcessing] = useState(false)
     const [processedUrl, setProcessedUrl] = useState<string | null>(alreadyProcessed ? imageUrl : null)
     const [rawUrl, setRawUrl] = useState<string | null>(null)
@@ -167,7 +168,7 @@
         const res = await fetch('/api/detourage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl, rotation: rotation + fineRotation }),
+          body: JSON.stringify({ imageUrl, rotation: rotation + fineRotation, categorie }),
         })
 
         const data = await res.json()

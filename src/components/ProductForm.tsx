@@ -2181,6 +2181,7 @@ async function compressImage(file: File): Promise<string> {
             onConfirm={handlePhotoEditorConfirm}
             onCancel={handlePhotoEditorCancel}
             alreadyProcessed={(photoToEdit as any).alreadyProcessed}
+            categorie={formData.categorie}
           />
         )}
       </div>
