@@ -638,8 +638,9 @@
       let faceOnModelUrl: string | undefined = data.existingPhotos?.faceOnModel || editingProduct.photos?.faceOnModel
       let dosOnModelUrl: string | undefined = (data.existingPhotos as any)?.dosOnModel || editingProduct.photos?.dosOnModel
 
-      // Gérer les photos détails - ProductForm gère déjà l'ajout et la suppression
+      // Gérer les photos détails - filtrer les supprimées via detailsIndexes
       let detailsUrls = [...(data.existingPhotos?.details || [])]
+        .filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
 
       // Gérer les suppressions
       if (data.deletedPhotos.face) {
