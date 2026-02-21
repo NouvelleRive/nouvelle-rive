@@ -739,9 +739,8 @@
                 else if (item.id === 'existing-dosOnModel' && dosOnModelUrl) orderedUrls.push(dosOnModelUrl)
                 else if (item.id === 'existing-dos' && dosUrl) orderedUrls.push(dosUrl)
                 else if (item.id.startsWith('existing-detail-')) {
-                  const idx = parseInt(item.id.replace('existing-detail-', ''))
-                  if (detailsUrls[idx]) {
-                    orderedUrls.push(detailsUrls[idx])
+                  if (item.url && detailsUrls.includes(item.url)) {
+                    orderedUrls.push(item.url)
                   }
                 }
               }
