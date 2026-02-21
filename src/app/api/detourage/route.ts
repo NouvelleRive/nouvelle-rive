@@ -222,7 +222,7 @@
         output = await replicate.run("lucataco/remove-bg", { input: { image: base64Image } })
       } else {
         output = await replicate.run(
-          "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+          "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
           { input: { image: base64Image } }
         )
       }
