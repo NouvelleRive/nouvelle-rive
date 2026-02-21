@@ -60,14 +60,14 @@ const OUTFITS: Record<string, OutfitConfig> = {
   'manteau': {
     label: 'Manteau',
     accessories: [
-      'wearing wide leg trousers, square toe heels, square black glasses with blue lenses, fur chapka hat, plain white studio background',
-      'wearing wide leg trousers, pointed toe heels, square black glasses with blue lenses, fur chapka hat, plain white studio background',
+      'wearing wide leg trousers, square toe heels, square black glasses with blue lenses, plain white studio background',
+      'wearing wide leg trousers, pointed toe heels, square black glasses with blue lenses, plain white studio background',
     ],
   },
   'fourrure_longue': {
     label: 'Fourrure longue',
     accessories: [
-      'wearing sheer black tights, high heels, square black sunglasses with blue lenses, plain white studio background',
+      'wearing sheer black tights, high heels, square black sunglasses with blue lenses, fur chapka hat, plain white studio background',
     ],
   },
   'fourrure_courte': {
@@ -88,8 +88,8 @@ const OUTFITS: Record<string, OutfitConfig> = {
   'veste_cuir': {
     label: 'Veste en cuir',
     accessories: [
-      'wearing fur chapka hat, square black sunglasses with blue lenses, plain white studio background',
-      'wearing fur chapka hat, square black sunglasses, plain white studio background',
+      'wearing square black sunglasses with blue lenses, plain white studio background',
+      'wearing square black sunglasses, plain white studio background',
     ],
   },
   'blazer': {
@@ -217,8 +217,16 @@ export function getOutfitPrompt(
   if (isFourrure && cat.includes('veste')) {
     return pickRandom(OUTFITS['fourrure_courte'].accessories)
   }
+  // Manteau en cuir (chapka 50/50)
+  if (isCuir && (cat.includes('manteau') || cat.includes('veste / manteau'))) {
+    const manteauCuirAccessories = [
+      'wearing wide leg trousers, square toe heels, square black glasses with blue lenses, fur chapka hat, plain white studio background',
+      'wearing wide leg trousers, pointed toe heels, square black glasses with blue lenses, plain white studio background',
+    ]
+    return pickRandom(manteauCuirAccessories)
+  }
   // Veste en cuir
-  if (isCuir && (cat.includes('veste') || cat.includes('veste / manteau'))) {
+  if (isCuir && (cat.includes('veste'))) {
     return pickRandom(OUTFITS['veste_cuir'].accessories)
   }
   // Blazer
