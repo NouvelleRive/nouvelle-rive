@@ -119,6 +119,84 @@ const EBAY_CATEGORY_MEN: Record<string, { categoryId: string; type: string }> = 
 const DEFAULT_EBAY_CATEGORY_WOMEN = { categoryId: '15724', type: 'default' } // Women's Clothing
 const DEFAULT_EBAY_CATEGORY_MEN = { categoryId: '1059', type: 'default' } // Men's Clothing
 
+// ============================================================================
+// MAPPING MODÈLES → ASPECTS EBAY
+// ============================================================================
+
+/**
+ * Mapping modèle robe → Dress Length eBay
+ */
+function getDressLength(modele?: string, title?: string): string {
+  if (modele) {
+    const m = modele.toLowerCase()
+    if (m === 'longue') return 'Maxi'
+    if (m === 'midi') return 'Midi'
+    if (m === 'mini') return 'Mini'
+    if (m === 'fourreau' || m === 'moulante') return 'Knee-Length'
+    // Autres (Ample, Bustier, Chemise, Portefeuille) → Midi par défaut
+    return 'Midi'
+  }
+  // Déduire du titre si pas de modèle
+  if (title) {
+    const t = title.toLowerCase()
+    if (t.includes('longue') || t.includes('maxi')) return 'Maxi'
+    if (t.includes('mini')) return 'Mini'
+  }
+  return 'Midi'
+}
+
+/**
+ * Mapping modèle jupe → Skirt Length eBay
+ */
+function getSkirtLength(modele?: string): string {
+  if (!modele) return 'Knee-Length'
+  const m = modele.toLowerCase()
+  if (m === 'longue') return 'Maxi'
+  if (m === 'midi') return 'Midi'
+  if (m === 'mini') return 'Mini'
+  // Autres (Crayon, Évasée, Moulante, Plissée, Portefeuille) → Knee-Length
+  return 'Knee-Length'
+}
+
+/**
+ * Mapping modèle veste → Style eBay
+ */
+function getCoatStyle(modele?: string): string {
+  if (!modele) return 'Basic Jacket'
+  const m = modele.toLowerCase()
+  if (m === 'blazer') return 'Blazer'
+  if (m === 'bomber') return 'Bomber Jacket'
+  if (m === 'perfecto') return 'Motorcycle'
+  if (m === 'trench') return 'Trench Coat'
+  if (m === 'doudoune') return 'Puffer'
+  if (m === 'parka') return 'Parka'
+  if (m === 'manteau') return 'Overcoat'
+  if (m === 'caban') return 'Peacoat'
+  if (m === 'cape' || m === 'poncho') return 'Cape'
+  if (m === 'teddy') return 'Varsity/Baseball'
+  if (m === 'veste en jean') return 'Jean/Denim Jacket'
+  if (m === 'saharienne') return 'Safari Jacket'
+  if (m === 'blouson') return 'Bomber Jacket'
+  return 'Basic Jacket'
+}
+
+/**
+ * Mapping modèle sac → Style eBay
+ */
+function getBagStyle(modele?: string): string {
+  if (!modele) return 'Shoulder Bag'
+  const m = modele.toLowerCase()
+  if (m === 'bandoulière' || m === 'besace') return 'Crossbody'
+  if (m === 'à main') return 'Satchel/Top Handle Bag'
+  if (m === 'cabas') return 'Tote'
+  if (m === 'pochette' || m === 'clutch' || m === 'minaudière') return 'Clutch'
+  if (m === 'banane') return 'Belt Bag'
+  if (m === 'seau') return 'Bucket Bag'
+  if (m === 'baguette') return 'Baguette'
+  if (m === 'bowling') return 'Bowling Bag'
+  return 'Shoulder Bag'
+}
+
 /**
  * Trouve la catégorie eBay à partir de la catégorie/sous-catégorie Firebase et du genre
  */
@@ -294,7 +372,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
     case 'bags':
       // Sacs et pochettes
       aspects['Department'] = [department]
-      aspects['Style'] = ['Shoulder Bag']
+      aspects['Style'] = [getBagStyle(produit.modele)]
       aspects['Size'] = ['Medium']
       aspects['Exterior Material'] = [produit.material || 'Leather']
       aspects['Closure'] = ['Zip']
@@ -305,7 +383,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       // Manteaux, vestes, blazers (57988)
       aspects['Department'] = [department]
       aspects['Type'] = ['Jacket']
-      aspects['Style'] = ['Vintage']
+      aspects['Style'] = [getCoatStyle(produit.modele)]
       aspects['Size'] = [produit.size || 'M']
       aspects['Size Type'] = ['Regular']
       aspects['Pattern'] = ['Solid']
@@ -322,6 +400,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Style'] = ['Vintage']
       aspects['Size'] = [produit.size || 'M']
       aspects['Size Type'] = ['Regular']
+      aspects['Dress Length'] = [getDressLength(produit.modele, produit.title)]
       aspects['Sleeve Length'] = ['Long Sleeve']
       aspects['Pattern'] = ['Solid']
       aspects['Neckline'] = ['Round Neck']
@@ -365,7 +444,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Style'] = ['Vintage']
       aspects['Size'] = [produit.size || 'M']
       aspects['Size Type'] = ['Regular']
-      aspects['Skirt Length'] = ['Knee-Length']
+      aspects['Skirt Length'] = [getSkirtLength(produit.modele)]
       aspects['Pattern'] = ['Solid']
       aspects['Material'] = [produit.material || 'Cotton']
       aspects['Handmade'] = ['No']
@@ -730,6 +809,7 @@ export function prepareProductForEbay(firebaseProduct: any, gender?: EbayGender)
     material,
     color,
     size: firebaseProduct.taille,
+    modele: firebaseProduct.modele || '',
   }
 }
 

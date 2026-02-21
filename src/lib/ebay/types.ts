@@ -51,6 +51,7 @@ export interface EbayProduct {
   material?: string
   color?: string
   size?: string
+  modele?: string  // Modèle du produit (ex: Blazer, Mini, Bandoulière)
   
   // Shipping
   weightGrams?: number

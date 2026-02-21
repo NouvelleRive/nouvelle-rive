@@ -11,7 +11,7 @@
   import { COLOR_PALETTE } from '@/lib/couleurs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
-  import { detectModele } from '@/lib/modeles'
+  import { detectModele, getModelesForCategorie } from '@/lib/modeles'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -494,7 +494,7 @@ async function compressImage(file: File): Promise<string> {
       }
     }, [initialData])
 
-    // Reset taille quand catégorie change
+    // Reset taille et modele quand catégorie change
     const [initialized, setInitialized] = useState(false)
     useEffect(() => {
       if (!initialized) {
@@ -502,7 +502,7 @@ async function compressImage(file: File): Promise<string> {
         return
       }
       if (formData.categorie && initialData?.categorie !== formData.categorie) {
-        setFormData(prev => ({ ...prev, taille: '' }))
+        setFormData(prev => ({ ...prev, taille: '', modele: '' }))
       }
     }, [formData.categorie])
 
@@ -582,6 +582,7 @@ async function compressImage(file: File): Promise<string> {
     const typeTaille = detectTypeTaille(formData.categorie)
     const taillesDisponibles = getTaillesPourCategorie(formData.categorie)
     const matieresDisponibles = getMatieresForCategorie(formData.categorie)
+    const modelesDisponibles = getModelesForCategorie(formData.categorie)
 
     // Catégories à afficher
     const displayCategories = isAdmin && selectedChineuse 
@@ -1506,7 +1507,7 @@ async function compressImage(file: File): Promise<string> {
                 <label className="block text-sm font-medium mb-1">Catégorie</label>
                 <select
                   value={formData.categorie}
-                  onChange={(e) => setFormData({ ...formData, categorie: e.target.value, taille: '' })}
+                  onChange={(e) => setFormData({ ...formData, categorie: e.target.value, taille: '', modele: '' })}
                   required
                   disabled={isAdmin && chineuses.length > 0 && !selectedChineuse}
                   className="w-full border rounded px-2 py-1.5 text-sm disabled:bg-gray-100"
@@ -1517,6 +1518,23 @@ async function compressImage(file: File): Promise<string> {
                   ))}
                 </select>
               </div>
+
+              {/* Modèle (optionnel) */}
+              {modelesDisponibles.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Modèle</label>
+                  <select
+                    value={formData.modele}
+                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                  >
+                    <option value="">— Optionnel —</option>
+                    {modelesDisponibles.map((m, i) => (
+                      <option key={i} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Taille */}
               <div>
