@@ -26,16 +26,7 @@
     auth: process.env.REPLICATE_API_TOKEN,
   })
 
-  // Catégories qui utilisent le modèle "objets" (851-labs/background-remover)
-const OBJECT_CATEGORIES = ['sac', 'pochette', 'ceinture', 'chaussures', 'bijoux', 'accessoire', 'botte', 'chapeau', 'lunettes', 'porte']
-
-function isObjectCategory(categorie?: string): boolean {
-  if (!categorie) return false
-  const cat = categorie.toLowerCase()
-  return OBJECT_CATEGORIES.some(keyword => cat.includes(keyword))
-}
-
-export async function POST(req: NextRequest) {
+  export async function POST(req: NextRequest) {
     try {
       const { imageUrl, rotation = 0, base64, uploadOnly, mode, applyTransform, offset, zoom = 1, formatOnly, categorie } = await req.json()
 
@@ -216,8 +207,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'imageUrl requis' }, { status: 400 })
       }
 
-      const useObjectModel = isObjectCategory(categorie)
-      console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation, 'categorie:', categorie, 'modèle:', useObjectModel ? 'objets' : 'vêtements')
+      console.log('🔄 Détourage pour:', imageUrl, 'rotation:', rotation)
 
       // Télécharger et convertir en RGB avant Replicate
       const preResponse = await fetch(imageUrl)
@@ -225,18 +215,14 @@ export async function POST(req: NextRequest) {
       const rgbBuffer = await sharp(preBuffer).toColorspace('srgb').png().toBuffer()
       const base64Image = `data:image/png;base64,${rgbBuffer.toString('base64')}`
 
-      // Choisir le modèle selon la catégorie
+      const isObjet = categorie && ["sac","pochette","ceinture","chaussures","bijoux","accessoire","botte","chapeau","lunettes","porte"].some(c => categorie.toLowerCase().includes(c))
+
       let output
-      if (useObjectModel) {
-        // Modèle pour les objets (sacs, chaussures, bijoux, etc.)
-        output = await replicate.run(
-          "lucataco/remove-bg",
-          { input: { image: base64Image } }
-        )
+      if (isObjet) {
+        output = await replicate.run("lucataco/remove-bg", { input: { image: base64Image } })
       } else {
-        // Modèle pour les vêtements
         output = await replicate.run(
-          "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+          "lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
           { input: { image: base64Image } }
         )
       }
