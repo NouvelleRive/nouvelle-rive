@@ -225,11 +225,21 @@ export async function POST(req: NextRequest) {
       const rgbBuffer = await sharp(preBuffer).toColorspace('srgb').png().toBuffer()
       const base64Image = `data:image/png;base64,${rgbBuffer.toString('base64')}`
 
-      // Détourage avec lucataco/remove-bg (fonctionne pour vêtements et objets)
-      const output = await replicate.run(
-        "lucataco/remove-bg",
-        { input: { image: base64Image } }
-      )
+      // Choisir le modèle selon la catégorie
+      let output
+      if (useObjectModel) {
+        // Modèle pour les objets (sacs, chaussures, bijoux, etc.)
+        output = await replicate.run(
+          "lucataco/remove-bg",
+          { input: { image: base64Image } }
+        )
+      } else {
+        // Modèle pour les vêtements
+        output = await replicate.run(
+          "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+          { input: { image: base64Image } }
+        )
+      }
 
       console.log('📦 Output Replicate:', output, typeof output)
 
