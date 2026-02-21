@@ -1,7 +1,7 @@
 // app/admin/nos-produits/page.tsx
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot } from 'firebase/firestore'
 import ProductList, { Produit, Deposant } from '@/components/ProductList'
@@ -12,6 +12,13 @@ export default function NosProduits() {
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Callback pour mise à jour immédiate après modification
+  const handleProductUpdated = useCallback((productId: string, updatedData: Partial<Produit>) => {
+    setProduits(prev => prev.map(p =>
+      p.id === productId ? { ...p, ...updatedData } : p
+    ))
+  }, [])
 
   useEffect(() => {
     // Charger tous les produits
@@ -55,6 +62,7 @@ export default function NosProduits() {
       deposants={deposants}
       isAdmin={true}
       loading={loading}
+      onProductUpdated={handleProductUpdated}
     />
   )
 }

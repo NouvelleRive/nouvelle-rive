@@ -90,6 +90,7 @@
   loading?: boolean
   onSearch?: () => void
   showSearchButton?: boolean
+  onProductUpdated?: (productId: string, updatedData: Partial<Produit>) => void
 }
 
     // =====================
@@ -151,6 +152,7 @@
       loading = false,
       onSearch,
       showSearchButton = false,
+      onProductUpdated,
     }: ProductListProps) {
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
@@ -773,6 +775,26 @@
           }
           
           await updateDoc(doc(db, 'produits', productId), updateData)
+
+          // Mettre à jour le state local immédiatement pour refléter les changements
+          if (onProductUpdated) {
+            const updatedPhotos = {
+              face: faceUrl,
+              faceOriginal: faceOriginalUrl,
+              dos: dosUrl,
+              dosOriginal: dosOriginalUrl,
+              faceOnModel: faceOnModelUrl,
+              dosOnModel: dosOnModelUrl,
+              details: detailsUrls,
+            }
+            onProductUpdated(productId, {
+              ...updateData,
+              photos: updatedPhotos,
+              imageUrls: updateData.imageUrls,
+              imageUrl: updateData.imageUrl,
+            })
+          }
+
           console.log('DEBUG:', data.quantite, editingProduct.quantite, chineusesList.find(c => c.trigramme?.toUpperCase() === editingProduct.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase())?.stockType)
           // Demande de restock si smallBatch et quantité augmentée
           const newQte = isNaN(parseInt(data.quantite)) ? 1 : parseInt(data.quantite)

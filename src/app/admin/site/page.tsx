@@ -1,13 +1,13 @@
 // app/admin/site/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useFilteredProducts } from '@/lib/siteConfig'
 import { Save, Plus, X, Trash2 } from 'lucide-react'
 import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-react'
-import ProductList from '@/components/ProductList'
+import ProductList, { Produit } from '@/components/ProductList'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -89,6 +89,19 @@ export default function AdminSitePage() {
   const [produitsFiltrés, setProduitsFiltrés] = useState<ProduitPreview[]>([])
   const [loadingProduits, setLoadingProduits] = useState(false)
   const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage)
+  const [localProduits, setLocalProduits] = useState<Produit[]>([])
+
+  // Sync local products with hook
+  useEffect(() => {
+    setLocalProduits(produitsFromHook as Produit[])
+  }, [produitsFromHook])
+
+  // Callback pour mise à jour immédiate après modification
+  const handleProductUpdated = useCallback((productId: string, updatedData: Partial<Produit>) => {
+    setLocalProduits(prev => prev.map(p =>
+      p.id === productId ? { ...p, ...updatedData } : p
+    ))
+  }, [])
 
   useEffect(() => {
     async function fetchChineuses() {
@@ -463,9 +476,10 @@ const getImageUrl = (p: ProduitPreview) => {
   ) : (
     <ProductList
       titre=""
-      produits={produitsFromHook}
+      produits={localProduits}
       isAdmin={true}
       loading={loadingProduitsHook}
+      onProductUpdated={handleProductUpdated}
     />
   )}
 </div>
