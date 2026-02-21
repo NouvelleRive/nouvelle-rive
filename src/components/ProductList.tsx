@@ -44,6 +44,7 @@
       taille?: string
       material?: string
       color?: string
+      modele?: string
       madeIn?: string
       photos?: {
         face?: string
@@ -1372,6 +1373,7 @@
                       marque: editingProduct.marque,
                       taille: editingProduct.taille,
                       material: editingProduct.material,
+                      modele: editingProduct.modele,
                       color: editingProduct.color,
                       madeIn: editingProduct.madeIn,
                       photos: editingProduct.photos,
