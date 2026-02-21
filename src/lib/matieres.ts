@@ -8,7 +8,7 @@ export const MATIERES = {
   bijoux: ['Acier inoxydable', 'Argent', 'Fantaisie', 'Laiton', 'Or', 'Perles d\'eau douce', 'Perles de culture', 'Perles de synthèse', 'Pierres', 'Plaqué or', 'Vermeil'],
   maille: ['Acrylique', 'Alpaga', 'Angora', 'Cachemire', 'Coton', 'Fausse fourrure', 'Fourrure', 'Laine', 'Mérinos', 'Mohair'],
   cuir: ['Cuir', 'Cuir grainé', 'Cuir tressé', 'Cuir verni', 'Daim', 'Nubuck', 'Simili cuir'],
-  maro: ['Cuir', 'Cuir grainé', 'Cuir verni', 'Daim', 'Nubuck', 'Simili cuir', 'Tissu', 'Toile'],
+  maro: ['Cuir', 'Cuir grainé', 'Cuir verni', 'Daim', 'Nubuck', 'Python', 'Simili cuir', 'Tissu', 'Toile'],
   tissus: ['Coton', 'Cuir', 'Daim', 'Denim', 'Dentelle', 'Fausse fourrure', 'Fourrure', 'Fourrure de lapin', 'Fourrure de mouton', 'Fourrure de renard', 'Fourrure de vison', 'Laine', 'Lin', 'Plumes', 'Polyester', 'Python', 'Satin', 'Sequins', 'Shearling', 'Simili cuir', 'Soie', 'Tweed', 'Velours', 'Viscose'],
   objets: ['Acétate', 'Céramique', 'Métal', 'Plastique recyclé', 'Résine', 'Verre'],
 }
