@@ -11,15 +11,17 @@ export default function AdminEbayPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [publishing, setPublishing] = useState(false)
   const [publishingId, setPublishingId] = useState<string | null>(null)
+  const [genderModal, setGenderModal] = useState<{ productIds: string[] } | null>(null)
   const [filterBrand, setFilterBrand] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'not_published'>('not_published')
   const [search, setSearch] = useState('')
 
   // Filtrer les produits actifs
-  const produitsActifs = produitsFiltres.filter(p => 
-    (p.quantite ?? 1) > 0 && 
-    p.statut !== 'vendu' && 
-    p.statut !== 'supprime'
+  const produitsActifs = produitsFiltres.filter(p =>
+    (p.quantite ?? 1) > 0 &&
+    p.statut !== 'vendu' &&
+    p.statut !== 'supprime' &&
+    p.statut !== 'retour'
   )
 
   // Produits filtrés et triés
@@ -84,16 +86,15 @@ export default function AdminEbayPage() {
     }
   }
 
-  const publishToEbay = async (productIds: string[]) => {
+  const publishToEbay = async (productIds: string[], gender: string) => {
     if (productIds.length === 0) return
-    if (!confirm(productIds.length === 1 ? 'Publier ce produit sur eBay ?' : `Publier ${productIds.length} produits sur eBay ?`)) return
 
     setPublishing(true)
     try {
       const res = await fetch('/api/ebay/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productIds })
+        body: JSON.stringify({ productIds, gender })
       })
       const data = await res.json()
       if (data.success) {
@@ -111,6 +112,11 @@ alert(`❌ Erreur : ${errMsg}`)
       setSelectedIds(new Set())
       setPublishingId(null)
     }
+  }
+
+  const askGenderThenPublish = (productIds: string[]) => {
+    if (productIds.length === 0) return
+    setGenderModal({ productIds })
   }
 
   // Stats
@@ -182,7 +188,7 @@ alert(`❌ Erreur : ${errMsg}`)
 
         {selectedIds.size > 0 && (
           <button
-            onClick={() => publishToEbay(Array.from(selectedIds))}
+            onClick={() => askGenderThenPublish(Array.from(selectedIds))}
             disabled={publishing}
             className="px-4 py-2 bg-yellow-500 text-white rounded font-medium hover:bg-yellow-600 disabled:opacity-50 text-sm"
           >
@@ -266,7 +272,7 @@ alert(`❌ Erreur : ${errMsg}`)
                   <span className="text-green-600 text-sm font-medium">✅ Publié</span>
                 ) : (
                   <button
-                    onClick={() => { setPublishingId(p.id); publishToEbay([p.id]) }}
+                    onClick={() => { setPublishingId(p.id); askGenderThenPublish([p.id]) }}
                     disabled={publishing || publishingId === p.id}
                     className="px-3 py-1.5 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600 disabled:opacity-50"
                   >
@@ -282,6 +288,43 @@ alert(`❌ Erreur : ${errMsg}`)
           <p className="text-center text-gray-400 py-8">Aucun produit trouvé</p>
         )}
       </div>
+
+      {/* Modal de sélection du genre */}
+      {genderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-bold mb-4 text-center">Genre du produit</h3>
+            <div className="flex gap-3 justify-center mb-4">
+              <button
+                onClick={() => { publishToEbay(genderModal.productIds, 'Femme'); setGenderModal(null) }}
+                className="border rounded px-4 py-2 bg-pink-500 text-white"
+              >
+                Femme
+              </button>
+              <button
+                onClick={() => { publishToEbay(genderModal.productIds, 'Homme'); setGenderModal(null) }}
+                className="border rounded px-4 py-2 bg-blue-500 text-white"
+              >
+                Homme
+              </button>
+              <button
+                onClick={() => { publishToEbay(genderModal.productIds, 'Unisexe'); setGenderModal(null) }}
+                className="border rounded px-4 py-2 bg-gray-500 text-white"
+              >
+                Unisexe
+              </button>
+            </div>
+            <div className="text-center">
+              <button
+                onClick={() => setGenderModal(null)}
+                className="text-gray-400 underline"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
