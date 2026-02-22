@@ -573,7 +573,8 @@
     setLocalHidden(prev => ({ ...prev, [p.id]: newHidden }))
     try {
       await updateDoc(doc(db, 'produits', p.id), {
-        hidden: newHidden
+        hidden: newHidden,
+        forceDisplay: !newHidden
       })
     } catch (err) {
       console.error('Erreur toggle hidden:', err)
