@@ -95,8 +95,8 @@ const OUTFITS: Record<string, OutfitConfig> = {
   'blazer': {
     label: 'Blazer',
     accessories: [
-      'wearing nothing underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
-      'wearing black turtleneck underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
+      'wearing oversized, nothing underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
+      'wearing oversized, black turtleneck underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
     ],
   },
 'perfecto': {
