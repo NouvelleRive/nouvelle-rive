@@ -15,6 +15,7 @@ export default function AdminEbayPage() {
   const [filterBrand, setFilterBrand] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'not_published'>('not_published')
   const [search, setSearch] = useState('')
+  const [filterChineuse, setFilterChineuse] = useState('')
 
   // Filtrer les produits actifs
   const produitsActifs = produitsFiltres.filter(p =>
@@ -23,6 +24,15 @@ export default function AdminEbayPage() {
     p.statut !== 'supprime' &&
     p.statut !== 'retour'
   )
+
+  const trigrammes = useMemo(() => {
+    const set = new Set<string>()
+    produitsActifs.forEach(p => {
+      const tri = p.sku?.match(/^[A-Z]+/)?.[0]
+      if (tri) set.add(tri)
+    })
+    return Array.from(set).sort()
+  }, [produitsActifs])
 
   // Produits filtrés et triés
   const produitsEbay = useMemo(() => {
@@ -49,6 +59,13 @@ export default function AdminEbayPage() {
       )
     }
 
+    if (filterChineuse) {
+      result = result.filter(p => {
+        const trigramme = p.sku?.match(/^[A-Z]+/)?.[0] || ''
+        return trigramme.toLowerCase() === filterChineuse.toLowerCase()
+      })
+    }
+
     // Tri : luxe en premier, puis par prix décroissant
     result.sort((a, b) => {
       const priorityA = getBrandPriority(a.marque)
@@ -58,7 +75,7 @@ export default function AdminEbayPage() {
     })
 
     return result
-  }, [produitsActifs, filterStatus, filterBrand, search])
+  }, [produitsActifs, filterStatus, filterBrand, search, filterChineuse])
 
   const getMainImage = (p: any): string | null => {
     if (p.photos?.face) return p.photos.face
@@ -173,6 +190,20 @@ alert(`❌ Erreur : ${errMsg}`)
             onChange={(e) => setFilterBrand(e.target.value)}
             className="w-full border rounded px-3 py-2 text-sm"
           />
+        </div>
+
+        <div className="flex-1 min-w-[120px]">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Chineuse</label>
+          <select
+            value={filterChineuse}
+            onChange={(e) => setFilterChineuse(e.target.value)}
+            className="w-full border rounded px-3 py-2 text-sm"
+          >
+            <option value="">Toutes</option>
+            {trigrammes.map(tri => (
+              <option key={tri} value={tri}>{tri}</option>
+            ))}
+          </select>
         </div>
 
         <div className="flex-1 min-w-[150px]">
