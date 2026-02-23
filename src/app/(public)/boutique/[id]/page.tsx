@@ -320,7 +320,7 @@ export default function ProduitPage() {
                 letterSpacing: '0.05em',
                 fontFamily: 'Helvetica Neue, sans-serif',
               }}>
-                Réf. {(produit as any).sku}
+                {(produit as any).sku}
               </p>
             )}
 
