@@ -741,14 +741,25 @@
               updateData.imageUrl = orderedUrls[0] // La première = image principale
             }
             
-            // S'assurer que toutes les photos détails sont dans imageUrls
-            if (detailsUrls.length > 0) {
-              detailsUrls.forEach(url => {
-                if (!updateData.imageUrls?.includes(url)) {
-                  updateData.imageUrls = [...(updateData.imageUrls || []), url]
-                }
-              })
+            // Réordonner les détails selon photoOrder
+            const reorderedDetails: string[] = []
+            for (const item of data.photoOrder) {
+              if (item.id.startsWith('photo-detail-') && item.url && detailsUrls.includes(item.url)) {
+                reorderedDetails.push(item.url)
+              }
             }
+            detailsUrls.forEach(url => {
+              if (!reorderedDetails.includes(url)) reorderedDetails.push(url)
+            })
+            detailsUrls = reorderedDetails
+            if (detailsUrls.length > 0) updateData['photos.details'] = detailsUrls
+
+            // S'assurer que toutes les photos détails sont dans imageUrls
+            detailsUrls.forEach(url => {
+              if (!updateData.imageUrls?.includes(url)) {
+                updateData.imageUrls = [...(updateData.imageUrls || []), url]
+              }
+            })
 
           } else {
             // Fallback : construire imageUrls dans l'ordre par défaut
