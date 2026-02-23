@@ -95,8 +95,8 @@ const OUTFITS: Record<string, OutfitConfig> = {
   'blazer': {
     label: 'Blazer',
     accessories: [
-      'wearing oversized, nothing underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
-      'wearing oversized, black turtleneck underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
+      'wearing nothing underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
+      'wearing black turtleneck underneath, wide leg cropped trousers, boots, square black sunglasses, plain white studio background',
     ],
   },
 'perfecto': {
@@ -201,6 +201,8 @@ export function getOutfitPrompt(
   categorie: string,
   opts?: { nom?: string; matiere?: string }
 ): string {
+  const SKIN_PREFIX = 'medium olive skin tone, '
+  const _build = (prompt: string) => SKIN_PREFIX + prompt
   const cat = categorie.toLowerCase().trim()
   const nom = (opts?.nom || '').toLowerCase()
   const matiere = (opts?.matiere || '').toLowerCase()

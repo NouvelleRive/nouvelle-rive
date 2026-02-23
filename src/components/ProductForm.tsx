@@ -461,10 +461,8 @@ async function compressImage(file: File): Promise<string> {
     const [photoToEdit, setPhotoToEdit] = useState<{ file: File; type: 'face' | 'dos' } | null>(null)
     const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null)
 
-    // URLs des photos détourées (prêtes à enregistrer)
-    const [detouredFaceUrl, setDetouredFaceUrl] = useState<string | null>(null)
-    const [detouredDosUrl, setDetouredDosUrl] = useState<string | null>(null)
-    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+    // Compteur d'uploads en cours (pour le loader)
+    const [uploadingCount, setUploadingCount] = useState(0)
     const [generatingDesc, setGeneratingDesc] = useState(false)
     const [deletePhotoConfirm, setDeletePhotoConfirm] = useState<{type: 'face' | 'faceOnModel' | 'dos' | 'dosOnModel' | 'detail', index?: number} | null>(null)
     const [suggestedDesc, setSuggestedDesc] = useState<{fr: string, en: string} | null>(null)
@@ -524,42 +522,45 @@ async function compressImage(file: File): Promise<string> {
     // Construire la liste des photos pour le réordonnancement
     useEffect(() => {
       const items: PhotoItem[] = []
-      
-      // Photos existantes
+      const blobUrls: string[] = []
+
+      // Photos face/dos/faceOnModel/dosOnModel (id stable basé sur le type)
       if (formData.existingPhotos.face && !formData.deletedPhotos.face) {
-        items.push({ id: 'existing-face', url: formData.existingPhotos.face, type: 'face', label: 'Face' })
+        items.push({ id: 'photo-face', url: formData.existingPhotos.face, type: 'face', label: 'Face' })
+      } else if (formData.photoFace) {
+        const blobUrl = URL.createObjectURL(formData.photoFace)
+        blobUrls.push(blobUrl)
+        items.push({ id: 'photo-face', url: blobUrl, type: 'face', label: 'Face', isNew: true, file: formData.photoFace })
       }
+
       if (formData.existingPhotos.faceOnModel && !formData.deletedPhotos.faceOnModel) {
-        items.push({ id: 'existing-faceOnModel', url: formData.existingPhotos.faceOnModel, type: 'faceOnModel', label: 'Portée' })
+        items.push({ id: 'photo-faceOnModel', url: formData.existingPhotos.faceOnModel, type: 'faceOnModel', label: 'Portée' })
       }
+
       if (formData.existingPhotos.dos && !formData.deletedPhotos.dos) {
-        items.push({ id: 'existing-dos', url: formData.existingPhotos.dos, type: 'dos', label: 'Dos' })
+        items.push({ id: 'photo-dos', url: formData.existingPhotos.dos, type: 'dos', label: 'Dos' })
+      } else if (formData.photoDos) {
+        const blobUrl = URL.createObjectURL(formData.photoDos)
+        blobUrls.push(blobUrl)
+        items.push({ id: 'photo-dos', url: blobUrl, type: 'dos', label: 'Dos', isNew: true, file: formData.photoDos })
       }
+
       if (formData.existingPhotos.dosOnModel) {
-        items.push({ id: 'existing-dosOnModel', url: formData.existingPhotos.dosOnModel, type: 'faceOnModel', label: 'Portée dos' })
+        items.push({ id: 'photo-dosOnModel', url: formData.existingPhotos.dosOnModel, type: 'faceOnModel', label: 'Portée dos' })
       }
+
+      // Détails (id stable basé sur l'index)
       (formData.existingPhotos.details || []).forEach((url, i) => {
         if (!isDetailDeleted(i)) {
-          items.push({ id: `existing-detail-${i}`, url, type: 'detail', label: `Détail ${i + 1}` })
+          items.push({ id: `photo-detail-${i}`, url, type: 'detail', label: `Détail ${i + 1}` })
         }
       })
-      
-      // Nouvelles photos
-      if (formData.photoFace) {
-        items.push({ id: 'new-face', url: URL.createObjectURL(formData.photoFace), type: 'face', label: 'Face', isNew: true, file: formData.photoFace })
-      }
-      if (formData.photoDos) {
-        items.push({ id: 'new-dos', url: URL.createObjectURL(formData.photoDos), type: 'dos', label: 'Dos', isNew: true, file: formData.photoDos })
-      }
-      formData.photosDetails.forEach((file, i) => {
-        items.push({ id: `new-detail-${i}`, url: URL.createObjectURL(file), type: 'detail', label: `Détail (nouveau ${i + 1})`, isNew: true, file })
-      })
-      
+
       // Conserver l'ordre existant si possible
       if (photoOrder.length > 0) {
         const orderedItems: PhotoItem[] = []
         const remainingItems = [...items]
-        
+
         photoOrder.forEach(orderedPhoto => {
           const index = remainingItems.findIndex(item => item.id === orderedPhoto.id)
           if (index !== -1) {
@@ -567,19 +568,23 @@ async function compressImage(file: File): Promise<string> {
             remainingItems.splice(index, 1)
           }
         })
-        
+
         // Ajouter les nouvelles photos à la fin
         orderedItems.push(...remainingItems)
         setPhotoOrder(orderedItems)
       } else {
         setPhotoOrder(items)
       }
+
+      // Cleanup des URLs blob
+      return () => {
+        blobUrls.forEach(url => URL.revokeObjectURL(url))
+      }
     }, [
       formData.existingPhotos,
       formData.deletedPhotos,
       formData.photoFace,
       formData.photoDos,
-      formData.photosDetails,
     ])
 
     const typeTaille = detectTypeTaille(formData.categorie)
@@ -599,12 +604,12 @@ async function compressImage(file: File): Promise<string> {
       if (type === 'face' || type === 'dos') {
         try {
           // Upload vers Bunny
-          setUploadingPhoto(true)
+          setUploadingCount(c => c + 1)
           const base64 = await compressImage(file)
           const timestamp = Date.now()
           const random = Math.random().toString(36).substring(2, 8)
           const path = `produits/temp_${timestamp}_${random}.jpg`
-          
+
           const response = await fetch('/api/detourage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -622,21 +627,21 @@ async function compressImage(file: File): Promise<string> {
           console.error('Erreur upload:', err)
           alert('Erreur upload photo')
         } finally {
-          setUploadingPhoto(false)
+          setUploadingCount(c => c - 1)
         }
       } else if (type === 'details') {
         // Formatter en carré 1200x1200 avant d'ajouter
         try {
-          setUploadingPhoto(true)
+          setUploadingCount(c => c + 1)
           const base64 = await compressImage(file)
-          
+
           const response = await fetch('/api/detourage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ base64, skipDetourage: true, mode: 'erased' })
           })
           const data = await response.json()
-          
+
           if (data.success && data.maskUrl) {
             setFormData(prev => ({
               ...prev,
@@ -652,7 +657,7 @@ async function compressImage(file: File): Promise<string> {
           console.error('Erreur formatage détail:', err)
           alert('Erreur formatage photo détail')
         } finally {
-          setUploadingPhoto(false)
+          setUploadingCount(c => c - 1)
         }
       }
     }
@@ -660,7 +665,6 @@ async function compressImage(file: File): Promise<string> {
     const handlePhotoEditorConfirm = async (processedUrl: string) => {
       if (photoToEdit) {
         if (photoToEdit.type === 'face') {
-          setDetouredFaceUrl(processedUrl)
           setFormData(prev => ({
             ...prev,
             existingPhotos: { ...prev.existingPhotos, face: processedUrl },
@@ -668,7 +672,6 @@ async function compressImage(file: File): Promise<string> {
             deletedPhotos: { ...prev.deletedPhotos, face: false }
           }))
         } else if (photoToEdit.type === 'dos') {
-          setDetouredDosUrl(processedUrl)
           setFormData(prev => ({
             ...prev,
             existingPhotos: { ...prev.existingPhotos, dos: processedUrl },
@@ -728,14 +731,9 @@ async function compressImage(file: File): Promise<string> {
         const combined = `${suggestedDesc.fr}\n\n🇬🇧 ${suggestedDesc.en}`
         const newFormData = { ...formData, description: combined }
         setSuggestedDesc(null)
-        await onSubmit({ 
-          ...newFormData, 
-          photoOrder,
-          existingPhotos: {
-            ...formData.existingPhotos,
-            ...(detouredFaceUrl && { face: detouredFaceUrl }),
-            ...(detouredDosUrl && { dos: detouredDosUrl }),
-          }
+        await onSubmit({
+          ...newFormData,
+          photoOrder
         })
       }
     }
@@ -1282,7 +1280,7 @@ async function compressImage(file: File): Promise<string> {
       
       // Si description vide → générer avec IA + popup
       if (!formData.description.trim() && formData.nom) {
-        const imageUrl = formData.existingPhotos.face || detouredFaceUrl
+        const imageUrl = formData.existingPhotos.face
         if (imageUrl) {
           const result = await analyzeProduct(imageUrl)
           if (result?.descriptions) {
@@ -1292,15 +1290,10 @@ async function compressImage(file: File): Promise<string> {
           }
         }
       }
-      
-      await onSubmit({ 
-        ...formData, 
-        photoOrder,
-        existingPhotos: {
-          ...formData.existingPhotos,
-          ...(detouredFaceUrl && { face: detouredFaceUrl }),
-          ...(detouredDosUrl && { dos: detouredDosUrl }),
-        }
+
+      await onSubmit({
+        ...formData,
+        photoOrder
       })
     }
 
@@ -1698,7 +1691,7 @@ async function compressImage(file: File): Promise<string> {
                  <button
                     type="button"
                     onClick={async () => {
-                      const imageUrl = formData.existingPhotos.face || detouredFaceUrl
+                      const imageUrl = formData.existingPhotos.face
                       if (!imageUrl) {
                         alert('Ajoutez une photo face d\'abord')
                         return
@@ -1977,27 +1970,7 @@ async function compressImage(file: File): Promise<string> {
                     ))}
                   </div>
                 )}
-                
-                {formData.photosDetails.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {formData.photosDetails.map((file, i) => (
-                      <div key={i} className="relative group w-14 h-14">
-                        <img src={URL.createObjectURL(file)} alt={`Nouveau ${i + 1}`} className="w-full h-full object-cover rounded border" />
-                        <button 
-                          type="button" 
-                          onClick={() => setFormData(prev => ({ 
-                            ...prev, 
-                            photosDetails: prev.photosDetails.filter((_, idx) => idx !== i) 
-                          }))} 
-                          className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
+
                 <div className="flex gap-2">
                   <input
                     type="file"
@@ -2135,7 +2108,7 @@ async function compressImage(file: File): Promise<string> {
         </form>
 
         {/* Loader pendant upload photo */}
-        {uploadingPhoto && (
+        {uploadingCount > 0 && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22209C]"></div>
