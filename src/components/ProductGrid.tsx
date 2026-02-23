@@ -363,9 +363,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                   {formatDisplayTitle(produit)}
                 </h3>
                 {produit.marque && (
-                  <p 
+                  <p
                     className="mt-1 uppercase hidden md:block"
-                    style={{ 
+                    style={{
                       fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                       fontSize: '10px',
                       letterSpacing: '0.05em',
@@ -375,7 +375,18 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     {produit.marque}
                   </p>
                 )}
-                <p 
+                {produit.sku && (
+                  <p style={{
+                    fontSize: '0.65rem',
+                    color: '#999',
+                    marginTop: '2px',
+                    letterSpacing: '0.05em',
+                    fontFamily: 'Helvetica Neue, sans-serif',
+                  }}>
+                    {produit.sku}
+                  </p>
+                )}
+                <p
                   className="mt-1"
                   style={{ 
                     fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',

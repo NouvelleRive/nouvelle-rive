@@ -299,17 +299,30 @@ export default function ProduitPage() {
             )}
 
             {/* Nom du produit - plus petit et fin (sans SKU) */}
-            <h2 
+            <h2
               className="uppercase mb-4"
-              style={{ 
-                fontSize: '20px', 
-                letterSpacing: '0.08em', 
+              style={{
+                fontSize: '20px',
+                letterSpacing: '0.08em',
                 fontWeight: '300',
                 color: '#000'
               }}
             >
               {produit.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
             </h2>
+
+            {(produit as any).sku && (
+              <p style={{
+                fontSize: '0.7rem',
+                color: '#999',
+                marginTop: '-12px',
+                marginBottom: '16px',
+                letterSpacing: '0.05em',
+                fontFamily: 'Helvetica Neue, sans-serif',
+              }}>
+                Réf. {(produit as any).sku}
+              </p>
+            )}
 
             {/* Prix */}
             <p 
