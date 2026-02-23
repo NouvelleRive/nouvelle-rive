@@ -276,34 +276,75 @@ async function ensureMerchantLocation(): Promise<void> {
 
 /**
  * Prépare le titre pour eBay (max 80 caractères)
- * Format: "Vintage [Marque] - [Nom du produit]" sans SKU
+ * Format SEO optimisé: "Vintage [Marque] [Type] [Matière] [Couleur] Size [Taille] [Genre]"
  */
-function formatEbayTitle(nom: string, marque?: string): string {
-  let title = nom
+function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
+  // Extraire le type de vêtement du titre (enlever SKU et marque)
+  let clothingType = produit.title
 
   // Enlever le SKU du début (ex: "GIGI18 - " ou "PS102 - ")
-  title = title.replace(/^[A-Z]{2,4}\d+\s*-\s*/i, '')
+  clothingType = clothingType.replace(/^[A-Z]{2,4}\d+\s*-\s*/i, '')
 
-  // Enlever le SKU au milieu du titre (ex: "Louis Vuitton PS102 - Sac" → "Louis Vuitton - Sac")
-  title = title.replace(/\s+[A-Z]{2,4}\d+\s*-\s*/gi, ' - ')
+  // Enlever le SKU au milieu du titre
+  clothingType = clothingType.replace(/\s+[A-Z]{2,4}\d+\s*-\s*/gi, ' - ')
 
-  // Enlever le SKU seul sans tiret (ex: "Sac PS102 bandoulière" → "Sac bandoulière")
-  title = title.replace(/\s+[A-Z]{2,4}\d+\s+/gi, ' ')
+  // Enlever le SKU seul sans tiret
+  clothingType = clothingType.replace(/\s+[A-Z]{2,4}\d+\s+/gi, ' ')
 
-  // Nettoyer les espaces multiples et tirets en double
-  title = title.replace(/\s+/g, ' ').replace(/\s*-\s*-\s*/g, ' - ').trim()
-
-  // Ajouter la marque si pas déjà dans le titre
-  if (marque && !title.toLowerCase().includes(marque.toLowerCase())) {
-    title = `${marque} ${title}`
+  // Enlever la marque du titre si présente
+  if (produit.brand) {
+    const brandRegex = new RegExp(produit.brand, 'gi')
+    clothingType = clothingType.replace(brandRegex, '')
   }
 
-  // Ajouter "Vintage" si pas présent
-  if (!title.toLowerCase().includes('vintage')) {
-    title = `Vintage ${title}`
+  // Nettoyer les espaces multiples et tirets
+  clothingType = clothingType
+    .replace(/\s+/g, ' ')
+    .replace(/\s*-\s*-\s*/g, ' - ')
+    .replace(/^\s*-\s*/, '')
+    .replace(/\s*-\s*$/, '')
+    .trim()
+
+  // Construire les parties du titre
+  const genderLabel = gender === 'men' ? "Men's" : "Women's"
+  const parts: string[] = ['Vintage']
+
+  if (produit.brand) {
+    parts.push(produit.brand.toUpperCase())
   }
 
-  // Tronquer à 80 caractères
+  if (clothingType) {
+    parts.push(clothingType)
+  }
+
+  // Parties optionnelles (peuvent être supprimées si trop long)
+  const material = produit.material || ''
+  const color = produit.color || ''
+  const size = produit.size ? `Size ${produit.size}` : ''
+
+  // Construire le titre complet avec toutes les parties
+  let title = parts.join(' ')
+  if (material) title += ` ${material}`
+  if (color) title += ` ${color}`
+  if (size) title += ` ${size}`
+  title += ` ${genderLabel}`
+
+  // Si trop long, supprimer d'abord la matière
+  if (title.length > 80) {
+    title = parts.join(' ')
+    if (color) title += ` ${color}`
+    if (size) title += ` ${size}`
+    title += ` ${genderLabel}`
+  }
+
+  // Si encore trop long, supprimer la couleur
+  if (title.length > 80) {
+    title = parts.join(' ')
+    if (size) title += ` ${size}`
+    title += ` ${genderLabel}`
+  }
+
+  // Si encore trop long, tronquer
   if (title.length > 80) {
     title = title.substring(0, 77) + '...'
   }
@@ -511,7 +552,7 @@ async function createOrUpdateInventoryItem(produit: EbayProduct, categoryType: s
     },
     condition: 'USED_EXCELLENT',
     product: {
-      title: formatEbayTitle(produit.title, produit.brand),
+      title: formatEbayTitle(produit, gender),
       description: formatEbayDescription(produit.description, produit),
       imageUrls: produit.imageUrls.slice(0, 12),
       aspects: buildProductAspects(produit, categoryType, gender),
