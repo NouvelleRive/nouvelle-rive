@@ -276,72 +276,64 @@ async function ensureMerchantLocation(): Promise<void> {
 
 /**
  * Prépare le titre pour eBay (max 80 caractères)
- * Format SEO optimisé: "Vintage [Marque] [Type] [Matière] [Couleur] Size [Taille] [Genre]"
+ * Format SEO: "Vintage MARQUE Type Matière Couleur Taille Genre"
  */
 function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
-  // Extraire le type de vêtement du titre (enlever SKU et marque)
-  let clothingType = produit.title
+  // 1. Enlever le SKU du début
+  let cleanedTitle = produit.title.replace(/^[A-Z]{2,4}\d+\s*[-–]\s*/i, '')
 
-  // Enlever le SKU du début (ex: "GIGI18 - " ou "PS102 - ")
-  clothingType = clothingType.replace(/^[A-Z]{2,4}\d+\s*-\s*/i, '')
-
-  // Enlever le SKU au milieu du titre
-  clothingType = clothingType.replace(/\s+[A-Z]{2,4}\d+\s*-\s*/gi, ' - ')
-
-  // Enlever le SKU seul sans tiret
-  clothingType = clothingType.replace(/\s+[A-Z]{2,4}\d+\s+/gi, ' ')
-
-  // Enlever la marque du titre si présente
+  // 2. Enlever la marque du titre (elle sera ajoutée en majuscules)
   if (produit.brand) {
-    const brandRegex = new RegExp(produit.brand, 'gi')
-    clothingType = clothingType.replace(brandRegex, '')
+    const brandRegex = new RegExp(produit.brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+    cleanedTitle = cleanedTitle.replace(brandRegex, '')
   }
 
-  // Nettoyer les espaces multiples et tirets
-  clothingType = clothingType
+  // Nettoyer les tirets orphelins et espaces multiples
+  cleanedTitle = cleanedTitle
+    .replace(/^\s*[-–]\s*/, '')
+    .replace(/\s*[-–]\s*$/, '')
     .replace(/\s+/g, ' ')
-    .replace(/\s*-\s*-\s*/g, ' - ')
-    .replace(/^\s*-\s*/, '')
-    .replace(/\s*-\s*$/, '')
     .trim()
 
-  // Construire les parties du titre
+  // 3. Extraire première matière et première couleur (avant la virgule)
+  const material = produit.material ? produit.material.split(',')[0].trim() : ''
+  const color = produit.color ? produit.color.split(',')[0].trim() : ''
+  const size = produit.size || ''
   const genderLabel = gender === 'men' ? "Men's" : "Women's"
-  const parts: string[] = ['Vintage']
 
-  if (produit.brand) {
-    parts.push(produit.brand.toUpperCase())
+  // 4. Vérifier les doublons (ne pas ajouter si déjà dans le titre)
+  const titleLower = cleanedTitle.toLowerCase()
+  const materialToAdd = material && !titleLower.includes(material.toLowerCase()) ? material : ''
+  const colorToAdd = color && !titleLower.includes(color.toLowerCase()) ? color : ''
+
+  // 5. Construire le titre complet
+  const buildTitle = (includeMaterial: boolean, includeColor: boolean, includeSize: boolean): string => {
+    const parts: string[] = ['Vintage']
+    if (produit.brand) parts.push(produit.brand.toUpperCase())
+    if (cleanedTitle) parts.push(cleanedTitle)
+    if (includeMaterial && materialToAdd) parts.push(materialToAdd)
+    if (includeColor && colorToAdd) parts.push(colorToAdd)
+    if (includeSize && size) parts.push(size)
+    parts.push(genderLabel)
+    return parts.join(' ').replace(/\s+/g, ' ')
   }
 
-  if (clothingType) {
-    parts.push(clothingType)
-  }
-
-  // Parties optionnelles (peuvent être supprimées si trop long)
-  const material = produit.material || ''
-  const color = produit.color || ''
-  const size = produit.size ? `Size ${produit.size}` : ''
-
-  // Construire le titre complet avec toutes les parties
-  let title = parts.join(' ')
-  if (material) title += ` ${material}`
-  if (color) title += ` ${color}`
-  if (size) title += ` ${size}`
-  title += ` ${genderLabel}`
+  // Essayer avec tous les éléments
+  let title = buildTitle(true, true, true)
 
   // Si trop long, supprimer d'abord la matière
   if (title.length > 80) {
-    title = parts.join(' ')
-    if (color) title += ` ${color}`
-    if (size) title += ` ${size}`
-    title += ` ${genderLabel}`
+    title = buildTitle(false, true, true)
   }
 
   // Si encore trop long, supprimer la couleur
   if (title.length > 80) {
-    title = parts.join(' ')
-    if (size) title += ` ${size}`
-    title += ` ${genderLabel}`
+    title = buildTitle(false, false, true)
+  }
+
+  // Si encore trop long, supprimer la taille
+  if (title.length > 80) {
+    title = buildTitle(false, false, false)
   }
 
   // Si encore trop long, tronquer
