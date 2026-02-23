@@ -234,21 +234,19 @@
       }
 
       const getAllImages = (p: Produit): string[] => {
-        // Utiliser imageUrls en priorité (respecte l'ordre défini)
-        if (Array.isArray(p.imageUrls) && p.imageUrls.length > 0) return p.imageUrls
-        // Fallback sur photos structurées
-        if (p.photos) {
-          const imgs: string[] = []
-          if (p.photos.face) imgs.push(p.photos.face)
-          if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
-          if (p.photos.dos) imgs.push(p.photos.dos)
-          if (p.photos.dosOnModel) imgs.push(p.photos.dosOnModel)
-          if (p.photos.details) imgs.push(...p.photos.details)
-          return imgs
-        }
-        if (p.imageUrl) return [p.imageUrl]
-        return []
-      }
+  if (Array.isArray(p.imageUrls) && p.imageUrls.length > 0) return p.imageUrls
+  if (p.photos) {
+    const imgs: string[] = []
+    if (p.photos.face) imgs.push(p.photos.face)
+    if (p.photos.faceOnModel) imgs.push(p.photos.faceOnModel)
+    if (p.photos.dos) imgs.push(p.photos.dos)
+    if (p.photos.dosOnModel) imgs.push(p.photos.dosOnModel)
+    if (p.photos.details) imgs.push(...p.photos.details)
+    return imgs
+  }
+  if (p.imageUrl) return [p.imageUrl]
+  return []
+}
 
       const toggleExpanded = (id: string) => {
         setExpandedIds((prev) => {
