@@ -71,7 +71,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const productIds: string[] = body.productIds || (body.productId ? [body.productId] : [])
-    const forcedGender: EbayGender | undefined = body.gender // Genre forcé par le frontend
+    // Convertir le genre du frontend (FR) vers le format eBay (EN)
+    const genderMap: Record<string, EbayGender> = { 'Femme': 'women', 'Homme': 'men', 'Unisexe': 'women', 'women': 'women', 'men': 'men' }
+    const forcedGender: EbayGender | undefined = genderMap[body.gender] || undefined
 
     if (productIds.length === 0) {
       return NextResponse.json(
