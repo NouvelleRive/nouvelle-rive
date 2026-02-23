@@ -37,7 +37,13 @@ const categoriesSansTaille = ['bijoux', 'boucles d\'oreilles', 'colliers', 'brac
 
 function getAllImages(p: Produit): string[] {
   // Priorité à imageUrls (respecte l'ordre défini)
-  if (p.imageUrls?.length > 0) return p.imageUrls
+  if (p.imageUrls?.length > 0) {
+  const urls = [...p.imageUrls]
+  if (p.photos) {
+    ;[p.photos.face, p.photos.faceOnModel, p.photos.dos, (p.photos as any).dosOnModel, ...(p.photos.details || [])].forEach(u => { if (u && !urls.includes(u)) urls.push(u) })
+  }
+  return urls
+}
   
   // Fallback sur photos structurées
   const imgs: string[] = []
