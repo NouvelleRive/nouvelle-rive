@@ -97,8 +97,8 @@ export async function POST(req: NextRequest) {
     const outfitAccessories = getOutfitPrompt(categorie, { nom: productName, matiere })
 
    const prompt = gender === 'male'
-      ? `${selectedModel}, standing straight, hands by sides, neutral expression, minimalist studio, wearing relaxed fit trousers and dress shoes, professional editorial fashion shoot, plain white studio background`
-      : `${selectedModel}, standing straight, hands by sides, ${view === 'back' ? 'model seen from behind, back of head visible, facing away from camera, rear view photography, ' : 'neutral expression, '}minimalist studio, professional editorial fashion shoot, ${outfitAccessories}`
+      ? `${selectedModel}, standing straight, hands by sides, ${view === 'back' ? 'seen from behind, back facing camera, back of head visible, facing away from camera, ' : ''}neutral expression, minimalist studio, wearing relaxed fit trousers and dress shoes, professional editorial fashion shoot, plain white studio background`
+      : `${selectedModel}, ${view === 'back' ? 'seen from behind, back facing camera, back of head visible, facing away from camera, ' : ''}standing straight, hands by sides, ${view === 'front' ? 'neutral expression, ' : ''}minimalist studio, professional editorial fashion shoot, ${outfitAccessories}`
     console.log('🎨 Prompt choisi:', prompt)
     
     const fashnResponse = await fetch('https://api.fashn.ai/v1/run', {
