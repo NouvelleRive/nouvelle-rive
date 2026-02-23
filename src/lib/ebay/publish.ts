@@ -7,6 +7,56 @@
 import { ebayApiCall, calculateEbayPrice, isEbayConfigured } from './clients'
 import { EbayProduct, EbayListingResponse } from './types'
 
+const COLOR_FR_TO_EN: Record<string, string> = {
+  'noir': 'Black', 'blanc': 'White', 'bleu': 'Blue', 'bleu marine': 'Navy',
+  'marine': 'Navy', 'rouge': 'Red', 'vert': 'Green', 'jaune': 'Yellow',
+  'rose': 'Pink', 'violet': 'Purple', 'orange': 'Orange', 'gris': 'Gray',
+  'marron': 'Brown', 'beige': 'Beige', 'crème': 'Cream', 'bordeaux': 'Burgundy',
+  'kaki': 'Khaki', 'camel': 'Camel', 'doré': 'Gold', 'argenté': 'Silver',
+  'corail': 'Coral', 'turquoise': 'Turquoise', 'anthracite': 'Charcoal',
+  'écru': 'Ivory', 'taupe': 'Taupe', 'multicolore': 'Multicolor',
+}
+
+const MATERIAL_FR_TO_EN: Record<string, string> = {
+  'cuir': 'Leather', 'soie': 'Silk', 'coton': 'Cotton', 'laine': 'Wool',
+  'lin': 'Linen', 'polyester': 'Polyester', 'cachemire': 'Cashmere',
+  'daim': 'Suede', 'velours': 'Velvet', 'denim': 'Denim', 'nylon': 'Nylon',
+  'viscose': 'Viscose', 'satin': 'Satin', 'tweed': 'Tweed', 'fourrure': 'Fur',
+  'mohair': 'Mohair', 'alpaga': 'Alpaca', 'synthétique': 'Synthetic',
+  'acrylique': 'Acrylic', 'élasthanne': 'Elastane', 'lycra': 'Spandex',
+}
+
+function translateColor(color: string): string {
+  const first = color.split(',')[0].trim().toLowerCase()
+  return COLOR_FR_TO_EN[first] || color.split(',')[0].trim()
+}
+
+function translateMaterial(material: string): string {
+  const first = material.split(',')[0].trim().toLowerCase()
+  return MATERIAL_FR_TO_EN[first] || material.split(',')[0].trim()
+}
+
+function translateTitle(title: string): string {
+  let t = title
+  for (const [fr, en] of Object.entries(COLOR_FR_TO_EN)) {
+    t = t.replace(new RegExp(`\\b${fr}\\b`, 'gi'), en)
+  }
+  for (const [fr, en] of Object.entries(MATERIAL_FR_TO_EN)) {
+    t = t.replace(new RegExp(`\\b${fr}\\b`, 'gi'), en)
+  }
+  const WORDS: Record<string, string> = {
+    'avec': 'with', 'rayures': 'Stripes', 'rayons': 'Stripes', 'rayé': 'Striped',
+    'imprimé': 'Print', 'brodé': 'Embroidered', 'longue': 'Long', 'courte': 'Short',
+    'doublé': 'Lined', 'cintré': 'Fitted', 'ample': 'Oversized',
+    'à carreaux': 'Plaid', 'à pois': 'Polka Dot', 'fleuri': 'Floral',
+    'orangées': 'Orange', 'orangés': 'Orange', 'sans manches': 'Sleeveless',
+  }
+  for (const [fr, en] of Object.entries(WORDS)) {
+    t = t.replace(new RegExp(fr, 'gi'), en)
+  }
+  return t.replace(/\s+/g, ' ').trim()
+}
+
 const EBAY_MARKETPLACE_ID = 'EBAY_US'
 const EBAY_CURRENCY = 'USD'
 const EBAY_MERCHANT_LOCATION_KEY = process.env.EBAY_MERCHANT_LOCATION_KEY || 'PARIS_STORE'
@@ -294,6 +344,7 @@ function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
     .replace(/\s*[-–]\s*$/, '')
     .replace(/\s+/g, ' ')
     .trim()
+  cleanedTitle = translateTitle(cleanedTitle)
 
   // 3. Extraire première matière et première couleur (avant la virgule)
   const material = produit.material ? produit.material.split(',')[0].trim() : ''
@@ -397,7 +448,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
 
   // Aspects communs à toutes les catégories
   aspects['Brand'] = [produit.brand || 'Unbranded']
-  aspects['Color'] = [produit.color || 'Multicolor']
+  aspects['Color'] = [translateColor(produit.color || 'Multicolor')]
   aspects['Vintage'] = ['Yes']
   aspects['Country/Region of Manufacture'] = ['France']
 
@@ -543,6 +594,7 @@ async function createOrUpdateInventoryItem(produit: EbayProduct, categoryType: s
       },
     },
     condition: 'USED_EXCELLENT',
+conditionDescription: 'Excellent vintage condition. Carefully inspected and curated from our Paris boutique.',
     product: {
       title: formatEbayTitle(produit, gender),
       description: formatEbayDescription(produit.description, produit),
@@ -833,6 +885,7 @@ export function prepareProductForEbay(firebaseProduct: any, gender?: EbayGender)
     title: firebaseProduct.nom || 'Vintage Item',
     description: firebaseProduct.description || '',
     condition: 'USED_EXCELLENT',
+conditionDescription: 'Excellent vintage condition. Carefully inspected and curated from our Paris boutique.',
     priceEUR: firebaseProduct.prix || 0,
     categoryId: localCategory || '',
     sousCat: sousCat || '',
