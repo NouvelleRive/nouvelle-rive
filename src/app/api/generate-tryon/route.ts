@@ -87,7 +87,9 @@ export async function POST(req: NextRequest) {
       { weight: 3, desc: 'mixed race woman' },
     ]
     const totalWeight = modelPool.reduce((sum, m) => sum + m.weight, 0)
-    let rand = Math.random() * totalWeight
+    // Utiliser le seed pour sélectionner le même mannequin face + dos
+    const seedRand = seed ? ((seed % 1000) / 1000) : Math.random()
+    let rand = seedRand * totalWeight
     let selectedModel = modelPool[0].desc
     for (const m of modelPool) {
       rand -= m.weight
