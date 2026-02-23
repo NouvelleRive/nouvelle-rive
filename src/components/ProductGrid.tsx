@@ -375,17 +375,6 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     {produit.marque}
                   </p>
                 )}
-                {produit.sku && (
-                  <p style={{
-                    fontSize: '0.65rem',
-                    color: '#999',
-                    marginTop: '2px',
-                    letterSpacing: '0.05em',
-                    fontFamily: 'Helvetica Neue, sans-serif',
-                  }}>
-                    {produit.sku}
-                  </p>
-                )}
                 <p
                   className="mt-1"
                   style={{ 
