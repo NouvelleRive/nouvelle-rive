@@ -725,19 +725,11 @@
             for (const item of data.photoOrder) {
               if (item.url) {
                 // Pour les nouvelles photos, on doit utiliser les URLs uploadées
-                if (item.id === 'new-face' && faceUrl) orderedUrls.push(faceUrl)
-                else if (item.id === 'new-dos' && dosUrl) orderedUrls.push(dosUrl)
-                else if (item.id.startsWith('new-detail-')) {
-                  const idx = parseInt(item.id.replace('new-detail-', ''))
-                  const actualIdx = newDetailsStartIndex + idx
-                  if (detailsUrls[actualIdx]) orderedUrls.push(detailsUrls[actualIdx])
-                }
-                // Pour les photos existantes
-                else if (item.id === 'existing-face' && faceUrl) orderedUrls.push(faceUrl)
-                else if (item.id === 'existing-faceOnModel' && faceOnModelUrl) orderedUrls.push(faceOnModelUrl)
-                else if (item.id === 'existing-dosOnModel' && dosOnModelUrl) orderedUrls.push(dosOnModelUrl)
-                else if (item.id === 'existing-dos' && dosUrl) orderedUrls.push(dosUrl)
-                else if (item.id.startsWith('existing-detail-')) {
+                if (item.id === 'photo-face' && faceUrl) orderedUrls.push(faceUrl)
+                else if (item.id === 'photo-dos' && dosUrl) orderedUrls.push(dosUrl)
+                else if (item.id === 'photo-faceOnModel' && faceOnModelUrl) orderedUrls.push(faceOnModelUrl)
+                else if (item.id === 'photo-dosOnModel' && dosOnModelUrl) orderedUrls.push(dosOnModelUrl)
+                else if (item.id.startsWith('photo-detail-')) {
                   if (item.url && detailsUrls.includes(item.url)) {
                     orderedUrls.push(item.url)
                   }
