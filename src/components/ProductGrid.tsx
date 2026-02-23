@@ -10,6 +10,37 @@ import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
 
+function formatDisplayTitle(produit: Produit): string {
+  // 1. Enlever le SKU du début
+  let title = produit.nom.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')
+
+  // 2. Enlever la marque du titre (elle s'affiche séparément en dessous)
+  if (produit.marque) {
+    const marqueRegex = new RegExp(produit.marque.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+    title = title.replace(marqueRegex, '').replace(/\s*[-–]\s*$/, '').replace(/^\s*[-–]\s*/, '').trim()
+  }
+
+  // 3. Enrichir avec matière, couleur, taille si pas déjà dans le titre
+  const titleLower = title.toLowerCase()
+  const extras: string[] = []
+
+  if (produit.material && !titleLower.includes(produit.material.toLowerCase().split(',')[0].trim())) {
+    extras.push(produit.material.split(',')[0].trim())
+  }
+  if (produit.color && !titleLower.includes(produit.color.toLowerCase().split(',')[0].trim())) {
+    extras.push(produit.color.split(',')[0].trim())
+  }
+  if (produit.taille && !titleLower.includes(produit.taille.toLowerCase())) {
+    extras.push(produit.taille)
+  }
+
+  if (extras.length > 0) {
+    title = title + ' ' + extras.join(' ')
+  }
+
+  return title.replace(/\s+/g, ' ').trim()
+}
+
 type Produit = {
   id: string
   nom: string
@@ -329,7 +360,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     letterSpacing: '0.03em'
                   }}
                 >
-                  {produit.nom.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')}
+                  {formatDisplayTitle(produit)}
                 </h3>
                 {produit.marque && (
                   <p 
