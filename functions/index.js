@@ -278,6 +278,38 @@ exports.onProductReceived = functions
           }
         }
       }
+
+      // CAS 2b: Sync eBay si le produit est publié sur eBay
+      if (after.ebayListingId) {
+        const prixChange = before.prix !== after.prix
+        const nomChange = before.nom !== after.nom
+        const descChange = before.description !== after.description
+        const imageChange = JSON.stringify(before.imageUrls || []) !== JSON.stringify(after.imageUrls || [])
+        const photoChange = JSON.stringify(before.photos || {}) !== JSON.stringify(after.photos || {})
+
+        if (prixChange || nomChange || descChange || imageChange || photoChange) {
+          try {
+            const siteUrl = 'https://nouvellerive.eu'
+            const fetch = require('node-fetch')
+            const response = await fetch(`${siteUrl}/api/sync/product`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-secret': process.env.API_SECRET || 'NR_INTERNAL_SYNC_2026'
+              },
+              body: JSON.stringify({ productId: productId }),
+            })
+            const result = await response.json()
+            if (result.success) {
+              console.log(`✅ eBay mis à jour: ${after.sku}`)
+            } else {
+              console.warn(`⚠️ eBay update failed: ${result.error}`)
+            }
+          } catch (ebayErr) {
+            console.warn(`⚠️ Erreur sync eBay: ${ebayErr.message}`)
+          }
+        }
+      }
     }
 
     // CAS 3b: Produit passe en outOfStock (petite série) → stock Square à 0 mais garder le produit
