@@ -1,9 +1,11 @@
 // app/admin/ebay/page.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import { getBrandPriority } from '@/lib/admin/helpers'
+import { db } from '@/lib/firebaseConfig'
+import { collection, onSnapshot } from 'firebase/firestore'
 
 export default function AdminEbayPage() {
   const { produitsFiltres, loadData, loading } = useAdmin()
@@ -16,6 +18,18 @@ export default function AdminEbayPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'not_published'>('not_published')
   const [search, setSearch] = useState('')
   const [filterChineuse, setFilterChineuse] = useState('')
+
+  const [chineusesList, setChineusesList] = useState<{trigramme: string, wearType: string}[]>([])
+
+useEffect(() => {
+  const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
+    setChineusesList(snap.docs.map(d => ({
+      trigramme: d.data().trigramme || '',
+      wearType: d.data().wearType || 'womenswear',
+    })))
+  })
+  return () => unsub()
+}, [])
 
   // Filtrer les produits actifs
   const produitsActifs = produitsFiltres.filter(p =>
@@ -133,6 +147,23 @@ alert(`❌ Erreur : ${errMsg}`)
 
   const askGenderThenPublish = (productIds: string[]) => {
     if (productIds.length === 0) return
+    
+    const genders = new Set<string>()
+    for (const id of productIds) {
+      const p = produitsActifs.find(pr => pr.id === id)
+      const tri = p?.sku?.match(/^[A-Z]+/)?.[0]?.toUpperCase()
+      const ch = chineusesList.find(c => c.trigramme?.toUpperCase() === tri)
+      const wt = ch?.wearType || ''
+      if (wt === 'womenswear') genders.add('Femme')
+      else if (wt === 'menswear') genders.add('Homme')
+      else genders.add('unknown')
+    }
+    
+    if (genders.size === 1 && !genders.has('unknown')) {
+      publishToEbay(productIds, Array.from(genders)[0])
+      return
+    }
+    
     setGenderModal({ productIds })
   }
 
