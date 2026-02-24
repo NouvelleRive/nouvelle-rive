@@ -8,12 +8,15 @@ import { ebayApiCall, calculateEbayPrice, isEbayConfigured } from './clients'
 import { EbayProduct, EbayListingResponse } from './types'
 
 const COLOR_FR_TO_EN: Record<string, string> = {
-  'noir': 'Black', 'blanc': 'White', 'bleu': 'Blue', 'bleu marine': 'Navy',
-  'marine': 'Navy', 'rouge': 'Red', 'vert': 'Green', 'jaune': 'Yellow',
-  'rose': 'Pink', 'violet': 'Purple', 'orange': 'Orange', 'gris': 'Gray',
-  'marron': 'Brown', 'beige': 'Beige', 'crème': 'Cream', 'bordeaux': 'Burgundy',
-  'kaki': 'Khaki', 'camel': 'Camel', 'doré': 'Gold', 'argenté': 'Silver',
-  'corail': 'Coral', 'turquoise': 'Turquoise', 'anthracite': 'Charcoal',
+  'noir': 'Black', 'noire': 'Black', 'blanc': 'White', 'blanche': 'White',
+  'bleu': 'Blue', 'bleue': 'Blue', 'bleu marine': 'Navy', 'marine': 'Navy',
+  'rouge': 'Red', 'vert': 'Green', 'verte': 'Green', 'jaune': 'Yellow',
+  'rose': 'Pink', 'violet': 'Purple', 'violette': 'Purple', 'orange': 'Orange',
+  'gris': 'Gray', 'grise': 'Gray', 'marron': 'Brown', 'brune': 'Brown',
+  'beige': 'Beige', 'crème': 'Cream', 'bordeaux': 'Burgundy',
+  'kaki': 'Khaki', 'camel': 'Camel', 'doré': 'Gold', 'dorée': 'Gold',
+  'argenté': 'Silver', 'argentée': 'Silver', 'corail': 'Coral',
+  'turquoise': 'Turquoise', 'anthracite': 'Charcoal',
   'écru': 'Ivory', 'taupe': 'Taupe', 'multicolore': 'Multicolor',
 }
 
