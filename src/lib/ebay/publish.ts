@@ -502,7 +502,10 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Size'] = [produit.size || 'M']
       aspects['Size Type'] = ['Regular']
       aspects['Pattern'] = ['Solid']
-      aspects['Closure'] = ['Button']
+      const closureByModel = (produit.modele || '').toLowerCase()
+      aspects['Closure'] = [
+        ['perfecto', 'blouson', 'bomber', 'doudoune', 'parka'].includes(closureByModel) ? 'Zip' : 'Button'
+      ]
       aspects['Outer Shell Material'] = [translateMaterial(produit.material || 'Cotton Blend')]
       aspects['Lining Material'] = ['Polyester']
       aspects['Handmade'] = ['No']
