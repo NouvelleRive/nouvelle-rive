@@ -38,21 +38,47 @@ function translateMaterial(material: string): string {
 
 function translateTitle(title: string): string {
   let t = title
+  // Expressions composées EN PREMIER (avant les mots simples)
+  const PHRASES: Record<string, string> = {
+    'en cuir': 'Leather', 'en laine': 'Wool', 'en soie': 'Silk', 'en coton': 'Cotton',
+    'en lin': 'Linen', 'en velours': 'Velvet', 'en daim': 'Suede', 'en satin': 'Satin',
+    'en denim': 'Denim', 'en tweed': 'Tweed', 'en fourrure': 'Fur',
+    'à carreaux': 'Plaid', 'à pois': 'Polka Dot', 'à capuche': 'Hooded',
+    'sans manches': 'Sleeveless', 'manches longues': 'Long Sleeve', 'manches courtes': 'Short Sleeve',
+    'col roulé': 'Turtleneck', 'col V': 'V-Neck',
+    'taille haute': 'High Waist', 'taille basse': 'Low Rise',
+    'veste en jean': 'Denim Jacket',
+  }
+  for (const [fr, en] of Object.entries(PHRASES)) {
+    t = t.replace(new RegExp(fr, 'gi'), en)
+  }
+  // Couleurs
   for (const [fr, en] of Object.entries(COLOR_FR_TO_EN)) {
     t = t.replace(new RegExp(`\\b${fr}\\b`, 'gi'), en)
   }
+  // Matières
   for (const [fr, en] of Object.entries(MATERIAL_FR_TO_EN)) {
     t = t.replace(new RegExp(`\\b${fr}\\b`, 'gi'), en)
   }
+  // Mots courants
   const WORDS: Record<string, string> = {
-    'avec': 'with', 'rayures': 'Stripes', 'rayons': 'Stripes', 'rayé': 'Striped',
-    'imprimé': 'Print', 'brodé': 'Embroidered', 'longue': 'Long', 'courte': 'Short',
-    'doublé': 'Lined', 'cintré': 'Fitted', 'ample': 'Oversized',
-    'à carreaux': 'Plaid', 'à pois': 'Polka Dot', 'fleuri': 'Floral',
-    'orangées': 'Orange', 'orangés': 'Orange', 'sans manches': 'Sleeveless',
+    'veste': 'Jacket', 'chemise': 'Shirt', 'chemisier': 'Blouse', 'pantalon': 'Pants',
+    'robe': 'Dress', 'manteau': 'Coat', 'blazer': 'Blazer', 'blouson': 'Jacket',
+    'jupe': 'Skirt', 'pull': 'Sweater', 'gilet': 'Cardigan', 'cardigan': 'Cardigan',
+    'haut': 'Top', 'short': 'Shorts', 'parka': 'Parka', 'trench': 'Trench',
+    'doudoune': 'Puffer', 'bomber': 'Bomber', 'sac': 'Bag', 'pochette': 'Clutch',
+    'ceinture': 'Belt', 'écharpe': 'Scarf', 'foulard': 'Scarf', 'chapeau': 'Hat',
+    'avec': 'with', 'sans': 'without', 'et': 'and',
+    'rayures': 'Stripes', 'rayons': 'Stripes', 'rayé': 'Striped', 'rayée': 'Striped',
+    'imprimé': 'Print', 'imprimée': 'Print', 'brodé': 'Embroidered', 'brodée': 'Embroidered',
+    'longue': 'Long', 'courte': 'Short', 'doublé': 'Lined', 'doublée': 'Lined',
+    'cintré': 'Fitted', 'cintrée': 'Fitted', 'ample': 'Oversized',
+    'fleuri': 'Floral', 'fleurie': 'Floral',
+    'orangées': 'Orange', 'orangés': 'Orange',
+    'élégant': 'Elegant', 'élégante': 'Elegant', 'vintage': 'Vintage',
   }
   for (const [fr, en] of Object.entries(WORDS)) {
-    t = t.replace(new RegExp(fr, 'gi'), en)
+    t = t.replace(new RegExp(`\\b${fr}\\b`, 'gi'), en)
   }
   return t.replace(/\s+/g, ' ').trim()
 }
@@ -354,8 +380,10 @@ function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
 
   // 4. Vérifier les doublons (ne pas ajouter si déjà dans le titre)
   const titleLower = cleanedTitle.toLowerCase()
-  const materialToAdd = material && !titleLower.includes(material.toLowerCase()) ? material : ''
-  const colorToAdd = color && !titleLower.includes(color.toLowerCase()) ? color : ''
+  const translatedMaterial = material ? translateMaterial(material) : ''
+  const translatedColor = color ? translateColor(color) : ''
+  const materialToAdd = translatedMaterial && !titleLower.includes(translatedMaterial.toLowerCase()) ? translatedMaterial : ''
+  const colorToAdd = translatedColor && !titleLower.includes(translatedColor.toLowerCase()) ? translatedColor : ''
 
   // 5. Construire le titre complet
   const buildTitle = (includeMaterial: boolean, includeColor: boolean, includeSize: boolean): string => {
