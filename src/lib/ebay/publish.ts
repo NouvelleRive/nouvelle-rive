@@ -70,7 +70,7 @@ function translateTitle(title: string): string {
     'jupe': 'Skirt', 'pull': 'Sweater', 'gilet': 'Cardigan', 'cardigan': 'Cardigan',
     'haut': 'Top', 'short': 'Shorts', 'parka': 'Parka', 'trench': 'Trench',
     'doudoune': 'Puffer', 'bomber': 'Bomber', 'sac': 'Bag', 'pochette': 'Clutch',
-    'ceinture': 'Belt', 'écharpe': 'Scarf', 'foulard': 'Scarf', 'chapeau': 'Hat',
+    'ceinture': 'Belt', 'écharpe': 'Scarf', 'foulard': 'Scarf', 'chapeau': 'Hat', 'col': 'Collar',
     'avec': 'with', 'sans': 'without', 'et': 'and',
     'rayures': 'Stripes', 'rayons': 'Stripes', 'rayé': 'Striped', 'rayée': 'Striped',
     'imprimé': 'Print', 'imprimée': 'Print', 'brodé': 'Embroidered', 'brodée': 'Embroidered',
