@@ -489,7 +489,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Department'] = [department]
       aspects['Style'] = [getBagStyle(produit.modele)]
       aspects['Size'] = ['Medium']
-      aspects['Exterior Material'] = [produit.material || 'Leather']
+      aspects['Exterior Material'] = [translateMaterial(produit.material || 'Leather')]
       aspects['Closure'] = ['Zip']
       aspects['Handmade'] = ['No']
       break
@@ -503,7 +503,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Size Type'] = ['Regular']
       aspects['Pattern'] = ['Solid']
       aspects['Closure'] = ['Button']
-      aspects['Outer Shell Material'] = [produit.material || 'Cotton Blend']
+      aspects['Outer Shell Material'] = [translateMaterial(produit.material || 'Cotton Blend')]
       aspects['Lining Material'] = ['Polyester']
       aspects['Handmade'] = ['No']
       break
@@ -519,7 +519,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Sleeve Length'] = ['Long Sleeve']
       aspects['Pattern'] = ['Solid']
       aspects['Neckline'] = ['Round Neck']
-      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Material'] = [translateMaterial(produit.material || 'Cotton')]
       aspects['Handmade'] = ['No']
       break
 
@@ -533,7 +533,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Sleeve Length'] = ['Long Sleeve']
       aspects['Pattern'] = ['Solid']
       aspects['Neckline'] = ['Round Neck']
-      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Material'] = [translateMaterial(produit.material || 'Cotton')]
       aspects['Handmade'] = ['No']
       break
 
@@ -547,7 +547,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Rise'] = ['Mid']
       aspects['Inseam'] = ['Regular']
       aspects['Pattern'] = ['Solid']
-      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Material'] = [translateMaterial(produit.material || 'Cotton')]
       aspects['Closure'] = ['Zip']
       aspects['Handmade'] = ['No']
       break
@@ -561,7 +561,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Size Type'] = ['Regular']
       aspects['Skirt Length'] = [getSkirtLength(produit.modele)]
       aspects['Pattern'] = ['Solid']
-      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Material'] = [translateMaterial(produit.material || 'Cotton')]
       aspects['Handmade'] = ['No']
       break
 
@@ -575,7 +575,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Sleeve Length'] = ['Long Sleeve']
       aspects['Pattern'] = ['Solid']
       aspects['Neckline'] = ['Round Neck']
-      aspects['Material'] = [produit.material || 'Wool Blend']
+      aspects['Material'] = [translateMaterial(produit.material || 'Wool Blend')]
       aspects['Handmade'] = ['No']
       break
 
@@ -585,7 +585,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Type'] = ['Heels']
       aspects['Style'] = ['Vintage']
       aspects['US Shoe Size'] = [produit.size || '8']
-      aspects['Upper Material'] = [produit.material || 'Leather']
+      aspects['Upper Material'] = [translateMaterial(produit.material || 'Leather')]
       aspects['Heel Height'] = ['Mid Heel (1.5-3 in)']
       aspects['Occasion'] = ['Casual']
       aspects['Handmade'] = ['No']
@@ -596,7 +596,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Department'] = [department]
       aspects['Type'] = ['Scarf']
       aspects['Style'] = ['Vintage']
-      aspects['Material'] = [produit.material || 'Silk']
+      aspects['Material'] = [translateMaterial(produit.material || 'Silk')]
       aspects['Handmade'] = ['No']
       break
 
@@ -605,7 +605,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       aspects['Department'] = [department]
       aspects['Style'] = ['Vintage']
       aspects['Size'] = [produit.size || 'M']
-      aspects['Material'] = [produit.material || 'Cotton']
+      aspects['Material'] = [translateMaterial(produit.material || 'Cotton')]
       aspects['Handmade'] = ['No']
       break
   }
