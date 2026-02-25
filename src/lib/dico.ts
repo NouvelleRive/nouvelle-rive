@@ -39,6 +39,10 @@ export const MATERIALS: Record<string, string> = {
   'coton': 'Cotton',
   'laine': 'Wool',
   'lin': 'Linen',
+  'lin mélangé': 'Linen Blend',
+  'laine mélangée': 'Wool Blend',
+  'coton mélangé': 'Cotton Blend',
+  'soie mélangée': 'Silk Blend',
   'cachemire': 'Cashmere',
   'mohair': 'Mohair',
   'alpaga': 'Alpaca',
@@ -422,7 +426,7 @@ export function translateTitle(title: string): string {
   const translated = words.map(word => {
     const clean = word.toLowerCase().replace(/[^a-zà-ÿ]/g, '')
     const cleanNorm = normalize(clean)
-    const wordMatch = Object.entries(WORDS).find(([k]) => normalize(k) === cleanNorm)
+    const wordMatch = Object.entries({ ...WORDS, ...COLORS, ...MATERIALS }).find(([k]) => normalize(k) === cleanNorm)
     if (wordMatch) {
       const prefix = word.match(/^[^a-zà-ÿA-ZÀ-Ÿ]*/)?.[0] || ''
       const suffix = word.match(/[^a-zà-ÿA-ZÀ-Ÿ]*$/)?.[0] || ''
