@@ -5,7 +5,7 @@
 
 /** Normalise un texte : minuscule + supprime les accents */
 function normalize(str: string): string {
-  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/e?s?$/, '').trim()
 }
 
 // ============================================================
@@ -421,11 +421,12 @@ export function translateTitle(title: string): string {
   const words = result.split(/\s+/)
   const translated = words.map(word => {
     const clean = word.toLowerCase().replace(/[^a-zà-ÿ]/g, '')
-    if (WORDS[clean] !== undefined) {
-      // Préserver la ponctuation
+    const cleanNorm = normalize(clean)
+    const wordMatch = Object.entries(WORDS).find(([k]) => normalize(k) === cleanNorm)
+    if (wordMatch) {
       const prefix = word.match(/^[^a-zà-ÿA-ZÀ-Ÿ]*/)?.[0] || ''
       const suffix = word.match(/[^a-zà-ÿA-ZÀ-Ÿ]*$/)?.[0] || ''
-      return prefix + WORDS[clean] + suffix
+      return prefix + wordMatch[1] + suffix
     }
     return word
   })
