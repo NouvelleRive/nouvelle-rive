@@ -33,6 +33,7 @@ async function updateProductOnEbay(produitData: any): Promise<{ success: boolean
           title: ebayProduct.title,
           description: ebayProduct.description,
           imageUrls: ebayProduct.imageUrls.slice(0, 12),
+          aspects: ebayProduct.aspects,
         },
       },
     })
