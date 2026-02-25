@@ -12,6 +12,7 @@
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
   import { detectModele, getModelesForCategorie } from '@/lib/modeles'
+  import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -271,6 +272,9 @@ async function compressImage(file: File): Promise<string> {
     madeIn: string
     modele: string
     motif: string
+    bagLength?: string   // longueur cm
+    bagWidth?: string    // largeur cm
+    bagSizeName?: string // nom taille (Mini, PM, etc.)
     sku?: string
     // Nouvelles photos (File)
     photoFace: File | null
@@ -342,6 +346,9 @@ async function compressImage(file: File): Promise<string> {
       madeIn?: string
       modele?: string
       motif?: string
+      bagLength?: string
+      bagWidth?: string
+      bagSizeName?: string
       sku?: string
       photos?: ExistingPhotos
     }
@@ -437,6 +444,9 @@ async function compressImage(file: File): Promise<string> {
       madeIn: initialData?.madeIn || '',
       modele: initialData?.modele || '',
       motif: initialData?.motif || '',
+      bagLength: initialData?.bagLength || '',
+      bagWidth: initialData?.bagWidth || '',
+      bagSizeName: initialData?.bagSizeName || '',
       sku: initialData?.sku || '',
       photoFace: null,
       photoDos: null,
@@ -485,6 +495,9 @@ async function compressImage(file: File): Promise<string> {
           madeIn: initialData.madeIn || '',
           modele: initialData.modele || '',
           motif: initialData.motif || '',
+          bagLength: initialData.bagLength || '',
+          bagWidth: initialData.bagWidth || '',
+          bagSizeName: initialData.bagSizeName || '',
           sku: initialData.sku || '',
           photoFace: null,
           photoDos: null,
@@ -1640,6 +1653,62 @@ async function compressImage(file: File): Promise<string> {
                       <option key={i} value={m}>{m}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* Dimensions sac */}
+              {formData.categorie.toLowerCase().includes('sac') && (
+                <div className="col-span-2 md:col-span-4 grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Longueur (cm) *</label>
+                    <input
+                      type="number"
+                      value={formData.bagLength || ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        const updated = { ...formData, bagLength: val }
+                        const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(val) || 0, parseFloat(formData.bagWidth || '0') || 0)
+                        if (detected) {
+                          updated.bagSizeName = `${detected.model} ${detected.sizeName}`
+                          if (!formData.modele) updated.modele = detected.model
+                        } else {
+                          updated.bagSizeName = ''
+                        }
+                        setFormData(updated)
+                      }}
+                      className="w-full border rounded px-2 py-1.5 text-sm"
+                      placeholder="30"
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Largeur (cm) *</label>
+                    <input
+                      type="number"
+                      value={formData.bagWidth || ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        const updated = { ...formData, bagWidth: val }
+                        const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(formData.bagLength || '0') || 0, parseFloat(val) || 0)
+                        if (detected) {
+                          updated.bagSizeName = `${detected.model} ${detected.sizeName}`
+                          if (!formData.modele) updated.modele = detected.model
+                        } else {
+                          updated.bagSizeName = ''
+                        }
+                        setFormData(updated)
+                      }}
+                      className="w-full border rounded px-2 py-1.5 text-sm"
+                      placeholder="20"
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Taille détectée</label>
+                    <div className={`w-full border rounded px-2 py-1.5 text-sm ${formData.bagSizeName ? 'bg-green-50 border-green-300 text-green-700 font-medium' : 'bg-gray-100 text-gray-400'}`}>
+                      {formData.bagSizeName || '—'}
+                    </div>
+                  </div>
                 </div>
               )}
 
