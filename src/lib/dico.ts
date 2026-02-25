@@ -299,6 +299,7 @@ export const WORDS: Record<string, string> = {
   'pull': 'Sweater',
   'gilet': 'Vest',
   'chemise': 'Shirt',
+  'pâle': 'Pale',
   'chemisier': 'Blouse',
   'top': 'Top',
   'haut': 'Top',
