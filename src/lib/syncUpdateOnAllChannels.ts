@@ -2,9 +2,8 @@ import { prepareProductForEbay, wearTypeToGender, formatEbayTitle, buildProductA
 import { ebayApiCall, calculateEbayPrice, isEbayConfigured } from '@/lib/ebay/clients'
 import { getFirestore } from 'firebase-admin/firestore'
 
-const db = getFirestore()
-
 async function getGenderForProduct(produitData: any): Promise<EbayGender> {
+  const db = getFirestore()
   const trigramme = produitData.trigramme || produitData.sku?.match(/^([A-Z]{2,4})/i)?.[1]
   if (trigramme) {
     const chiSnap = await db.collection('chineuse').where('trigramme', '==', trigramme.toUpperCase()).limit(1).get()
