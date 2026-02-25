@@ -45,6 +45,9 @@
       material?: string
       color?: string
       modele?: string
+      bagLength?: string
+      bagWidth?: string
+      bagSizeName?: string
       madeIn?: string
       photos?: {
         face?: string
@@ -681,6 +684,9 @@
             taille: data.taille || '',
             material: data.material || '',
             color: data.color || '',
+            bagLength: data.bagLength || '',
+            bagWidth: data.bagWidth || '',
+            bagSizeName: data.bagSizeName || '',
             madeIn: data.madeIn || '',
             updatedAt: Timestamp.now(),
             // Si le prix baisse, on enregistre la date et l'ancien prix
@@ -1398,6 +1404,9 @@
                       taille: editingProduct.taille,
                       material: editingProduct.material,
                       modele: editingProduct.modele,
+                      bagLength: editingProduct.bagLength,
+                      bagWidth: editingProduct.bagWidth,
+                      bagSizeName: editingProduct.bagSizeName,
                       color: editingProduct.color,
                       madeIn: editingProduct.madeIn,
                       photos: editingProduct.photos,
