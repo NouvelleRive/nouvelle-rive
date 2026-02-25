@@ -286,8 +286,9 @@ exports.onProductReceived = functions
         const descChange = before.description !== after.description
         const imageChange = JSON.stringify(before.imageUrls || []) !== JSON.stringify(after.imageUrls || [])
         const photoChange = JSON.stringify(before.photos || {}) !== JSON.stringify(after.photos || {})
+        const aspectsChange = before.marque !== after.marque || before.taille !== after.taille || before.material !== after.material || before.color !== after.color || before.bagSizeName !== after.bagSizeName || before.madeIn !== after.madeIn || before.modele !== after.modele
 
-        if (prixChange || nomChange || descChange || imageChange || photoChange) {
+        if (prixChange || nomChange || descChange || imageChange || photoChange || aspectsChange) {
           try {
             const siteUrl = 'https://nouvellerive.eu'
             const fetch = require('node-fetch')
