@@ -201,7 +201,7 @@ function getBagStyle(modele?: string): string {
 /**
  * Trouve la catégorie eBay à partir de la catégorie/sous-catégorie Firebase et du genre
  */
-function findEbayCategoryFromFirebase(
+export function findEbayCategoryFromFirebase(
   categoryId?: string,
   sousCat?: string,
   gender: EbayGender = 'women'
@@ -279,7 +279,7 @@ async function ensureMerchantLocation(): Promise<void> {
  * Prépare le titre pour eBay (max 80 caractères)
  * Format SEO: "Vintage MARQUE Type Matière Couleur Taille Genre"
  */
-function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
+export function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
   // 1. Enlever le SKU du début
   let cleanedTitle = produit.title.replace(/^[A-Z]{2,4}\d+\s*[-–]\s*/i, '')
 
@@ -351,7 +351,7 @@ function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
 /**
  * Prépare la description HTML pour eBay
  */
-function formatEbayDescription(description: string, produit: Partial<EbayProduct>): string {
+export function formatEbayDescription(description: string, produit: Partial<EbayProduct>): string {
   const parts: string[] = []
   
   parts.push('<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">')
@@ -395,7 +395,7 @@ function formatEbayDescription(description: string, produit: Partial<EbayProduct
 /**
  * Construit les aspects (attributs) du produit selon la catégorie eBay et le genre
  */
-function buildProductAspects(produit: EbayProduct, categoryType: string, gender: EbayGender): Record<string, string[]> {
+export function buildProductAspects(produit: EbayProduct, categoryType: string, gender: EbayGender): Record<string, string[]> {
   const aspects: Record<string, string[]> = {}
   const department = gender === 'men' ? 'Men' : 'Women'
 

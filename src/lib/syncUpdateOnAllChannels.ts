@@ -1,4 +1,4 @@
-import { prepareProductForEbay, wearTypeToGender, type EbayGender } from '@/lib/ebay'
+import { prepareProductForEbay, wearTypeToGender, formatEbayTitle, buildProductAspects, findEbayCategoryFromFirebase, formatEbayDescription, type EbayGender } from '@/lib/ebay'
 import { ebayApiCall, calculateEbayPrice, isEbayConfigured } from '@/lib/ebay/clients'
 import { getFirestore } from 'firebase-admin/firestore'
 
@@ -23,6 +23,7 @@ async function updateProductOnEbay(produitData: any): Promise<{ success: boolean
 
     const gender = await getGenderForProduct(produitData)
     const ebayProduct = prepareProductForEbay(produitData, gender)
+    const ebayCategory = findEbayCategoryFromFirebase(ebayProduct.categoryId, ebayProduct.sousCat, gender)
 
     await ebayApiCall(`/sell/inventory/v1/inventory_item/${ebayProduct.sku}`, {
       method: 'PUT',
@@ -31,10 +32,10 @@ async function updateProductOnEbay(produitData: any): Promise<{ success: boolean
         condition: 'USED_EXCELLENT',
         conditionDescription: 'Excellent vintage condition. Carefully inspected and curated from our Paris boutique.',
         product: {
-          title: ebayProduct.title,
-          description: ebayProduct.description,
+          title: formatEbayTitle(ebayProduct, gender),
+          description: formatEbayDescription(ebayProduct.description, ebayProduct),
           imageUrls: ebayProduct.imageUrls.slice(0, 12),
-          aspects: ebayProduct.aspects,
+          aspects: buildProductAspects(ebayProduct, ebayCategory.type, gender),
         },
       },
     })
