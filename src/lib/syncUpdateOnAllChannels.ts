@@ -29,6 +29,7 @@ async function updateProductOnEbay(produitData: any): Promise<{ success: boolean
       body: {
         availability: { shipToLocationAvailability: { quantity: produitData.quantite || 1 } },
         condition: 'USED_EXCELLENT',
+        conditionDescription: 'Excellent vintage condition. Carefully inspected and curated from our Paris boutique.',
         product: {
           title: ebayProduct.title,
           description: ebayProduct.description,
