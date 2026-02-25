@@ -1,4 +1,4 @@
-import { prepareProductForEbay, wearTypeToGender, formatEbayTitle, buildProductAspects, findEbayCategoryFromFirebase, formatEbayDescription, type EbayGender } from '@/lib/ebay'
+import { prepareProductForEbay, wearTypeToGender, formatEbayTitle, buildProductAspects, findEbayCategoryFromFirebase, formatEbayDescription, type EbayGender } from '@/lib/ebay/publish'
 import { ebayApiCall, calculateEbayPrice, isEbayConfigured } from '@/lib/ebay/clients'
 import { getFirestore } from 'firebase-admin/firestore'
 
