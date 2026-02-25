@@ -722,64 +722,36 @@
           if (detailsUrls.length > 0) updateData['photos.details'] = detailsUrls
           else updateData['photos.details'] = deleteField()
 
-          // Reconstruire imageUrls selon l'ordre défini par photoOrder
+          // Reconstruire imageUrls — TOUJOURS depuis photoOrder ou fallback
+          const finalUrls: string[] = []
+          
           if (data.photoOrder && data.photoOrder.length > 0) {
-            const orderedUrls: string[] = []
-            const existingDetailsKept = (editingProduct.photos?.details || [])
-              .filter((_, i) => !data.deletedPhotos.detailsIndexes?.includes(i))
-            const newDetailsStartIndex = existingDetailsKept.length
             for (const item of data.photoOrder) {
-              if (item.url) {
-                // Pour les nouvelles photos, on doit utiliser les URLs uploadées
-                if (item.id === 'photo-face' && faceUrl) orderedUrls.push(faceUrl)
-                else if (item.id === 'photo-dos' && dosUrl) orderedUrls.push(dosUrl)
-                else if (item.id === 'photo-faceOnModel' && faceOnModelUrl) orderedUrls.push(faceOnModelUrl)
-                else if (item.id === 'photo-dosOnModel' && dosOnModelUrl) orderedUrls.push(dosOnModelUrl)
-                else if (item.id.startsWith('photo-detail-')) {
-                  if (item.url && detailsUrls.includes(item.url)) {
-                    orderedUrls.push(item.url)
-                  }
-                }
-              }
-            }
-            if (orderedUrls.length > 0) {
-              updateData.imageUrls = orderedUrls
-              updateData.imageUrl = orderedUrls[0] // La première = image principale
-            }
-            
-            // Réordonner les détails selon photoOrder
-            const reorderedDetails: string[] = []
-            for (const item of data.photoOrder) {
-              if (item.id.startsWith('photo-detail-') && item.url && detailsUrls.includes(item.url)) {
-                reorderedDetails.push(item.url)
-              }
-            }
-            detailsUrls.forEach(url => {
-              if (!reorderedDetails.includes(url)) reorderedDetails.push(url)
-            })
-            detailsUrls = reorderedDetails
-            if (detailsUrls.length > 0) updateData['photos.details'] = detailsUrls
-
-            // S'assurer que toutes les photos détails sont dans imageUrls
-            detailsUrls.forEach(url => {
-              if (!updateData.imageUrls?.includes(url)) {
-                updateData.imageUrls = [...(updateData.imageUrls || []), url]
-              }
-            })
-
-          } else {
-            // Fallback : construire imageUrls dans l'ordre par défaut
-            const defaultUrls: string[] = []
-            if (faceUrl) defaultUrls.push(faceUrl)
-            if (faceOnModelUrl) defaultUrls.push(faceOnModelUrl)
-            if (dosUrl) defaultUrls.push(dosUrl)
-            if (dosOnModelUrl) defaultUrls.push(dosOnModelUrl)
-            defaultUrls.push(...detailsUrls)
-            if (defaultUrls.length > 0) {
-              updateData.imageUrls = defaultUrls
-              updateData.imageUrl = defaultUrls[0]
+              let url: string | undefined
+              if (item.id === 'photo-face') url = faceUrl
+              else if (item.id === 'photo-dos') url = dosUrl
+              else if (item.id === 'photo-faceOnModel') url = faceOnModelUrl
+              else if (item.id === 'photo-dosOnModel') url = dosOnModelUrl
+              else if (item.id.startsWith('photo-detail-')) url = item.url
+              if (url && !finalUrls.includes(url)) finalUrls.push(url)
             }
           }
+          
+          // Fallback : ajouter les photos manquantes dans l'ordre par défaut
+          const allPhotos = [faceUrl, faceOnModelUrl, dosUrl, dosOnModelUrl, ...detailsUrls].filter(Boolean) as string[]
+          for (const url of allPhotos) {
+            if (!finalUrls.includes(url)) finalUrls.push(url)
+          }
+          
+          if (finalUrls.length > 0) {
+            updateData.imageUrls = finalUrls
+            updateData.imageUrl = finalUrls[0]
+          }
+          
+          // Réordonner photos.details selon l'ordre dans finalUrls
+          const reorderedDetails = finalUrls.filter(url => detailsUrls.includes(url))
+          if (reorderedDetails.length > 0) updateData['photos.details'] = reorderedDetails
+          else if (detailsUrls.length === 0) updateData['photos.details'] = deleteField()
           
           await updateDoc(doc(db, 'produits', productId), updateData)
 
