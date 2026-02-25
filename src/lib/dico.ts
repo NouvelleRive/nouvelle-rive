@@ -81,6 +81,9 @@ export const MATERIALS: Record<string, string> = {
 
   // Autres
   'toile': 'Canvas',
+  'toile oblique': 'Oblique Canvas',
+  'toile monogram': 'Monogram Canvas',
+  'toile monogrammée': 'Monogram Canvas',
   'jean': 'Denim',
   'denim': 'Denim',
   'fourrure': 'Fur',
