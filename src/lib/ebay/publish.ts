@@ -380,7 +380,7 @@ function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
   // 3. Extraire première matière et première couleur (avant la virgule)
   const material = produit.material ? produit.material.split(',')[0].trim() : ''
   const color = produit.color ? produit.color.split(',')[0].trim() : ''
-  const size = (produit.size && produit.size !== 'Taille unique') ? produit.size : ''
+  const size = produit.bagSizeName || ((produit.size && produit.size !== 'Taille unique') ? produit.size : '')
   const genderLabel = gender === 'men' ? "Men's" : "Women's"
 
   // 4. Vérifier les doublons (ne pas ajouter si déjà dans le titre)
@@ -490,7 +490,7 @@ function buildProductAspects(produit: EbayProduct, categoryType: string, gender:
       // Sacs et pochettes
       aspects['Department'] = [department]
       aspects['Style'] = [getBagStyle(produit.modele)]
-      aspects['Size'] = ['Medium']
+      aspects['Size'] = [produit.bagSizeName || 'One Size']
       aspects['Exterior Material'] = [translateMaterial(produit.material || 'Leather')]
       aspects['Closure'] = ['Zip']
       aspects['Handmade'] = ['No']
