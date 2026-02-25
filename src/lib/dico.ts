@@ -345,6 +345,16 @@ export const WORDS: Record<string, string> = {
   'motif': 'Pattern',
   'motifs': 'Pattern',
   'léger': 'Light',
+  'longue': 'Long',
+  'brillant': 'Shiny',
+  'glacé': 'Glossy',
+  'iconique': 'iconic',
+  'bandes': 'Stripes',
+  'rayures': 'Striped',
+  'cargo': 'Cargo',
+  'bomber': 'Bomber',
+  'bombers': 'Bomber',
+  'polo': 'Polo',
   'mélangé': 'Blend',
   'rayé': 'Striped',
   'imprimé': 'Printed',
@@ -436,7 +446,11 @@ export function translateTitle(title: string): string {
     const normPhrase = normalize(phrase)
     const idx = normResult.indexOf(normPhrase)
     if (idx !== -1) {
-      result = result.substring(0, idx) + allPhrases[phrase] + result.substring(idx + phrase.length)
+      const before = idx === 0 || normResult[idx - 1] === ' '
+      const after = idx + normPhrase.length >= normResult.length || normResult[idx + normPhrase.length] === ' '
+      if (before && after) {
+        result = result.substring(0, idx) + allPhrases[phrase] + result.substring(idx + phrase.length)
+      }
     }
   }
 
