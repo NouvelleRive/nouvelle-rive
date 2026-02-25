@@ -22,4 +22,12 @@ export const COLOR_PALETTE = [
   { name: 'Doré', hex: '#C5A048' },
   { name: 'Argenté', hex: '#A8A8A8' },
   { name: 'Multicolore', hex: 'linear-gradient(135deg, #FF6B6B, #4ECDC4, #FFE66D, #A06CD5)' },
+  { name: 'Bleu', hex: '#2563EB' },
+  { name: 'Crème', hex: '#FFFDD0' },
+  { name: 'Taupe', hex: '#8B7D6B' },
+  { name: 'Corail', hex: '#FF7F50' },
+  { name: 'Turquoise', hex: '#40E0D0' },
+  { name: 'Nude', hex: '#E3BC9A' },
+  { name: 'Rouille', hex: '#B7410E' },
+  { name: 'Lavande', hex: '#B57EDC' },
 ]
