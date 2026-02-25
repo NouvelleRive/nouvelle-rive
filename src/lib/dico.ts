@@ -219,6 +219,7 @@ export const PRODUCT_TYPES: Record<string, string> = {
   'cardigan': 'Cardigan',
   'débardeur': 'Tank Top',
   'chemisier': 'Blouse',
+  'veste tailleur': 'Tailored Jacket',
 
   // Vêtements bas
   'jupe crayon': 'Pencil Skirt',
@@ -301,6 +302,7 @@ export const WORDS: Record<string, string> = {
   'chemisier': 'Blouse',
   'top': 'Top',
   'haut': 'Top',
+  'tailleur': 'Tailored',
   'sac': 'Bag',
   'ceinture': 'Belt',
   'écharpe': 'Scarf',
