@@ -1612,7 +1612,7 @@ async function compressImage(file: File): Promise<string> {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Largeur (cm) *</label>
+                  <label className="block text-sm font-medium mb-1">Hauteur (cm) *</label>
                   <input
                     type="number"
                     value={formData.bagWidth || ''}
