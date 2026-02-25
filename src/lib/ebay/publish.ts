@@ -51,6 +51,8 @@ function translateTitle(title: string): string {
     'col roulé': 'Turtleneck', 'col V': 'V-Neck',
     'taille haute': 'High Waist', 'taille basse': 'Low Rise',
     'veste en jean': 'Denim Jacket',
+    'sac à main': 'Handbag', 'sac à dos': 'Backpack', 'sac à bandoulière': 'Crossbody Bag',
+    'sac seau': 'Bucket Bag', 'sac cabas': 'Tote Bag', 'sac banane': 'Belt Bag',
   }
   for (const [fr, en] of Object.entries(PHRASES)) {
     t = t.replace(new RegExp(fr, 'gi'), en)
@@ -378,7 +380,7 @@ function formatEbayTitle(produit: EbayProduct, gender: EbayGender): string {
   // 3. Extraire première matière et première couleur (avant la virgule)
   const material = produit.material ? produit.material.split(',')[0].trim() : ''
   const color = produit.color ? produit.color.split(',')[0].trim() : ''
-  const size = produit.size || ''
+  const size = (produit.size && produit.size !== 'Taille unique') ? produit.size : ''
   const genderLabel = gender === 'men' ? "Men's" : "Women's"
 
   // 4. Vérifier les doublons (ne pas ajouter si déjà dans le titre)
