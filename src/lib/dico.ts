@@ -277,6 +277,8 @@ export const PRODUCT_TYPES: Record<string, string> = {
   'broche': 'Brooch',
   'barrette': 'Hair Clip',
   'bandeau': 'Headband',
+  'à motif': 'Patterned',
+  'à motifs': 'Patterned',
 }
 
 // ============================================================
@@ -329,6 +331,12 @@ export const WORDS: Record<string, string> = {
   'avec': 'with',
   'et': 'and',
   'sans': 'without',
+  'à': '',
+  'très': '',
+  'col': 'Collar',
+  'motif': 'Pattern',
+  'motifs': 'Pattern',
+  'léger': 'Light',
   'petit': 'Small',
   'grand': 'Large',
   'long': 'Long',
