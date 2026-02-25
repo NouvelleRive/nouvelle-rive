@@ -3,6 +3,11 @@
  * Utilisé par eBay, Depop, Etsy, Google Shopping, etc.
  */
 
+/** Normalise un texte : minuscule + supprime les accents */
+function normalize(str: string): string {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+}
+
 // ============================================================
 // MATIÈRES
 // ============================================================
@@ -358,23 +363,16 @@ export const EBAY_CATEGORIES: Record<string, string> = {
  */
 export function translateMaterial(material: string): string {
   if (!material) return ''
-  const lower = material.toLowerCase().trim()
+  const norm = normalize(material)
 
-  // Match exact composé d'abord
-  if (MATERIALS[lower]) return MATERIALS[lower]
-
-  // Match partiel : cherche les clés les plus longues d'abord
   const sortedKeys = Object.keys(MATERIALS).sort((a, b) => b.length - a.length)
   for (const key of sortedKeys) {
-    if (lower.includes(key)) {
+    if (norm.includes(normalize(key))) {
       return MATERIALS[key]
     }
   }
 
-  // Si le mot commence par une majuscule et n'est pas dans le dico,
-  // c'est peut-être déjà en anglais
   if (material[0] === material[0].toUpperCase()) return material
-
   return material
 }
 
@@ -383,14 +381,11 @@ export function translateMaterial(material: string): string {
  */
 export function translateColor(color: string): string {
   if (!color) return ''
-  const lower = color.toLowerCase().trim()
+  const norm = normalize(color)
 
-  if (COLORS[lower]) return COLORS[lower]
-
-  // Match partiel
   const sortedKeys = Object.keys(COLORS).sort((a, b) => b.length - a.length)
   for (const key of sortedKeys) {
-    if (lower.includes(key)) {
+    if (norm.includes(normalize(key))) {
       return COLORS[key]
     }
   }
@@ -412,8 +407,12 @@ export function translateTitle(title: string): string {
   const sortedPhrases = Object.keys(allPhrases).sort((a, b) => b.length - a.length)
 
   for (const phrase of sortedPhrases) {
-    const regex = new RegExp(phrase, 'gi')
-    result = result.replace(regex, allPhrases[phrase])
+    const normResult = normalize(result)
+    const normPhrase = normalize(phrase)
+    const idx = normResult.indexOf(normPhrase)
+    if (idx !== -1) {
+      result = result.substring(0, idx) + allPhrases[phrase] + result.substring(idx + phrase.length)
+    }
   }
 
   // 2. Remplacer les mots individuels
