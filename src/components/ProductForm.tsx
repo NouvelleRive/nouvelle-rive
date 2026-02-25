@@ -1584,6 +1584,64 @@ async function compressImage(file: File): Promise<string> {
                 />
               </div>
             </div>
+
+            {/* Dimensions sac (obligatoire) */}
+            {formData.categorie.toLowerCase().includes('sac') && (
+              <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Longueur (cm) *</label>
+                  <input
+                    type="number"
+                    value={formData.bagLength || ''}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      const updated = { ...formData, bagLength: val }
+                      const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(val) || 0, parseFloat(formData.bagWidth || '0') || 0)
+                      if (detected) {
+                        updated.bagSizeName = `${detected.model} ${detected.sizeName}`
+                        if (!formData.modele) updated.modele = detected.model
+                      } else {
+                        updated.bagSizeName = ''
+                      }
+                      setFormData(updated)
+                    }}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                    placeholder="30"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Largeur (cm) *</label>
+                  <input
+                    type="number"
+                    value={formData.bagWidth || ''}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      const updated = { ...formData, bagWidth: val }
+                      const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(formData.bagLength || '0') || 0, parseFloat(val) || 0)
+                      if (detected) {
+                        updated.bagSizeName = `${detected.model} ${detected.sizeName}`
+                        if (!formData.modele) updated.modele = detected.model
+                      } else {
+                        updated.bagSizeName = ''
+                      }
+                      setFormData(updated)
+                    }}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                    placeholder="20"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Taille détectée</label>
+                  <div className={`w-full border rounded px-2 py-1.5 text-sm ${formData.bagSizeName ? 'bg-green-50 border-green-300 text-green-700 font-medium' : 'bg-gray-100 text-gray-400'}`}>
+                    {formData.bagSizeName || '—'}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* CHAMPS OPTIONNELS */}
@@ -1656,62 +1714,6 @@ async function compressImage(file: File): Promise<string> {
                       <option key={i} value={m}>{m}</option>
                     ))}
                   </select>
-                </div>
-              )}
-
-              {/* Dimensions sac */}
-              {formData.categorie.toLowerCase().includes('sac') && (
-                <div className="col-span-2 md:col-span-4 grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Longueur (cm) *</label>
-                    <input
-                      type="number"
-                      value={formData.bagLength || ''}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        const updated = { ...formData, bagLength: val }
-                        const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(val) || 0, parseFloat(formData.bagWidth || '0') || 0)
-                        if (detected) {
-                          updated.bagSizeName = `${detected.model} ${detected.sizeName}`
-                          if (!formData.modele) updated.modele = detected.model
-                        } else {
-                          updated.bagSizeName = ''
-                        }
-                        setFormData(updated)
-                      }}
-                      className="w-full border rounded px-2 py-1.5 text-sm"
-                      placeholder="30"
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Largeur (cm) *</label>
-                    <input
-                      type="number"
-                      value={formData.bagWidth || ''}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        const updated = { ...formData, bagWidth: val }
-                        const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(formData.bagLength || '0') || 0, parseFloat(val) || 0)
-                        if (detected) {
-                          updated.bagSizeName = `${detected.model} ${detected.sizeName}`
-                          if (!formData.modele) updated.modele = detected.model
-                        } else {
-                          updated.bagSizeName = ''
-                        }
-                        setFormData(updated)
-                      }}
-                      className="w-full border rounded px-2 py-1.5 text-sm"
-                      placeholder="20"
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Taille détectée</label>
-                    <div className={`w-full border rounded px-2 py-1.5 text-sm ${formData.bagSizeName ? 'bg-green-50 border-green-300 text-green-700 font-medium' : 'bg-gray-100 text-gray-400'}`}>
-                      {formData.bagSizeName || '—'}
-                    </div>
-                  </div>
                 </div>
               )}
 
