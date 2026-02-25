@@ -8,7 +8,7 @@
   import * as XLSX from 'xlsx'
   import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
-  import { COLOR_PALETTE } from '@/lib/couleurs'
+  import { COLOR_PALETTE, getColorsPrioritized } from '@/lib/couleurs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
   import { detectModele, getModelesForCategorie } from '@/lib/modeles'
@@ -604,6 +604,9 @@ async function compressImage(file: File): Promise<string> {
     const taillesDisponibles = getTaillesPourCategorie(formData.categorie)
     const matieresDisponibles = getMatieresForCategorie(formData.categorie)
     const modelesDisponibles = getModelesForCategorie(formData.categorie)
+    const { priority: priorityColors, others: otherColors } = getColorsPrioritized(formData.categorie)
+    const [showAllColors, setShowAllColors] = useState(false)
+    const displayedColors = showAllColors ? [...priorityColors, ...otherColors] : priorityColors
 
     // Catégories à afficher
     const displayCategories = isAdmin && selectedChineuse 
@@ -1714,8 +1717,8 @@ async function compressImage(file: File): Promise<string> {
 
               <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Couleur</label>
-                <div className="grid grid-cols-7 md:grid-cols-11 gap-1.5 py-2">
-                  {COLOR_PALETTE.map((c) => (
+                <div className="flex flex-wrap gap-1.5 py-2">
+                  {displayedColors.map((c) => (
                     <button
                       key={c.name}
                       type="button"
@@ -1731,12 +1734,12 @@ async function compressImage(file: File): Promise<string> {
                       }`}
                       style={{ 
                         background: c.hex.startsWith('linear') ? c.hex : c.hex,
-                        boxShadow: c.name === 'Blanc' ? 'inset 0 0 0 1px #ddd' : undefined
+                        boxShadow: c.name === 'Blanc' || c.name === 'Ivoire' || c.name === 'Crème' ? 'inset 0 0 0 1px #ddd' : undefined
                       }}
                     >
                       {formData.color.split(', ').includes(c.name) && (
                         <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
-                          ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet'].includes(c.name) 
+                          ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet', 'Prune', 'Aubergine'].includes(c.name) 
                             ? 'text-white' 
                             : 'text-gray-800'
                         }`}>
@@ -1748,6 +1751,24 @@ async function compressImage(file: File): Promise<string> {
                       </span>
                     </button>
                   ))}
+                  {!showAllColors && otherColors.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllColors(true)}
+                      className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition text-xs font-bold"
+                    >
+                      +
+                    </button>
+                  )}
+                  {showAllColors && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllColors(false)}
+                      className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition text-xs font-bold"
+                    >
+                      −
+                    </button>
+                  )}
                 </div>
                 {formData.color && (
                   <p className="text-xs text-[#22209C] mt-1.5 font-medium">{formData.color}</p>
