@@ -281,7 +281,7 @@ export default function CreateurPage() {
         </div>
 
         {/* Image */}
-        <div className="aspect-square md:aspect-auto md:max-h-[600px] bg-gray-50 overflow-hidden order-1 md:order-2">
+        <div className="aspect-square bg-gray-50 overflow-hidden order-1 md:order-2">
           {creatrice.imageUrl ? (
             <img
               src={creatrice.imageUrl}
