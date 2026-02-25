@@ -853,6 +853,7 @@ conditionDescription: 'Excellent vintage condition. Carefully inspected and cura
     size: firebaseProduct.taille,
     modele: firebaseProduct.modele || '',
     bagSizeName: firebaseProduct.bagSizeName || '',
+    bagHeight: firebaseProduct.bagHeight || '',
   }
 }
 

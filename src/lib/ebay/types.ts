@@ -53,6 +53,7 @@ export interface EbayProduct {
   size?: string
   modele?: string  // Modèle du produit (ex: Blazer, Mini, Bandoulière)
   bagSizeName?: string  // Taille détectée du sac (ex: Speedy 30, Classic Flap Medium)
+  bagHeight?: string    // Hauteur cm
   
   // Shipping
   weightGrams?: number

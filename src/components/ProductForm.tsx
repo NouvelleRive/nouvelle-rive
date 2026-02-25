@@ -273,7 +273,7 @@ async function compressImage(file: File): Promise<string> {
     modele: string
     motif: string
     bagLength?: string   // longueur cm
-    bagWidth?: string    // largeur cm
+    bagHeight?: string    // largeur cm
     bagSizeName?: string // nom taille (Mini, PM, etc.)
     sku?: string
     // Nouvelles photos (File)
@@ -347,7 +347,7 @@ async function compressImage(file: File): Promise<string> {
       modele?: string
       motif?: string
       bagLength?: string
-      bagWidth?: string
+      bagHeight?: string
       bagSizeName?: string
       sku?: string
       photos?: ExistingPhotos
@@ -445,7 +445,7 @@ async function compressImage(file: File): Promise<string> {
       modele: initialData?.modele || '',
       motif: initialData?.motif || '',
       bagLength: initialData?.bagLength || '',
-      bagWidth: initialData?.bagWidth || '',
+      bagHeight: initialData?.bagHeight || '',
       bagSizeName: initialData?.bagSizeName || '',
       sku: initialData?.sku || '',
       photoFace: null,
@@ -496,7 +496,7 @@ async function compressImage(file: File): Promise<string> {
           modele: initialData.modele || '',
           motif: initialData.motif || '',
           bagLength: initialData.bagLength || '',
-          bagWidth: initialData.bagWidth || '',
+          bagHeight: initialData.bagHeight || '',
           bagSizeName: initialData.bagSizeName || '',
           sku: initialData.sku || '',
           photoFace: null,
@@ -1596,7 +1596,7 @@ async function compressImage(file: File): Promise<string> {
                     onChange={(e) => {
                       const val = e.target.value
                       const updated = { ...formData, bagLength: val }
-                      const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(val) || 0, parseFloat(formData.bagWidth || '0') || 0)
+                      const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(val) || 0, parseFloat(formData.bagHeight || '0') || 0)
                       if (detected) {
                         updated.bagSizeName = `${detected.model} ${detected.sizeName}`
                         if (!formData.modele) updated.modele = detected.model
@@ -1615,10 +1615,10 @@ async function compressImage(file: File): Promise<string> {
                   <label className="block text-sm font-medium mb-1">Hauteur (cm) *</label>
                   <input
                     type="number"
-                    value={formData.bagWidth || ''}
+                    value={formData.bagHeight || ''}
                     onChange={(e) => {
                       const val = e.target.value
-                      const updated = { ...formData, bagWidth: val }
+                      const updated = { ...formData, bagHeight: val }
                       const detected = detectBagSizeName(formData.marque, formData.modele, parseFloat(formData.bagLength || '0') || 0, parseFloat(val) || 0)
                       if (detected) {
                         updated.bagSizeName = `${detected.model} ${detected.sizeName}`
