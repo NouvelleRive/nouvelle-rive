@@ -1714,7 +1714,7 @@ async function compressImage(file: File): Promise<string> {
 
               <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Couleur</label>
-                <div className="grid grid-cols-7 md:grid-cols-11 gap-1.5 pb-8 relative">
+                <div className="grid grid-cols-7 md:grid-cols-11 gap-1.5 py-2">
                   {COLOR_PALETTE.map((c) => (
                     <button
                       key={c.name}
@@ -1743,7 +1743,7 @@ async function compressImage(file: File): Promise<string> {
                           ✓
                         </span>
                       )}
-                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                      <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                         {c.name}
                       </span>
                     </button>
