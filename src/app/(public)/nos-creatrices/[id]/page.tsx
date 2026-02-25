@@ -281,12 +281,12 @@ export default function CreateurPage() {
         </div>
 
         {/* Image */}
-        <div className="aspect-square bg-gray-50 overflow-hidden order-1 md:order-2">
+        <div className="aspect-square md:aspect-auto md:min-h-[500px] bg-gray-50 overflow-hidden order-1 md:order-2">
           {creatrice.imageUrl ? (
             <img
               src={creatrice.imageUrl}
               alt={creatrice.nom}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               onError={(e: any) => {
                 e.currentTarget.style.display = 'none'
               }}
