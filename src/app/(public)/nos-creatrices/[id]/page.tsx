@@ -286,7 +286,7 @@ export default function CreateurPage() {
             <img
               src={creatrice.imageUrl}
               alt={creatrice.nom}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               onError={(e: any) => {
                 e.currentTarget.style.display = 'none'
               }}
