@@ -272,6 +272,11 @@ async function compressImage(file: File): Promise<string> {
     madeIn: string
     modele: string
     motif: string
+    sleeveLength: string
+    collarType: string
+    garmentLength: string
+    closureType: string
+    shoeType: string
     bagLength?: string   // longueur cm
     bagHeight?: string    // largeur cm
     bagSizeName?: string // nom taille (Mini, PM, etc.)
@@ -346,6 +351,11 @@ async function compressImage(file: File): Promise<string> {
       madeIn?: string
       modele?: string
       motif?: string
+      sleeveLength?: string
+      collarType?: string
+      garmentLength?: string
+      closureType?: string
+      shoeType?: string
       bagLength?: string
       bagHeight?: string
       bagSizeName?: string
@@ -445,6 +455,11 @@ async function compressImage(file: File): Promise<string> {
       madeIn: initialData?.madeIn || '',
       modele: initialData?.modele || '',
       motif: initialData?.motif || '',
+      sleeveLength: initialData?.sleeveLength || '',
+      collarType: initialData?.collarType || '',
+      garmentLength: initialData?.garmentLength || '',
+      closureType: initialData?.closureType || '',
+      shoeType: initialData?.shoeType || '',
       bagLength: initialData?.bagLength || '',
       bagHeight: initialData?.bagHeight || '',
       bagSizeName: initialData?.bagSizeName || '',
@@ -496,6 +511,11 @@ async function compressImage(file: File): Promise<string> {
           madeIn: initialData.madeIn || '',
           modele: initialData.modele || '',
           motif: initialData.motif || '',
+          sleeveLength: initialData.sleeveLength || '',
+          collarType: initialData.collarType || '',
+          garmentLength: initialData.garmentLength || '',
+          closureType: initialData.closureType || '',
+          shoeType: initialData.shoeType || '',
           bagLength: initialData.bagLength || '',
           bagHeight: initialData.bagHeight || '',
           bagSizeName: initialData.bagSizeName || '',
@@ -723,7 +743,12 @@ async function compressImage(file: File): Promise<string> {
     }
 
     // Analyser produit avec IA (couleur, motif, modèle, description)
-    const analyzeProduct = async (imageUrl: string): Promise<{couleur?: string, motif?: string, modele?: string, descriptions?: {fr: string, en: string}} | null> => {
+    const analyzeProduct = async (imageUrl: string): Promise<{
+      couleur?: string, motif?: string, modele?: string,
+      sleeveLength?: string, collarType?: string, garmentLength?: string,
+      closureType?: string, shoeType?: string,
+      descriptions?: {fr: string, en: string}
+    } | null> => {
       setGeneratingDesc(true)
       try {
         const response = await fetch('/api/analyze-product', {
@@ -1304,19 +1329,6 @@ async function compressImage(file: File): Promise<string> {
           return
         }
       }
-      
-      // Si description vide → générer avec IA + popup
-      if (!formData.description.trim() && formData.nom) {
-        const imageUrl = formData.existingPhotos.face
-        if (imageUrl) {
-          const result = await analyzeProduct(imageUrl)
-          if (result?.descriptions) {
-            if (result.couleur && !formData.color) setFormData(prev => ({ ...prev, color: result.couleur! }))
-            setSuggestedDesc(result.descriptions)
-            return // Attendre validation du popup
-          }
-        }
-      }
 
       await onSubmit({
         ...formData,
@@ -1788,40 +1800,96 @@ async function compressImage(file: File): Promise<string> {
                 )}
               </div>
 
+              {/* Bouton préremplissage IA */}
               <div className="col-span-2 md:col-span-4">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs text-gray-600">Description</label>
-                 <button
-                    type="button"
-                    onClick={async () => {
-                      const imageUrl = formData.existingPhotos.face
-                      if (!imageUrl) {
-                        alert('Ajoutez une photo face d\'abord')
-                        return
-                      }
-                      const result = await analyzeProduct(imageUrl)
-                      if (result) {
-                        if (result.couleur) setFormData(prev => ({ ...prev, color: result.couleur! }))
-                        if (result.descriptions) {
-                          const combined = `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}`
-                          setFormData(prev => ({ ...prev, description: combined }))
-                        }
-                      } else {
-                        alert('Erreur lors de l\'analyse')
-                      }
-                    }}
-                    disabled={generatingDesc || !formData.nom}
-                    className="text-xs text-[#22209C] hover:underline disabled:opacity-40 disabled:no-underline flex items-center gap-1"
-                  >
-                    {generatingDesc ? '⏳ Rédaction...' : '✍️ Rédiger'}
-                  </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const imageUrl = formData.existingPhotos.face
+                    if (!imageUrl) {
+                      alert('Ajoutez une photo face d\'abord')
+                      return
+                    }
+                    if (!formData.categorie) {
+                      alert('Sélectionnez une catégorie d\'abord')
+                      return
+                    }
+                    const result = await analyzeProduct(imageUrl)
+                    if (result) {
+                      setFormData(prev => ({
+                        ...prev,
+                        ...(result.couleur && !prev.color ? { color: result.couleur } : {}),
+                        ...(result.motif ? { motif: result.motif } : {}),
+                        ...(result.modele ? { modele: result.modele } : {}),
+                        ...(result.sleeveLength ? { sleeveLength: result.sleeveLength } : {}),
+                        ...(result.collarType ? { collarType: result.collarType } : {}),
+                        ...(result.garmentLength ? { garmentLength: result.garmentLength } : {}),
+                        ...(result.closureType ? { closureType: result.closureType } : {}),
+                        ...(result.shoeType ? { shoeType: result.shoeType } : {}),
+                        ...(result.descriptions ? { description: `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}` } : {}),
+                      }))
+                    } else {
+                      alert('Erreur lors de l\'analyse')
+                    }
+                  }}
+                  disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}
+                  className="w-full py-2.5 border-2 border-dashed border-[#22209C] text-[#22209C] rounded-lg font-medium hover:bg-[#22209C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                >
+                  {generatingDesc ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#22209C]"></div>
+                      Analyse en cours...
+                    </>
+                  ) : (
+                    <>🤖 Préremplir les champs secondaires</>
+                  )}
+                </button>
+                {!formData.existingPhotos.face && (
+                  <p className="text-xs text-gray-400 mt-1">Photo face requise</p>
+                )}
+              </div>
+
+              {/* Champs secondaires détectés par IA */}
+              {formData.sleeveLength && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Manches</label>
+                  <input type="text" value={formData.sleeveLength} onChange={(e) => setFormData({ ...formData, sleeveLength: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
                 </div>
+              )}
+              {formData.collarType && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Col</label>
+                  <input type="text" value={formData.collarType} onChange={(e) => setFormData({ ...formData, collarType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+              {formData.garmentLength && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Longueur</label>
+                  <input type="text" value={formData.garmentLength} onChange={(e) => setFormData({ ...formData, garmentLength: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+              {formData.closureType && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Fermeture</label>
+                  <input type="text" value={formData.closureType} onChange={(e) => setFormData({ ...formData, closureType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+              {formData.shoeType && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Type chaussure</label>
+                  <input type="text" value={formData.shoeType} onChange={(e) => setFormData({ ...formData, shoeType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+
+              {/* Description */}
+              <div className="col-span-2 md:col-span-4">
+                <label className="block text-xs text-gray-600 mb-1">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full border rounded px-2 py-1.5 text-sm resize-none"
                   rows={4}
-                  placeholder="État, époque, détails... ou cliquez sur 'Rédiger'"
+                  placeholder="Rempli automatiquement par l'IA ou saisissez manuellement"
                 />
               </div>
             </div>
