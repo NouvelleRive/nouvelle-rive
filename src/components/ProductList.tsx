@@ -1382,6 +1382,8 @@
                       color: editingProduct.color,
                       madeIn: editingProduct.madeIn,
                       photos: editingProduct.photos,
+                      imageUrls: editingProduct.imageUrls,
+                      imageUrls?: string[]
                     } : undefined}
                     onSubmit={handleSaveProduct}
                     onCancel={() => { setShowForm(false); setEditingProduct(null) }}

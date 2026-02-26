@@ -351,6 +351,7 @@ async function compressImage(file: File): Promise<string> {
       bagSizeName?: string
       sku?: string
       photos?: ExistingPhotos
+      imageUrls?: string[]
     }
     
     // Callbacks
@@ -585,9 +586,19 @@ async function compressImage(file: File): Promise<string> {
         // Ajouter les nouvelles photos à la fin
         orderedItems.push(...remainingItems)
         setPhotoOrder(orderedItems)
-      } else {
-        setPhotoOrder(items)
-      }
+      } else if (initialData?.imageUrls && initialData.imageUrls.length > 0) {
+    const sorted = [...items].sort((a, b) => {
+      const idxA = initialData.imageUrls!.indexOf(a.url)
+      const idxB = initialData.imageUrls!.indexOf(b.url)
+      if (idxA === -1 && idxB === -1) return 0
+      if (idxA === -1) return 1
+      if (idxB === -1) return -1
+      return idxA - idxB
+    })
+    setPhotoOrder(sorted)
+  } else {
+    setPhotoOrder(items)
+  }
 
       // Cleanup des URLs blob
       return () => {
