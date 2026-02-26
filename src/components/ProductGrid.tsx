@@ -364,7 +364,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                 </h3>
                 {produit.marque && (
                   <p
-                    className="mt-1 uppercase hidden md:block"
+                    className="mt-1 uppercase"
                     style={{
                       fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                       fontSize: '10px',
