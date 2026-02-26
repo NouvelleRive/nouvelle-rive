@@ -201,8 +201,6 @@ export function getOutfitPrompt(
   categorie: string,
   opts?: { nom?: string; matiere?: string }
 ): string {
-  const SKIN_PREFIX = 'medium olive skin tone, '
-  const _build = (prompt: string) => SKIN_PREFIX + prompt
   const cat = categorie.toLowerCase().trim()
   const nom = (opts?.nom || '').toLowerCase()
   const matiere = (opts?.matiere || '').toLowerCase()
