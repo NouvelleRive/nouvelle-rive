@@ -1,4 +1,4 @@
-// lib/tryonOutfits.ts
+// lib/tryonOutfitsHiver.ts
 // Prompts de styling par catégorie pour FASHN.ai Product-to-Model
 // Modifier ici pour changer le look des mannequins
 

@@ -3,7 +3,8 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
-import { getOutfitPrompt } from '@/lib/tryonOutfits'
+import { getOutfitPrompt as getOutfitHiver } from '@/lib/tryonOutfitsHiver'
+import { getOutfitPrompt as getOutfitEte } from '@/lib/tryonOutfitsEte'
 
 async function uploadToBunny(imageUrl: string): Promise<string> {
   const storageZone = process.env.BUNNY_STORAGE_ZONE
@@ -101,10 +102,17 @@ export async function POST(req: NextRequest) {
       if (rand <= 0) { selectedModel = m.desc; break }
     }
 
+    const now = new Date()
+    const mmdd = now.getMonth() * 100 + now.getDate()
+    const isSummer = mmdd >= 126 && mmdd <= 726
+    const getOutfitPrompt = isSummer ? getOutfitEte : getOutfitHiver
     const outfitAccessories = getOutfitPrompt(categorie, { nom: productName, matiere })
 
-   const prompt = gender === 'male'
-      ? `${selectedModel}, standing straight, hands by sides, ${view === 'back' ? 'seen from behind, back facing camera, back of head visible, facing away from camera, ' : ''}neutral expression, minimalist studio, wearing relaxed fit trousers and dress shoes, professional editorial fashion shoot, plain white studio background`
+    const maleOutfit = isSummer
+      ? `wearing relaxed fit chinos and leather sandals${Math.random() < 0.3 ? ', baseball cap' : ''}, square black sunglasses`
+      : 'wearing relaxed fit trousers and dress shoes'
+    const prompt = gender === 'male'
+      ? `${selectedModel}, standing straight, hands by sides, ${view === 'back' ? 'seen from behind, back facing camera, back of head visible, facing away from camera, ' : ''}neutral expression, minimalist studio, ${maleOutfit}, professional editorial fashion shoot, plain white studio background`
       : `${selectedModel}, ${view === 'back' ? 'seen from behind, back facing camera, back of head visible, facing away from camera, ' : ''}standing straight, hands by sides, ${view === 'front' ? 'neutral expression, ' : ''}minimalist studio, professional editorial fashion shoot, ${outfitAccessories}`
     console.log('🎨 Prompt choisi:', prompt)
     
