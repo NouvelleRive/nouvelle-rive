@@ -63,7 +63,6 @@
         details?: string[]
       }
       imageUrl?: string
-      imageUrls?: string[]
       chineur?: string
       chineurUid?: string
       vendu?: boolean
