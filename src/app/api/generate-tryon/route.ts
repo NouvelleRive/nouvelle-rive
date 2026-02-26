@@ -74,13 +74,17 @@ export async function POST(req: NextRequest) {
 
     // Sélection pondérée du modèle (représentativité française approx.)
     const modelPool = gender === 'male' ? [
-      { weight: 70, desc: 'fair-skinned man with short light brown hair' },
+      { weight: 35, desc: 'fair-skinned man with short brown hair' },
+      { weight: 25, desc: 'fair-skinned man with short blonde hair' },
+      { weight: 10, desc: 'fair-skinned man with short red hair' },
       { weight: 12, desc: 'dark brown-skinned man with short black hair' },
       { weight: 10, desc: 'olive-skinned man with short dark brown hair' },
       { weight: 5, desc: 'East Asian man with straight black hair' },
       { weight: 3, desc: 'light brown-skinned man with short curly dark hair' },
     ] : [
-      { weight: 70, desc: 'fair-skinned woman with straight light brown hair' },
+      { weight: 35, desc: 'fair-skinned woman with straight brown hair' },
+      { weight: 25, desc: 'fair-skinned woman with straight blonde hair' },
+      { weight: 10, desc: 'fair-skinned woman with wavy red hair' },
       { weight: 12, desc: 'dark brown-skinned woman with coily black hair' },
       { weight: 10, desc: 'olive-skinned woman with wavy dark brown hair' },
       { weight: 5, desc: 'East Asian woman with straight black hair' },
