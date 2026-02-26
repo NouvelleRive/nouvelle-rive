@@ -45,6 +45,12 @@
       material?: string
       color?: string
       modele?: string
+      motif?: string
+      sleeveLength?: string
+      collarType?: string
+      garmentLength?: string
+      closureType?: string
+      shoeType?: string
       bagLength?: string
       bagWidth?: string
       bagSizeName?: string
@@ -688,6 +694,13 @@
             bagWidth: data.bagWidth || '',
             bagSizeName: data.bagSizeName || '',
             madeIn: data.madeIn || '',
+            modele: data.modele?.trim() || null,
+            motif: (data as any).motif?.trim() || null,
+            sleeveLength: (data as any).sleeveLength?.trim() || null,
+            collarType: (data as any).collarType?.trim() || null,
+            garmentLength: (data as any).garmentLength?.trim() || null,
+            closureType: (data as any).closureType?.trim() || null,
+            shoeType: (data as any).shoeType?.trim() || null,
             updatedAt: Timestamp.now(),
             // Si le prix baisse, on enregistre la date et l'ancien prix
 ...((() => {
@@ -1381,6 +1394,12 @@
                       bagSizeName: editingProduct.bagSizeName,
                       color: editingProduct.color,
                       madeIn: editingProduct.madeIn,
+                      motif: (editingProduct as any).motif,
+                      sleeveLength: (editingProduct as any).sleeveLength,
+                      collarType: (editingProduct as any).collarType,
+                      garmentLength: (editingProduct as any).garmentLength,
+                      closureType: (editingProduct as any).closureType,
+                      shoeType: (editingProduct as any).shoeType,
                       photos: editingProduct.photos,
                       imageUrls: editingProduct.imageUrls,
                       imageUrls?: string[]
