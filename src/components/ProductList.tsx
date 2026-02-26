@@ -52,7 +52,7 @@
       closureType?: string
       shoeType?: string
       bagLength?: string
-      bagWidth?: string
+      bagHeight?: string
       bagSizeName?: string
       madeIn?: string
       photos?: {
@@ -690,7 +690,7 @@
             material: data.material || '',
             color: data.color || '',
             bagLength: data.bagLength || '',
-            bagWidth: data.bagWidth || '',
+            bagHeight: (data as any).bagHeight || '',
             bagSizeName: data.bagSizeName || '',
             madeIn: data.madeIn || '',
             modele: data.modele?.trim() || null,
@@ -1389,7 +1389,7 @@
                       material: editingProduct.material,
                       modele: editingProduct.modele,
                       bagLength: editingProduct.bagLength,
-                      bagWidth: editingProduct.bagWidth,
+                      bagHeight: (editingProduct as any).bagHeight,
                       bagSizeName: editingProduct.bagSizeName,
                       color: editingProduct.color,
                       madeIn: editingProduct.madeIn,
@@ -1401,7 +1401,6 @@
                       shoeType: (editingProduct as any).shoeType,
                       photos: editingProduct.photos,
                       imageUrls: editingProduct.imageUrls,
-                      imageUrls?: string[]
                     } : undefined}
                     onSubmit={handleSaveProduct}
                     onCancel={() => { setShowForm(false); setEditingProduct(null) }}
