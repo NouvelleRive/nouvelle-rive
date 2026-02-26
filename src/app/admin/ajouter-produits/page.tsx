@@ -82,6 +82,13 @@ export default function AdminAjouterPage() {
         marque: data.marque.trim(), taille: data.taille.trim(),
         material: data.material.trim() || null, color: data.color.trim() || null,
         madeIn: data.madeIn || null, sku: finalSku,
+        modele: data.modele?.trim() || null,
+        motif: (data as any).motif?.trim() || null,
+        sleeveLength: (data as any).sleeveLength?.trim() || null,
+        collarType: (data as any).collarType?.trim() || null,
+        garmentLength: (data as any).garmentLength?.trim() || null,
+        closureType: (data as any).closureType?.trim() || null,
+        shoeType: (data as any).shoeType?.trim() || null,
         chineurUid: selectedChineuse.uid, categorieRapport,
         trigramme: selectedChineuse.trigramme, 
         ...(Object.keys(data.existingPhotos).length > 0 && {
