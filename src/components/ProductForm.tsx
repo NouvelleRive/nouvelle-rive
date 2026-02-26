@@ -1667,258 +1667,6 @@ async function compressImage(file: File): Promise<string> {
             )}
           </div>
 
-          {/* CHAMPS OPTIONNELS */}
-          <div className="bg-gray-50 border rounded-lg p-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Optionnel</h3>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Marque</label>
-                <input
-                  type="text"
-                  value={formData.marque}
-                  onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
-                  className="w-full border rounded px-2 py-1.5 text-sm"
-                  placeholder="Chanel..."
-                />
-              </div>
-
-              <div className="col-span-2 md:col-span-4">
-                <label className="block text-xs text-gray-600 mb-1">Matière</label>
-                <div className="relative">
-                  <div
-                    className="w-full border rounded px-2 py-1.5 text-sm cursor-pointer flex items-center justify-between bg-white min-h-[34px]"
-                    onClick={() => setShowMatiereDropdown(!showMatiereDropdown)}
-                  >
-                    <span className={formData.material ? 'text-gray-900' : 'text-gray-400'}>
-                      {formData.material || '— Sélectionner —'}
-                    </span>
-                    <span className="text-gray-400">{showMatiereDropdown ? '▲' : '▼'}</span>
-                  </div>
-                  {showMatiereDropdown && (
-                    <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {matieresDisponibles.map((m) => {
-                        const isSelected = formData.material?.split(', ').includes(m)
-                        return (
-                          <label
-                            key={m}
-                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {
-                                const current = formData.material ? formData.material.split(', ').filter(Boolean) : []
-                                const updated = isSelected ? current.filter(x => x !== m) : [...current, m]
-                                setFormData({ ...formData, material: updated.join(', ') })
-                              }}
-                              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
-                            />
-                            <span>{m}</span>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Modèle (optionnel) */}
-              {modelesDisponibles.length > 0 && (
-                <div className="col-span-2">
-                  <label className="block text-xs text-gray-600 mb-1">Modèle</label>
-                  <select
-                    value={formData.modele}
-                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
-                    className="w-full border rounded px-2 py-1.5 text-sm"
-                  >
-                    <option value="">—</option>
-                    {modelesDisponibles.map((m, i) => (
-                      <option key={i} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="col-span-2 md:col-span-4">
-                <label className="block text-xs text-gray-600 mb-1">Couleur</label>
-                <div className="flex flex-wrap gap-1.5 py-2">
-                  {displayedColors.map((c) => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => {
-                        const current = formData.color ? formData.color.split(', ').filter(Boolean) : []
-                        const updated = current.includes(c.name) ? current.filter(x => x !== c.name) : [...current, c.name]
-                        setFormData({ ...formData, color: updated.join(', ') })
-                      }}
-                      className={`group relative w-7 h-7 rounded-full border-2 transition-all ${
-                        formData.color.split(', ').includes(c.name) 
-                          ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30' 
-                          : 'border-gray-200 hover:border-gray-400 hover:scale-105'
-                      }`}
-                      style={{ 
-                        background: c.hex.startsWith('linear') ? c.hex : c.hex,
-                        boxShadow: c.name === 'Blanc' || c.name === 'Ivoire' || c.name === 'Crème' ? 'inset 0 0 0 1px #ddd' : undefined
-                      }}
-                    >
-                      {formData.color.split(', ').includes(c.name) && (
-                        <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
-                          ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet', 'Prune', 'Aubergine'].includes(c.name) 
-                            ? 'text-white' 
-                            : 'text-gray-800'
-                        }`}>
-                          ✓
-                        </span>
-                      )}
-                      <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                        {c.name}
-                      </span>
-                    </button>
-                  ))}
-                  {!showAllColors && otherColors.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllColors(true)}
-                      className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition text-xs font-bold"
-                    >
-                      +
-                    </button>
-                  )}
-                  {showAllColors && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllColors(false)}
-                      className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition text-xs font-bold"
-                    >
-                      −
-                    </button>
-                  )}
-                </div>
-                {formData.color && (
-                  <p className="text-xs text-[#22209C] mt-1.5 font-medium">{formData.color}</p>
-                )}
-              </div>
-
-              {/* Bouton préremplissage IA */}
-              <div className="col-span-2 md:col-span-4">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const imageUrl = formData.existingPhotos.face
-                    if (!imageUrl) {
-                      alert('Ajoutez une photo face d\'abord')
-                      return
-                    }
-                    if (!formData.categorie) {
-                      alert('Sélectionnez une catégorie d\'abord')
-                      return
-                    }
-                    const result = await analyzeProduct(imageUrl)
-                    if (result) {
-                      setFormData(prev => ({
-                        ...prev,
-                        ...(result.couleur && !prev.color ? { color: result.couleur } : {}),
-                        ...(result.motif ? { motif: result.motif } : {}),
-                        ...(result.modele ? { modele: result.modele } : {}),
-                        ...(result.sleeveLength ? { sleeveLength: result.sleeveLength } : {}),
-                        ...(result.collarType ? { collarType: result.collarType } : {}),
-                        ...(result.garmentLength ? { garmentLength: result.garmentLength } : {}),
-                        ...(result.closureType ? { closureType: result.closureType } : {}),
-                        ...(result.shoeType ? { shoeType: result.shoeType } : {}),
-                        ...(result.descriptions ? { description: `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}` } : {}),
-                      }))
-                    } else {
-                      alert('Erreur lors de l\'analyse')
-                    }
-                  }}
-                  disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}
-                  className="w-full py-2.5 border-2 border-dashed border-[#22209C] text-[#22209C] rounded-lg font-medium hover:bg-[#22209C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                >
-                  {generatingDesc ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#22209C]"></div>
-                      Analyse en cours...
-                    </>
-                  ) : (
-                    <>🤖 Préremplir les champs secondaires</>
-                  )}
-                </button>
-                {!formData.existingPhotos.face && (
-                  <p className="text-xs text-gray-400 mt-1">Photo face requise</p>
-                )}
-              </div>
-
-              {/* Champs secondaires détectés par IA */}
-              {formData.sleeveLength && (
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Manches</label>
-                  <input type="text" value={formData.sleeveLength} onChange={(e) => setFormData({ ...formData, sleeveLength: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
-                </div>
-              )}
-              {formData.collarType && (
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Col</label>
-                  <input type="text" value={formData.collarType} onChange={(e) => setFormData({ ...formData, collarType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
-                </div>
-              )}
-              {formData.garmentLength && (
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Longueur</label>
-                  <input type="text" value={formData.garmentLength} onChange={(e) => setFormData({ ...formData, garmentLength: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
-                </div>
-              )}
-              {formData.closureType && (
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Fermeture</label>
-                  <input type="text" value={formData.closureType} onChange={(e) => setFormData({ ...formData, closureType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
-                </div>
-              )}
-              {formData.shoeType && (
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Type chaussure</label>
-                  <input type="text" value={formData.shoeType} onChange={(e) => setFormData({ ...formData, shoeType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
-                </div>
-              )}
-
-              {/* Description */}
-              <div className="col-span-2 md:col-span-4">
-                <label className="block text-xs text-gray-600 mb-1">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border rounded px-2 py-1.5 text-sm resize-none"
-                  rows={4}
-                  placeholder="Rempli automatiquement par l'IA ou saisissez manuellement"
-                />
-              </div>
-            </div>
-
-            <div className="mt-3 pt-3 border-t">
-              <label className="block text-xs text-gray-600 mb-2">Made in</label>
-              <div className="flex flex-wrap gap-4">
-                {[
-                  { value: '', label: 'Non spécifié' },
-                  { value: 'Made in France', label: '🇫🇷 France' },
-                  { value: 'Made in Italy', label: '🇮🇹 Italy' },
-                  { value: 'Made in USA', label: '🇺🇸 USA' },
-                ].map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                    <input
-                      type="radio"
-                      name="madeIn"
-                      value={opt.value}
-                      checked={formData.madeIn === opt.value}
-                      onChange={(e) => setFormData({ ...formData, madeIn: e.target.value })}
-                      className="accent-[#22209C]"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* PHOTOS */}
           <div className="bg-white border rounded-lg p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">📸 Photos</h3>
@@ -2261,6 +2009,258 @@ async function compressImage(file: File): Promise<string> {
             />
           </div>
 
+       {/* CHAMPS OPTIONNELS */}
+          <div className="bg-gray-50 border rounded-lg p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Optionnel</h3>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Marque</label>
+                <input
+                  type="text"
+                  value={formData.marque}
+                  onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
+                  className="w-full border rounded px-2 py-1.5 text-sm"
+                  placeholder="Chanel..."
+                />
+              </div>
+
+              <div className="col-span-2 md:col-span-4">
+                <label className="block text-xs text-gray-600 mb-1">Matière</label>
+                <div className="relative">
+                  <div
+                    className="w-full border rounded px-2 py-1.5 text-sm cursor-pointer flex items-center justify-between bg-white min-h-[34px]"
+                    onClick={() => setShowMatiereDropdown(!showMatiereDropdown)}
+                  >
+                    <span className={formData.material ? 'text-gray-900' : 'text-gray-400'}>
+                      {formData.material || '— Sélectionner —'}
+                    </span>
+                    <span className="text-gray-400">{showMatiereDropdown ? '▲' : '▼'}</span>
+                  </div>
+                  {showMatiereDropdown && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {matieresDisponibles.map((m) => {
+                        const isSelected = formData.material?.split(', ').includes(m)
+                        return (
+                          <label
+                            key={m}
+                            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                const current = formData.material ? formData.material.split(', ').filter(Boolean) : []
+                                const updated = isSelected ? current.filter(x => x !== m) : [...current, m]
+                                setFormData({ ...formData, material: updated.join(', ') })
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+                            />
+                            <span>{m}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modèle (optionnel) */}
+              {modelesDisponibles.length > 0 && (
+                <div className="col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">Modèle</label>
+                  <select
+                    value={formData.modele}
+                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                  >
+                    <option value="">—</option>
+                    {modelesDisponibles.map((m, i) => (
+                      <option key={i} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="col-span-2 md:col-span-4">
+                <label className="block text-xs text-gray-600 mb-1">Couleur</label>
+                <div className="flex flex-wrap gap-1.5 py-2">
+                  {displayedColors.map((c) => (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.color ? formData.color.split(', ').filter(Boolean) : []
+                        const updated = current.includes(c.name) ? current.filter(x => x !== c.name) : [...current, c.name]
+                        setFormData({ ...formData, color: updated.join(', ') })
+                      }}
+                      className={`group relative w-7 h-7 rounded-full border-2 transition-all ${
+                        formData.color.split(', ').includes(c.name) 
+                          ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30' 
+                          : 'border-gray-200 hover:border-gray-400 hover:scale-105'
+                      }`}
+                      style={{ 
+                        background: c.hex.startsWith('linear') ? c.hex : c.hex,
+                        boxShadow: c.name === 'Blanc' || c.name === 'Ivoire' || c.name === 'Crème' ? 'inset 0 0 0 1px #ddd' : undefined
+                      }}
+                    >
+                      {formData.color.split(', ').includes(c.name) && (
+                        <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+                          ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet', 'Prune', 'Aubergine'].includes(c.name) 
+                            ? 'text-white' 
+                            : 'text-gray-800'
+                        }`}>
+                          ✓
+                        </span>
+                      )}
+                      <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                        {c.name}
+                      </span>
+                    </button>
+                  ))}
+                  {!showAllColors && otherColors.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllColors(true)}
+                      className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition text-xs font-bold"
+                    >
+                      +
+                    </button>
+                  )}
+                  {showAllColors && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllColors(false)}
+                      className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 hover:text-gray-600 transition text-xs font-bold"
+                    >
+                      −
+                    </button>
+                  )}
+                </div>
+                {formData.color && (
+                  <p className="text-xs text-[#22209C] mt-1.5 font-medium">{formData.color}</p>
+                )}
+              </div>
+
+              {/* Bouton préremplissage IA */}
+              <div className="col-span-2 md:col-span-4">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const imageUrl = formData.existingPhotos.face
+                    if (!imageUrl) {
+                      alert('Ajoutez une photo face d\'abord')
+                      return
+                    }
+                    if (!formData.categorie) {
+                      alert('Sélectionnez une catégorie d\'abord')
+                      return
+                    }
+                    const result = await analyzeProduct(imageUrl)
+                    if (result) {
+                      setFormData(prev => ({
+                        ...prev,
+                        ...(result.couleur && !prev.color ? { color: result.couleur } : {}),
+                        ...(result.motif ? { motif: result.motif } : {}),
+                        ...(result.modele ? { modele: result.modele } : {}),
+                        ...(result.sleeveLength ? { sleeveLength: result.sleeveLength } : {}),
+                        ...(result.collarType ? { collarType: result.collarType } : {}),
+                        ...(result.garmentLength ? { garmentLength: result.garmentLength } : {}),
+                        ...(result.closureType ? { closureType: result.closureType } : {}),
+                        ...(result.shoeType ? { shoeType: result.shoeType } : {}),
+                        ...(result.descriptions ? { description: `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}` } : {}),
+                      }))
+                    } else {
+                      alert('Erreur lors de l\'analyse')
+                    }
+                  }}
+                  disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}
+                  className="w-full py-2.5 border-2 border-dashed border-[#22209C] text-[#22209C] rounded-lg font-medium hover:bg-[#22209C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                >
+                  {generatingDesc ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#22209C]"></div>
+                      Analyse en cours...
+                    </>
+                  ) : (
+                    <>🤖 Préremplir les champs secondaires</>
+                  )}
+                </button>
+                {!formData.existingPhotos.face && (
+                  <p className="text-xs text-gray-400 mt-1">Photo face requise</p>
+                )}
+              </div>
+
+              {/* Champs secondaires détectés par IA */}
+              {formData.sleeveLength && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Manches</label>
+                  <input type="text" value={formData.sleeveLength} onChange={(e) => setFormData({ ...formData, sleeveLength: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+              {formData.collarType && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Col</label>
+                  <input type="text" value={formData.collarType} onChange={(e) => setFormData({ ...formData, collarType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+              {formData.garmentLength && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Longueur</label>
+                  <input type="text" value={formData.garmentLength} onChange={(e) => setFormData({ ...formData, garmentLength: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+              {formData.closureType && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Fermeture</label>
+                  <input type="text" value={formData.closureType} onChange={(e) => setFormData({ ...formData, closureType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+              {formData.shoeType && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Type chaussure</label>
+                  <input type="text" value={formData.shoeType} onChange={(e) => setFormData({ ...formData, shoeType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm bg-purple-50 border-purple-200" />
+                </div>
+              )}
+
+              {/* Description */}
+              <div className="col-span-2 md:col-span-4">
+                <label className="block text-xs text-gray-600 mb-1">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full border rounded px-2 py-1.5 text-sm resize-none"
+                  rows={4}
+                  placeholder="Rempli automatiquement par l'IA ou saisissez manuellement"
+                />
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t">
+              <label className="block text-xs text-gray-600 mb-2">Made in</label>
+              <div className="flex flex-wrap gap-4">
+                {[
+                  { value: '', label: 'Non spécifié' },
+                  { value: 'Made in France', label: '🇫🇷 France' },
+                  { value: 'Made in Italy', label: '🇮🇹 Italy' },
+                  { value: 'Made in USA', label: '🇺🇸 USA' },
+                ].map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="madeIn"
+                      value={opt.value}
+                      checked={formData.madeIn === opt.value}
+                      onChange={(e) => setFormData({ ...formData, madeIn: e.target.value })}
+                      className="accent-[#22209C]"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
         {/* BOUTONS */}
           <div className="flex gap-3">
             {onCancel && (
@@ -2368,6 +2368,4 @@ async function compressImage(file: File): Promise<string> {
       </div>
     )
   }
-
-  // Export types
   export type { ProductFormData, Cat, Chineuse, ExistingPhotos, ExcelImportData, PhotoItem }
