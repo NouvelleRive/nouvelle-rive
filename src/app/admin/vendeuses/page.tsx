@@ -294,40 +294,44 @@ useEffect(() => {
 
   // CA par vendeuse (réconciliation planning + ventes du mois)
   const caParVendeuse = useMemo(() => {
-    const map = new Map<string, { ca: number; ventes: number }>()
+    const map = new Map<string, { ca: number; ventes: number; discountCount: number; discountTotal: number }>()
 
-    const getDate = (p: ProduitVente): Date | null => {
-      if (p.dateVente instanceof Timestamp) return p.dateVente.toDate()
-      if (p.updatedAt instanceof Timestamp) return p.updatedAt.toDate()
-      if (p.createdAt instanceof Timestamp) return p.createdAt.toDate()
-      return null
-    }
-
-    ventesAll.forEach(v => {
-      const date = getDate(v)
-      if (!date) return
-      const m = date.getMonth()
-      const y = date.getFullYear()
-      if (m !== currentMonth.month || y !== currentMonth.year) return
+    ventesAll.forEach(p => {
+      if (!(p.dateVente instanceof Timestamp)) return
+      const date = p.dateVente.toDate()
+      if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
 
       const dateStr = format(date, 'yyyy-MM-dd')
       const hour = date.getHours()
       const slot1220 = planningSlots[`${dateStr}_12-20`]
       const slot1117 = planningSlots[`${dateStr}_11-17`]
+      const montant = p.prixVenteReel || 0
+      const discount = (p.prix || 0) - (p.prixVenteReel || 0)
+      const hasDiscount = discount > 0
 
-      let vendeuseId: string | null = null
-      if (slot1220 && slot1117) {
-        vendeuseId = hour < 12 ? slot1117 : hour >= 17 ? slot1220 : slot1220
-      } else {
-        vendeuseId = slot1220 || slot1117 || null
+      const addTo = (id: string, fraction: number) => {
+        const cur = map.get(id) || { ca: 0, ventes: 0, discountCount: 0, discountTotal: 0 }
+        map.set(id, {
+          ca: cur.ca + montant * fraction,
+          ventes: cur.ventes + fraction,
+          discountCount: cur.discountCount + (hasDiscount ? fraction : 0),
+          discountTotal: cur.discountTotal + discount * fraction,
+        })
       }
 
-      if (!vendeuseId) return
-      const cur = map.get(vendeuseId) || { ca: 0, ventes: 0 }
-      map.set(vendeuseId, {
-        ca: cur.ca + (v.prixVenteReel || v.prix || 0),
-        ventes: cur.ventes + 1,
-      })
+      if (slot1117 && slot1220) {
+        if (hour < 12) {
+          addTo(slot1117, 1)
+        } else if (hour < 17) {
+          addTo(slot1117, 0.5)
+          addTo(slot1220, 0.5)
+        } else {
+          addTo(slot1220, 1)
+        }
+      } else {
+        const vendeuseId = slot1220 || slot1117
+        if (vendeuseId) addTo(vendeuseId, 1)
+      }
     })
 
     return map
