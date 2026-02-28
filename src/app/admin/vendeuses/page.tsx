@@ -550,7 +550,7 @@ useEffect(() => {
       {/* CALENDRIER PLANNING      */}
       {/* ======================== */}
       <div className="lg:flex lg:gap-6">
-        <div className="flex-1">
+        <div className="lg:w-2/3">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-[#22209C]">Planning</h2>
           <button
@@ -657,7 +657,7 @@ useEffect(() => {
 
         {/* Récap heures — sidebar droite */}
         {activeVendeuses.length > 0 && (
-          <div className="lg:w-64 mt-6 lg:mt-14 flex-shrink-0">
+          <div className="lg:w-1/3 mt-6 lg:mt-0 flex-shrink-0">
             <div className="bg-white rounded-xl border p-4 sticky top-20">
               <h3 className="text-sm font-bold text-[#22209C] mb-3">Récap — {monthLabel}</h3>
               <div className="space-y-3">
@@ -665,29 +665,34 @@ useEffect(() => {
                   const prevues = heuresSupposees(v)
                   const reelles = heuresReelles(v.id)
                   const cp = joursCP(v)
+                  const stats = caParVendeuse.get(v.id)
+                  const bonus = stats ? Math.round(stats.ca * 0.01) : 0
                   return (
-                    <div key={v.id} className="py-2 border-b border-gray-100 last:border-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.couleur }} />
-                        <span className="text-sm font-medium">{v.prenom}</span>
+                    <div key={v.id} className="py-3 border-b border-gray-100 last:border-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.couleur }} />
+                          <span className="text-sm font-bold">{v.prenom.toUpperCase()}</span>
+                        </div>
+                        <span className="text-xs text-gray-400">{prevues}h prévues</span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs pl-5">
-                        <span className="text-gray-400">{prevues}h prévues</span>
-                        <span className="font-semibold">{reelles}h réelles</span>
-                        {cp > 0 && (
-                          <span className="text-orange-500 font-medium">{cp}h CP</span>
-                        )}
+                      <div className="flex items-center justify-between text-xs pl-5">
+                        <span>Réel : {reelles}h</span>
+                        {cp > 0 && <span className="font-bold">CP : {cp}h</span>}
                       </div>
-                      {caParVendeuse.get(v.id) && (
+                      {stats && (
                         <>
-                          <div className="flex items-center gap-3 text-xs pl-5 mt-1">
-                            <span className="font-bold text-[#22209C]">{caParVendeuse.get(v.id)!.ca.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} € CA</span>
-                            <span className="text-gray-400">{Math.round(caParVendeuse.get(v.id)!.ventes)} ventes</span>
+                          <div className="flex items-center justify-between text-xs pl-5 mt-0.5">
+                            <span>CA : {stats.ca.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                            <span className="font-bold">Bonus : {bonus} €</span>
                           </div>
-                          {caParVendeuse.get(v.id)!.discountCount > 0 && (
-                            <div className="flex items-center gap-3 text-xs pl-5 mt-0.5">
-                              <span className="text-red-400">−{caParVendeuse.get(v.id)!.discountTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                              <span className="text-red-400">{Math.round(caParVendeuse.get(v.id)!.discountCount)} discounts</span>
+                          <div className="text-xs pl-5 mt-0.5 text-gray-400">
+                            Nb de ventes : {Math.round(stats.ventes)}
+                          </div>
+                          {stats.discountCount > 0 && (
+                            <div className="flex items-center justify-between text-xs pl-5 mt-0.5">
+                              <span>Discounts : −{stats.discountTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                              <span className="text-gray-400">{Math.round(stats.discountCount)} discounts</span>
                             </div>
                           )}
                         </>
