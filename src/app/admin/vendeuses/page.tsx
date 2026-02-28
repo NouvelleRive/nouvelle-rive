@@ -294,7 +294,12 @@ useEffect(() => {
 
   // CA par vendeuse (réconciliation planning + ventes du mois)
   const caParVendeuse = useMemo(() => {
-    const map = new Map<string, { ca: number; ventes: number; discountCount: number; discountTotal: number }>()
+    const map = new Map<string, { ca: number; ventes: number; bonus: number; discountCount: number; discountTotal: number }>()
+
+    // Pass 1 : CA total par jour
+    const dailyCA = new Map<string, number>()
+    // Pass 1 : ventes par vendeuse par jour (pour calculer bonus après)
+    const vendeuseDaily = new Map<string, Map<string, number>>() // vendeuseId -> dateStr -> ca
 
     ventesAll.forEach(p => {
       if (!(p.dateVente instanceof Timestamp)) return
@@ -309,14 +314,22 @@ useEffect(() => {
       const discount = (p.prix || 0) - (p.prixVenteReel || 0)
       const hasDiscount = discount > 0
 
+      // Accumuler CA journalier
+      dailyCA.set(dateStr, (dailyCA.get(dateStr) || 0) + montant)
+
       const addTo = (id: string, fraction: number) => {
-        const cur = map.get(id) || { ca: 0, ventes: 0, discountCount: 0, discountTotal: 0 }
+        const cur = map.get(id) || { ca: 0, ventes: 0, bonus: 0, discountCount: 0, discountTotal: 0 }
         map.set(id, {
+          ...cur,
           ca: cur.ca + montant * fraction,
           ventes: cur.ventes + fraction,
           discountCount: cur.discountCount + (hasDiscount ? fraction : 0),
           discountTotal: cur.discountTotal + discount * fraction,
         })
+        // Tracker CA par vendeuse par jour pour bonus
+        if (!vendeuseDaily.has(id)) vendeuseDaily.set(id, new Map())
+        const vd = vendeuseDaily.get(id)!
+        vd.set(dateStr, (vd.get(dateStr) || 0) + montant * fraction)
       }
 
       if (slot1117 && slot1220) {
@@ -332,6 +345,18 @@ useEffect(() => {
         const vendeuseId = slot1220 || slot1117
         if (vendeuseId) addTo(vendeuseId, 1)
       }
+    })
+
+    // Pass 2 : bonus = 1% du CA de la vendeuse, uniquement les jours >= 1000€ total boutique
+    vendeuseDaily.forEach((days, vendeuseId) => {
+      let bonus = 0
+      days.forEach((ca, dateStr) => {
+        if ((dailyCA.get(dateStr) || 0) >= 1000) {
+          bonus += ca * 0.01
+        }
+      })
+      const cur = map.get(vendeuseId)
+      if (cur) map.set(vendeuseId, { ...cur, bonus: Math.round(bonus) })
     })
 
     return map
@@ -549,8 +574,8 @@ useEffect(() => {
       {/* ======================== */}
       {/* CALENDRIER PLANNING      */}
       {/* ======================== */}
-      <div className="lg:flex lg:gap-6">
-        <div className="lg:w-2/3">
+      <div className="lg:grid lg:grid-cols-3 lg:gap-6">
+        <div className="lg:col-span-2">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-[#22209C]">Planning</h2>
           <button
@@ -657,7 +682,7 @@ useEffect(() => {
 
         {/* Récap heures — sidebar droite */}
         {activeVendeuses.length > 0 && (
-          <div className="lg:w-1/3 mt-6 lg:mt-0 flex-shrink-0">
+          <div className="mt-6 lg:mt-0">
             <div className="bg-white rounded-xl border p-4 sticky top-20">
               <h3 className="text-sm font-bold text-[#22209C] mb-3">Récap — {monthLabel}</h3>
               <div className="space-y-3">
@@ -666,7 +691,6 @@ useEffect(() => {
                   const reelles = heuresReelles(v.id)
                   const cp = joursCP(v)
                   const stats = caParVendeuse.get(v.id)
-                  const bonus = stats ? Math.round(stats.ca * 0.01) : 0
                   return (
                     <div key={v.id} className="py-3 border-b border-gray-100 last:border-0">
                       <div className="flex items-center justify-between mb-1">
@@ -684,10 +708,11 @@ useEffect(() => {
                         <>
                           <div className="flex items-center justify-between text-xs pl-5 mt-0.5">
                             <span>CA : {stats.ca.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                            <span className="font-bold">Bonus : {bonus} €</span>
+                            <span className="font-bold">Bonus : {stats.bonus} €</span>
                           </div>
-                          <div className="text-xs pl-5 mt-0.5 text-gray-400">
-                            Nb de ventes : {Math.round(stats.ventes)}
+                          <div className="flex items-center justify-between text-xs pl-5 mt-0.5 text-gray-400">
+                            <span>Nb de ventes : {Math.round(stats.ventes)}</span>
+                            <span>{reelles > 0 ? (stats.ventes / reelles).toFixed(1) : '0'} ventes/h</span>
                           </div>
                           {stats.discountCount > 0 && (
                             <div className="flex items-center justify-between text-xs pl-5 mt-0.5">
