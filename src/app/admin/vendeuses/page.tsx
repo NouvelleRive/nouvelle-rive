@@ -323,8 +323,8 @@ useEffect(() => {
         if (hour < 12) {
           addTo(slot1117, 1)
         } else if (hour < 17) {
-          addTo(slot1117, 0.5)
-          addTo(slot1220, 0.5)
+          addTo(slot1117, 1)
+          addTo(slot1220, 1)
         } else {
           addTo(slot1220, 1)
         }
@@ -679,10 +679,18 @@ useEffect(() => {
                         )}
                       </div>
                       {caParVendeuse.get(v.id) && (
-                        <div className="flex items-center gap-3 text-xs pl-5 mt-1">
-                          <span className="font-bold text-[#22209C]">{caParVendeuse.get(v.id)!.ca.toLocaleString('fr-FR')} € CA</span>
-                          <span className="text-gray-400">{caParVendeuse.get(v.id)!.ventes} ventes</span>
-                        </div>
+                        <>
+                          <div className="flex items-center gap-3 text-xs pl-5 mt-1">
+                            <span className="font-bold text-[#22209C]">{caParVendeuse.get(v.id)!.ca.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} € CA</span>
+                            <span className="text-gray-400">{Math.round(caParVendeuse.get(v.id)!.ventes)} ventes</span>
+                          </div>
+                          {caParVendeuse.get(v.id)!.discountCount > 0 && (
+                            <div className="flex items-center gap-3 text-xs pl-5 mt-0.5">
+                              <span className="text-red-400">{Math.round(caParVendeuse.get(v.id)!.discountCount)} discounts</span>
+                              <span className="text-red-400">−{caParVendeuse.get(v.id)!.discountTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )
