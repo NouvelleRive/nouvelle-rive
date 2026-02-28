@@ -686,8 +686,8 @@ useEffect(() => {
                           </div>
                           {caParVendeuse.get(v.id)!.discountCount > 0 && (
                             <div className="flex items-center gap-3 text-xs pl-5 mt-0.5">
-                              <span className="text-red-400">{Math.round(caParVendeuse.get(v.id)!.discountCount)} discounts</span>
                               <span className="text-red-400">−{caParVendeuse.get(v.id)!.discountTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
+                              <span className="text-red-400">{Math.round(caParVendeuse.get(v.id)!.discountCount)} discounts</span>
                             </div>
                           )}
                         </>
