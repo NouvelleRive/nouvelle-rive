@@ -296,8 +296,6 @@ useEffect(() => {
   const caParVendeuse = useMemo(() => {
     const map = new Map<string, { ca: number; ventes: number; bonus: number; discountCount: number; discountTotal: number }>()
 
-    // Pass 1 : CA total par jour
-    const dailyCA = new Map<string, number>()
     // Pass 1 : ventes par vendeuse par jour (pour calculer bonus après)
     const vendeuseDaily = new Map<string, Map<string, number>>() // vendeuseId -> dateStr -> ca
 
@@ -313,9 +311,6 @@ useEffect(() => {
       const montant = p.prixVenteReel || 0
       const discount = (p.prix || 0) - (p.prixVenteReel || 0)
       const hasDiscount = discount > 0
-
-      // Accumuler CA journalier
-      dailyCA.set(dateStr, (dailyCA.get(dateStr) || 0) + montant)
 
       const addTo = (id: string, fraction: number) => {
         const cur = map.get(id) || { ca: 0, ventes: 0, bonus: 0, discountCount: 0, discountTotal: 0 }
@@ -350,8 +345,8 @@ useEffect(() => {
     // Pass 2 : bonus = 1% du CA de la vendeuse, uniquement les jours >= 1000€ total boutique
     vendeuseDaily.forEach((days, vendeuseId) => {
       let bonus = 0
-      days.forEach((ca, dateStr) => {
-        if ((dailyCA.get(dateStr) || 0) >= 1000) {
+      days.forEach((ca) => {
+        if (ca >= 1000) {
           bonus += ca * 0.01
         }
       })
@@ -684,7 +679,7 @@ useEffect(() => {
         {activeVendeuses.length > 0 && (
           <div className="mt-6 lg:mt-0">
             <div className="bg-white rounded-xl border p-4 sticky top-20">
-              <h3 className="text-sm font-bold text-[#22209C] mb-3">Récap — {monthLabel}</h3>
+              <h3 className="text-sm font-bosld text-[#22209C] mb-3">Récap — {monthLabel}</h3>
               <div className="space-y-3">
                 {activeVendeuses.map(v => {
                   const prevues = heuresSupposees(v)
