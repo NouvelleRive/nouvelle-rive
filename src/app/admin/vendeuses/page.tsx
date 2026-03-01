@@ -296,9 +296,6 @@ useEffect(() => {
   const caParVendeuse = useMemo(() => {
     const map = new Map<string, { ca: number; ventes: number; bonus: number; discountCount: number; discountTotal: number }>()
 
-    // Pass 1 : ventes par vendeuse par jour (pour calculer bonus après)
-    const vendeuseDaily = new Map<string, Map<string, number>>() // vendeuseId -> dateStr -> ca
-
     ventesAll.forEach(p => {
       if (!(p.dateVente instanceof Timestamp)) return
       const date = p.dateVente.toDate()
@@ -321,10 +318,6 @@ useEffect(() => {
           discountCount: cur.discountCount + (hasDiscount ? fraction : 0),
           discountTotal: cur.discountTotal + discount * fraction,
         })
-        // Tracker CA par vendeuse par jour pour bonus
-        if (!vendeuseDaily.has(id)) vendeuseDaily.set(id, new Map())
-        const vd = vendeuseDaily.get(id)!
-        vd.set(dateStr, (vd.get(dateStr) || 0) + montant * fraction)
       }
 
       if (slot1117 && slot1220) {
@@ -342,16 +335,38 @@ useEffect(() => {
       }
     })
 
-    // Pass 2 : bonus = 1% du CA de la vendeuse, uniquement les jours >= 1000€ total boutique
-    vendeuseDaily.forEach((days, vendeuseId) => {
-      let bonus = 0
-      days.forEach((ca) => {
-        if (ca >= 1000) {
-          bonus += ca * 0.01
-        }
-      })
+    // Pass 2 : CA par créneau par jour + bonus
+    const creneauDaily = new Map<string, number>() // "dateStr_12-20" -> CA total du créneau
+
+    ventesAll.forEach(p => {
+      if (!(p.dateVente instanceof Timestamp)) return
+      const date = p.dateVente.toDate()
+      if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
+
+      const dateStr = format(date, 'yyyy-MM-dd')
+      const hour = date.getHours()
+      const montant = p.prixVenteReel || 0
+
+      // Une vente compte dans le CA du créneau si elle tombe dans ses heures
+      if (hour >= 12) {
+        const key = `${dateStr}_12-20`
+        creneauDaily.set(key, (creneauDaily.get(key) || 0) + montant)
+      }
+      if (hour >= 11 && hour < 17) {
+        const key = `${dateStr}_11-17`
+        creneauDaily.set(key, (creneauDaily.get(key) || 0) + montant)
+      }
+    })
+
+    // Bonus : 1% du CA créneau si >= 1000€, attribué à la vendeuse du créneau
+    creneauDaily.forEach((ca, key) => {
+      if (ca < 1000) return
+      const vendeuseId = planningSlots[key]
+      if (!vendeuseId) return
       const cur = map.get(vendeuseId)
-      if (cur) map.set(vendeuseId, { ...cur, bonus: Math.round(bonus) })
+      if (cur) {
+        map.set(vendeuseId, { ...cur, bonus: cur.bonus + Math.round(ca * 0.01) })
+      }
     })
 
     return map
