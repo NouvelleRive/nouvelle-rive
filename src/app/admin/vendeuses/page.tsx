@@ -369,6 +369,14 @@ useEffect(() => {
       }
     })
 
+    // DEBUG — à supprimer après
+    console.log('=== BONUS DEBUG ===')
+    creneauDaily.forEach((ca, key) => {
+      const vid = planningSlots[key]
+      const v = vid ? vendeuses.find(x => x.id === vid) : null
+      if (ca >= 1000) console.log(key, ca.toFixed(2), '→', v?.prenom || 'personne', '→ bonus', Math.round(ca * 0.01))
+    })
+
     return map
   }, [ventesAll, planningSlots, currentMonth])
 
