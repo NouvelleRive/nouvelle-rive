@@ -119,12 +119,10 @@
     }, [monthKey])
 
     // Charger les ventes
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'produits'), (snap) => {
-      const sold = snap.docs
-        .map(d => ({ id: d.id, ...d.data() } as ProduitVente))
-        .filter(p => p.vendu === true || p.statut === 'vendu' || (p.quantite !== undefined && p.quantite <= 0))
-      setVentesAll(sold)
+    useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'ventes'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProduitVente))
+      setVentesAll(list)
     })
     return () => unsub()
   }, [])
