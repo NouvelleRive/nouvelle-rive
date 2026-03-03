@@ -284,7 +284,10 @@
 
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
         if (filtreCategorie && cat !== filtreCategorie) return false
-        if (filtreDeposant && !p.sku?.toUpperCase().startsWith(filtreDeposant.toUpperCase())) return false
+        if (filtreDeposant) {
+  const skuTri = p.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || ''
+  if (skuTri !== filtreDeposant.toUpperCase()) return false
+}
 
         if (filtreMois) {
           if (p.createdAt instanceof Timestamp) {
@@ -365,7 +368,10 @@
           
           const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
           if (filtreCategorie && cat !== filtreCategorie) return false
-          if (filtreDeposant && !p.sku?.toUpperCase().startsWith(filtreDeposant.toUpperCase())) return false
+          if (filtreDeposant) {
+  const skuTri = p.sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || ''
+  if (skuTri !== filtreDeposant.toUpperCase()) return false
+}
           
           if (filtreMois && p.dateRetour) {
             const dateRetour = p.dateRetour instanceof Timestamp 
