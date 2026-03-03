@@ -335,16 +335,9 @@
         }
       })
 
-      // DEBUG dates — à supprimer
-    ventesAll.forEach(p => {
-      if (!(p.dateVente instanceof Timestamp)) return
-      const date = p.dateVente.toDate()
-      if (date.getMonth() !== 1 || date.getDate() !== 6 || date.getFullYear() !== 2026) return
-      console.log('FEV6:', p.id, 'heure:', date.getHours(), 'prix:', p.prixVenteReel)
-    })
-
-      // Pass 2 : CA par créneau par jour + bonus
-      const creneauDaily = new Map<string, number>() // "dateStr_12-20" -> CA total du créneau
+      // Pass 2 : bonus par créneau
+      const ca1220 = new Map<string, number>()
+      const ca1117 = new Map<string, number>()
 
       ventesAll.forEach(p => {
         if (!(p.dateVente instanceof Timestamp)) return
@@ -355,34 +348,28 @@
         const hour = date.getHours()
         const montant = p.prixVenteReel || 0
 
-        // Une vente compte dans le CA du créneau si elle tombe dans ses heures
-        if (hour >= 12) {
-          const key = `${dateStr}_12-20`
-          creneauDaily.set(key, (creneauDaily.get(key) || 0) + montant)
+        if (hour >= 12 && hour < 20) {
+          ca1220.set(dateStr, (ca1220.get(dateStr) || 0) + montant)
         }
         if (hour >= 11 && hour < 17) {
-          const key = `${dateStr}_11-17`
-          creneauDaily.set(key, (creneauDaily.get(key) || 0) + montant)
+          ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
         }
       })
 
-      // Bonus : 1% du CA créneau si >= 1000€, attribué à la vendeuse du créneau
-      creneauDaily.forEach((ca, key) => {
+      ca1220.forEach((ca, dateStr) => {
         if (ca < 1000) return
-        const vendeuseId = planningSlots[key]
+        const vendeuseId = planningSlots[`${dateStr}_12-20`]
         if (!vendeuseId) return
         const cur = map.get(vendeuseId)
-        if (cur) {
-          map.set(vendeuseId, { ...cur, bonus: cur.bonus + Math.round(ca * 0.01) })
-        }
+        if (cur) map.set(vendeuseId, { ...cur, bonus: cur.bonus + ca * 0.01 })
       })
 
-      // DEBUG — à supprimer après
-      console.log('=== BONUS DEBUG ===')
-      creneauDaily.forEach((ca, key) => {
-        const vid = planningSlots[key]
-        const v = vid ? vendeuses.find(x => x.id === vid) : null
-        if (ca >= 1000) console.log(key, ca.toFixed(2), '→', v?.prenom || 'personne', '→ bonus', Math.round(ca * 0.01))
+      ca1117.forEach((ca, dateStr) => {
+        if (ca < 1000) return
+        const vendeuseId = planningSlots[`${dateStr}_11-17`]
+        if (!vendeuseId) return
+        const cur = map.get(vendeuseId)
+        if (cur) map.set(vendeuseId, { ...cur, bonus: cur.bonus + ca * 0.01 })
       })
 
       return map
@@ -734,7 +721,7 @@
                           <>
                             <div className="flex items-center justify-between text-xs pl-5 mt-0.5">
                               <span>CA : {stats.ca.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                              <span className="font-bold">Bonus : {stats.bonus} €</span>
+                              <span className="font-bold">Bonus : {Math.round(stats.bonus)} €</span>
                             </div>
                             <div className="flex items-center justify-between text-xs pl-5 mt-0.5 text-gray-400">
                               <span>Nb de ventes : {Math.round(stats.ventes)}</span>
