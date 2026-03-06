@@ -73,8 +73,8 @@ export default function LoginPage() {
     } finally { setLoading(false) }
   }
 
-  const inputCls = "w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm"
-  const btnCls = "w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm"
+  const inputCls = "w-full border border-gray-200 px-4 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm"
+  const btnCls = "w-full bg-[#22209C] text-white py-1.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm"
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
@@ -88,34 +88,34 @@ export default function LoginPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
 
           {/* ── ROW : TITRES ── */}
-          <div className="px-6 pt-6 pb-2">
+          <div className="px-6 pt-5 pb-1">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Mon compte client</h2>
           </div>
-          <div className="px-6 pt-6 pb-2 md:border-l border-gray-100">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Vendre chez NR</h2>
+          <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Vendre chez Nouvelle Rive</h2>
           </div>
-          <div className="px-6 pt-6 pb-2 md:border-l border-gray-100">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace revendeuse</h2>
+          <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace professionnel·les</h2>
           </div>
 
           {/* ── ROW : SOUS-TITRES ── */}
-          <div className="px-6 py-2">
+          <div className="px-6 py-1">
             <p className="text-xs text-gray-500">Revoir mes pépites &amp; paramétrer mes alertes.</p>
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <p className="text-xs text-gray-500">Je suis un·e particulier·e, je veux vendre mes affaires.</p>
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <p className="text-xs text-gray-500">Je suis un·e professionnel·le, je veux rejoindre l'équipe.</p>
           </div>
 
           {/* ── ROW : LIEN SPÉCIAL ── */}
-          <div className="px-6 py-2">
+          <div className="px-6 py-1">
             <button
               type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 border-2 border-gray-200 bg-white text-gray-700 py-2.5 rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition font-medium text-sm"
+              className="w-full flex items-center justify-center gap-3 border-2 border-gray-200 bg-white text-gray-700 py-1.5 rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition font-medium text-sm"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -126,19 +126,19 @@ export default function LoginPage() {
               Continuer avec Google
             </button>
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100 flex items-center">
+          <div className="px-6 py-1 md:border-l border-gray-100 flex items-center">
             <Link href="/client/deposant/conditions" className="text-sm underline" style={{ color: '#22209C' }}>
               Découvrir nos conditions de dépôt →
             </Link>
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100 flex items-center">
+          <div className="px-6 py-1 md:border-l border-gray-100 flex items-center">
             <Link href="/boutique" className="text-sm underline" style={{ color: '#22209C' }}>
               Découvrir la boutique →
             </Link>
           </div>
 
           {/* ── ROW : EMAIL ── */}
-          <div className="px-6 py-2">
+          <div className="px-6 py-1">
             {isSignupClient && (
               <div className="grid grid-cols-2 gap-2 mb-2">
                 <input value={prenomClient} onChange={e => setPrenomClient(e.target.value)} placeholder="Prénom" className={inputCls} />
@@ -148,58 +148,58 @@ export default function LoginPage() {
             <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
             <input type="email" value={emailClient} onChange={e => setEmailClient(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
             <input type="email" value={emailDeposante} onChange={e => setEmailDeposante(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
             <input type="email" value={emailPro} onChange={e => setEmailPro(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
           </div>
 
           {/* ── ROW : MOT DE PASSE ── */}
-          <div className="px-6 py-2">
+          <div className="px-6 py-1">
             <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
             <input type="password" value={passwordClient} onChange={e => setPasswordClient(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
             <input type="password" value={passwordDeposante} onChange={e => setPasswordDeposante(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
             <input type="password" value={passwordPro} onChange={e => setPasswordPro(e.target.value)} required className={inputCls} placeholder="••••••••" />
           </div>
 
           {/* ── ROW : BOUTON SE CONNECTER ── */}
-          <div className="px-6 py-2">
+          <div className="px-6 py-1">
             <button onClick={handleClientSubmit} disabled={loading} className={btnCls}>
               {loading ? 'Chargement...' : isSignupClient ? 'Créer mon compte' : 'Se connecter'}
             </button>
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <button onClick={handleDeposanteSubmit} disabled={loading} className={btnCls}>
               {loading ? 'Chargement...' : isSignupDeposante ? 'Créer mon compte' : 'Se connecter'}
             </button>
           </div>
-          <div className="px-6 py-2 md:border-l border-gray-100">
+          <div className="px-6 py-1 md:border-l border-gray-100">
             <button onClick={handleProSubmit} disabled={loading} className={btnCls}>
               {loading ? 'Chargement...' : isSignupPro ? 'Créer mon compte' : 'Se connecter'}
             </button>
           </div>
 
           {/* ── ROW : CRÉER UN COMPTE ── */}
-          <div className="px-6 pt-2 pb-6">
+          <div className="px-6 pt-1 pb-5">
             <button onClick={() => setIsSignupClient(!isSignupClient)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupClient ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
           </div>
-          <div className="px-6 pt-2 pb-6 md:border-l border-gray-100">
+          <div className="px-6 pt-1 pb-5 md:border-l border-gray-100">
             <button onClick={() => setIsSignupDeposante(!isSignupDeposante)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupDeposante ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
           </div>
-          <div className="px-6 pt-2 pb-6 md:border-l border-gray-100">
+          <div className="px-6 pt-1 pb-5 md:border-l border-gray-100">
             <button onClick={() => setIsSignupPro(!isSignupPro)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupPro ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
