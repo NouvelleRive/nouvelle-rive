@@ -100,7 +100,7 @@ export default function LoginPage() {
 
           {/* ── ROW : SOUS-TITRES ── */}
           <div className="px-6 py-1">
-            <p className="text-xs text-gray-500">Revoir mes pépites &amp; paramétrer mes alertes.</p>
+            <p className="text-xs text-gray-500">Je veux revoir les pépites que j'ai achetées &amp; paramétrer mes alertes.</p>
           </div>
           <div className="px-6 py-1 md:border-l border-gray-100">
             <p className="text-xs text-gray-500">Je suis un·e particulier·e, je veux vendre mes affaires.</p>
