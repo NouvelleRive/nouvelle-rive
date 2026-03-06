@@ -136,7 +136,7 @@ export default function ProfilDeposantePage() {
       if (!token) { setMsg('❌ Non connecté'); setSaving(false); return }
       if (!pieceIdentiteUrl) { setMsg('❌ Pièce d\'identité obligatoire'); setSaving(false); return }
 
-      const res = await fetch('/api/deposantes', {
+      const res = await fetch('/api/deposante', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ prenom, nom, trigramme, telephone, adresse1, adresse2, iban, bic, banqueAdresse, modePaiement, pieceIdentiteUrl }),
