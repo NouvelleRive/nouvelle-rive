@@ -222,9 +222,9 @@ export default function LoginPage() {
         {/* COLONNE DROITE — Vendre chez NR */}
         <div className="w-72 shrink-0" style={{ border: '2px solid #0000FF' }}>
           <div className="p-6">
-            <h2 className="uppercase mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>Vendre chez<br/>NOUVELLE RIVE</h2>
+            <h2 className="uppercase mb-6" style={{ fontSize: '20px', letterSpacing: '0.05em', fontWeight: '700' }}>Vendre chez<br/>NOUVELLE RIVE</h2>
             <div className="mb-4">
-              <p className="font-bold uppercase text-sm mb-3">Je suis un particulier</p>
+              <p className="uppercase mb-3" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>Je suis un particulier</p>
               <div className="space-y-2">
                 <Link href="/client/deposant/inscription" className="block text-center py-2 border border-black text-xs hover:bg-black hover:text-white transition-colors uppercase">
                   Découvrir nos conditions
@@ -235,7 +235,7 @@ export default function LoginPage() {
               </div>
             </div>
             <div>
-              <p className="font-bold uppercase text-sm mb-3">Je suis un professionnel</p>
+              <p className="uppercase mb-3" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>Je suis un professionnel</p>
               <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-black text-xs hover:bg-black hover:text-white transition-colors uppercase">
                 Contacter Nouvelle Rive
               </a>
