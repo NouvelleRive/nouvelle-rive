@@ -2,89 +2,185 @@
 
 import Link from 'next/link'
 
-export default function DeposantInscriptionPage() {
-  const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+const PHOTOS = [
+  'PHOTO_BOUTIQUE_1', // remplacer par URL Bunny CDN
+  'PHOTO_BOUTIQUE_2',
+  'PHOTO_BOUTIQUE_3',
+]
+
+export default function ConditionsDeposantPage() {
+  const font = '"Helvetica Neue", Helvetica, Arial, sans-serif'
   const bleu = '#0000FF'
 
-  const label = {
+  const label: React.CSSProperties = {
     fontSize: '11px',
     letterSpacing: '0.2em',
-    fontWeight: '600' as const,
+    fontWeight: '600',
+    fontFamily: font,
   }
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: fontHelvetica }}>
-      <div className="px-6 py-12 max-w-2xl">
+    <div style={{ fontFamily: font, backgroundColor: '#fff', color: '#000' }}>
 
-        <p className="uppercase mb-8" style={label}>Vendre chez Nouvelle Rive</p>
-        <div style={{ borderBottom: '1px solid #000' }} className="mb-10" />
+      {/* HERO */}
+      <div className="relative overflow-hidden" style={{ borderBottom: '1px solid #000' }}>
+        <div className="flex" style={{ minHeight: '480px' }}>
 
-        {/* CONDITIONS */}
-        <div className="space-y-8 mb-12">
-
-          <div>
-            <p className="uppercase mb-3" style={label}>Notre commission</p>
-            <p className="text-sm">Vous recevez <strong>60% du prix de vente</strong> en virement bancaire, ou <strong>70%</strong> sous forme de bon d'achat à utiliser en boutique.</p>
+          {/* Texte gauche */}
+          <div className="flex flex-col justify-between p-10" style={{ width: '50%', borderRight: '1px solid #000' }}>
+            <p style={{ ...label, color: bleu }}>VENDRE CHEZ NOUVELLE RIVE</p>
+            <div>
+              <h1 style={{ fontSize: '52px', fontWeight: '700', lineHeight: '1.05', letterSpacing: '-0.02em', marginBottom: '24px' }}>
+                Votre garde-robe<br/>mérite une<br/>seconde vie.
+              </h1>
+              <p style={{ fontSize: '15px', lineHeight: '1.7', maxWidth: '380px', color: '#444' }}>
+                Chez Nouvelle Rive, chaque pièce est choisie avec soin. Nous prenons en charge la mise en valeur, la vente, et vous reversons l'essentiel — parce que votre confiance vaut plus qu'une commission.
+              </p>
+            </div>
+            <p style={{ ...label, color: '#888' }}>8 RUE DES ÉCOUFFES — PARIS 4E</p>
           </div>
 
-          <div>
-            <p className="uppercase mb-3" style={label}>Durée du dépôt</p>
-            <p className="text-sm">Vos pièces sont mises en vente pour une durée de <strong>60 jours</strong>. Au bout de 30 jours sans vente, nous vous proposons soit une réduction de 15% sur le prix, soit le retour de votre pièce.</p>
-          </div>
-
-          <div>
-            <p className="uppercase mb-3" style={label}>Paiement</p>
-            <p className="text-sm">Chaque mois, vous choisissez votre mode de paiement (virement ou bon d'achat) avant la fin du mois. Le règlement est effectué le <strong>10 du mois suivant</strong>.</p>
-          </div>
-
-          <div>
-            <p className="uppercase mb-3" style={label}>Ce que nous acceptons</p>
-            <p className="text-sm">Pièces vintage et de seconde main en bon état : prêt-à-porter, sacs, accessoires, chaussures, bijoux. Chaque pièce est sélectionnée par notre équipe lors du dépôt.</p>
+          {/* Photos droite */}
+          <div className="flex" style={{ width: '50%' }}>
+            {PHOTOS.map((url, i) => (
+              <div
+                key={i}
+                style={{
+                  flex: 1,
+                  borderLeft: i > 0 ? '1px solid #000' : undefined,
+                  backgroundColor: '#f0f0f0',
+                  backgroundImage: url.startsWith('http') ? `url(${url})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '480px',
+                }}
+              >
+                {!url.startsWith('http') && (
+                  <span style={{ ...label, color: '#aaa' }}>PHOTO</span>
+                )}
+              </div>
+            ))}
           </div>
 
         </div>
+      </div>
 
-        <div style={{ borderBottom: '1px solid #000' }} className="mb-10" />
+      {/* CONDITIONS */}
+      <div style={{ borderBottom: '1px solid #000' }}>
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          {[
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                </svg>
+              ),
+              titre: 'Notre commission',
+              texte: '60% du prix de vente en virement, ou 70% en bon d'achat boutique.',
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                </svg>
+              ),
+              titre: 'Durée du dépôt',
+              texte: '60 jours de mise en vente. À 30 jours : réduction 15% ou retour de la pièce.',
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                </svg>
+              ),
+              titre: 'Paiement',
+              texte: 'Vous choisissez chaque mois votre mode. Versement le 10 du mois suivant.',
+            },
+            {
+              icon: (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+                </svg>
+              ),
+              titre: 'Sélection',
+              texte: 'Prêt-à-porter, sacs, bijoux, chaussures vintage en bon état. Chaque pièce est validée.',
+            },
+          ].map(({ icon, titre, texte }, i) => (
+            <div
+              key={i}
+              className="p-8"
+              style={{ borderLeft: i > 0 ? '1px solid #000' : undefined }}
+            >
+              <div style={{ color: bleu, marginBottom: '16px' }}>{icon}</div>
+              <p style={{ ...label, marginBottom: '10px' }}>{titre.toUpperCase()}</p>
+              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#444' }}>{texte}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        {/* PROCESS 3 ÉTAPES */}
-        <div className="mb-10">
-          <p className="uppercase mb-6" style={label}>Comment ça marche</p>
-          <div className="space-y-4">
+      {/* LIEN PRODUITS ACCEPTÉS */}
+      <div className="flex items-center justify-between px-10 py-5" style={{ borderBottom: '1px solid #000' }}>
+        <p style={{ ...label, color: '#666' }}>Vous voulez savoir si vos pièces sont éligibles ?</p>
+        <Link
+          href="/client/deposant/produits-acceptes"
+          style={{ ...label, color: bleu, textDecoration: 'underline', textUnderlineOffset: '4px' }}
+        >
+          VOIR LES PIÈCES ACCEPTÉES →
+        </Link>
+      </div>
+
+      {/* COMMENT ÇA MARCHE */}
+      <div style={{ borderBottom: '1px solid #000' }}>
+        <div className="grid" style={{ gridTemplateColumns: '1fr 2fr' }}>
+          <div className="p-10" style={{ borderRight: '1px solid #000' }}>
+            <p style={label}>COMMENT ÇA MARCHE</p>
+          </div>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             {[
-              { n: '01', title: 'Créer votre compte', desc: 'Créez votre espace déposant en quelques minutes. Si vous avez déjà un compte client, vos informations sont récupérées automatiquement.' },
-              { n: '02', title: 'Décrire vos pièces', desc: 'Ajoutez vos articles avec photos et informations. Notre équipe valide chaque fiche avant mise en ligne.' },
-              { n: '03', title: 'Choisir votre créneau', desc: 'Réservez un rendez-vous pour déposer vos pièces en boutique au 8 rue des Écouffes, Paris 4e.' },
-            ].map(({ n, title, desc }) => (
-              <div key={n} className="flex gap-6 items-start">
-                <span className="shrink-0" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', color: bleu }}>{n}</span>
-                <div>
-                  <p className="uppercase mb-1" style={label}>{title}</p>
-                  <p className="text-sm text-gray-600">{desc}</p>
-                </div>
+              { n: '01', titre: 'Créer votre compte', texte: 'Créez votre espace déposant. Si vous avez déjà un compte client Nouvelle Rive, vos informations sont récupérées automatiquement.' },
+              { n: '02', titre: 'Décrire vos pièces', texte: 'Ajoutez vos articles avec photos et descriptions. Notre équipe valide chaque fiche avant publication.' },
+              { n: '03', titre: 'Déposer en boutique', texte: 'Réservez un créneau pour apporter vos pièces au 8 rue des Écouffes. On s\'occupe du reste.' },
+            ].map(({ n, titre, texte }, i) => (
+              <div key={i} className="p-8" style={{ borderLeft: '1px solid #000' }}>
+                <p style={{ fontSize: '32px', fontWeight: '700', color: bleu, marginBottom: '16px' }}>{n}</p>
+                <p style={{ ...label, marginBottom: '10px' }}>{titre.toUpperCase()}</p>
+                <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#444' }}>{texte}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* BOUTONS */}
-        <div className="space-y-3">
-          <Link
-            href="/client/deposant/nouveau"
-            className="block text-center py-3 uppercase transition-all duration-200 hover:opacity-80"
-            style={{ backgroundColor: bleu, color: 'white', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
-          >
-            Faire mon premier dépôt en ligne
-          </Link>
-          <button
-            disabled
-            className="w-full py-3 uppercase border border-black opacity-40 cursor-not-allowed"
-            style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
-          >
-            Prendre RDV pour un dépôt en physique
-          </button>
-        </div>
-
       </div>
+
+      {/* CTA */}
+      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <Link
+          href="/client/deposant/nouveau"
+          className="flex items-center justify-between p-10 transition-all"
+          style={{ backgroundColor: bleu, color: 'white', borderRight: '1px solid #0000cc' }}
+        >
+          <div>
+            <p style={{ ...label, color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>DÉPÔT EN LIGNE</p>
+            <p style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.01em' }}>Faire mon premier dépôt en ligne</p>
+          </div>
+          <span style={{ fontSize: '32px', fontWeight: '200' }}>→</span>
+        </Link>
+        <button
+          disabled
+          className="flex items-center justify-between p-10"
+          style={{ backgroundColor: '#f5f5f5', color: '#aaa', cursor: 'not-allowed', width: '100%', textAlign: 'left' }}
+        >
+          <div>
+            <p style={{ ...label, color: '#bbb', marginBottom: '8px' }}>BIENTÔT DISPONIBLE</p>
+            <p style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.01em' }}>Prendre RDV pour un dépôt en physique</p>
+          </div>
+          <span style={{ fontSize: '32px', fontWeight: '200' }}>→</span>
+        </button>
+      </div>
+
     </div>
   )
 }
