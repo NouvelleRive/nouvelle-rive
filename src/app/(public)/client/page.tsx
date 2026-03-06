@@ -39,10 +39,11 @@ export default function ClientPage() {
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-      <div className="max-w-4xl mx-auto px-6 py-12 flex gap-12">
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <h1 className="text-4xl font-bold uppercase mb-8">MON COMPTE</h1>
+        <p className="mb-8">Bonjour, {user?.displayName || user?.email}</p>
+        <div className="flex gap-12 items-stretch">
         <div className="flex-1">
-          <h1 className="text-4xl font-bold uppercase mb-8">MON COMPTE</h1>
-          <p className="mb-8">Bonjour, {user?.displayName || user?.email}</p>
           <div className="space-y-4">
           <Link 
             href="/client/profil" 
@@ -73,7 +74,7 @@ export default function ClientPage() {
           </button>
           </div>
         </div>
-        <div className="w-64 shrink-0 self-start" style={{ backgroundColor: '#22209C' }}>
+        <div className="w-64 shrink-0" style={{ backgroundColor: '#22209C' }}>
           <div className="p-6">
             <h2 className="text-lg font-bold uppercase mb-1 text-white">Vendre chez</h2>
             <h2 className="text-lg font-bold uppercase mb-6 text-white">NOUVELLE RIVE</h2>
