@@ -95,6 +95,7 @@ export default function ClientPage() {
           </div>
         </div>
       </div>
+      </div>
     </div>
   )
 }
