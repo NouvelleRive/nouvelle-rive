@@ -16,7 +16,7 @@ import {
 import { auth, db } from '@/lib/firebaseConfig'
 import ProductForm, { ProductFormData, Cat } from '@/components/ProductForm'
 import { checkSkuUnique } from '@/lib/admin/helpers'
-import { MARQUES_DEPOSANTE } from '@/lib/marquesDeposante'
+import { MARQUES_DEPOSANTE, getPrixRange } from '@/lib/marquesDeposante'
 
 // Catégories extraites du lib
 const CATEGORIES_DEPOSANTE: Cat[] = Array.from(
@@ -109,6 +109,16 @@ export default function DeposanteFormulairePage() {
         alert(`❌ Le SKU "${sku}" est déjà utilisé.`)
         setLoading(false)
         return
+      }
+
+      const range = getPrixRange(formData.marque, formData.categorie)
+      if (range) {
+        const prix = parseFloat(formData.prix)
+        if (prix < range.min || prix > range.max) {
+          alert(`⚠️ Prix hors marché pour cette pièce.\nFourchette conseillée : ${range.min}€ – ${range.max}€\n\nAjuste le prix ou contacte-nous.`)
+          setLoading(false)
+          return
+        }
       }
 
       const fullName = `${sku} - ${formData.nom.trim()}`
