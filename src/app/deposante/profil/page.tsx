@@ -5,7 +5,7 @@ import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
-unction generateTrigramme(prenom: string, nom: string): string {
+function generateTrigramme(prenom: string, nom: string): string {
   const p = prenom.trim().toUpperCase().replace(/[^A-Z]/g, '')
   const n = nom.trim().toUpperCase().replace(/[^A-Z]/g, '')
   if (!p && !n) return ''
@@ -15,12 +15,12 @@ unction generateTrigramme(prenom: string, nom: string): string {
 }
 
 async function findUniqueTrigramme(base: string, excludeUid?: string): Promise<string> {
-  const snap = await getDocs(query(collection(db, 'deposantes'), where('trigramme', '==', base)))
+  const snap = await getDocs(query(collection(db, 'deposante'), where('trigramme', '==', base)))
   const taken = snap.docs.filter(d => d.id !== excludeUid)
   if (taken.length === 0) return base
   for (let i = 2; i <= 99; i++) {
     const candidate = base + i
-    const s2 = await getDocs(query(collection(db, 'deposantes'), where('trigramme', '==', candidate)))
+    const s2 = await getDocs(query(collection(db, 'deposante'), where('trigramme', '==', candidate)))
     if (s2.empty) return candidate
   }
   return base
@@ -76,7 +76,7 @@ export default function ProfilDeposantePage() {
       setCurrentUid(u.uid)
 
       const snap = await getDocs(
-        query(collection(db, 'deposantes'), where('authUid', '==', u.uid))
+        query(collection(db, 'deposante'), where('authUid', '==', u.uid))
       )
       if (!snap.empty) {
         const d = snap.docs[0].data()
@@ -136,7 +136,7 @@ export default function ProfilDeposantePage() {
       if (!token) { setMsg('❌ Non connecté'); setSaving(false); return }
       if (!pieceIdentiteUrl) { setMsg('❌ Pièce d\'identité obligatoire'); setSaving(false); return }
 
-      const res = await fetch('/api/chineuse', {
+      const res = await fetch('/api/deposantes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ prenom, nom, trigramme, telephone, adresse1, adresse2, iban, bic, banqueAdresse, modePaiement, pieceIdentiteUrl }),
