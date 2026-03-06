@@ -34,7 +34,7 @@ export default function ConditionsDeposantPage() {
                 Votre garde-robe<br/>mérite une<br/>seconde vie.
               </h1>
               <p style={{ fontSize: '15px', lineHeight: '1.7', maxWidth: '380px', color: '#444' }}>
-                Chez Nouvelle Rive, chaque pièce est choisie avec soin. Nous prenons en charge la mise en valeur, la vente, et vous reversons l'essentiel — parce que votre confiance vaut plus qu'une commission.
+                Vendez ce que vous ne portez plus ! Nous prenons en dépôt vos pièces pendant deux mois. Une fois la pièce vendue vous récupérez 60 à 70% de la valeur. Découvrez les pièces éligibles.
               </p>
             </div>
             <p style={{ ...label, color: '#888' }}>8 RUE DES ÉCOUFFES — PARIS 4E</p>
