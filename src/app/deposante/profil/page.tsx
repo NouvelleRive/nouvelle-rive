@@ -5,6 +5,27 @@ import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
+unction generateTrigramme(prenom: string, nom: string): string {
+  const p = prenom.trim().toUpperCase().replace(/[^A-Z]/g, '')
+  const n = nom.trim().toUpperCase().replace(/[^A-Z]/g, '')
+  if (!p && !n) return ''
+  if (!p) return n.slice(0, 3)
+  if (!n) return p.slice(0, 3)
+  return p[0] + n.slice(0, 2)
+}
+
+async function findUniqueTrigramme(base: string, excludeUid?: string): Promise<string> {
+  const snap = await getDocs(query(collection(db, 'deposantes'), where('trigramme', '==', base)))
+  const taken = snap.docs.filter(d => d.id !== excludeUid)
+  if (taken.length === 0) return base
+  for (let i = 2; i <= 99; i++) {
+    const candidate = base + i
+    const s2 = await getDocs(query(collection(db, 'deposantes'), where('trigramme', '==', candidate)))
+    if (s2.empty) return candidate
+  }
+  return base
+}
+
 export default function ProfilDeposantePage() {
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -22,6 +43,9 @@ export default function ProfilDeposantePage() {
   const [banqueAdresse, setBanqueAdresse] = useState('')
   const [modePaiement, setModePaiement] = useState<'cash' | 'bon' | ''>('')
   const [pieceIdentiteUrl, setPieceIdentiteUrl] = useState('')
+  const [trigramme, setTrigramme] = useState('')
+  const [currentUid, setCurrentUid] = useState<string>('')
+  const [generatingTri, setGeneratingTri] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -49,6 +73,7 @@ export default function ProfilDeposantePage() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) return
       setEmail(u.email || '')
+      setCurrentUid(u.uid)
 
       const snap = await getDocs(
         query(collection(db, 'deposantes'), where('authUid', '==', u.uid))
@@ -65,6 +90,7 @@ export default function ProfilDeposantePage() {
         setBanqueAdresse(d?.banqueAdresse || '')
         setModePaiement(d?.modePaiement || '')
         setPieceIdentiteUrl(d?.pieceIdentiteUrl || '')
+        setTrigramme(d?.trigramme || '')
       }
       setLoaded(true)
     })
@@ -93,6 +119,15 @@ export default function ProfilDeposantePage() {
     }
   }
 
+  async function handleGenerateTrigramme() {
+    if (!prenom && !nom) return
+    setGeneratingTri(true)
+    const base = generateTrigramme(prenom, nom)
+    const unique = await findUniqueTrigramme(base, currentUid)
+    setTrigramme(unique)
+    setGeneratingTri(false)
+  }
+
   async function save() {
     setSaving(true)
     setMsg('')
@@ -104,7 +139,7 @@ export default function ProfilDeposantePage() {
       const res = await fetch('/api/deposantes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ prenom, nom, telephone, adresse1, adresse2, iban, bic, banqueAdresse, modePaiement, pieceIdentiteUrl }),
+        body: JSON.stringify({ prenom, nom, trigramme, telephone, adresse1, adresse2, iban, bic, banqueAdresse, modePaiement, pieceIdentiteUrl }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Erreur')
@@ -131,7 +166,7 @@ export default function ProfilDeposantePage() {
           {/* IDENTITÉ */}
           <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
             <p style={{ ...label, marginBottom: '20px' }}>IDENTITÉ</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={label}>PRÉNOM</label>
                 <input value={prenom} onChange={e => setPrenom(e.target.value)} style={inputStyle} />
@@ -140,6 +175,26 @@ export default function ProfilDeposantePage() {
                 <label style={label}>NOM</label>
                 <input value={nom} onChange={e => setNom(e.target.value)} style={inputStyle} />
               </div>
+            </div>
+            <div>
+              <label style={label}>TRIGRAMME</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  value={trigramme}
+                  onChange={e => setTrigramme(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
+                  style={{ ...inputStyle, width: '120px', fontWeight: '700', letterSpacing: '0.2em' }}
+                  placeholder="EX: MAD"
+                  maxLength={4}
+                />
+                <button
+                  onClick={handleGenerateTrigramme}
+                  disabled={generatingTri || (!prenom && !nom)}
+                  style={{ padding: '10px 16px', border: '1px solid #000', backgroundColor: '#fff', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.15em', fontWeight: '600', opacity: generatingTri || (!prenom && !nom) ? 0.4 : 1 }}
+                >
+                  {generatingTri ? '...' : 'GÉNÉRER'}
+                </button>
+              </div>
+              <p style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>Généré automatiquement à partir du prénom et du nom. Modifiable.</p>
             </div>
           </div>
 
