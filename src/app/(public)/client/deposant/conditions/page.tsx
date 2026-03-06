@@ -75,7 +75,7 @@ export default function ConditionsDeposantPage() {
         .hero-right { width: 50%; display: flex; }
         .photo-col { flex: 1; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center; min-height: 480px; }
         .conditions-grid { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid #000; }
-        .condition-card { padding: 32px; }
+        .condition-card { padding: 32px; display: flex; flex-direction: column; }
         .etapes-grid { display: grid; grid-template-columns: 1fr 2fr; border-bottom: 1px solid #000; }
         .etapes-right { display: grid; grid-template-columns: repeat(3, 1fr); }
         .cta-grid { display: grid; grid-template-columns: 1fr 1fr; }
@@ -101,16 +101,17 @@ export default function ConditionsDeposantPage() {
       {/* HERO */}
       <div className="hero">
         <div className="hero-left">
-          <p style={{ ...label, color: bleu }}>VENDRE CHEZ NOUVELLE RIVE</p>
+          <p style={{ ...label, color: bleu, marginBottom: '12px' }}>VENDRE CHEZ NOUVELLE RIVE</p>
           <div>
-            <h1 style={{ fontSize: '52px', fontWeight: '700', lineHeight: '1.05', letterSpacing: '-0.02em', marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '52px', fontWeight: '700', lineHeight: '1.05', letterSpacing: '-0.02em', marginBottom: '16px' }}>
               Votre garde-robe<br/>mérite une<br/>seconde vie.
             </h1>
-            <p style={{ fontSize: '15px', lineHeight: '1.7', maxWidth: '420px', color: '#444' }}>
-              Vendez ce que vous ne portez plus ! Nous prenons en dépôt vos pièces pendant deux mois. Une fois la pièce vendue vous récupérez 60 à 70% de la valeur. Découvrez les pièces éligibles.
+            <p style={{ fontSize: '15px', lineHeight: '1.7', maxWidth: '420px', color: '#444', marginBottom: '24px' }}>
+              Vendez ce que vous ne portez plus ! Nous prenons en dépôt vos pièces pendant deux mois. Une fois la pièce vendue vous récupérez 60 à 70% de la valeur.{' '}
+              <Link href="/client/deposant/produits-acceptes" style={{ color: bleu, textDecoration: 'underline', textUnderlineOffset: '3px' }}>Découvrez les pièces éligibles.</Link>
             </p>
           </div>
-          <p style={{ ...label, color: '#888' }}>8 RUE DES ÉCOUFFES — PARIS 4E</p>
+          <a href="https://maps.google.com/?q=8+rue+des+Ecouffes+Paris" target="_blank" rel="noopener noreferrer" style={{ ...label, color: '#888', textDecoration: 'none' }}>8 RUE DES ÉCOUFFES — PARIS 4E →</a>
         </div>
 
         <div className="hero-right">
@@ -134,7 +135,7 @@ export default function ConditionsDeposantPage() {
       </div>
 
       {/* CONDITIONS */}
-      <div className="conditions-grid">
+      <div className="conditions-grid" style={{ alignItems: 'stretch' }}>
         {conditions.map(({ icon, titre, texte, lien, lienLabel }, i) => (
           <div
             key={i}
@@ -158,17 +159,17 @@ export default function ConditionsDeposantPage() {
       </div>
 
       {/* MANIFESTO */}
-      <div style={{ backgroundColor: '#000', color: '#fff', padding: '32px', borderBottom: '1px solid #000', overflow: 'hidden' }}>
+      <div style={{ backgroundColor: '#fff', padding: '32px', borderBottom: '1px solid #000', borderTop: '1px solid #000' }}>
         <div style={{ display: 'flex', gap: '48px', alignItems: 'center', flexWrap: 'wrap' }}>
           {[
-            { emoji: '💸', texte: 'Plus d\'argent sur votre compte' },
-            { emoji: '🚪', texte: 'Plus de place dans vos placards' },
-            { emoji: '👯', texte: 'Des pièces accessibles pour nos copines' },
-            { emoji: '🌱', texte: 'Une planète plus propre' },
-          ].map(({ emoji, texte }, i) => (
+            'Plus d\'argent sur votre compte',
+            'Plus de place dans vos placards',
+            'Des pièces accessibles pour nos copines',
+            'Une planète plus propre',
+          ].map((texte, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '20px' }}>{emoji}</span>
-              <p style={{ ...label, color: 'white', whiteSpace: 'nowrap' }}>{texte.toUpperCase()}</p>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: bleu, display: 'inline-block', flexShrink: 0 }} />
+              <p style={{ ...label }}>{texte.toUpperCase()}</p>
             </div>
           ))}
         </div>
