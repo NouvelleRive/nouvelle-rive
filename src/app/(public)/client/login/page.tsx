@@ -226,17 +226,17 @@ export default function LoginPage() {
             <div className="mb-4">
               <p className="uppercase mb-3" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>Je suis un particulier</p>
               <div className="space-y-2">
-                <Link href="/client/deposant/inscription" className="block text-center py-2 border border-black text-xs hover:bg-black hover:text-white transition-colors uppercase">
+                <Link href="/client/deposant/inscription" className="block text-center py-2 border border-black hover:bg-black hover:text-white transition-colors uppercase" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
                   Découvrir nos conditions
                 </Link>
-                <Link href="/client/login" className="block text-center py-2 bg-black text-white text-xs hover:bg-gray-800 transition-colors uppercase">
+                <Link href="/client/login" className="block text-center py-2 bg-black text-white hover:bg-gray-800 transition-colors uppercase" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
                   Me connecter
                 </Link>
               </div>
             </div>
             <div>
               <p className="uppercase mb-3" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>Je suis un professionnel</p>
-              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-black text-xs hover:bg-black hover:text-white transition-colors uppercase">
+              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-black hover:bg-black hover:text-white transition-colors uppercase" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
                 Contacter Nouvelle Rive
               </a>
             </div>
