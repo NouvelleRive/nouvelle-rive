@@ -107,16 +107,27 @@ export default function ConditionsDeposantPage() {
               ),
               titre: 'Sélection',
               texte: 'Prêt-à-porter, sacs, bijoux, chaussures vintage en bon état. Chaque pièce est validée.',
+              lien: '/client/deposant/produits-acceptes',
+              lienLabel: 'Découvrir les pièces éligibles',
             },
-          ].map(({ icon, titre, texte }, i) => (
+          ].map(({ icon, titre, texte, lien, lienLabel }, i) => (
             <div
               key={i}
               className="p-8"
-              style={{ borderLeft: i > 0 ? '1px solid #000' : undefined }}
+              style={{
+                borderLeft: i > 0 ? '1px solid #000' : undefined,
+                backgroundColor: lien ? bleu : undefined,
+                color: lien ? 'white' : undefined,
+              }}
             >
-              <div style={{ color: bleu, marginBottom: '16px' }}>{icon}</div>
-              <p style={{ ...label, marginBottom: '10px' }}>{titre.toUpperCase()}</p>
-              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#444' }}>{texte}</p>
+              <div style={{ color: lien ? 'white' : bleu, marginBottom: '16px' }}>{icon}</div>
+              <p style={{ ...label, marginBottom: '10px', color: lien ? 'white' : undefined }}>{titre.toUpperCase()}</p>
+              <p style={{ fontSize: '13px', lineHeight: '1.7', color: lien ? 'rgba(255,255,255,0.8)' : '#444' }}>{texte}</p>
+              {lien && (
+                <Link href={lien} style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '700', color: 'white', textDecoration: 'underline', textUnderlineOffset: '4px', marginTop: '12px', display: 'block' }}>
+                  {lienLabel} →
+                </Link>
+              )}
             </div>
           ))}
         </div>
