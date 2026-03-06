@@ -157,12 +157,21 @@ export default function ConditionsDeposantPage() {
         ))}
       </div>
 
-      {/* BANDEAU PRODUITS ACCEPTÉS */}
-      <div className="bandeau-eligibles" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid #000', borderTop: '1px solid #000' }}>
-        <p style={{ ...label, color: '#666' }}>Vous voulez savoir si vos pièces sont éligibles ?</p>
-        <Link href="/client/deposant/produits-acceptes" style={{ ...label, color: bleu, textDecoration: 'underline', textUnderlineOffset: '4px' }}>
-          VOIR LES PIÈCES ACCEPTÉES →
-        </Link>
+      {/* MANIFESTO */}
+      <div style={{ backgroundColor: '#000', color: '#fff', padding: '32px', borderBottom: '1px solid #000', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', gap: '48px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {[
+            { emoji: '💸', texte: 'Plus d\'argent sur votre compte' },
+            { emoji: '🚪', texte: 'Plus de place dans vos placards' },
+            { emoji: '👯', texte: 'Des pièces accessibles pour nos copines' },
+            { emoji: '🌱', texte: 'Une planète plus propre' },
+          ].map(({ emoji, texte }, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '20px' }}>{emoji}</span>
+              <p style={{ ...label, color: 'white', whiteSpace: 'nowrap' }}>{texte.toUpperCase()}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* COMMENT ÇA MARCHE */}
