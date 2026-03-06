@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { MARQUES_DEPOSANTE } from '@/lib/marquesDeposante'
 
 const marques = MARQUES_DEPOSANTE
