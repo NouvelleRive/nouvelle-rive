@@ -1,4 +1,3 @@
-// app/(public)/client/login/page.tsx
 'use client'
 
 import { useState } from 'react'
@@ -20,8 +19,16 @@ export default function LoginPage() {
   const [prenom, setPrenom] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [emailDeposant, setEmailDeposant] = useState('')
-  const [passwordDeposant, setPasswordDeposant] = useState('')
+
+  // Déposante
+  const [emailDeposante, setEmailDeposante] = useState('')
+  const [passwordDeposante, setPasswordDeposante] = useState('')
+  const [isSignupDeposante, setIsSignupDeposante] = useState(false)
+
+  // Revendeuse
+  const [emailPro, setEmailPro] = useState('')
+  const [passwordPro, setPasswordPro] = useState('')
+
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,15 +67,27 @@ export default function LoginPage() {
     }
   }
 
-  const handleDeposantLogin = async (e: React.FormEvent) => {
+  const handleDeposanteLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      await signInWithEmailAndPassword(auth, emailDeposant, passwordDeposant)
-      router.push('/chineuse/formulaire')
+      if (isSignupDeposante) {
+        await createUserWithEmailAndPassword(auth, emailDeposante, passwordDeposante)
+      } else {
+        await signInWithEmailAndPassword(auth, emailDeposante, passwordDeposante)
+      }
+      router.push('/deposante/profil')
     } catch (err: any) {
-      setError('Erreur de connexion')
+      setError(
+        err.code === 'auth/email-already-in-use'
+          ? 'Cet email est déjà utilisé'
+          : err.code === 'auth/wrong-password'
+          ? 'Mot de passe incorrect'
+          : err.code === 'auth/user-not-found'
+          ? 'Aucun compte avec cet email'
+          : 'Erreur de connexion'
+      )
     } finally {
       setLoading(false)
     }
@@ -79,8 +98,8 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await signInWithEmailAndPassword(auth, emailDeposant, passwordDeposant)
-      router.push('/login')
+      await signInWithEmailAndPassword(auth, emailPro, passwordPro)
+      router.push('/chineuse/formulaire')
     } catch (err: any) {
       setError('Erreur de connexion')
     } finally {
@@ -90,15 +109,14 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
-      <div className="w-full max-w-3xl space-y-6">
+      <div className="w-full max-w-5xl space-y-6">
 
         <div className="flex flex-col md:flex-row gap-6 md:items-stretch">
 
-          {/* COLONNE GAUCHE — Formulaire */}
+          {/* COLONNE 1 — Compte client */}
           <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Mon compte client</h2>
 
-            {/* Google */}
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -114,7 +132,6 @@ export default function LoginPage() {
               {loading ? 'Connexion...' : 'Continuer avec Google'}
             </button>
 
-            {/* Séparateur */}
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
@@ -124,119 +141,91 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Formulaire */}
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignup && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
-                    <input
-                      type="text"
-                      value={prenom}
-                      onChange={(e) => setPrenom(e.target.value)}
-                      required
-                      className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition"
-                    />
+                    <input type="text" value={prenom} onChange={(e) => setPrenom(e.target.value)} required className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-                    <input
-                      type="text"
-                      value={nom}
-                      onChange={(e) => setNom(e.target.value)}
-                      required
-                      className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition"
-                    />
+                    <input type="text" value={nom} onChange={(e) => setNom(e.target.value)} required className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition" />
                   </div>
                 </>
               )}
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition"
-                  placeholder="ton@email.com"
-                />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition" placeholder="ton@email.com" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition"
-                  placeholder="••••••••"
-                />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition" placeholder="••••••••" />
               </div>
-
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg">
-                  {error}
-                </div>
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg">{error}</div>
               )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium"
-              >
+              <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium">
                 {loading ? 'Chargement...' : isSignup ? 'Créer mon compte' : 'Se connecter'}
               </button>
             </form>
 
-            <button
-              onClick={() => setIsSignup(!isSignup)}
-              className="w-full text-sm text-center hover:underline"
-              style={{ color: '#22209C' }}
-            >
+            <button onClick={() => setIsSignup(!isSignup)} className="w-full text-sm text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignup ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
 
             <div className="text-center">
-              <Link href="/boutique" className="text-sm text-gray-400 hover:underline">
-                ← Retour à la boutique
-              </Link>
+              <Link href="/boutique" className="text-sm text-gray-400 hover:underline">← Retour à la boutique</Link>
             </div>
           </div>
 
-          {/* COLONNE DROITE — Vendre chez NR */}
-          <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
-            <h2 className="text-xl font-bold uppercase whitespace-nowrap" style={{ color: '#22209C' }}>Vendre chez Nouvelle Rive</h2>
-
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un·e particulier·ère</p>
-              <Link href="/client/deposant/conditions" className="block text-sm underline" style={{ color: '#22209C' }}>
-                Découvrir nos conditions
+          {/* COLONNE 2 — Déposer une pièce */}
+          <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Déposer une pièce</h2>
+            <p className="text-xs text-gray-500">
+              Vendez vos pièces en dépôt-vente.{' '}
+              <Link href="/client/deposant/conditions" className="underline" style={{ color: '#22209C' }}>
+                Découvrir nos conditions →
               </Link>
-              <form onSubmit={handleDeposantLogin} className="space-y-2">
-                <input type="email" value={emailDeposant} onChange={(e) => setEmailDeposant(e.target.value)} required placeholder="ton@email.com" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
-                <input type="password" value={passwordDeposant} onChange={(e) => setPasswordDeposant(e.target.value)} required placeholder="••••••••" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
-                <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
-                  {loading ? 'Connexion...' : 'Se connecter'}
-                </button>
-              </form>
-            </div>
+            </p>
 
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un·e professionnel·le</p>
-              <Link href="/client/deposant/conditions" className="block text-sm underline" style={{ color: '#22209C' }}>
-                Postuler pour devenir revendeuse
-              </Link>
-              <form onSubmit={handleDeposantLogin} className="space-y-2">
-                <input type="email" value={emailDeposant} onChange={(e) => setEmailDeposant(e.target.value)} required placeholder="ton@email.com" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
-                <input type="password" value={passwordDeposant} onChange={(e) => setPasswordDeposant(e.target.value)} required placeholder="••••••••" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
-                <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
-                  {loading ? 'Connexion...' : 'Se connecter'}
-                </button>
-              </form>
-            </div>
+            <form onSubmit={handleDeposanteLogin} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={emailDeposante} onChange={(e) => setEmailDeposante(e.target.value)} required className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" placeholder="ton@email.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                <input type="password" value={passwordDeposante} onChange={(e) => setPasswordDeposante(e.target.value)} required minLength={6} className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" placeholder="••••••••" />
+              </div>
+              <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
+                {loading ? 'Connexion...' : isSignupDeposante ? 'Créer mon compte' : 'Se connecter'}
+              </button>
+            </form>
+
+            <button onClick={() => setIsSignupDeposante(!isSignupDeposante)} className="w-full text-sm text-center hover:underline" style={{ color: '#22209C' }}>
+              {isSignupDeposante ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
+            </button>
+          </div>
+
+          {/* COLONNE 3 — Espace revendeuse */}
+          <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace revendeuse</h2>
+            <p className="text-xs text-gray-500">Accès réservé aux chineuses Nouvelle Rive.</p>
+
+            <form onSubmit={handleProLogin} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={emailPro} onChange={(e) => setEmailPro(e.target.value)} required className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" placeholder="ton@email.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                <input type="password" value={passwordPro} onChange={(e) => setPasswordPro(e.target.value)} required className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" placeholder="••••••••" />
+              </div>
+              <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
+                {loading ? 'Connexion...' : 'Se connecter'}
+              </button>
+            </form>
           </div>
 
         </div>
