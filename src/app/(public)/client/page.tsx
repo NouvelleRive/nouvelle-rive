@@ -40,11 +40,10 @@ export default function ClientPage() {
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       <div className="max-w-4xl mx-auto px-6 py-12 flex gap-12">
-        <h1 className="text-4xl font-bold uppercase mb-8">MON COMPTE</h1>
-        
-        <p className="mb-8">Bonjour, {user?.displayName || user?.email}</p>
-
-        <div className="flex-1 space-y-4">
+        <div className="flex-1">
+          <h1 className="text-4xl font-bold uppercase mb-8">MON COMPTE</h1>
+          <p className="mb-8">Bonjour, {user?.displayName || user?.email}</p>
+          <div className="space-y-4">
           <Link 
             href="/client/profil" 
             className="block p-4 border border-black hover:bg-gray-50"
@@ -72,6 +71,7 @@ export default function ClientPage() {
           >
             Se déconnecter
           </button>
+          </div>
         </div>
         <div className="w-64 shrink-0 border border-black p-6 self-start">
           <h2 className="text-lg font-bold uppercase mb-1">Vendre chez</h2>
