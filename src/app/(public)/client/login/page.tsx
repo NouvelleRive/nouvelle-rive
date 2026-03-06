@@ -186,7 +186,7 @@ export default function LoginPage() {
 
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Je suis un particulier</p>
-              <Link href="/client/deposant/inscription" className="text-sm underline opacity-80 hover:opacity-100">
+              <Link href="/client/deposant/conditions" className="text-sm underline opacity-80 hover:opacity-100">
                 Découvrir nos conditions
               </Link>
 
