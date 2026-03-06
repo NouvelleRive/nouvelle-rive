@@ -66,7 +66,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: fontHelvetica }}>
-      <div className="max-w-md mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto px-6 py-12 flex gap-12 items-start">
+        <div className="flex-1">
         {/* Titre */}
         <h1 
           className="uppercase text-center mb-8"
@@ -229,6 +230,32 @@ export default function LoginPage() {
             ← Retour à la boutique
           </Link>
         </div>
+        </div>
+
+        {/* COLONNE DROITE — Vendre chez NR */}
+        <div className="w-72 shrink-0" style={{ backgroundColor: '#22209C' }}>
+          <div className="p-6">
+            <h2 className="text-lg font-bold uppercase mb-6 text-white">Vendre chez<br/>NOUVELLE RIVE</h2>
+            <div className="border border-white p-4 mb-4">
+              <p className="text-white font-bold uppercase text-sm mb-3">Je suis un particulier</p>
+              <div className="space-y-2">
+                <Link href="/client/deposant/inscription" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
+                  Découvrir nos conditions
+                </Link>
+                <Link href="/client/login" className="block text-center py-2 bg-white text-black text-xs hover:bg-gray-100 transition-colors uppercase">
+                  Me connecter
+                </Link>
+              </div>
+            </div>
+            <div className="border border-white p-4">
+              <p className="text-white font-bold uppercase text-sm mb-3">Je suis un professionnel</p>
+              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
+                Contacter Nouvelle Rive
+              </a>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   )
