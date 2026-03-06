@@ -92,7 +92,7 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
       <div className="w-full max-w-3xl space-y-6">
 
-        <div className="flex gap-6 items-stretch">
+        <div className="flex flex-col md:flex-row gap-6 md:items-stretch">
 
           {/* COLONNE GAUCHE — Formulaire */}
           <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
