@@ -2012,6 +2012,55 @@ async function compressImage(file: File): Promise<string> {
        {/* CHAMPS OPTIONNELS */}
           <div className="bg-gray-50 border rounded-lg p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Optionnel</h3>
+
+            {/* Bouton préremplissage IA */}
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  const imageUrl = formData.existingPhotos.face
+                  if (!imageUrl) {
+                    alert('Ajoutez une photo face d\'abord')
+                    return
+                  }
+                  if (!formData.categorie) {
+                    alert('Sélectionnez une catégorie d\'abord')
+                    return
+                  }
+                  const result = await analyzeProduct(imageUrl)
+                  if (result) {
+                    setFormData(prev => ({
+                      ...prev,
+                      ...(result.couleur && !prev.color ? { color: result.couleur } : {}),
+                      ...(result.motif ? { motif: result.motif } : {}),
+                      ...(result.modele ? { modele: result.modele } : {}),
+                      ...(result.sleeveLength ? { sleeveLength: result.sleeveLength } : {}),
+                      ...(result.collarType ? { collarType: result.collarType } : {}),
+                      ...(result.garmentLength ? { garmentLength: result.garmentLength } : {}),
+                      ...(result.closureType ? { closureType: result.closureType } : {}),
+                      ...(result.shoeType ? { shoeType: result.shoeType } : {}),
+                      ...(result.descriptions ? { description: `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}` } : {}),
+                    }))
+                  } else {
+                    alert('Erreur lors de l\'analyse')
+                  }
+                }}
+                disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}
+                className="w-full py-2.5 border-2 border-dashed border-[#22209C] text-[#22209C] rounded-lg font-medium hover:bg-[#22209C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+              >
+                {generatingDesc ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#22209C]"></div>
+                    Analyse en cours...
+                  </>
+                ) : (
+                  <>🤖 Préremplir les champs secondaires</>
+                )}
+              </button>
+              {!formData.existingPhotos.face && (
+                <p className="text-xs text-gray-400 mt-1">Photo face requise</p>
+              )}
+            </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
@@ -2139,55 +2188,6 @@ async function compressImage(file: File): Promise<string> {
                 </div>
                 {formData.color && (
                   <p className="text-xs text-[#22209C] mt-1.5 font-medium">{formData.color}</p>
-                )}
-              </div>
-
-              {/* Bouton préremplissage IA */}
-              <div className="col-span-2 md:col-span-4">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const imageUrl = formData.existingPhotos.face
-                    if (!imageUrl) {
-                      alert('Ajoutez une photo face d\'abord')
-                      return
-                    }
-                    if (!formData.categorie) {
-                      alert('Sélectionnez une catégorie d\'abord')
-                      return
-                    }
-                    const result = await analyzeProduct(imageUrl)
-                    if (result) {
-                      setFormData(prev => ({
-                        ...prev,
-                        ...(result.couleur && !prev.color ? { color: result.couleur } : {}),
-                        ...(result.motif ? { motif: result.motif } : {}),
-                        ...(result.modele ? { modele: result.modele } : {}),
-                        ...(result.sleeveLength ? { sleeveLength: result.sleeveLength } : {}),
-                        ...(result.collarType ? { collarType: result.collarType } : {}),
-                        ...(result.garmentLength ? { garmentLength: result.garmentLength } : {}),
-                        ...(result.closureType ? { closureType: result.closureType } : {}),
-                        ...(result.shoeType ? { shoeType: result.shoeType } : {}),
-                        ...(result.descriptions ? { description: `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}` } : {}),
-                      }))
-                    } else {
-                      alert('Erreur lors de l\'analyse')
-                    }
-                  }}
-                  disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}
-                  className="w-full py-2.5 border-2 border-dashed border-[#22209C] text-[#22209C] rounded-lg font-medium hover:bg-[#22209C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                >
-                  {generatingDesc ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#22209C]"></div>
-                      Analyse en cours...
-                    </>
-                  ) : (
-                    <>🤖 Préremplir les champs secondaires</>
-                  )}
-                </button>
-                {!formData.existingPhotos.face && (
-                  <p className="text-xs text-gray-400 mt-1">Photo face requise</p>
                 )}
               </div>
 
