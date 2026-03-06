@@ -79,7 +79,7 @@ export default function ConditionsDeposantPage() {
                 </svg>
               ),
               titre: 'Notre commission',
-              texte: '60% du prix de vente en virement, ou 70% en bon d'achat boutique.',
+              texte: {"60% du prix de vente en virement, ou 70% en bon d'achat boutique."},
             },
             {
               icon: (
