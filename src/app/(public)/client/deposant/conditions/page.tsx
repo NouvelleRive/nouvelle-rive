@@ -27,7 +27,7 @@ export default function ConditionsDeposantPage() {
         </svg>
       ),
       titre: 'Notre commission',
-      texte: '40% en cash, 30% en bons d\'achat valables sans limite de temps.',
+      texte: '40% en cash,\n30% en bons d\'achat valables sans limite de temps.',
     },
     {
       icon: (
@@ -36,7 +36,7 @@ export default function ConditionsDeposantPage() {
         </svg>
       ),
       titre: 'Durée du dépôt',
-      texte: '30 jours de dépôt, renouvelable 30 jours sous condition de baisse du prix.',
+      texte: '30 jours de dépôt,\nrenouvelable 30 jours sous condition de baisse du prix.',
     },
     {
       icon: (
@@ -85,8 +85,8 @@ export default function ConditionsDeposantPage() {
           .hero-left { width: 100%; border-right: none; border-bottom: 1px solid #000; padding: 24px; min-height: auto; }
           .hero-right { width: 100%; height: 220px; }
           .photo-col { min-height: 220px; }
-          .conditions-grid { grid-template-columns: repeat(2, 1fr); }
-          .condition-card { padding: 20px; border-bottom: 1px solid #000; }
+          .conditions-grid { grid-template-columns: repeat(2, 1fr); align-items: stretch; }
+          .condition-card { padding: 20px; border-bottom: 1px solid #000; height: 100%; box-sizing: border-box; }
           .etapes-grid { grid-template-columns: 1fr; }
           .etapes-label { display: none; }
           .etapes-right { grid-template-columns: 1fr; border-left: none !important; }
@@ -148,7 +148,7 @@ export default function ConditionsDeposantPage() {
           >
             <div style={{ color: lien ? 'white' : bleu, marginBottom: '16px' }}>{icon}</div>
             <p style={{ ...label, marginBottom: '10px', color: lien ? 'white' : undefined }}>{titre.toUpperCase()}</p>
-            <p style={{ fontSize: '13px', lineHeight: '1.7', color: lien ? 'rgba(255,255,255,0.85)' : '#444' }}>{texte}</p>
+            <p style={{ fontSize: '13px', lineHeight: '1.7', color: lien ? 'rgba(255,255,255,0.85)' : '#444', whiteSpace: 'pre-line' }}>{texte}</p>
             {lien && (
               <Link href={lien} style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '700', color: 'white', textDecoration: 'underline', textUnderlineOffset: '4px', marginTop: '12px', display: 'block' }}>
                 {lienLabel} →
