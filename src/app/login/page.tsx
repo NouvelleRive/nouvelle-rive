@@ -296,9 +296,8 @@ export default function LoginPage() {
         </div>
 
         <p className="text-xs text-gray-400 mt-4">
-            Pas encore de compte ? Contacte Nouvelle Rive
-          </p>
-          </div>
+          Pas encore de compte ? Contacte Nouvelle Rive
+        </p>
         </div>
 
         {/* COLONNE DROITE — Vendre chez NR */}
