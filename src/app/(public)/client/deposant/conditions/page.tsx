@@ -79,7 +79,7 @@ export default function ConditionsDeposantPage() {
                 </svg>
               ),
               titre: 'Notre commission',
-              texte: "60% du prix de vente en virement, ou 70% en bon d\u2019achat boutique.",
+              texte: "40% en cash, 30% en bons d\'achat valables sans limite de temps",
             },
             {
               icon: (
@@ -88,7 +88,7 @@ export default function ConditionsDeposantPage() {
                 </svg>
               ),
               titre: 'Durée du dépôt',
-              texte: '60 jours de mise en vente. À 30 jours : réduction 15% ou retour de la pièce.',
+              texte: '30 jours de dépôt, renouvelable 30 jours sous condition de baisse du prix',
             },
             {
               icon: (
