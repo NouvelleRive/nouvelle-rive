@@ -1,4 +1,4 @@
-// app/api/deposantes/route.ts
+// app/api/chineuse/route.ts
 // v2 - wearType + stockType
 export const runtime = 'nodejs'
 

@@ -64,7 +64,7 @@ export default function ProfilFacturationPage() {
         return
       }
 
-      const res = await fetch('/api/deposantes', {
+      const res = await fetch('/api/chineuse', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

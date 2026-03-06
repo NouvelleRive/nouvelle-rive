@@ -259,7 +259,7 @@ export default function AdminDeposantesPage() {
         },
       }
 
-      const res = await fetch('/api/deposantes', {
+      const res = await fetch('/api/chineuse', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,7 +294,7 @@ export default function AdminDeposantesPage() {
       const auth = getAuth()
       const token = await auth.currentUser?.getIdToken()
 
-      const res = await fetch('/api/deposantes', {
+      const res = await fetch('/api/chineuse', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
