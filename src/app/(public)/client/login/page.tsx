@@ -67,7 +67,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: fontHelvetica }}>
       <div className="px-6 py-12 flex gap-12 items-start justify-between">
-        <div className="flex-1">
+        <div className="w-1/2">
         {/* Titre */}      
 
         {/* Formulaire */}
@@ -220,7 +220,7 @@ export default function LoginPage() {
         </div>
 
         {/* COLONNE DROITE — Vendre chez NR */}
-        <div className="w-72 shrink-0" style={{ border: '2px solid #0000FF' }}>
+        <div className="w-1/2" style={{ border: '2px solid #0000FF' }}>
           <div className="p-6">
             <h2 className="uppercase mb-6" style={{ fontSize: '20px', letterSpacing: '0.05em', fontWeight: '700' }}>Vendre chez<br/>NOUVELLE RIVE</h2>
             <div className="mb-4">
