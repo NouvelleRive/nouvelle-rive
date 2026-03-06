@@ -20,6 +20,8 @@ export default function LoginPage() {
   const [prenom, setPrenom] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [emailDeposant, setEmailDeposant] = useState('')
+  const [passwordDeposant, setPasswordDeposant] = useState('')
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +60,20 @@ export default function LoginPage() {
     }
   }
 
+  const handleDeposantLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await signInWithEmailAndPassword(auth, emailDeposant, passwordDeposant)
+      router.push('/chineuse/formulaire')
+    } catch (err: any) {
+      setError('Erreur de connexion')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
       <div className="w-full max-w-3xl space-y-6">
@@ -66,7 +82,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold" style={{ color: '#22209C' }}>NOUVELLE RIVE</h1>
         </div>
 
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-6 items-stretch">
 
           {/* COLONNE GAUCHE — Formulaire */}
           <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
@@ -181,17 +197,17 @@ export default function LoginPage() {
           </div>
 
           {/* COLONNE DROITE — Vendre chez NR */}
-          <div className="w-72 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Vendre chez Nouvelle Rive</h2>
+          <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+            <h2 className="text-xl font-bold uppercase whitespace-nowrap" style={{ color: '#22209C' }}>Vendre chez Nouvelle Rive</h2>
 
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un particulier</p>
               <Link href="/client/deposant/inscription" className="text-sm underline" style={{ color: '#22209C' }}>
                 Découvrir nos conditions
               </Link>
-              <form onSubmit={handleSubmit} className="space-y-2 mt-2">
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="ton@email.com" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
+              <form onSubmit={handleDeposantLogin} className="space-y-2 mt-2">
+                <input type="email" value={emailDeposant} onChange={(e) => setEmailDeposant(e.target.value)} required placeholder="ton@email.com" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
+                <input type="password" value={passwordDeposant} onChange={(e) => setPasswordDeposant(e.target.value)} required placeholder="••••••••" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
                 <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
                   {loading ? 'Connexion...' : 'Se connecter'}
                 </button>
