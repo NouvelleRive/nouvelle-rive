@@ -1,7 +1,8 @@
 'use client'
 
 const marques = [
-  { nom: 'ALAÏA', categories: 'Prêt-à-porter, maroquinerie, petite maroquinerie, ceintures, bijoux, souliers' },
+  { nom: 'AGNÈS B.', categories: 'Prêt-à-porter, maroquinerie' },
+    { nom: 'ALAÏA', categories: 'Prêt-à-porter, maroquinerie, petite maroquinerie, ceintures, bijoux, souliers' },
   { nom: 'ALEXANDER MCQUEEN', categories: 'Prêt-à-porter, petite maroquinerie, ceintures, souliers' },
   { nom: 'ANN DEMEULEMEESTER', categories: 'Prêt-à-porter' },
   { nom: 'AZZARO', categories: 'Prêt-à-porter (hors formel)' },
@@ -42,6 +43,7 @@ const marques = [
   { nom: 'LORO PIANA', categories: 'Prêt-à-porter, maroquinerie' },
     { nom: 'LOUIS VUITTON', categories: 'Maroquinerie, petite maroquinerie, prêt-à-porter, souliers' },
   { nom: 'MARGIELA', categories: 'Prêt-à-porter, maroquinerie' },
+  { nom: 'MARINE SERRE', categories: 'Prêt-à-porter' },
   { nom: 'MAX MARA', categories: 'Manteaux, souliers' },
   { nom: 'MISSONI', categories: 'Prêt-à-porter, petite maroquinerie, souliers' },
   { nom: 'MIU MIU', categories: 'Prêt-à-porter, maroquinerie, petite maroquinerie, souliers' },
