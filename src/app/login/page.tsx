@@ -129,7 +129,6 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold" style={{ color: '#22209C' }}>
             NOUVELLE RIVE
           </h1>
-          <p className="text-gray-500 text-sm mt-2">Espace chineuses & admin</p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
