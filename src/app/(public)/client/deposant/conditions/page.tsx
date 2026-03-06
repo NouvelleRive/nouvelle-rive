@@ -108,10 +108,10 @@ export default function ConditionsDeposantPage() {
             </h1>
             <p style={{ fontSize: '15px', lineHeight: '1.7', maxWidth: '420px', color: '#444', marginBottom: '24px' }}>
               Vendez ce que vous ne portez plus ! Nous prenons en dépôt vos pièces pendant deux mois. Une fois la pièce vendue vous récupérez 60 à 70% de la valeur.{' '}
-              <Link href="/client/deposant/produits-acceptes" style={{ color: bleu, textDecoration: 'underline', textUnderlineOffset: '3px' }}>Découvrez les pièces éligibles.</Link>
+              <br/><Link href="/client/deposant/produits-acceptes" style={{ color: bleu, textDecoration: 'underline', textUnderlineOffset: '3px' }}>Découvrez les pièces éligibles.</Link>
             </p>
           </div>
-          <a href="https://maps.google.com/?q=8+rue+des+Ecouffes+Paris" target="_blank" rel="noopener noreferrer" style={{ ...label, color: '#888', textDecoration: 'none' }}>8 RUE DES ÉCOUFFES — PARIS 4E →</a>
+          <a href="https://www.nouvellerive.eu/nous-rencontrer" style={{ ...label, color: '#888', textDecoration: 'none' }}>8 RUE DES ÉCOUFFES — PARIS 4E →</a>
         </div>
 
         <div className="hero-right">
