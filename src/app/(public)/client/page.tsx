@@ -73,22 +73,24 @@ export default function ClientPage() {
           </button>
           </div>
         </div>
-        <div className="w-64 shrink-0 border border-black p-6 self-start">
-          <h2 className="text-lg font-bold uppercase mb-1">Vendre chez</h2>
-          <h2 className="text-lg font-bold uppercase mb-6">NOUVELLE RIVE</h2>
-          <div className="space-y-3">
-            <Link
-              href="/client/deposant/inscription"
-              className="block p-3 border border-black text-sm hover:bg-black hover:text-white transition-colors"
-            >
-              Je suis un particulier
-            </Link>
-            <Link
-              href="/client/pro/inscription"
-              className="block p-3 border border-black text-sm hover:bg-black hover:text-white transition-colors"
-            >
-              Je suis un professionnel
-            </Link>
+        <div className="w-64 shrink-0 self-start" style={{ backgroundColor: '#22209C' }}>
+          <div className="p-6">
+            <h2 className="text-lg font-bold uppercase mb-1 text-white">Vendre chez</h2>
+            <h2 className="text-lg font-bold uppercase mb-6 text-white">NOUVELLE RIVE</h2>
+            <div className="space-y-3">
+              <Link
+                href="/client/deposant/inscription"
+                className="block p-3 border border-white text-white text-sm hover:bg-white hover:text-black transition-colors"
+              >
+                Je suis un particulier
+              </Link>
+              <Link
+                href="/client/pro/inscription"
+                className="block p-3 border border-white text-white text-sm hover:bg-white hover:text-black transition-colors"
+              >
+                Je suis un professionnel
+              </Link>
+            </div>
           </div>
         </div>
       </div>
