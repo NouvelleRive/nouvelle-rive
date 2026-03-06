@@ -75,7 +75,7 @@ export default function NavbarPublic() {
               whiteSpace: 'nowrap'
             }}
           >
-            {isAuthenticated ? 'MON COMPTE' : 'SE CONNECTER'}
+            MON COMPTE
           </Link>
         </div>
 
