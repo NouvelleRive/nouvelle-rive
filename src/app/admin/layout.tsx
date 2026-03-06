@@ -114,7 +114,7 @@
                 isActive('/admin/deposantes') ? 'text-[#22209C] font-semibold bg-blue-50' : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
-              Création
+              Chineuses
             </Link>
             <Link
               href="/admin/vendeuses"
@@ -246,7 +246,7 @@
                 <>
                   <div className="text-xs text-gray-400 uppercase tracking-wider pt-2 mt-2 border-t">Équipe</div>
                   <Link href="/admin/deposantes" className={`text-sm font-medium py-2 ${isActive('/admin/deposantes') ? 'text-[#22209C] underline' : 'text-gray-600'}`}>
-                    Création
+                    Chineuses
                   </Link>
                   <Link href="/admin/vendeuses" className={`text-sm font-medium py-2 ${isActive('/admin/vendeuses') ? 'text-[#22209C] underline' : 'text-gray-600'}`}>
                     Vente
