@@ -132,19 +132,29 @@ export default function ProduitsAcceptesPage() {
         })}
       </div>
 
-      {/* FOOTER NOTE */}
-      <div style={{ padding: '32px 40px', borderTop: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-        <p style={{ fontSize: '13px', color: '#666' }}>
-          Votre marque n'est pas dans la liste ? Écrivez-nous, nous étudions chaque cas.
-        </p>
-        <a
-          href="mailto:nouvelleriveparis@gmail.com"
-          style={{ ...label, color: bleu, textDecoration: 'underline', textUnderlineOffset: '4px' }}
+      {/* CTA */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        <Link
+          href="/client/deposant/nouveau"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '40px', backgroundColor: bleu, color: 'white', borderRight: '1px solid #0000cc', textDecoration: 'none' }}
         >
-          NOUS CONTACTER →
-        </a>
+          <div>
+            <p style={{ ...label, color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>DÉPÔT EN LIGNE</p>
+            <p style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.01em' }}>Faire mon premier dépôt en ligne</p>
+          </div>
+          <span style={{ fontSize: '32px', fontWeight: '200', marginLeft: '16px' }}>→</span>
+        </Link>
+        <button
+          disabled
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '40px', backgroundColor: '#f5f5f5', color: '#aaa', cursor: 'not-allowed', width: '100%', textAlign: 'left', border: 'none' }}
+        >
+          <div>
+            <p style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', color: '#bbb', marginBottom: '8px' }}>BIENTÔT DISPONIBLE</p>
+            <p style={{ fontSize: '22px', fontWeight: '700', letterSpacing: '-0.01em' }}>Prendre RDV pour un dépôt en physique</p>
+          </div>
+          <span style={{ fontSize: '32px', fontWeight: '200', marginLeft: '16px' }}>→</span>
+        </button>
       </div>
-
     </div>
   )
 }
