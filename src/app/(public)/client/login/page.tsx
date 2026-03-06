@@ -78,10 +78,6 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
       <div className="w-full max-w-3xl space-y-6">
 
-        <div className="text-center">
-          <h1 className="text-3xl font-bold" style={{ color: '#22209C' }}>NOUVELLE RIVE</h1>
-        </div>
-
         <div className="flex gap-6 items-stretch">
 
           {/* COLONNE GAUCHE — Formulaire */}
@@ -201,21 +197,20 @@ export default function LoginPage() {
             <h2 className="text-xl font-bold uppercase whitespace-nowrap" style={{ color: '#22209C' }}>Vendre chez Nouvelle Rive</h2>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un particulier</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un·e particulier·ère</p>
               <Link href="/client/deposant/inscription" className="text-sm underline" style={{ color: '#22209C' }}>
                 Découvrir nos conditions
               </Link>
-              <form onSubmit={handleDeposantLogin} className="space-y-2 mt-2">
-                <input type="email" value={emailDeposant} onChange={(e) => setEmailDeposant(e.target.value)} required placeholder="ton@email.com" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
-                <input type="password" value={passwordDeposant} onChange={(e) => setPasswordDeposant(e.target.value)} required placeholder="••••••••" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
-                <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
-                  {loading ? 'Connexion...' : 'Se connecter'}
-                </button>
-              </form>
+              <Link href="/login" className="text-sm underline" style={{ color: '#22209C' }}>
+                Me connecter
+              </Link>
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un professionnel</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un·e professionnel·le</p>
+              <Link href="/client/deposant/inscription" className="text-sm underline" style={{ color: '#22209C' }}>
+                Postuler pour devenir revendeuse
+              </Link>
               <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-sm font-semibold uppercase tracking-wider" style={{ color: '#22209C' }}>
                 Contacter Nouvelle Rive
               </a>
