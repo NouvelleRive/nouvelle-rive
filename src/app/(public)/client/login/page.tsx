@@ -201,7 +201,7 @@ export default function LoginPage() {
               <Link href="/client/deposant/inscription" className="text-sm underline" style={{ color: '#22209C' }}>
                 Découvrir nos conditions
               </Link>
-              <Link href="/login" className="text-sm underline" style={{ color: '#22209C' }}>
+              <Link href="/client/deposant/inscription" className="text-sm underline" style={{ color: '#22209C' }}>
                 Me connecter
               </Link>
             </div>
@@ -211,9 +211,9 @@ export default function LoginPage() {
               <Link href="/client/deposant/inscription" className="text-sm underline" style={{ color: '#22209C' }}>
                 Postuler pour devenir revendeuse
               </Link>
-              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-sm font-semibold uppercase tracking-wider" style={{ color: '#22209C' }}>
-                Contacter Nouvelle Rive
-              </a>
+              <Link href="/login" className="text-sm underline" style={{ color: '#22209C' }}>
+                Me connecter
+              </Link>
             </div>
           </div>
 
