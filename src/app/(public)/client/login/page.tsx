@@ -74,6 +74,20 @@ export default function LoginPage() {
     }
   }
 
+  const handleProLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await signInWithEmailAndPassword(auth, emailDeposant, passwordDeposant)
+      router.push('/login')
+    } catch (err: any) {
+      setError('Erreur de connexion')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
       <div className="w-full max-w-3xl space-y-6">
@@ -215,9 +229,13 @@ export default function LoginPage() {
               <Link href="/client/deposant/conditions" className="block text-sm underline" style={{ color: '#22209C' }}>
                 Postuler pour devenir revendeuse
               </Link>
-              <Link href="/login" className="block text-sm underline" style={{ color: '#22209C' }}>
-                Me connecter
-              </Link>
+              <form onSubmit={handleDeposantLogin} className="space-y-2">
+                <input type="email" value={emailDeposant} onChange={(e) => setEmailDeposant(e.target.value)} required placeholder="ton@email.com" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
+                <input type="password" value={passwordDeposant} onChange={(e) => setPasswordDeposant(e.target.value)} required placeholder="••••••••" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
+                <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
+                  {loading ? 'Connexion...' : 'Se connecter'}
+                </button>
+              </form>
             </div>
           </div>
 
