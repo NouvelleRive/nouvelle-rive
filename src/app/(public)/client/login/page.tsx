@@ -68,20 +68,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-white" style={{ fontFamily: fontHelvetica }}>
       <div className="max-w-4xl mx-auto px-6 py-12 flex gap-12 items-start">
         <div className="flex-1">
-        {/* Titre */}
-        <h1 
-          className="uppercase text-center mb-8"
-          style={{ 
-            fontSize: '48px',
-            fontWeight: '700',
-            letterSpacing: '-0.01em',
-            lineHeight: '1'
-          }}
-        >
-          {isSignup ? 'CRÉER UN COMPTE' : 'SE CONNECTER'}
-        </h1>
-
-        <div style={{ borderBottom: '1px solid #000' }} className="mb-8" />
+        {/* Titre */}      
 
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -233,23 +220,23 @@ export default function LoginPage() {
         </div>
 
         {/* COLONNE DROITE — Vendre chez NR */}
-        <div className="w-72 shrink-0" style={{ backgroundColor: '#0000FF' }}>
+        <div className="w-72 shrink-0" style={{ border: '2px solid #0000FF' }}>
           <div className="p-6">
-            <h2 className="text-lg font-bold uppercase mb-6 text-white">Vendre chez<br/>NOUVELLE RIVE</h2>
+            <h2 className="uppercase mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>Vendre chez<br/>NOUVELLE RIVE</h2>
             <div className="mb-4">
-              <p className="text-white font-bold uppercase text-sm mb-3">Je suis un particulier</p>
+              <p className="font-bold uppercase text-sm mb-3">Je suis un particulier</p>
               <div className="space-y-2">
-                <Link href="/client/deposant/inscription" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
+                <Link href="/client/deposant/inscription" className="block text-center py-2 border border-black text-xs hover:bg-black hover:text-white transition-colors uppercase">
                   Découvrir nos conditions
                 </Link>
-                <Link href="/client/login" className="block text-center py-2 bg-white text-black text-xs hover:bg-gray-100 transition-colors uppercase">
+                <Link href="/client/login" className="block text-center py-2 bg-black text-white text-xs hover:bg-gray-800 transition-colors uppercase">
                   Me connecter
                 </Link>
               </div>
             </div>
             <div>
-              <p className="text-white font-bold uppercase text-sm mb-3">Je suis un professionnel</p>
-              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
+              <p className="font-bold uppercase text-sm mb-3">Je suis un professionnel</p>
+              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-black text-xs hover:bg-black hover:text-white transition-colors uppercase">
                 Contacter Nouvelle Rive
               </a>
             </div>
