@@ -532,4 +532,20 @@ export const MARQUES_DEPOSANTE: MarqueDeposante[] = [
   },
 ]
 
+export function getPrixRange(marque: string, categorie: string): { min: number, max: number } | null {
+  const m = MARQUES_DEPOSANTE.find(m => m.nom.toLowerCase() === marque.toLowerCase())
+  if (!m?.prix) return null
+  const cat = m.prix.find(p => categorie.toLowerCase().includes(p.categorie.toLowerCase()))
+  if (!cat) return null
+  return { min: cat.prixMin, max: cat.prixMax }
+}
+
+export function getPrixRange(marque: string, categorie: string): { min: number, max: number } | null {
+  const m = MARQUES_DEPOSANTE.find(m => m.nom.toLowerCase() === marque.toLowerCase())
+  if (!m?.prix) return null
+  const cat = m.prix.find(p => categorie.toLowerCase().includes(p.categorie.toLowerCase()))
+  if (!cat) return null
+  return { min: cat.prixMin, max: cat.prixMax }
+}
+
 export const NOMS_MARQUES_DEPOSANTE = MARQUES_DEPOSANTE.map(m => m.nom)
