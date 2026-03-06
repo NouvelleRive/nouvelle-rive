@@ -70,7 +70,7 @@ export default function LoginPage() {
 
           {/* COLONNE GAUCHE — Formulaire */}
           <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
-            <h2 className="text-xl font-bold uppercase leading-tight" style={{ color: '#22209C' }}>Mon compte<br/>client</h2>
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Mon compte client</h2>
 
             {/* Google */}
             <button
@@ -181,48 +181,26 @@ export default function LoginPage() {
           </div>
 
           {/* COLONNE DROITE — Vendre chez NR */}
-          <div className="w-72 bg-[#22209C] rounded-xl p-6 text-white space-y-6">
-            <h2 className="text-xl font-bold uppercase leading-tight">Vendre chez<br/>Nouvelle Rive</h2>
+          <div className="w-72 bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Vendre chez Nouvelle Rive</h2>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Je suis un particulier</p>
-              <Link href="/client/deposant/conditions" className="text-sm underline opacity-80 hover:opacity-100">
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un particulier</p>
+              <Link href="/client/deposant/inscription" className="text-sm underline" style={{ color: '#22209C' }}>
                 Découvrir nos conditions
               </Link>
-
               <form onSubmit={handleSubmit} className="space-y-2 mt-2">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="ton@email.com"
-                  className="w-full border border-white/40 bg-white/10 text-white placeholder-white/50 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-white"
-                />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full border border-white/40 bg-white/10 text-white placeholder-white/50 px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-white"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-2.5 bg-white text-[#22209C] rounded-lg hover:bg-gray-100 transition text-sm font-semibold uppercase tracking-wider"
-                >
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="ton@email.com" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="w-full border border-gray-200 px-4 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm" />
+                <button type="submit" disabled={loading} className="w-full bg-[#22209C] text-white py-2.5 rounded-lg hover:bg-[#1a1875] disabled:opacity-50 transition font-medium text-sm">
                   {loading ? 'Connexion...' : 'Se connecter'}
                 </button>
               </form>
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Je suis un professionnel</p>
-              <a
-                href="mailto:nouvelleriveparis@gmail.com"
-                className="block text-center py-2.5 border border-white rounded-lg hover:bg-white hover:text-[#22209C] transition text-sm font-semibold uppercase tracking-wider"
-              >
+              <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Je suis un professionnel</p>
+              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition text-sm font-semibold uppercase tracking-wider" style={{ color: '#22209C' }}>
                 Contacter Nouvelle Rive
               </a>
             </div>
