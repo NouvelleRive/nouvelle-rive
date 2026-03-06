@@ -66,7 +66,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: fontHelvetica }}>
-      <div className="max-w-4xl mx-auto px-6 py-12 flex gap-12 items-start">
+      <div className="px-6 py-12 flex gap-12 items-start">
         <div className="flex-1">
         {/* Titre */}      
 
