@@ -123,15 +123,13 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold" style={{ color: '#22209C' }}>
-            NOUVELLE RIVE
-          </h1>
-        </div>
+    <main className="min-h-screen bg-white px-6 py-12" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+      <div className="max-w-4xl mx-auto flex gap-12">
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">
+        {/* COLONNE GAUCHE — Mon compte */}
+        <div className="flex-1">
+          <h1 className="text-4xl font-bold uppercase mb-8">MON COMPTE</h1>
+          <div className="space-y-4">
           {!showReset ? (
             <>
               {/* Bouton Google - Principal */}
@@ -297,9 +295,40 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="text-xs text-center text-gray-400">
-          Pas encore de compte ? Contacte Nouvelle Rive
-        </p>
+        <p className="text-xs text-gray-400 mt-4">
+            Pas encore de compte ? Contacte Nouvelle Rive
+          </p>
+          </div>
+        </div>
+
+        {/* COLONNE DROITE — Vendre chez NR */}
+        <div className="w-72 shrink-0 self-start" style={{ backgroundColor: '#22209C' }}>
+          <div className="p-6">
+            <h2 className="text-lg font-bold uppercase mb-6 text-white">Vendre chez<br/>NOUVELLE RIVE</h2>
+
+            {/* Particulier */}
+            <div className="border border-white p-4 mb-4">
+              <p className="text-white font-bold uppercase text-sm mb-3">Je suis un particulier</p>
+              <div className="space-y-2">
+                <Link href="/client/deposant/inscription" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
+                  Découvrir nos conditions
+                </Link>
+                <Link href="/client/login?redirect=/client/deposant" className="block text-center py-2 bg-white text-black text-xs hover:bg-gray-100 transition-colors uppercase">
+                  Me connecter
+                </Link>
+              </div>
+            </div>
+
+            {/* Professionnel */}
+            <div className="border border-white p-4">
+              <p className="text-white font-bold uppercase text-sm mb-3">Je suis un professionnel</p>
+              <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
+                Contacter Nouvelle Rive
+              </a>
+            </div>
+          </div>
+        </div>
+
       </div>
     </main>
   )
