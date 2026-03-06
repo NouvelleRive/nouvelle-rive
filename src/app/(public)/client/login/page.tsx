@@ -233,10 +233,10 @@ export default function LoginPage() {
         </div>
 
         {/* COLONNE DROITE — Vendre chez NR */}
-        <div className="w-72 shrink-0" style={{ backgroundColor: '#22209C' }}>
+        <div className="w-72 shrink-0" style={{ backgroundColor: '#0000FF' }}>
           <div className="p-6">
             <h2 className="text-lg font-bold uppercase mb-6 text-white">Vendre chez<br/>NOUVELLE RIVE</h2>
-            <div className="border border-white p-4 mb-4">
+            <div className="mb-4">
               <p className="text-white font-bold uppercase text-sm mb-3">Je suis un particulier</p>
               <div className="space-y-2">
                 <Link href="/client/deposant/inscription" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
@@ -247,7 +247,7 @@ export default function LoginPage() {
                 </Link>
               </div>
             </div>
-            <div className="border border-white p-4">
+            <div>
               <p className="text-white font-bold uppercase text-sm mb-3">Je suis un professionnel</p>
               <a href="mailto:nouvelleriveparis@gmail.com" className="block text-center py-2 border border-white text-white text-xs hover:bg-white hover:text-black transition-colors uppercase">
                 Contacter Nouvelle Rive
