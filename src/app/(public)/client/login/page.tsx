@@ -100,13 +100,13 @@ export default function LoginPage() {
           <div className="px-6 pt-5 pb-1">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
               Mon compte client
-              {isSignupClient && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Nouveau</span>}
+              {isSignupClient && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
             </h2>
           </div>
           <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
               Vendre chez Nouvelle Rive
-              {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Nouveau</span>}
+              {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
             </h2>
           </div>
           <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
