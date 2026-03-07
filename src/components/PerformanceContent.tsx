@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, orderBy, query, where } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
@@ -94,6 +94,9 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const [selectedNoteTrigramme, setSelectedNoteTrigramme] = useState('')
   const [noteUpdatedBy, setNoteUpdatedBy] = useState('')
   const [noteUpdatedAt, setNoteUpdatedAt] = useState<Date | null>(null)
+  const [noteHistorique, setNoteHistorique] = useState<{message: string, updatedBy: string, updatedAt: Date}[]>([])
+  const [showHistorique, setShowHistorique] = useState(false)
+  const [loadingHistorique, setLoadingHistorique] = useState(false)
 
   // Charger les déposants
   useEffect(() => {
@@ -148,6 +151,21 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   }, [ventesData, role, chineuseTrigramme])
 
   // Charger la note chineuse
+  const loadHistorique = async (tri: string) => {
+    setLoadingHistorique(true)
+    try {
+      const snap = await getDocs(query(collection(db, 'notes-chineuses', tri, 'historique'), orderBy('updatedAt', 'desc')))
+      setNoteHistorique(snap.docs.map(d => {
+        const data = d.data()
+        return {
+          message: data.message || '',
+          updatedBy: data.updatedBy || '',
+          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
+        }
+      }))
+    } catch { setNoteHistorique([]) }
+    setLoadingHistorique(false)
+  }
   const noteTrigramme = isAdmin ? selectedNoteTrigramme : (chineuseTrigramme || '')
   useEffect(() => {
     if (!noteTrigramme) {
@@ -176,6 +194,20 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     if (!noteTrigramme) return
     setNoteSaving(true)
     try {
+      // Archiver la note existante si elle existe
+      if (noteText !== '' || noteUpdatedAt) {
+        const existing = await getDoc(doc(db, 'notes-chineuses', noteTrigramme))
+        if (existing.exists()) {
+          const d = existing.data()
+          if (d.message) {
+            await addDoc(collection(db, 'notes-chineuses', noteTrigramme, 'historique'), {
+              message: d.message,
+              updatedBy: d.updatedBy || '',
+              updatedAt: d.updatedAt || new Date(),
+            })
+          }
+        }
+      }
       await setDoc(doc(db, 'notes-chineuses', noteTrigramme), {
         message: noteText,
         updatedBy: isAdmin ? 'admin' : 'vendeuse',
@@ -187,6 +219,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     setNoteSaving(false)
     setNoteUpdatedBy(isAdmin ? 'admin' : 'vendeuse')
     setNoteUpdatedAt(new Date())
+    setShowHistorique(false)
   }
 
   // Générer tous les mois disponibles depuis les données
@@ -759,7 +792,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           <div className="flex items-center gap-2 mb-3">
             <select
               value={selectedNoteTrigramme}
-              onChange={(e) => { setSelectedNoteTrigramme(e.target.value); setNoteLoaded(false) }}
+              onChange={(e) => { setSelectedNoteTrigramme(e.target.value); setNoteLoaded(false); setShowHistorique(false); setNoteHistorique([]) }}
               className="border border-gray-200 rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
             >
               <option value="">Sélectionner une chineuse…</option>
@@ -783,14 +816,36 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     Modifié par {noteUpdatedBy} le {format(noteUpdatedAt, 'd MMM yyyy à HH:mm', { locale: fr })}
                   </span>
                 )}
-                <button
-                  onClick={saveNote}
-                  disabled={noteSaving}
-                  className="ml-auto px-4 py-1.5 bg-[#22209C] text-white text-xs font-medium rounded-md hover:bg-[#22209C]/90 disabled:opacity-50"
-                >
-                  {noteSaving ? 'Enregistrement…' : 'Enregistrer'}
-                </button>
+                <div className="ml-auto flex gap-2">
+                  <button
+                    onClick={async () => { setShowHistorique(!showHistorique); if (!showHistorique) await loadHistorique(noteTrigramme) }}
+                    className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-md hover:bg-gray-50"
+                  >
+                    {showHistorique ? 'Masquer' : 'Anciennes notes'}
+                  </button>
+                  <button
+                    onClick={saveNote}
+                    disabled={noteSaving}
+                    className="px-4 py-1.5 bg-[#22209C] text-white text-xs font-medium rounded-md hover:bg-[#22209C]/90 disabled:opacity-50"
+                  >
+                    {noteSaving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                </div>
               </div>
+              {showHistorique && (
+                <div className="mt-3 border-t pt-3 space-y-2">
+                  {loadingHistorique ? (
+                    <p className="text-xs text-gray-400">Chargement…</p>
+                  ) : noteHistorique.length === 0 ? (
+                    <p className="text-xs text-gray-400">Aucune note archivée.</p>
+                  ) : noteHistorique.map((n, i) => (
+                    <div key={i} className="bg-gray-50 rounded p-2 text-xs">
+                      <p className="text-gray-700 whitespace-pre-wrap">{n.message}</p>
+                      <p className="text-gray-400 mt-1">{format(n.updatedAt, 'd MMM yyyy à HH:mm', { locale: fr })} · {n.updatedBy}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
