@@ -147,7 +147,7 @@ export default function LoginPage() {
             </Link>
           </div>
           <div className="px-6 py-1 md:border-l border-gray-100 flex items-center">
-            <Link href="/boutique" className="text-sm underline" style={{ color: '#22209C' }}>
+            <Link href="/nous-rencontrer" className="text-sm underline" style={{ color: '#22209C' }}>
               Découvrir la boutique →
             </Link>
           </div>
