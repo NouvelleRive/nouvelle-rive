@@ -3,11 +3,11 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, orderBy, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, deleteDoc, orderBy, query, where } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
-import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle, Trash2 } from 'lucide-react'
 import { getMonthEvents } from '@/lib/retailEvents'
 
 type Produit = {
@@ -97,6 +97,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const [noteHistorique, setNoteHistorique] = useState<{message: string, updatedBy: string, updatedAt: Date}[]>([])
   const [showHistorique, setShowHistorique] = useState(false)
   const [loadingHistorique, setLoadingHistorique] = useState(false)
+  const [noteHistoriqueIds, setNoteHistoriqueIds] = useState<string[]>([])
 
   // Charger les déposants
   useEffect(() => {
@@ -155,6 +156,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     setLoadingHistorique(true)
     try {
       const snap = await getDocs(query(collection(db, 'notes-chineuses', tri, 'historique'), orderBy('updatedAt', 'desc')))
+      setNoteHistoriqueIds(snap.docs.map(d => d.id))
       setNoteHistorique(snap.docs.map(d => {
         const data = d.data()
         return {
@@ -165,6 +167,13 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       }))
     } catch { setNoteHistorique([]) }
     setLoadingHistorique(false)
+  }
+  const deleteHistoriqueNote = async (index: number) => {
+    const id = noteHistoriqueIds[index]
+    if (!id || !noteTrigramme) return
+    await deleteDoc(doc(db, 'notes-chineuses', noteTrigramme, 'historique', id))
+    setNoteHistorique(prev => prev.filter((_, i) => i !== index))
+    setNoteHistoriqueIds(prev => prev.filter((_, i) => i !== index))
   }
   const noteTrigramme = isAdmin ? selectedNoteTrigramme : (chineuseTrigramme || '')
   useEffect(() => {
@@ -839,9 +848,14 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   ) : noteHistorique.length === 0 ? (
                     <p className="text-xs text-gray-400">Aucune note archivée.</p>
                   ) : noteHistorique.map((n, i) => (
-                    <div key={i} className="bg-gray-50 rounded p-2 text-xs">
-                      <p className="text-gray-700 whitespace-pre-wrap">{n.message}</p>
-                      <p className="text-gray-400 mt-1">{format(n.updatedAt, 'd MMM yyyy à HH:mm', { locale: fr })} · {n.updatedBy}</p>
+                    <div key={i} className="bg-gray-50 rounded p-2 text-xs flex gap-2 items-start">
+                      <div className="flex-1">
+                        <p className="text-gray-700 whitespace-pre-wrap">{n.message}</p>
+                        <p className="text-gray-400 mt-1">{format(n.updatedAt, 'd MMM yyyy à HH:mm', { locale: fr })} · {n.updatedBy}</p>
+                      </div>
+                      <button onClick={() => deleteHistoriqueNote(i)} className="text-gray-300 hover:text-red-400 shrink-0 mt-0.5">
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   ))}
                 </div>
