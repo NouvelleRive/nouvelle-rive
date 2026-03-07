@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { auth } from '@/lib/firebaseConfig'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  sendPasswordResetEmail
 } from 'firebase/auth'
-import { auth } from '@/lib/firebaseConfig'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -51,6 +52,14 @@ export default function LoginPage() {
     } catch { setError('Erreur Google') }
   }
 
+  const handleForgotPassword = async (email: string) => {
+    if (!email) { setError("Entre ton email d'abord"); return }
+    try {
+      await sendPasswordResetEmail(auth, email)
+      setError('Email de réinitialisation envoyé !')
+    } catch { setError('Erreur, vérifie ton email') }
+  }
+
   const handleDeposanteSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setLoading(true)
     try {
@@ -89,10 +98,16 @@ export default function LoginPage() {
 
           {/* ── ROW : TITRES ── */}
           <div className="px-6 pt-5 pb-1">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Mon compte client</h2>
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
+              Mon compte client
+              {isSignupClient && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Nouveau</span>}
+            </h2>
           </div>
           <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Vendre chez Nouvelle Rive</h2>
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
+              Vendre chez Nouvelle Rive
+              {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Nouveau</span>}
+            </h2>
           </div>
           <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace professionnel·les</h2>
@@ -161,6 +176,11 @@ export default function LoginPage() {
           <div className="px-6 py-1">
             <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
             <input type="password" value={passwordClient} onChange={e => setPasswordClient(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
+            {!isSignupClient && (
+              <button type="button" onClick={() => handleForgotPassword(emailClient)} className="text-xs text-gray-400 hover:underline mt-1 block">
+                Mot de passe oublié ?
+              </button>
+            )}
           </div>
           <div className="px-6 py-1 md:border-l border-gray-100">
             <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
