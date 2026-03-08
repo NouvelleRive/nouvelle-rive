@@ -134,6 +134,11 @@ export default function ProfilDeposantePage() {
     try {
       const token = await auth.currentUser?.getIdToken()
       if (!token) { setMsg('❌ Non connecté'); setSaving(false); return }
+      if (!trigramme && prenom && nom) {
+        const base = generateTrigramme(prenom, nom)
+        const unique = await findUniqueTrigramme(base, currentUid)
+        setTrigramme(unique)
+      }
       if (!pieceIdentiteUrl) { setMsg('❌ Pièce d\'identité obligatoire'); setSaving(false); return }
 
       const res = await fetch('/api/deposante', {
@@ -176,23 +181,14 @@ export default function ProfilDeposantePage() {
               </div>
             </div>
             <div>
+              <div>
               <label style={label}>TRIGRAMME</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input
-                  value={trigramme}
-                  onChange={e => setTrigramme(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
-                  style={{ ...inputStyle, width: '120px', fontWeight: '700', letterSpacing: '0.2em' }}
-                  placeholder="EX: MAD"
-                  maxLength={4}
-                />
-                <button
-                  onClick={handleGenerateTrigramme}
-                  disabled={generatingTri || (!prenom && !nom)}
-                  style={{ padding: '10px 16px', border: '1px solid #000', backgroundColor: '#fff', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.15em', fontWeight: '600', opacity: generatingTri || (!prenom && !nom) ? 0.4 : 1 }}
-                >
-                  {generatingTri ? '...' : 'GÉNÉRER'}
-                </button>
-              </div>   
+              <input
+                value={trigramme || '—'}
+                disabled
+                style={{ ...inputStyle, width: '120px', fontWeight: '700', letterSpacing: '0.2em', backgroundColor: '#f5f5f5', color: '#888' }}
+              />
+            </div>
             </div>
           </div>
 
@@ -221,8 +217,7 @@ export default function ProfilDeposantePage() {
 
           {/* PIÈCE D'IDENTITÉ */}
           <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
-            <p style={{ ...label, marginBottom: '8px' }}>PIÈCE D'IDENTITÉ *</p>
-            <p style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>CNI ou passeport obligatoire. Document stocké de façon sécurisée, utilisé uniquement pour vérification.</p>
+            <p style={{ ...label, marginBottom: '8px' }}>PIÈCE D'IDENTITÉ *</p> 
             {pieceIdentiteUrl ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ width: '80px', height: '52px', border: '1px solid #000', backgroundImage: `url(${pieceIdentiteUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
