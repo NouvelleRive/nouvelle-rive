@@ -372,8 +372,8 @@ export default function AdminDeposantesPage() {
 
         {/* STATS RESTOCKS */}
         <div className="mt-6 lg:mt-0">
-          <div className="bg-white rounded-xl border p-4 sticky top-20">
-            <div className="space-y-3">
+          <div className="bg-white rounded-xl border p-2 sticky top-20">
+            <div>
               {[...deposants]
                 .map((d: any) => {
                   const nbProduits = produits.filter((p: any) => p.chineur === d.email || p.chineurUid === d.id).length
