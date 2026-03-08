@@ -10,7 +10,7 @@ import { db } from '@/lib/firebaseConfig'
 // =====================
 const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
 const CRENEAUX_RESTOCK = ['14h', '18h'] as const
-const JOURS_SEMAINE = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
+const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 // =====================
 // TYPES
@@ -160,7 +160,7 @@ export default function PlanningCalendar({
   const calendarDays = useMemo(() => {
     const firstDay = new Date(currentMonth.year, currentMonth.month, 1)
     const lastDay = new Date(currentMonth.year, currentMonth.month + 1, 0)
-    const startPad = firstDay.getDay()
+    const startPad = (firstDay.getDay() + 6) % 7
     const days: (number | null)[] = []
     for (let i = 0; i < startPad; i++) days.push(null)
     for (let d = 1; d <= lastDay.getDate(); d++) days.push(d)
