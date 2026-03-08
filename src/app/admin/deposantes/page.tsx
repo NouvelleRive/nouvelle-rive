@@ -389,12 +389,7 @@ export default function AdminDeposantesPage() {
           <Plus size={18} />
           <span className="hidden sm:inline">Ajouter</span>
         </button>
-        <button
-          onClick={handleMigration}
-          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90"
-        >
-          🔄 <span className="hidden sm:inline">Migrer données</span>
-        </button>
+        
       </div>
 
       <div className="space-y-4">
