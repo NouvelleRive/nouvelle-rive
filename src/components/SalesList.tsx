@@ -27,6 +27,7 @@ export interface Vente {
   prixInitial?: number | null
   prixVenteReel?: number
   dateVente?: Timestamp | string | null
+  createdAt?: Timestamp | string | null
   remarque?: string | null
   source?: string
   isAttribue?: boolean
@@ -369,7 +370,14 @@ export default function SalesList({
                         <p className="font-semibold text-gray-900">{vente.sku && <span className="text-[#22209C]">{vente.sku} - </span>}{(vente.nom || vente.remarque || 'Vente sans nom').replace(new RegExp(`^${vente.sku}\\s*-\\s*`, 'i'), '')}</p>
                       </div>
                       {vente.description && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{vente.description}</p>}
-                      <p className="text-sm text-gray-400 mt-1">Vendu le {format(getDateFromVente(vente), 'dd/MM/yyyy')}{cat && <span className="ml-2">• {cat}</span>}</p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Vendu le {format(getDateFromVente(vente), 'dd/MM/yyyy')}{cat && <span className="ml-2">• {cat}</span>}
+                        {vente.createdAt && (() => {
+                          const entree = typeof (vente.createdAt as any).toDate === 'function' ? (vente.createdAt as any).toDate() : new Date(vente.createdAt as string)
+                          const jours = Math.round((getDateFromVente(vente).getTime() - entree.getTime()) / (1000 * 60 * 60 * 24))
+                          return <span className="ml-2">• Entré le {format(entree, 'dd/MM/yyyy')} · {jours}j</span>
+                        })()}
+                      </p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-green-600 text-lg">{prix}€</p>
