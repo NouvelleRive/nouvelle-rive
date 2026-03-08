@@ -8,20 +8,7 @@ import { fr } from 'date-fns/locale'
 import { Timestamp } from 'firebase/firestore'
 import { Link, Pencil, Trash2 } from 'lucide-react'
 
-export interface Vente {
-  id: string
-  produitId?: string | null
-  nom?: string
-  sku?: string | null
-  marque?: string | null
-  trigramme?: string | null
-  prix?: number
-  prixInitial?: number | null
-  prixVenteReel?: number
-  dateVente?: Timestamp | string | null
-  isAttribue?: boolean
-  imageUrls?: string[]
-}
+import { Vente } from '@/components/SalesList'
 
 interface SalesGridProps {
   ventes: Vente[]
