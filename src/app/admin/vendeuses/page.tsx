@@ -588,6 +588,7 @@
         <div className="lg:grid lg:grid-cols-3 lg:gap-6">
           <div className="lg:col-span-2">
             <PlanningCalendar
+              mode="planning"
               vendeuses={vendeuses}
               planningSlots={planningSlots}
               currentMonth={currentMonth}
