@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import { auth } from '@/lib/firebaseConfig'
 import SalesList, { Vente } from '@/components/SalesList'
-import { X, Search, Link, Trash2, Sparkles } from 'lucide-react'
+import { X, Search, Link, Trash2 } from 'lucide-react'
 
 // Helper pour récupérer le token
 const getAuthToken = async () => {
@@ -26,12 +26,6 @@ export default function AdminNosVentesPage() {
 
   // Import Excel
   const [importLoading, setImportLoading] = useState(false)
-
-  // Cleanup doublons
-  const [cleanupLoading, setCleanupLoading] = useState(false)
-  const [cleanupResult, setCleanupResult] = useState<any>(null)
-  const [showCleanupModal, setShowCleanupModal] = useState(false)
-  const [cleanupMois, setCleanupMois] = useState('11-2025') // Par défaut novembre
 
   // Modals
   const [showModalAttribuer, setShowModalAttribuer] = useState(false)
@@ -169,38 +163,6 @@ export default function AdminNosVentesPage() {
   }, [allProduits, searchProduit, venteSelectionnee])
 
   // ==================== HANDLERS ====================
-
-  // Cleanup doublons
-  const handleCleanupDoublons = async (dryRun: boolean) => {
-    setCleanupLoading(true)
-    try {
-      const token = await getAuthToken()
-      if (!token) {
-        alert('Non authentifié')
-        return
-      }
-
-      const res = await fetch('/api/cleanup-doublons', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ dryRun, mois: cleanupMois || null })
-      })
-      const data = await res.json()
-      setCleanupResult(data)
-      
-      if (!dryRun && data.success) {
-        await loadVentes()
-      }
-    } catch (err) {
-      alert('Erreur lors du nettoyage')
-      console.error(err)
-    } finally {
-      setCleanupLoading(false)
-    }
-  }
 
   // Sync Square
   const handleSync = async (startDate: string, endDate: string) => {
@@ -469,19 +431,7 @@ export default function AdminNosVentesPage() {
 
   return (
     <>
-      {/* Bouton Nettoyer doublons */}
-      <div className="max-w-6xl mx-auto px-4 pt-4">
-        <button
-          onClick={() => {
-            setCleanupResult(null)
-            setShowCleanupModal(true)
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-sm font-medium"
-        >
-          <Sparkles size={16} />
-          Nettoyer les doublons
-        </button>
-      </div>
+      
 
       <SalesList
         titre={titre}
@@ -506,108 +456,6 @@ export default function AdminNosVentesPage() {
         importLoading={importLoading}
         onRefresh={loadVentes}
       />
-
-      {/* Modal Cleanup Doublons */}
-      {showCleanupModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
-                <Sparkles size={20} className="text-purple-600" />
-                Nettoyer les doublons
-              </h3>
-              <button onClick={() => setShowCleanupModal(false)}><X size={20} /></button>
-            </div>
-
-            <p className="text-gray-600 text-sm mb-4">
-              Cet outil détecte les ventes NON attribuées qui ont un doublon ATTRIBUÉ 
-              (même prix + même date). Seules les non attribuées seront supprimées.
-            </p>
-
-            {!cleanupResult && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Mois à analyser</label>
-                  <select
-                    value={cleanupMois}
-                    onChange={(e) => setCleanupMois(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2"
-                  >
-                    <option value="">Tous les mois</option>
-                    <option value="12-2025">Décembre 2025</option>
-                    <option value="11-2025">Novembre 2025</option>
-                    <option value="10-2025">Octobre 2025</option>
-                    <option value="9-2025">Septembre 2025</option>
-                  </select>
-                </div>
-                <button
-                  onClick={() => handleCleanupDoublons(true)}
-                  disabled={cleanupLoading}
-                  className="w-full px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 disabled:opacity-50"
-                >
-                  {cleanupLoading ? '...' : '1. Analyser (sans supprimer)'}
-                </button>
-              </div>
-            )}
-
-            {cleanupResult && (
-              <div className="space-y-4">
-                <div className={`p-4 rounded-lg ${cleanupResult.doublonsIdentifies > 0 ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
-                  <p className="font-medium">
-                    {cleanupResult.doublonsIdentifies > 0 
-                      ? `🔍 ${cleanupResult.doublonsIdentifies} doublon(s) trouvé(s)`
-                      : '✅ Aucun doublon trouvé !'}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Total ventes analysées : {cleanupResult.totalVentes}
-                  </p>
-                  {cleanupResult.doublonsSupprimes > 0 && (
-                    <p className="text-sm text-green-600 mt-1 font-medium">
-                      ✅ {cleanupResult.doublonsSupprimes} doublon(s) supprimé(s)
-                    </p>
-                  )}
-                </div>
-
-                {cleanupResult.details && cleanupResult.details.length > 0 && (
-                  <div>
-                    <p className="font-medium text-sm mb-2">Détails (max 50) :</p>
-                    <div className="max-h-64 overflow-y-auto border rounded-lg">
-                      {cleanupResult.details.map((d: any, i: number) => (
-                        <div key={i} className="p-2 border-b last:border-b-0 text-xs">
-                          <p className="text-gray-500 font-medium">{d.raison || 'Doublon'}</p>
-                          <p className="text-green-600">✓ Garde : <strong>{d.garde.sku}</strong> - {d.garde.nom}</p>
-                          <p className="text-red-600">✗ Supprime : <strong>{d.supprime.sku || '—'}</strong> - {d.supprime.nom}</p>
-                          <p className="text-gray-400">Prix : {d.prix}€</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {cleanupResult.dryRun && cleanupResult.doublonsIdentifies > 0 && (
-                  <button
-                    onClick={() => handleCleanupDoublons(false)}
-                    disabled={cleanupLoading}
-                    className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
-                  >
-                    {cleanupLoading ? '...' : `2. Supprimer les ${cleanupResult.doublonsIdentifies} doublon(s)`}
-                  </button>
-                )}
-
-                <button
-                  onClick={() => {
-                    setCleanupResult(null)
-                    setShowCleanupModal(false)
-                  }}
-                  className="w-full px-4 py-2 border rounded-lg"
-                >
-                  Fermer
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Modal Ajout */}
       {showModalAjout && (
