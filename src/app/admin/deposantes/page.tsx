@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import { Search, Plus, X, Trash2, Edit2 } from 'lucide-react'
 import { getAuth } from 'firebase/auth'
+import PlanningCalendar from '@/components/PlanningCalendar'
 
 type CategorieItem = {
   label: string
@@ -357,6 +358,17 @@ export default function AdminDeposantesPage() {
 
   return (
     <>
+      <div className="mb-8">
+        <PlanningCalendar
+          mode="restock"
+          participants={deposants.map((d: any) => ({
+            nom: (d.nom || d.trigramme || '').toUpperCase(),
+            type: 'chineuse' as const
+          }))}
+          userType="admin"
+        />
+      </div>
+
       <div className="flex items-center gap-4 mb-4">
         {!selectedChineuse && (
           <div className="flex-1 relative">
