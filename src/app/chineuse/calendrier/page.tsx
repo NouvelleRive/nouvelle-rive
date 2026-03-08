@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import PlanningCalendar from '@/components/PlanningCalendar'
-import { Timestamp } from 'firebase/firestore'
 
 export default function ChineuseCalendrierPage() {
   const [userNom, setUserNom] = useState<string>('')
@@ -65,8 +64,8 @@ export default function ChineuseCalendrierPage() {
         />
       </div>
 
-      <div className="mt-6 lg:mt-0">
-        <div className="bg-white rounded-xl border p-4 sticky top-20">
+      <div>
+        <div className="bg-white rounded-xl border p-4 mt-[72px]">
           <p className="text-sm font-bold text-[#22209C] mb-3">{userNom}</p>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
