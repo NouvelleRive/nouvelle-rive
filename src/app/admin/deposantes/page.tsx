@@ -373,7 +373,6 @@ export default function AdminDeposantesPage() {
         {/* STATS RESTOCKS */}
         <div className="mt-6 lg:mt-0">
           <div className="bg-white rounded-xl border p-4 sticky top-20">
-            <h3 className="text-sm font-semibold text-[#22209C] mb-3 uppercase tracking-wide">Activité chineuses</h3>
             <div className="space-y-3">
               {[...deposants]
                 .map((d: any) => {
@@ -394,20 +393,11 @@ export default function AdminDeposantesPage() {
                 })
                 .sort((a, b) => (b.joursDepuis ?? 9999) - (a.joursDepuis ?? 9999) || b.nbProduits - a.nbProduits)
                 .map(({ d, nbProduits, nbEnVente, joursDepuis, dernierRestock }) => (
-                  <div key={d.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
-                    <span className={`text-xs font-bold ${nbProduits < 30 ? 'text-red-500' : ''}`}>
-                      {(d.nom || d.trigramme || '').toUpperCase()}
+                  <div key={d.id} className={`flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0 text-xs ${nbProduits < 30 || joursDepuis === null || joursDepuis > 30 ? 'text-red-500' : 'text-gray-700'}`}>
+                    <span className="font-bold truncate mr-2">{(d.nom || d.trigramme || '').toUpperCase()}</span>
+                    <span className="whitespace-nowrap flex-shrink-0">
+                      {nbProduits} art. · {dernierRestock ? dernierRestock.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'jamais'}
                     </span>
-                    <div className="text-right">
-                      <span className={`text-xs font-semibold ${nbProduits < 30 ? 'text-red-500' : 'text-gray-600'}`}>
-                        {nbProduits} articles
-                      </span>
-                      <div className={`text-[10px] ${joursDepuis === null || joursDepuis > 30 ? 'text-red-400' : 'text-gray-400'}`}>
-                        {dernierRestock
-                          ? `restock le ${dernierRestock.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
-                          : 'jamais'}
-                      </div>
-                    </div>
                   </div>
                 ))}
             </div>
