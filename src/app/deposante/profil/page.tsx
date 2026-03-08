@@ -159,7 +159,6 @@ export default function ProfilDeposantePage() {
 
         <p style={{ ...label, color: bleu, marginBottom: '16px' }}>MON ESPACE DÉPOSANTE</p>
         <h1 style={{ fontSize: '32px', fontWeight: '700', letterSpacing: '-0.02em', marginBottom: '8px' }}>Mon profil</h1>
-        <p style={{ fontSize: '13px', color: '#666', marginBottom: '40px' }}>Ces informations sont nécessaires pour établir vos virements et bons d'achat.</p>
 
         <div style={{ borderTop: '1px solid #000' }}>
 
@@ -168,11 +167,11 @@ export default function ProfilDeposantePage() {
             <p style={{ ...label, marginBottom: '20px' }}>IDENTITÉ</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
-                <label style={label}>PRÉNOM</label>
+                <label style={label}>PRÉNOM *</label>
                 <input value={prenom} onChange={e => setPrenom(e.target.value)} style={inputStyle} />
               </div>
               <div>
-                <label style={label}>NOM</label>
+                <label style={label}>NOM *</label>
                 <input value={nom} onChange={e => setNom(e.target.value)} style={inputStyle} />
               </div>
             </div>
@@ -193,8 +192,7 @@ export default function ProfilDeposantePage() {
                 >
                   {generatingTri ? '...' : 'GÉNÉRER'}
                 </button>
-              </div>
-              <p style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>Généré automatiquement à partir du prénom et du nom. Modifiable.</p>
+              </div>   
             </div>
           </div>
 
@@ -207,12 +205,12 @@ export default function ProfilDeposantePage() {
                 <input value={email} disabled style={{ ...inputStyle, backgroundColor: '#f5f5f5', color: '#888' }} />
               </div>
               <div>
-                <label style={label}>TÉLÉPHONE</label>
+                <label style={label}>TÉLÉPHONE *</label>
                 <input value={telephone} onChange={e => setTelephone(e.target.value)} style={inputStyle} placeholder="+33 6 xx xx xx xx" />
               </div>
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={label}>ADRESSE (LIGNE 1)</label>
+              <label style={label}>ADRESSE (LIGNE 1) *</label>
               <input value={adresse1} onChange={e => setAdresse1(e.target.value)} style={inputStyle} />
             </div>
             <div>
@@ -223,7 +221,7 @@ export default function ProfilDeposantePage() {
 
           {/* PIÈCE D'IDENTITÉ */}
           <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
-            <p style={{ ...label, marginBottom: '8px' }}>PIÈCE D'IDENTITÉ</p>
+            <p style={{ ...label, marginBottom: '8px' }}>PIÈCE D'IDENTITÉ *</p>
             <p style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>CNI ou passeport obligatoire. Document stocké de façon sécurisée, utilisé uniquement pour vérification.</p>
             {pieceIdentiteUrl ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -252,11 +250,11 @@ export default function ProfilDeposantePage() {
             <p style={{ ...label, marginBottom: '20px' }}>COORDONNÉES BANCAIRES</p>
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
-                <label style={label}>IBAN</label>
+                <label style={label}>IBAN *</label>
                 <input value={iban} onChange={e => setIban(e.target.value)} style={inputStyle} placeholder="FR76 xxxx xxxx xxxx xxxx xxxx xxx" />
               </div>
               <div>
-                <label style={label}>BIC</label>
+                <label style={label}>BIC *</label>
                 <input value={bic} onChange={e => setBic(e.target.value)} style={inputStyle} />
               </div>
             </div>
@@ -268,8 +266,7 @@ export default function ProfilDeposantePage() {
 
           {/* MODE DE PAIEMENT */}
           <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
-            <p style={{ ...label, marginBottom: '8px' }}>MODE DE PAIEMENT PRÉFÉRÉ</p>
-            <p style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>Vous pouvez modifier ce choix chaque mois avant la fin du mois.</p>
+            <p style={{ ...label, marginBottom: '8px' }}>MODE DE PAIEMENT PRÉFÉRÉ</p>  
             <div style={{ display: 'flex', gap: '12px' }}>
               {(['cash', 'bon'] as const).map((mode) => (
                 <button
