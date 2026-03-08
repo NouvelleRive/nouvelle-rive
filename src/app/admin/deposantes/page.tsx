@@ -358,15 +358,58 @@ export default function AdminDeposantesPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <PlanningCalendar
-          mode="restock"
-          participants={deposants.map((d: any) => ({
-            nom: (d.nom || d.trigramme || '').toUpperCase(),
-            type: 'chineuse' as const
-          }))}
-          userType="admin"
-        />
+      <div className="mb-8 lg:grid lg:grid-cols-3 lg:gap-6">
+        <div className="lg:col-span-2">
+          <PlanningCalendar
+            mode="restock"
+            participants={deposants.map((d: any) => ({
+              nom: (d.nom || d.trigramme || '').toUpperCase(),
+              type: 'chineuse' as const
+            }))}
+            userType="admin"
+          />
+        </div>
+
+        {/* STATS RESTOCKS */}
+        <div className="mt-6 lg:mt-0">
+          <div className="bg-white rounded-xl border p-4 sticky top-20">
+            <h3 className="text-sm font-semibold text-[#22209C] mb-3 uppercase tracking-wide">Activité chineuses</h3>
+            <div className="space-y-3">
+              {[...deposants]
+                .map((d: any) => {
+                  const nbProduits = produits.filter((p: any) => p.chineur === d.email || p.chineurUid === d.id).length
+                  const nbEnVente = produits.filter((p: any) => (p.chineur === d.email || p.chineurUid === d.id) && !p.vendu).length
+                  const dernierProduit = produits
+                    .filter((p: any) => p.chineur === d.email || p.chineurUid === d.id)
+                    .sort((a: any, b: any) => {
+                      const ta = a.createdAt?.toDate?.()?.getTime?.() || 0
+                      const tb = b.createdAt?.toDate?.()?.getTime?.() || 0
+                      return tb - ta
+                    })[0]
+                  const dernierRestock = dernierProduit?.createdAt?.toDate?.()
+                  const joursDepuis = dernierRestock
+                    ? Math.floor((Date.now() - dernierRestock.getTime()) / (1000 * 60 * 60 * 24))
+                    : null
+                  return { d, nbProduits, nbEnVente, joursDepuis }
+                })
+                .sort((a, b) => (b.joursDepuis ?? 9999) - (a.joursDepuis ?? 9999) || b.nbProduits - a.nbProduits)
+                .map(({ d, nbProduits, nbEnVente, joursDepuis }) => (
+                  <div key={d.id} className="py-2 border-b border-gray-100 last:border-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-sm font-bold">{(d.nom || d.trigramme || '').toUpperCase()}</span>
+                      <span className={`text-xs font-semibold ${joursDepuis === null ? 'text-gray-300' : joursDepuis > 30 ? 'text-red-500' : joursDepuis > 14 ? 'text-orange-400' : 'text-green-600'}`}>
+                        {joursDepuis === null ? 'jamais' : `J+${joursDepuis}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{nbProduits} articles total</span>
+                      <span>{nbEnVente} en vente</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center gap-4 mb-4">
