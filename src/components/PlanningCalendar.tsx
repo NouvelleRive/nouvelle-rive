@@ -2,8 +2,10 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+
+
 
 // =====================
 // CONSTANTES
@@ -108,6 +110,8 @@ export default function PlanningCalendar({
   // RESTOCK — Firestore interne
   // =====================
   const [restockSlots, setRestockSlots] = useState<RestockSlots>({})
+  const [vendeusesRestock, setVendeusesRestock] = useState<Vendeuse[]>([])
+  const [planningRestockSlots, setPlanningRestockSlots] = useState<PlanningSlots>({})
   const [restockLoading, setRestockLoading] = useState(false)
 
   const monthKey = useMemo(() => {
@@ -124,6 +128,19 @@ export default function PlanningCalendar({
       setRestockLoading(false)
     }
     fetchRestocks()
+  }, [monthKey, mode])
+
+  useEffect(() => {
+    if (mode !== 'restock') return
+    const fetchPlanningData = async () => {
+      const [vSnap, pSnap] = await Promise.all([
+        getDocs(collection(db, 'vendeuses')),
+        getDoc(doc(db, 'planning', monthKey))
+      ])
+      setVendeusesRestock(vSnap.docs.map(d => ({ id: d.id, ...d.data() } as Vendeuse)))
+      setPlanningRestockSlots(pSnap.exists() ? pSnap.data().slots || {} : {})
+    }
+    fetchPlanningData()
   }, [monthKey, mode])
 
   const saveRestockSlot = async (dateStr: string, creneau: string, nom: string, type: 'chineuse' | 'deposante' | '') => {
@@ -213,6 +230,14 @@ export default function PlanningCalendar({
   // =====================
   const renderRestockCell = (ds: string, isWeekend: boolean) => {
     if (isWeekend) return <p className="text-[8px] text-gray-300 leading-tight">Fermé</p>
+    const v1220 = planningRestockSlots[`${ds}_12-20`]
+    const v1117 = planningRestockSlots[`${ds}_11-17`]
+    const noms = [v1220, v1117]
+      .filter(Boolean)
+      .map(id => vendeusesRestock.find(v => v.id === id))
+      .filter(Boolean)
+      .map(v => v!.prenom)
+    const nomsUniques = [...new Set(noms)]
     return (
       <>
         {CRENEAUX_RESTOCK.map(cr => {
