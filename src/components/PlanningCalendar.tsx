@@ -240,6 +240,13 @@ export default function PlanningCalendar({
     const nomsUniques = [...new Set(noms)]
     return (
       <>
+        {nomsUniques.length > 0 && (
+          <div className="flex gap-0.5 mb-0.5 flex-wrap">
+            {nomsUniques.map(nom => (
+              <span key={nom} className="text-[8px] font-semibold text-[#22209C] bg-[#22209C10] rounded px-1">{nom}</span>
+            ))}
+          </div>
+        )}
         {CRENEAUX_RESTOCK.map(cr => {
           const key = `${ds}_${cr}`
           const slot = restockSlots[key]
