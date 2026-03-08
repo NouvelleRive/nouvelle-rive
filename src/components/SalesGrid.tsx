@@ -209,10 +209,13 @@ export default function SalesGrid({
               </div>
             </div>
 
-            {/* Prix permanent */}
-            <div className="absolute bottom-0 left-0 right-0 bg-white/90 text-center border-t border-black/10"
-              style={{ fontSize: 10, fontWeight: 700, padding: '2px 0' }}>
-              {prix}€{prixBaisse && <span style={{ fontSize: 8, color: '#aaa', textDecoration: 'line-through', marginLeft: 3 }}>{prixInitial}€</span>}
+            {/* Prix + Marque permanents */}
+            <div className="absolute bottom-0 left-0 right-0 bg-white/90 flex items-center justify-between border-t border-black/10"
+              style={{ padding: '2px 4px' }}>
+              <span style={{ fontSize: 8, letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase', color: '#555' }}>{marque}</span>
+              <span style={{ fontSize: 10, fontWeight: 700 }}>
+                {prix}€{prixBaisse && <span style={{ fontSize: 8, color: '#aaa', textDecoration: 'line-through', marginLeft: 3 }}>{prixInitial}€</span>}
+              </span>
             </div>
           </div>
         )
