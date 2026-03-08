@@ -393,7 +393,7 @@ export default function AdminDeposantesPage() {
                 })
                 .sort((a, b) => (b.joursDepuis ?? 9999) - (a.joursDepuis ?? 9999) || b.nbProduits - a.nbProduits)
                 .map(({ d, nbProduits, nbEnVente, joursDepuis, dernierRestock }) => (
-                  <div key={d.id} className={`flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0 text-xs ${nbProduits < 30 || joursDepuis === null || joursDepuis > 30 ? 'text-red-500' : 'text-gray-700'}`}>
+                  <div key={d.id} className={`flex items-center justify-between py-0.5 text-xs ${nbProduits < 30 || joursDepuis === null || joursDepuis > 30 ? 'text-red-500' : 'text-gray-700'}`}>
                     <span className="font-bold truncate mr-2">{(d.nom || d.trigramme || '').toUpperCase()}</span>
                     <span className="whitespace-nowrap flex-shrink-0">
                       {nbProduits} art. · {dernierRestock ? dernierRestock.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'jamais'}
