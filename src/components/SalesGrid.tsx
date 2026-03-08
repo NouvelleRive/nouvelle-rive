@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Timestamp } from 'firebase/firestore'
 import { Link, Pencil, Trash2 } from 'lucide-react'
 
 import { Vente } from '@/components/SalesList'
