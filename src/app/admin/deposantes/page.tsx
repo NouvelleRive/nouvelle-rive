@@ -390,20 +390,23 @@ export default function AdminDeposantesPage() {
                   const joursDepuis = dernierRestock
                     ? Math.floor((Date.now() - dernierRestock.getTime()) / (1000 * 60 * 60 * 24))
                     : null
-                  return { d, nbProduits, nbEnVente, joursDepuis }
+                  return { d, nbProduits, nbEnVente, joursDepuis, dernierRestock }
                 })
                 .sort((a, b) => (b.joursDepuis ?? 9999) - (a.joursDepuis ?? 9999) || b.nbProduits - a.nbProduits)
-                .map(({ d, nbProduits, nbEnVente, joursDepuis }) => (
-                  <div key={d.id} className="py-2 border-b border-gray-100 last:border-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-sm font-bold">{(d.nom || d.trigramme || '').toUpperCase()}</span>
-                      <span className={`text-xs font-semibold ${joursDepuis === null ? 'text-gray-300' : joursDepuis > 30 ? 'text-red-500' : joursDepuis > 14 ? 'text-orange-400' : 'text-green-600'}`}>
-                        {joursDepuis === null ? 'jamais' : `J+${joursDepuis}`}
+                .map(({ d, nbProduits, nbEnVente, joursDepuis, dernierRestock }) => (
+                  <div key={d.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
+                    <span className={`text-xs font-bold ${nbProduits < 30 ? 'text-red-500' : ''}`}>
+                      {(d.nom || d.trigramme || '').toUpperCase()}
+                    </span>
+                    <div className="text-right">
+                      <span className={`text-xs font-semibold ${nbProduits < 30 ? 'text-red-500' : 'text-gray-600'}`}>
+                        {nbProduits} articles
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{nbProduits} articles total</span>
-                      <span>{nbEnVente} en vente</span>
+                      <div className={`text-[10px] ${joursDepuis === null || joursDepuis > 30 ? 'text-red-400' : 'text-gray-400'}`}>
+                        {dernierRestock
+                          ? `restock le ${dernierRestock.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+                          : 'jamais'}
+                      </div>
                     </div>
                   </div>
                 ))}
