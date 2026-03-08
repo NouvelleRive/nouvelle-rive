@@ -1,7 +1,7 @@
 // components/SalesList.tsx
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -186,6 +186,28 @@ export default function SalesList({
     const endDate = format(new Date(), 'yyyy-MM-dd')
     await onSync(startDate, endDate)
   }
+
+  // =====================
+  // INFINITE SCROLL
+  // =====================
+  useEffect(() => {
+    const loader = loaderRef.current
+    if (!loader) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleCount < ventesFiltrées.length) {
+          setVisibleCount(prev => Math.min(prev + 20, ventesFiltrées.length))
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    )
+    observer.observe(loader)
+    return () => observer.disconnect()
+  }, [visibleCount, ventesFiltrées.length])
+
+  useEffect(() => {
+    setVisibleCount(20)
+  }, [ventesFiltrées])
 
   // =====================
   // RENDER
