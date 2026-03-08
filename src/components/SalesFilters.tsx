@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -8,6 +8,7 @@ import jsPDF from 'jspdf'
 import FilterBox from '@/components/FilterBox'
 import { Download, FileSpreadsheet, LayoutGrid, List } from 'lucide-react'
 import { Vente, ChineuseMeta } from '@/components/SalesList'
+
 
 const PRIMARY = '#22209C'
 
@@ -18,6 +19,7 @@ interface SalesFiltersProps {
   chineuses?: Array<{ trigramme: string; nom: string }>
   userEmail?: string
   isAdmin?: boolean
+  isDeposante?: boolean
   viewMode: 'grid' | 'list'
   onViewModeChange: (mode: 'grid' | 'list') => void
   onFiltered: (ventes: Vente[]) => void
@@ -30,6 +32,7 @@ export default function SalesFilters({
   chineuses = [],
   userEmail,
   isAdmin = false,
+  isDeposante = false,
   viewMode,
   onViewModeChange,
   onFiltered,
@@ -41,6 +44,11 @@ export default function SalesFilters({
   const [filtreStatut, setFiltreStatut] = useState<'all' | 'attribue' | 'non-attribue'>('all')
   const [tri, setTri] = useState<'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'>('date-desc')
   const [showMonthSelect, setShowMonthSelect] = useState(false)
+  const [showAttestationModal, setShowAttestationModal] = useState(false)
+  const [pendingMonth, setPendingMonth] = useState('')
+  const [cni, setCni] = useState('')
+  const [isDrawing, setIsDrawing] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const getDateFromVente = (v: Vente): Date => {
     if (v.dateVente && typeof (v.dateVente as any).toDate === 'function') return (v.dateVente as any).toDate()
@@ -149,6 +157,79 @@ export default function SalesFilters({
   // =====================
   // EXPORT FACTURE PDF
   // =====================
+
+  const generateAttestationFor = (monthValue: string, cniNum = '', signatureDataUrl: string | null = null) => {
+    const [m, annee] = monthValue.split('-').map(Number)
+    const start = new Date(annee, m - 1, 1)
+    const end = new Date(annee, m, 0, 23, 59, 59, 999)
+    const ventesDuMois = ventes.filter(v => {
+      const d = getDateFromVente(v)
+      return d >= start && d <= end
+    })
+    const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
+    const nom = (chineuse?.nom || userEmail || '').toUpperCase()
+    const periodeTxt = format(start, 'LLLL yyyy', { locale: fr })
+
+    const docPDF = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageW = docPDF.internal.pageSize.getWidth()
+    const margin = 60
+    const contentW = pageW - margin * 2
+
+    docPDF.setFontSize(10)
+    docPDF.setFont('helvetica', 'normal')
+
+    // En-tête NR
+    docPDF.setFont('helvetica', 'bold')
+    docPDF.text('NOUVELLE RIVE — NR1 SAS', margin, 60)
+    docPDF.setFont('helvetica', 'normal')
+    docPDF.text('5 route du Grand Pont, 78110 Le Vésinet', margin, 76)
+
+    // Titre
+    docPDF.setFontSize(14)
+    docPDF.setFont('helvetica', 'bold')
+    docPDF.text('ATTESTATION DE VENTE', pageW / 2, 140, { align: 'center' })
+    docPDF.setFontSize(10)
+    docPDF.setFont('helvetica', 'normal')
+    docPDF.text(`Période : ${periodeTxt.charAt(0).toUpperCase() + periodeTxt.slice(1)}`, pageW / 2, 158, { align: 'center' })
+
+    // Corps
+    const lignes = [
+      `Je soussigné(e) ${nom},`,
+      `certifie avoir confié à la société NR1 SAS (Nouvelle Rive) un lot de pièces`,
+      `vestimentaires de seconde main, et avoir perçu un montant total de`,
+      `${ca.toFixed(2).replace('.', ',')} € au titre des ventes réalisées`,
+      `au cours du mois de ${periodeTxt}.`,
+      '',
+      `Je certifie sur l'honneur l'exactitude de ces informations.`,
+    ]
+
+    let y = 220
+    lignes.forEach(ligne => {
+      docPDF.text(ligne, margin, y)
+      y += 18
+    })
+
+    if (cniNum) {
+      y += 8
+      docPDF.text(`CNI / Passeport n° : ${cniNum}`, margin, y)
+    }
+
+    // Lieu + date
+    y += 28
+    docPDF.text(`Fait à ________________, le ${format(new Date(), 'dd/MM/yyyy')}`, margin, y)
+
+    // Signature
+    y += 50
+    docPDF.text('Signature :', margin, y)
+    if (signatureDataUrl) {
+      docPDF.addImage(signatureDataUrl, 'PNG', margin, y + 8, 200, 60)
+    } else {
+      docPDF.rect(margin, y + 8, 200, 60)
+    }
+
+    docPDF.save(`attestation_${String(m).padStart(2, '0')}${String(annee).slice(-2)}_${nom}.pdf`)
+  }
+
   const generateInvoiceFor = (monthValue: string) => {
     if (!chineuse && !userEmail) return
     const dep = deposants.find((d: any) => d.email === userEmail || d.nom === chineuse?.nom || d.trigramme === chineuse?.codeChineuse)
@@ -217,6 +298,33 @@ export default function SalesFilters({
     docPDF.save(`facture_${ref}.pdf`)
   }
 
+  const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d'); if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    ctx.beginPath(); ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
+    setIsDrawing(true)
+  }
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d'); if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke()
+  }
+  const stopDraw = () => setIsDrawing(false)
+  const clearCanvas = () => {
+    const canvas = canvasRef.current; if (!canvas) return
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
+  }
+  const handleGenerateAttestation = () => {
+    const canvas = canvasRef.current
+    const signatureDataUrl = canvas ? canvas.toDataURL('image/png') : null
+    generateAttestationFor(pendingMonth, cni, signatureDataUrl)
+    setShowAttestationModal(false); setCni(''); clearCanvas()
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
       {/* FILTRER + TOGGLE */}
@@ -260,17 +368,40 @@ export default function SalesFilters({
             <FileSpreadsheet size={16} /> Ventes en CSV
           </button>
           <button onClick={() => setShowMonthSelect(s => !s)} className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-white text-sm" style={{ background: PRIMARY }}>
-            <Download size={16} /> Facture en PDF
+            <Download size={16} /> {isDeposante ? 'Attestation de vente' : 'Facture en PDF'}
           </button>
           {showMonthSelect && (
-            <select onChange={(e) => { if (e.target.value) generateInvoiceFor(e.target.value) }} defaultValue="" className="w-full border rounded-lg px-3 py-2 text-sm">
+            <select onChange={(e) => { if (e.target.value) { if (isDeposante) { setPendingMonth(e.target.value); setShowAttestationModal(true) } else { generateInvoiceFor(e.target.value) } } }} defaultValue="" className="w-full border rounded-lg px-3 py-2 text-sm">
               <option value="" disabled>Choisir un mois…</option>
               {moisDisponibles.map(({ value, label }) => <option key={value} value={value}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>)}
             </select>
           )}
-          <p className="text-xs text-gray-500">La facture est à retourner par mail à nouvelleriveparis@gmail.com</p>
+          <p className="text-xs text-gray-500">{isDeposante ? "L'attestation est à retourner signée par mail à nouvelleriveparis@gmail.com" : 'La facture est à retourner par mail à nouvelleriveparis@gmail.com'}</p>
         </div>
       </div>
     </div>
+
+      {showAttestationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-base font-bold uppercase mb-4" style={{ letterSpacing: '0.1em' }}>Attestation de vente</h3>
+            <div className="mb-4">
+              <label className="block text-xs font-semibold uppercase mb-1" style={{ letterSpacing: '0.1em' }}>N° CNI ou Passeport</label>
+              <input value={cni} onChange={e => setCni(e.target.value)} placeholder="Ex: 123456789" className="w-full border px-3 py-2 text-sm rounded-lg" />
+            </div>
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold uppercase" style={{ letterSpacing: '0.1em' }}>Signature</label>
+                <button onClick={clearCanvas} className="text-xs text-gray-400 underline">Effacer</button>
+              </div>
+              <canvas ref={canvasRef} width={380} height={120} className="w-full border rounded-lg cursor-crosshair bg-gray-50" onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowAttestationModal(false)} className="px-4 py-2 border rounded-lg text-sm">Annuler</button>
+              <button onClick={handleGenerateAttestation} className="px-4 py-2 text-white text-sm rounded-lg" style={{ background: PRIMARY }}>Générer le PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
   )
 }
