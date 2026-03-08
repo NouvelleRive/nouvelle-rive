@@ -326,6 +326,7 @@ export default function SalesFilters({
   }
 
   return (
+    <>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
       {/* FILTRER + TOGGLE */}
       <div className="lg:col-span-2">
@@ -381,7 +382,7 @@ export default function SalesFilters({
       </div>
     </div>
 
-      {showAttestationModal && (
+    {showAttestationModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <h3 className="text-base font-bold uppercase mb-4" style={{ letterSpacing: '0.1em' }}>Attestation de vente</h3>
@@ -403,5 +404,6 @@ export default function SalesFilters({
           </div>
         </div>
       )}
+  </>
   )
 }
