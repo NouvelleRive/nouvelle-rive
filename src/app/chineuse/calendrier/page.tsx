@@ -65,7 +65,7 @@ export default function ChineuseCalendrierPage() {
       </div>
 
       <div>
-        <div className="bg-white rounded-xl border p-4 mt-[72px]">
+        <div className="bg-white rounded-xl border p-4 mt-[140px]">
           <p className="text-sm font-bold text-[#22209C] mb-3">{userNom}</p>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
