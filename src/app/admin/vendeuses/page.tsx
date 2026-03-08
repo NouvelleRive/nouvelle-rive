@@ -9,6 +9,7 @@
   } from 'firebase/firestore'
   import { db } from '@/lib/firebaseConfig'
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
+  import PlanningCalendar from '@/components/PlanningCalendar'
 
   // =====================
   // TYPES
@@ -584,113 +585,18 @@
           </div>
         )}
 
-        {/* ======================== */}
-        {/* CALENDRIER PLANNING      */}
-        {/* ======================== */}
         <div className="lg:grid lg:grid-cols-3 lg:gap-6">
           <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-[#22209C]">Planning</h2>
-            <button
-              onClick={autoFill}
-              className="flex items-center gap-2 border border-[#22209C] text-[#22209C] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#22209C] hover:text-white transition"
-            >
-              <Wand2 size={16} /> Auto-remplir
-            </button>
-          </div>
-
-          {/* Navigation mois */}
-          <div className="flex items-center justify-center gap-6 mb-4">
-            <button onClick={() => navigateMonth(-1)} className="p-2 hover:bg-gray-100 rounded-lg transition">
-              <ChevronLeft size={20} />
-            </button>
-            <span className="text-lg font-semibold capitalize w-48 text-center">{monthLabel}</span>
-            <button onClick={() => navigateMonth(1)} className="p-2 hover:bg-gray-100 rounded-lg transition">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-
-          {/* Légende vendeuses */}
-          <div className="flex flex-wrap gap-3 mb-4 justify-center">
-            {activeVendeuses.map(v => (
-              <div key={v.id} className="flex items-center gap-1.5 text-xs">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.couleur }} />
-                <span>{v.prenom}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Grille calendrier */}
-          {planningLoading ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#22209C]" />
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl border overflow-hidden">
-              {/* Header jours */}
-              <div className="grid grid-cols-7 border-b bg-gray-50">
-                {JOURS_SEMAINE.map((j, i) => (
-                  <div key={i} className="text-center text-xs font-bold text-gray-500 py-2">
-                    {j}
-                  </div>
-                ))}
-              </div>
-
-              {/* Jours */}
-              <div className="grid grid-cols-7">
-                {calendarDays.map((day, idx) => {
-                  if (day === null) {
-                    return <div key={`pad-${idx}`} className="border-b border-r min-h-[80px] bg-gray-50/50" />
-                  }
-
-                  const dateStr = `${currentMonth.year}-${(currentMonth.month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
-                  const isToday = (() => {
-                    const now = new Date()
-                    return day === now.getDate() && currentMonth.month === now.getMonth() && currentMonth.year === now.getFullYear()
-                  })()
-
-                  return (
-                    <div key={dateStr} className={`border-b border-r min-h-[80px] p-1 ${isToday ? 'bg-blue-50' : ''}`}>
-                      {/* Numéro du jour */}
-                      <div className={`text-xs font-medium mb-1 ${isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'}`}>
-                        {day}
-                      </div>
-
-                      {/* Créneaux */}
-                      {CRENEAUX.map(cr => {
-                        const key = `${dateStr}_${cr}`
-                        const vendeuseId = planningSlots[key]
-                        const v = vendeuseId ? getVendeuse(vendeuseId) : null
-
-                        return (
-                          <div key={cr} className="mb-0.5">
-                            <select
-                              value={vendeuseId || ''}
-                              onChange={(e) => assignSlot(dateStr, cr, e.target.value)}
-                              className="w-full text-[10px] rounded px-1 py-0.5 border-0 cursor-pointer font-medium"
-                              style={{
-                                backgroundColor: v ? v.couleur + '20' : 'transparent',
-                                color: v ? v.couleur : '#9ca3af',
-                              }}
-                              title={`${cr}`}
-                            >
-                              <option value="">{cr}</option>
-                              {activeVendeuses.map(av => (
-                                <option key={av.id} value={av.id}>
-                                  {av.prenom}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
+            <PlanningCalendar
+              vendeuses={vendeuses}
+              planningSlots={planningSlots}
+              currentMonth={currentMonth}
+              planningLoading={planningLoading}
+              onNavigate={navigateMonth}
+              onAssign={assignSlot}
+              onAutoFill={autoFill}
+              showAutoFill={true}
+            />
           </div>
 
           {/* Récap heures — sidebar droite */}
@@ -743,6 +649,7 @@
             </div>
           )}
           </div>
-          </div>
+        </div>
+      </div>
     )
   }
