@@ -341,7 +341,7 @@ export default function SalesList({
       {/* Ventes */}
       {viewMode === 'grid' ? (
         <SalesGrid
-          ventes={ventesFiltrées}
+          ventes={ventesFiltrées.slice(0, visibleCount)}
           isAdmin={isAdmin}
           onAttribuer={onAttribuer}
           onModifierPrix={onModifierPrix}
