@@ -261,7 +261,7 @@ export default function PlanningCalendar({
       {/* HEADER */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-[#22209C]">
-          {mode === 'planning' ? 'Planning' : 'Restocks & Dépôts'}
+          {mode === 'restock' ? 'Restocks & Dépôts' : ''}
         </h2>
         {mode === 'planning' && showAutoFill && onAutoFill && (
           <button
