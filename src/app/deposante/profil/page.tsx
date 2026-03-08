@@ -180,16 +180,6 @@ export default function ProfilDeposantePage() {
                 <input value={nom} onChange={e => setNom(e.target.value)} style={inputStyle} />
               </div>
             </div>
-            <div>
-              <div>
-              <label style={label}>TRIGRAMME</label>
-              <input
-                value={trigramme || '—'}
-                disabled
-                style={{ ...inputStyle, width: '120px', fontWeight: '700', letterSpacing: '0.2em', backgroundColor: '#f5f5f5', color: '#888' }}
-              />
-            </div>
-            </div>
           </div>
 
           {/* CONTACT */}
