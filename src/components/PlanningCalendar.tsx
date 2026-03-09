@@ -322,18 +322,7 @@ export default function PlanningCalendar({
             <span>{v.prenom}</span>
           </div>
         ))}
-        {mode === 'restock' && (
-          <>
-            <div className="flex items-center gap-1.5 text-xs">
-              <div className="w-3 h-3 rounded-full bg-[#22209C]" />
-              <span>Chineuse</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span>Déposante</span>
-            </div>
-          </>
-        )}
+        {mode === 'restock' && <div />}
       </div>
 
       {/* CALENDRIER */}
