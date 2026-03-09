@@ -458,7 +458,7 @@
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-lg">{(d.prenom || '').toUpperCase()} {(d.nom || '').toUpperCase()}</p>
+                        <p className="font-bold text-lg">{((d.prenom || '') + ' ' + (d.nom || '')).toUpperCase().trim()}</p>
                         {champsManquants > 0 && (
                           <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
                             {champsManquants} champ{champsManquants > 1 ? 's' : ''} manquant{champsManquants > 1 ? 's' : ''}
@@ -498,7 +498,7 @@
                   </div>
                 )}
                 {cats.length > 0 && (
-                  <div className="px-4 py-3 bg-orange-50 border-t border-orange-100">
+                  <div className="px-4 py-3 bg-gray-50 border-t">
                     <div className="flex flex-wrap gap-2">
                       {cats.map((cat: string, idx: number) => (
                         <span key={idx} className="text-xs bg-orange-100 text-orange-600 px-3 py-1.5 rounded-full font-medium">
