@@ -86,44 +86,6 @@
     stockType: 'unique',
   }
 
-  function CapaciteBlock() {
-  const [maxPap, setMaxPap] = useState(0)
-  const [maxMaro, setMaxMaro] = useState(0)
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    getDocs(collection(db, 'config')).then(snap => {
-      const d = snap.docs.find(d => d.id === 'capacite')
-      if (d) { setMaxPap(d.data().maxPap || 0); setMaxMaro(d.data().maxMaro || 0) }
-    })
-  }, [])
-
-  const save = async () => {
-    setSaving(true)
-    await setDoc(doc(db, 'config', 'capacite'), { maxPap, maxMaro })
-    setSaving(false)
-  }
-
-  return (
-    <div className="border-b pb-2 mb-2">
-      <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-2">Capacité dépôt</p>
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs w-20">PAP</span>
-        <input type="number" value={maxPap} onChange={e => setMaxPap(parseInt(e.target.value) || 0)} className="w-14 border rounded px-2 py-0.5 text-xs" />
-        <span className="text-xs text-gray-400">pièces max</span>
-      </div>
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs w-20">Maroquinerie</span>
-        <input type="number" value={maxMaro} onChange={e => setMaxMaro(parseInt(e.target.value) || 0)} className="w-14 border rounded px-2 py-0.5 text-xs" />
-        <span className="text-xs text-gray-400">pièces max</span>
-      </div>
-      <button onClick={save} disabled={saving} className="text-xs px-3 py-1 bg-orange-500 text-white rounded">
-        {saving ? '...' : 'Enregistrer'}
-      </button>
-    </div>
-  )
-}
-
   export default function AdminDeposantesPage() {
     const { selectedChineuse, deposants, produits, loading } = useAdmin()
     const [rechercheDeposante, setRechercheDeposante] = useState('')
@@ -433,7 +395,6 @@
           {/* STATS RESTOCKS */}
           <div className="mt-6 lg:mt-0">
             <div className="bg-white rounded-xl border p-2 sticky top-20">
-              <CapaciteBlock />
               <div>
                 {[...deposants]
                   .map((d: any) => {
