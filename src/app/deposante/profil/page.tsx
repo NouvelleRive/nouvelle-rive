@@ -4,6 +4,9 @@ import { useEffect, useState, useRef } from 'react'
 import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs } from 'firebase/firestore'
+import jsPDF from 'jspdf'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 function generateTrigramme(prenom: string, nom: string): string {
   const p = prenom.trim().toUpperCase().replace(/[^A-Z]/g, '')
@@ -46,8 +49,11 @@ export default function ProfilDeposantePage() {
   const [trigramme, setTrigramme] = useState('')
   const [currentUid, setCurrentUid] = useState<string>('')
   const [generatingTri, setGeneratingTri] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [signed, setSigned] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const font = '"Helvetica Neue", Helvetica, Arial, sans-serif'
   const bleu = '#0000FF'
@@ -96,6 +102,110 @@ export default function ProfilDeposantePage() {
     })
     return () => unsub()
   }, [])
+
+  // =====================
+  // CANVAS SIGNATURE
+  // =====================
+  const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d'); if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    ctx.beginPath(); ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
+    setIsDrawing(true)
+  }
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d'); if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke()
+    setSigned(true)
+  }
+
+  const stopDraw = () => setIsDrawing(false)
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current; if (!canvas) return
+    canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
+    setSigned(false)
+  }
+
+  // =====================
+  // GÉNÉRATION PDF CONTRAT
+  // =====================
+  const generateContratPDF = () => {
+    const canvas = canvasRef.current
+    const sigDataUrl = canvas ? canvas.toDataURL('image/png') : null
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const m = 60
+    const today = format(new Date(), 'dd MMMM yyyy', { locale: fr })
+    let y = 55
+
+    const txt = (text: string, x: number, yy: number, opts?: { bold?: boolean, size?: number, align?: 'center' | 'left' }) => {
+      doc.setFont('helvetica', opts?.bold ? 'bold' : 'normal')
+      doc.setFontSize(opts?.size || 9)
+      doc.text(text, x, yy, { align: opts?.align || 'left' })
+    }
+
+    txt('CONTRAT DE DÉPÔT-VENTE', pageW / 2, y, { bold: true, size: 14, align: 'center' }); y += 14
+    txt('Confidentiel', pageW / 2, y, { size: 8, align: 'center' }); y += 30
+
+    txt('ENTRE LES SOUSSIGNÉS :', m, y, { bold: true }); y += 18
+    txt('Le Dépositaire :', m, y, { bold: true }); y += 14
+    txt('NR1 SAS — Nouvelle Rive', m, y); y += 12
+    txt('5 route du Grand Pont, 78110 Le Vésinet', m, y); y += 12
+    txt('SIRET : 94189520300011 — Représenté par Salomé Kassabi', m, y); y += 22
+    txt('Et le Déposant :', m, y, { bold: true }); y += 14
+    txt(`${prenom} ${nom}`.toUpperCase(), m, y); y += 12
+    if (adresse1) { txt(adresse1, m, y); y += 12 }
+    if (adresse2) { txt(adresse2, m, y); y += 12 }
+    txt(`${email}${telephone ? ' — ' + telephone : ''}`, m, y); y += 28
+
+    const articles = [
+      { n: 1, t: 'Objet', c: "Le présent contrat a pour objet de définir les conditions dans lesquelles le Déposant confie au Dépositaire des articles vestimentaires et accessoires de seconde main, afin qu'ils soient mis en vente en boutique et/ou sur la plateforme nouvellerive.eu, pour le compte et au nom du Déposant." },
+      { n: 2, t: 'Durée', c: "Le contrat est conclu pour une durée de 30 jours à compter de la date de dépôt, renouvelable tacitement pour une nouvelle période de 30 jours. Le Déposant peut récupérer ses articles non vendus à l'issue de chaque période, sur rendez-vous en boutique." },
+      { n: 3, t: 'Articles déposés', c: "Le dépôt est limité à 5 articles maximum. Le Déposant s'engage à déposer des articles en parfait état (propres, sans taches, sans accrocs, sans odeurs), conformes à la liste de produits acceptés sur nouvellerive.eu. Les Articles déposés sont référencés dans l'espace personnel du Déposant sur nouvellerive.eu — cette liste fait foi entre les parties. Le Déposant certifie en être le seul propriétaire et garantit leur authenticité." },
+      { n: 4, t: 'Prix et baisse automatique', c: "Les prix sont fixés d'un commun accord lors du dépôt. Après 30 jours d'invendu, le prix pourra être réduit automatiquement. Passé 60 jours, les Articles non vendus seront disponibles à la récupération. À défaut dans les 7 jours suivant notification, ils pourront être remis en vente ou donnés à des associations partenaires." },
+      { n: 5, t: 'Commission et reversement', c: "60 % reversés au Déposant en cas de règlement en espèces ou par virement — 70 % en cas de règlement en avoir boutique. Le reversement intervient dans les 30 jours suivant la vente. Le Déposant fera son affaire de ses obligations fiscales." },
+      { n: 6, t: 'Obligations du Dépositaire', c: "Nouvelle Rive s'engage à assurer la garde et la conservation des Articles, à les exposer en boutique et/ou en ligne, et à verser au Déposant sa quote-part dans les délais convenus. Un récapitulatif des ventes est accessible via l'espace personnel sur nouvellerive.eu." },
+      { n: 7, t: 'Assurances — Vol et sinistres', c: "Nouvelle Rive possède un système de sécurité (caméras, alarmes, antivols) et a souscrit une police d'assurance contre les sinistres. En cas de sinistre, Nouvelle Rive reversera au Déposant la quote-part de l'indemnité reçue, sans pouvoir être redevable d'un montant supérieur. Le Déposant reste libre de contracter sa propre assurance." },
+      { n: 8, t: 'Obligations du Déposant', c: "Le Déposant s'engage à déposer et récupérer ses Articles à ses frais, en boutique sur rendez-vous. Il garantit l'authenticité des Articles et leur conformité à la législation. En cas de vice caché, la responsabilité lui incombe vis-à-vis de l'acheteur final." },
+      { n: 9, t: 'Fin de contrat', c: "Chaque partie peut mettre fin au contrat par email. Les Articles invendus sont restitués dans un délai de 7 jours ouvrés sur rendez-vous, aux frais du Déposant." },
+      { n: 10, t: 'Force majeure', c: "Les parties ne seront pas responsables de l'inexécution de leurs obligations en cas de force majeure. Le contrat sera suspendu jusqu'à reprise possible. Faute de reprise dans 30 jours, les parties se rapprocheront pour modifier ou résilier le contrat." },
+      { n: 11, t: 'Droit applicable', c: "Le présent contrat est soumis au droit français. En cas de litige, les parties rechercheront une solution amiable avant tout recours judiciaire." },
+    ]
+
+    for (const art of articles) {
+      if (y > 720) { doc.addPage(); y = 55 }
+      txt(`Article ${art.n} — ${art.t}`, m, y, { bold: true }); y += 14
+      const lines = doc.splitTextToSize(art.c, pageW - m * 2)
+      lines.forEach((line: string) => {
+        if (y > 760) { doc.addPage(); y = 55 }
+        txt(line, m, y); y += 13
+      })
+      y += 10
+    }
+
+    if (y > 650) { doc.addPage(); y = 55 }
+    y += 20
+    txt(`Fait à Paris, le ${today}`, m, y); y += 30
+    txt('Pour NR1 SAS — Nouvelle Rive', m, y, { bold: true })
+    txt(`Pour le Déposant — ${prenom} ${nom}`.toUpperCase(), pageW / 2, y, { bold: true }); y += 14
+    txt('Salomé Kassabi', m, y); y += 40
+    doc.rect(m, y, 180, 60)
+    txt('Signature NR1 SAS', m + 5, y + 70, { size: 7 })
+    if (sigDataUrl && signed) {
+      doc.addImage(sigDataUrl, 'PNG', pageW / 2, y, 180, 60)
+    } else {
+      doc.rect(pageW / 2, y, 180, 60)
+    }
+    txt('Signature du Déposant', pageW / 2 + 5, y + 70, { size: 7 })
+
+    doc.save(`contrat_NR_${nom}_${format(new Date(), 'ddMMyy')}.pdf`)
+  }
 
   async function handleUploadId(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -207,7 +317,7 @@ export default function ProfilDeposantePage() {
 
           {/* PIÈCE D'IDENTITÉ */}
           <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
-            <p style={{ ...label, marginBottom: '8px' }}>PIÈCE D'IDENTITÉ *</p> 
+            <p style={{ ...label, marginBottom: '8px' }}>PIÈCE D'IDENTITÉ *</p>
             {pieceIdentiteUrl ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ width: '80px', height: '52px', border: '1px solid #000', backgroundImage: `url(${pieceIdentiteUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
@@ -251,7 +361,7 @@ export default function ProfilDeposantePage() {
 
           {/* MODE DE PAIEMENT */}
           <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
-            <p style={{ ...label, marginBottom: '8px' }}>MODE DE PAIEMENT PRÉFÉRÉ</p>  
+            <p style={{ ...label, marginBottom: '8px' }}>MODE DE PAIEMENT PRÉFÉRÉ</p>
             <div style={{ display: 'flex', gap: '12px' }}>
               {(['cash', 'bon'] as const).map((mode) => (
                 <button
@@ -268,10 +378,39 @@ export default function ProfilDeposantePage() {
                     fontWeight: '600',
                   }}
                 >
-                  {mode === 'cash' ? 'VIREMENT (40%)' : 'BON D\'ACHAT (30%)'}
+                  {mode === 'cash' ? 'VIREMENT (40%)' : "BON D'ACHAT (30%)"}
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* CONTRAT */}
+          <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
+            <p style={{ ...label, marginBottom: '8px' }}>CONTRAT DE DÉPÔT-VENTE</p>
+            <p style={{ fontSize: '13px', color: '#444', marginBottom: '20px', lineHeight: '1.6' }}>
+              En signant ci-dessous, vous acceptez les conditions du contrat de dépôt-vente Nouvelle Rive — durée 30 jours renouvelable, commission 40% virement / 30% avoir, 5 articles maximum, articles en parfait état.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={label}>VOTRE SIGNATURE</span>
+              <button onClick={clearCanvas} style={{ fontSize: '11px', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Effacer</button>
+            </div>
+            <canvas
+              ref={canvasRef}
+              width={640}
+              height={140}
+              style={{ width: '100%', border: '1px solid #000', cursor: 'crosshair', backgroundColor: '#fafafa', display: 'block' }}
+              onMouseDown={startDraw}
+              onMouseMove={draw}
+              onMouseUp={stopDraw}
+              onMouseLeave={stopDraw}
+            />
+            <p style={{ fontSize: '11px', color: '#999', marginTop: '6px' }}>Signez dans le cadre ci-dessus</p>
+            <button
+              onClick={generateContratPDF}
+              style={{ marginTop: '16px', padding: '12px 24px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
+            >
+              TÉLÉCHARGER LE CONTRAT SIGNÉ (PDF)
+            </button>
           </div>
 
           {/* SAVE */}
