@@ -20,7 +20,7 @@ export function countPlacesOccupees(
   )
 
   const actifs = produits.filter(p => {
-    if (!p.trigramme) return false
+    if (p.source !== 'deposante') return false
     if (p.vendu) return false
     if (p.statutRecuperation === 'recupere') return false
     // Reçu en boutique → occupe une place

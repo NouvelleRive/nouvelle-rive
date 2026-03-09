@@ -5,9 +5,10 @@
   import { useAdmin } from '@/lib/admin/context'
   import { Search, Plus, X, Trash2, Edit2 } from 'lucide-react'
   import { getAuth } from 'firebase/auth'
-  import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore'
+  import { collection, doc, getDocs, getDoc, setDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore'
   import { db } from '@/lib/firebaseConfig'
   import PlanningCalendar from '@/components/PlanningCalendar'
+  import { getPlacesDisponibles } from '@/lib/capaciteDepot'
 
   const CATEGORIES_DEPOSANTE = [
     { label: 'TODO', idsquare: 'TODO' },
@@ -148,6 +149,7 @@
     const [deposanteImageFile, setDeposanteImageFile] = useState<File | null>(null)
     const [deposanteImagePreview, setDeposanteImagePreview] = useState<string | null>(null)
     const [generatingTrigramme, setGeneratingTrigramme] = useState(false)
+    const [placesDisponibles, setPlacesDisponibles] = useState<{ pap: number; maro: number; total: number } | null>(null)
 
     useEffect(() => {
       getDocs(collection(db, 'deposante')).then(snap => {
@@ -164,6 +166,18 @@
       await setDoc(doc(db, 'config', 'capacite'), { maxPap, maxMaro }, { merge: true })
       setSavingCapacite(false)
     }
+
+    useEffect(() => {
+      if (!produits.length) return
+      const now = new Date()
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      getDoc(doc(db, 'restocks', monthKey)).then(snap => {
+        const restockSlots = snap.exists() ? snap.data().slots || {} : {}
+        const today = now.toISOString().split('T')[0]
+        setPlacesDisponibles(getPlacesDisponibles(produits, { maxPap, maxMaro }, restockSlots, today))
+      })
+    }, [produits, maxPap, maxMaro])
+
       useEffect(() => {
       const saved = sessionStorage.getItem('scrollPos')
       if (saved) {
@@ -622,6 +636,17 @@
                   {savingCapacite ? 'Enregistrement...' : 'Enregistrer'}
                 </button>
               </div>
+              {placesDisponibles && (
+                <div className="mt-3 flex gap-4 text-sm">
+                  <span className={placesDisponibles.pap === 0 ? 'text-orange-500 font-medium' : 'text-gray-600'}>
+                    PAP : {placesDisponibles.pap}/{maxPap} places
+                  </span>
+                  <span className="text-gray-300">·</span>
+                  <span className={placesDisponibles.maro === 0 ? 'text-orange-500 font-medium' : 'text-gray-600'}>
+                    MARO : {placesDisponibles.maro}/{maxMaro} places
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
