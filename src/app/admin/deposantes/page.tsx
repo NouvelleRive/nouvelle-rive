@@ -436,35 +436,69 @@
             const nbProduits = produits.filter((p: any) => p.trigramme === d.trigramme).length
             const nbVendues = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).length
             const caTotal = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).reduce((sum: number, p: any) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
+            const accroche = d?.accroche || ''
+            const description = d?.description || ''
+            const champsManquants = [
+              !d.email,
+              !d.contratSigne,
+              !d.iban,
+            ].filter(Boolean).length
             return (
               <div key={d.id} className="bg-white border border-orange-200 rounded-lg overflow-hidden">
                 <div className="p-4 flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 bg-orange-500 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
-                      {d.trigramme || '?'}
-                    </div>
+                    {d.imageUrl ? (
+                      <img src={d.imageUrl} alt={d.nom} className="w-14 h-14 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-14 h-14 bg-orange-500 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
+                        {d.trigramme || '?'}
+                      </div>
+                    )}
                     <div className="flex-1">
-                      <p className="font-bold text-lg">{(d.prenom || '').toUpperCase()} {(d.nom || '').toUpperCase()}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-lg">{(d.prenom || '').toUpperCase()} {(d.nom || '').toUpperCase()}</p>
+                        {champsManquants > 0 && (
+                          <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                            {champsManquants} champ{champsManquants > 1 ? 's' : ''} manquant{champsManquants > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-500">{d.email || '—'}</p>
-                      <p className="text-xs text-orange-500 font-medium mt-1">
-                        {d.contratSigne ? '✓ Contrat signé' : '⚠️ Contrat non signé'} · {d.modePaiement === 'cash' ? 'Virement' : d.modePaiement === 'bon' ? "Bon d'achat" : '—'}
-                      </p>
+                      {accroche && <p className="text-sm text-orange-500 font-medium mt-1 italic">"{accroche}"</p>}
                     </div>
                   </div>
-                  <div className="hidden md:flex items-center gap-4 text-sm">
-                    <div className="text-center px-3 py-2 bg-gray-50 rounded-lg">
-                      <p className="text-gray-500 text-xs">Produits</p>
-                      <p className="font-bold text-lg">{nbProduits}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="hidden md:flex items-center gap-4 text-sm mr-4">
+                      <div className="text-center px-3 py-2 bg-gray-50 rounded-lg">
+                        <p className="text-gray-500 text-xs">Produits</p>
+                        <p className="font-bold text-lg">{nbProduits}</p>
+                      </div>
+                      <div className="text-center px-3 py-2 bg-green-50 rounded-lg">
+                        <p className="text-gray-500 text-xs">Ventes</p>
+                        <p className="font-bold text-lg text-green-600">{nbVendues}</p>
+                      </div>
+                      <div className="text-center px-3 py-2 bg-orange-50 rounded-lg">
+                        <p className="text-gray-500 text-xs">CA</p>
+                        <p className="font-bold text-lg text-orange-500">{caTotal.toFixed(0)} €</p>
+                      </div>
                     </div>
-                    <div className="text-center px-3 py-2 bg-green-50 rounded-lg">
-                      <p className="text-gray-500 text-xs">Ventes</p>
-                      <p className="font-bold text-lg text-green-600">{nbVendues}</p>
-                    </div>
-                    <div className="text-center px-3 py-2 bg-orange-50 rounded-lg">
-                      <p className="text-gray-500 text-xs">CA</p>
-                      <p className="font-bold text-lg text-orange-500">{caTotal.toFixed(0)} €</p>
-                    </div>
+                    <button className="p-2 text-gray-500 hover:text-orange-500" title="Modifier">
+                      <Edit2 size={18} />
+                    </button>
+                    <button className="p-2 text-red-400 hover:text-red-600" title="Supprimer">
+                      <Trash2 size={18} />
+                    </button>
                   </div>
+                </div>
+                {description && (
+                  <div className="px-4 pb-3">
+                    <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+                  </div>
+                )}
+                <div className="px-4 py-3 bg-orange-50 border-t border-orange-100">
+                  <p className="text-xs text-orange-500 font-medium">
+                    {d.contratSigne ? '✓ Contrat signé' : '⚠️ Contrat non signé'} · {d.modePaiement === 'cash' ? 'Virement' : d.modePaiement === 'bon' ? "Bon d'achat" : 'Mode de paiement non défini'}
+                  </p>
                 </div>
               </div>
             )
