@@ -592,6 +592,37 @@
               }))}
               userType="admin"
             />
+
+            <div className="mt-6 bg-white rounded-xl border p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Capacité restocks</p>
+              <div className="flex items-end gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Max PAP</label>
+                  <input
+                    type="number"
+                    value={maxPap}
+                    onChange={(e) => setMaxPap(parseInt(e.target.value) || 0)}
+                    className="w-24 border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Max MARO</label>
+                  <input
+                    type="number"
+                    value={maxMaro}
+                    onChange={(e) => setMaxMaro(parseInt(e.target.value) || 0)}
+                    className="w-24 border rounded px-3 py-2"
+                  />
+                </div>
+                <button
+                  onClick={saveCapacite}
+                  disabled={savingCapacite}
+                  className="px-4 py-2 bg-[#22209C] text-white rounded hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingCapacite ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* STATS RESTOCKS */}
