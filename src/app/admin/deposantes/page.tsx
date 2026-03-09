@@ -450,6 +450,51 @@
           </div>
         </div>
 
+        <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-4">Déposantes</p>
+        <div className="space-y-4 mb-8">
+          {deposantesParticulieres.length === 0 && (
+            <p className="text-center text-gray-400 py-8">Aucune déposante pour l'instant</p>
+          )}
+          {deposantesParticulieres.map((d: any) => {
+            const nbProduits = produits.filter((p: any) => p.trigramme === d.trigramme).length
+            const nbVendues = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).length
+            const caTotal = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).reduce((sum: number, p: any) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
+            return (
+              <div key={d.id} className="bg-white border border-orange-200 rounded-lg overflow-hidden">
+                <div className="p-4 flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 bg-orange-500 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      {d.trigramme || '?'}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-lg">{(d.prenom || '').toUpperCase()} {(d.nom || '').toUpperCase()}</p>
+                      <p className="text-sm text-gray-500">{d.email || '—'}</p>
+                      <p className="text-xs text-orange-500 font-medium mt-1">
+                        {d.contratSigne ? '✓ Contrat signé' : '⚠️ Contrat non signé'} · {d.modePaiement === 'cash' ? 'Virement' : d.modePaiement === 'bon' ? "Bon d'achat" : '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="hidden md:flex items-center gap-4 text-sm">
+                    <div className="text-center px-3 py-2 bg-gray-50 rounded-lg">
+                      <p className="text-gray-500 text-xs">Produits</p>
+                      <p className="font-bold text-lg">{nbProduits}</p>
+                    </div>
+                    <div className="text-center px-3 py-2 bg-green-50 rounded-lg">
+                      <p className="text-gray-500 text-xs">Ventes</p>
+                      <p className="font-bold text-lg text-green-600">{nbVendues}</p>
+                    </div>
+                    <div className="text-center px-3 py-2 bg-orange-50 rounded-lg">
+                      <p className="text-gray-500 text-xs">CA</p>
+                      <p className="font-bold text-lg text-orange-500">{caTotal.toFixed(0)} €</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <p className="text-xs font-bold uppercase tracking-widest text-[#22209C] mb-4">Chineuses</p>
         <div className="flex items-center gap-4 mb-4">
           {!selectedChineuse && (
             <div className="flex-1 relative">
