@@ -57,6 +57,7 @@ interface SalesListProps {
   chineuses?: Array<{ trigramme: string; nom: string }> // Liste des chineuses pour le filtre
   userEmail?: string
   isAdmin?: boolean
+  isDeposante?: boolean
   loading?: boolean
   // Callbacks admin
   onAttribuer?: (vente: Vente) => void
@@ -85,6 +86,7 @@ export default function SalesList({
   chineuses = [],
   userEmail,
   isAdmin = false,
+  isDeposante = false,
   loading = false,
   onAttribuer,
   onModifierPrix, 
@@ -277,7 +279,13 @@ export default function SalesList({
           <div className="bg-white border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
             <span className="text-xs text-blue-600">CA</span>
             <span className="font-bold text-blue-600">{stats.ca.toFixed(2)}€</span>
-          </div>         
+          </div>
+          {isDeposante && (
+            <div className="bg-white border border-[#22209C]/30 rounded-lg px-3 py-2 flex items-center gap-2">
+              <span className="text-xs text-[#22209C]">Ma cagnotte</span>
+              <span className="font-bold text-[#22209C]">{(stats.ca * 0.6).toFixed(2)}€</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -296,6 +304,7 @@ export default function SalesList({
         chineuses={chineuses}
         userEmail={userEmail}
         isAdmin={isAdmin}
+        isDeposante={isDeposante}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onFiltered={setVentesFiltrées}
