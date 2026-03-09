@@ -1,28 +1,47 @@
-// Retourne true si la catégorie est MARO (sac)
 export function isMaro(categorie: string): boolean {
   return categorie?.toLowerCase().includes('sac')
 }
 
-// Compte les places occupées par les déposantes
-// Un produit occupe une place si : il appartient à une déposante 
-// ET n'est pas vendu ET pas récupéré (statutRecuperation !== 'recupere')
-export function countPlacesOccupees(produits: any[]): { pap: number, maro: number } {
-  const actifs = produits.filter(p => 
-    p.trigramme && // déposante = a un trigramme
-    !p.vendu &&
-    p.statutRecuperation !== 'recupere'
+// Places occupées = produits reçus en boutique
+// + produits en attente dont la déposante a un RDV futur
+export function countPlacesOccupees(
+  produits: any[],
+  restockSlots: Record<string, { nom: string; type: string; trigramme?: string }>,
+  today: string
+): { pap: number; maro: number } {
+  // Trigrammes avec un RDV futur
+  const trigrammesAvecRdv = new Set(
+    Object.entries(restockSlots)
+      .filter(([key, slot]) => {
+        const dateStr = key.split('_')[0]
+        return slot.type === 'deposante' && slot.trigramme && dateStr >= today
+      })
+      .map(([_, slot]) => slot.trigramme!)
   )
+
+  const actifs = produits.filter(p => {
+    if (!p.trigramme) return false
+    if (p.vendu) return false
+    if (p.statutRecuperation === 'recupere') return false
+    // Reçu en boutique → occupe une place
+    if (p.recu === true) return true
+    // En attente → occupe une place seulement si RDV futur pris
+    if (trigrammesAvecRdv.has(p.trigramme)) return true
+    return false
+  })
+
   const maro = actifs.filter(p => isMaro(p.categorie || '')).length
   const pap = actifs.length - maro
   return { pap, maro }
 }
 
-// Retourne les places disponibles
 export function getPlacesDisponibles(
   produits: any[],
-  config: { maxPap: number, maxMaro: number }
-): { pap: number, maro: number, total: number } {
-  const { pap, maro } = countPlacesOccupees(produits)
+  config: { maxPap: number; maxMaro: number },
+  restockSlots: Record<string, any> = {},
+  today: string = new Date().toISOString().split('T')[0]
+): { pap: number; maro: number; total: number } {
+  const { pap, maro } = countPlacesOccupees(produits, restockSlots, today)
   return {
     pap: Math.max(0, config.maxPap - pap),
     maro: Math.max(0, config.maxMaro - maro),
@@ -30,14 +49,4 @@ export function getPlacesDisponibles(
   }
 }
 
-// Déposante peut prendre RDV si au moins 1 place disponible
-export function peutPrendreRdv(
-  produits: any[],
-  config: { maxPap: number, maxMaro: number }
-): boolean {
-  const { total } = getPlacesDisponibles(produits, config)
-  return total > 0
-}
-
-// Max 5 articles par dépôt
 export const MAX_ARTICLES_PAR_DEPOT = 5

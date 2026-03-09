@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
-import { peutPrendreRdv, getPlacesDisponibles } from '@/lib/capaciteDepot'
+import { getPlacesDisponibles } from '@/lib/capaciteDepot'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
 import PlanningCalendar from '@/components/PlanningCalendar'
@@ -11,6 +11,7 @@ export default function DeposanteCalendrierPage() {
   const [userNom, setUserNom] = useState<string>('')
   const [placesDisponibles, setPlacesDisponibles] = useState<{ pap: number, maro: number, total: number } | null>(null)
   const [loadingPlaces, setLoadingPlaces] = useState(true)
+  const [userTrigramme, setUserTrigramme] = useState<string>('')
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -19,18 +20,24 @@ export default function DeposanteCalendrierPage() {
       if (!snap.empty) {
         const data = snap.docs[0].data()
         setUserNom((data.nom || data.trigramme || '').toUpperCase())
+        setUserTrigramme((data.trigramme || '').toUpperCase())
       }
 
       // Fetch capacité + produits déposantes
-      const [configSnap, produitsSnap] = await Promise.all([
+      const now = new Date()
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      const [configSnap, produitsSnap, restockSnap] = await Promise.all([
         getDoc(doc(db, 'config', 'capacite')),
-        getDocs(collection(db, 'produits'))
+        getDocs(collection(db, 'produits')),
+        getDoc(doc(db, 'restocks', monthKey))
       ])
       const config = configSnap.exists()
         ? { maxPap: configSnap.data().maxPap || 0, maxMaro: configSnap.data().maxMaro || 0 }
         : { maxPap: 0, maxMaro: 0 }
       const produits = produitsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-      setPlacesDisponibles(getPlacesDisponibles(produits, config))
+      const restockSlots = restockSnap.exists() ? restockSnap.data().slots || {} : {}
+      const today = now.toISOString().split('T')[0]
+      setPlacesDisponibles(getPlacesDisponibles(produits, config, restockSlots, today))
       setLoadingPlaces(false)
     })
     return () => unsub()
@@ -64,7 +71,7 @@ export default function DeposanteCalendrierPage() {
       ) : (
         <PlanningCalendar
           mode="restock"
-          participants={userNom ? [{ nom: userNom, type: 'deposante' }] : []}
+          participants={userNom ? [{ nom: userNom, type: 'deposante', trigramme: userTrigramme }] : []}
           userType="deposante"
           userNom={userNom}
         />

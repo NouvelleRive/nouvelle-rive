@@ -13,9 +13,9 @@ const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean }
 type Task = { id: string; texte: string }
 type PlanningSlots = Record<string, string>
-type RestockSlotData = { nom: string; type: 'chineuse' | 'deposante' }
+type RestockSlotData = { nom: string; type: 'chineuse' | 'deposante'; trigramme?: string }
 type RestockSlots = Record<string, RestockSlotData>
-type Participant = { nom: string; type: 'chineuse' | 'deposante' }
+type Participant = { nom: string; type: 'chineuse' | 'deposante'; trigramme?: string }
 
 interface PlanningCalendarProps {
   mode: 'planning' | 'restock' | 'unified'
@@ -113,18 +113,18 @@ export default function PlanningCalendar({
     fetch()
   }, [monthKey, mode])
 
-  const saveRestockSlot = async (dateStr: string, creneau: string, nom: string, type: 'chineuse' | 'deposante' | '') => {
+  const saveRestockSlot = async (dateStr: string, creneau: string, nom: string, type: 'chineuse' | 'deposante' | '', trigramme?: string) => {
     const key = `${dateStr}_${creneau}`
     const newSlots = { ...restockSlots }
     if (!nom) delete newSlots[key]
-    else newSlots[key] = { nom, type: type as 'chineuse' | 'deposante' }
+    else newSlots[key] = { nom, type: type as 'chineuse' | 'deposante', ...(trigramme ? { trigramme } : {}) }
     setRestockSlots(newSlots)
     await setDoc(doc(db, 'restocks', monthKey), { slots: newSlots }, { merge: true })
   }
 
   const handleRestockChange = (ds: string, cr: string, val: string) => {
     const participant = participants.find(p => p.nom === val)
-    saveRestockSlot(ds, cr, val, participant?.type || 'chineuse')
+    saveRestockSlot(ds, cr, val, participant?.type || 'chineuse', participant?.trigramme)
   }
 
   const canEditRestock = (slot: RestockSlotData | undefined) => {
