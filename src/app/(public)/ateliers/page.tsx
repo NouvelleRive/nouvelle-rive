@@ -132,7 +132,7 @@ export default function AteliersPage() {
         alert(data.error || 'Erreur lors de la réservation')
       }
     } catch (err) {
-      alert('Erreur de connexion')
+      alert('Erreur : ERR')
     } finally {
       setSubmitting(false)
     }

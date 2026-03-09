@@ -187,7 +187,7 @@
           setError(data.error || 'Erreur lors du détourage')
         }
       } catch (err: any) {
-        setError(err.message || 'Erreur réseau')
+        setError('FA500')
       } finally {
         setProcessing(false)
       }
@@ -270,7 +270,7 @@
         setMode('view')
         setCanvasReady(false)
       } catch (err: any) {
-        setError(err.message)
+        setError('FA500')
       } finally {
         setProcessing(false)
       }
@@ -305,10 +305,10 @@
         if (data.success && data.maskUrl) {
           onConfirm(data.maskUrl)
         } else {
-          setError(data.error || 'Erreur rotation')
+          setError('FA500')
         }
       } catch (err: any) {
-        setError(err.message)
+        setError('FA500')
       } finally {
         setProcessing(false)
       }

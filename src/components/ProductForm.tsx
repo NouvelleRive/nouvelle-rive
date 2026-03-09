@@ -672,7 +672,7 @@ async function compressImage(file: File): Promise<string> {
           setPhotoToEdit({ file, type })
       } catch (err) {
           console.error('Erreur upload:', err)
-          alert('Erreur upload photo')
+          alert('Erreur : FA500')
         } finally {
           setUploadingCount(c => c - 1)
         }
@@ -702,7 +702,7 @@ async function compressImage(file: File): Promise<string> {
           }
         } catch (err) {
           console.error('Erreur formatage détail:', err)
-          alert('Erreur formatage photo détail')
+          alert('Erreur : FA500')
         } finally {
           setUploadingCount(c => c - 1)
         }
@@ -1259,16 +1259,16 @@ async function compressImage(file: File): Promise<string> {
             setShowExcelSection(false)
             
           } catch (err: any) {
-            alert('❌ Erreur de lecture : ' + (err?.message || 'Format invalide'))
+            alert('❌ Erreur de lecture : ERR')
           } finally {
             setImportLoading(false)
           }
         }
-        
+
         reader.readAsArrayBuffer(excelFile)
-        
+
       } catch (err: any) {
-        alert('❌ Erreur : ' + (err?.message || ''))
+        alert('❌ Erreur : ERR')
         setImportLoading(false)
       }
     }
@@ -2042,7 +2042,7 @@ async function compressImage(file: File): Promise<string> {
                       ...(result.descriptions ? { description: `${result.descriptions.fr}\n\n🇬🇧 ${result.descriptions.en}` } : {}),
                     }))
                   } else {
-                    alert('Erreur lors de l\'analyse')
+                    alert('Erreur : AI500')
                   }
                 }}
                 disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}

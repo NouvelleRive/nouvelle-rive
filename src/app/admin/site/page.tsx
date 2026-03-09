@@ -157,7 +157,7 @@ export default function AdminSitePage() {
       alert('✅ Sauvegardé !')
     } catch (error) {
       console.error('Erreur:', error)
-      alert('❌ Erreur')
+      alert('❌ Erreur : FI')
     } finally {
       setSaving(false)
     }

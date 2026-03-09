@@ -230,7 +230,7 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
       }
     } catch (err: any) {
       console.error('💥 ERREUR:', err)
-      alert('Erreur : ' + (err?.message || ''))
+      alert('Erreur : FI')
     } finally {
       setLoading(false)
     }
@@ -302,7 +302,7 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
       
     } catch (err: any) {
       console.error('Erreur import:', err)
-      alert('❌ Erreur import : ' + (err?.message || ''))
+      alert('❌ Erreur import : FI')
     }
   }
 

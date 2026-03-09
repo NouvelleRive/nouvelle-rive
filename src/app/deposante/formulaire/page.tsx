@@ -173,7 +173,7 @@ export default function DeposanteFormulairePage() {
       alert('✅ Pièce ajoutée avec succès !')
       if (user.email) await refreshSku(trigramme, user.email)
     } catch (err: any) {
-      alert('Erreur : ' + (err?.message || ''))
+      alert('Erreur : FI')
     } finally {
       setLoading(false)
     }

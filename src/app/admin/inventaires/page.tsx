@@ -220,7 +220,7 @@ export default function AdminInventairesPage() {
       setNewInventaireNom('')
     } catch (err) {
       console.error('Erreur création inventaire:', err)
-      alert('Erreur lors de la création')
+      alert('Erreur : FI')
     } finally {
       setProcessing(false)
     }
@@ -275,7 +275,7 @@ export default function AdminInventairesPage() {
       const nbManquants = await handleCloturerInventaire(inventaireEnCours)
       alert(`Inventaire clôturé. ${nbManquants} pièce(s) manquante(s) enregistrée(s).`)
     } catch (err) {
-      alert('Erreur lors de la clôture')
+      alert('Erreur : FI')
     } finally {
       setProcessing(false)
     }

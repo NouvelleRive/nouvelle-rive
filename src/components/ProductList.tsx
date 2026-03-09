@@ -633,7 +633,7 @@
           alert(`${selectedIds.size} produit(s) mis à jour`)
         } catch (err) {
           console.error('Erreur batch update:', err)
-          alert('Erreur lors de la mise à jour')
+          alert('Erreur : FI')
         }
       }
 
@@ -821,7 +821,7 @@
             
       } catch (err: any) {
         console.error('Erreur sauvegarde:', err)
-        alert('Erreur: ' + (err.message || 'Impossible de sauvegarder'))
+        alert('Erreur : FI')
       } finally {
         setSavingProduct(false)  // <-- ajoute cette ligne
       }

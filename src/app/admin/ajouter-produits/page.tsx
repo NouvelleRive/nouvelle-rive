@@ -112,7 +112,7 @@ export default function AdminAjouterPage() {
       const nextSku = await computeNextSkuForTrigram(selectedChineuse.trigramme, identifier, !selectedChineuse.email)
       setAutoSku(nextSku)
       await loadData()
-    } catch (error) { alert('Erreur : ' + (error as any)?.message) }
+    } catch (error) { alert('Erreur : FI') }
     finally { setCreatingProduct(false) }
   }
 
@@ -193,7 +193,7 @@ export default function AdminAjouterPage() {
       setAutoSku(nextSku)
       
     } catch (error: any) {
-      alert('❌ Erreur import : ' + (error?.message || ''))
+      alert('❌ Erreur : FI')
     }
   }
 

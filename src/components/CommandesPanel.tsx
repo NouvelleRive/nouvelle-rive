@@ -273,7 +273,7 @@ export default function CommandesPanel({
       await chargerCommandes(true)
     } catch (error) {
       console.error('Erreur:', error)
-      alert('Erreur lors de la mise à jour')
+      alert('Erreur : FI')
     }
   }
 
@@ -288,7 +288,7 @@ export default function CommandesPanel({
       await chargerCommandes(true)
     } catch (error) {
       console.error('Erreur:', error)
-      alert('Erreur lors de la mise à jour')
+      alert('Erreur : FI')
     }
   }
 
@@ -340,7 +340,7 @@ export default function CommandesPanel({
       await chargerCommandes(true)
     } catch (error) {
       console.error('Erreur:', error)
-      alert('Erreur lors de la mise à jour')
+      alert('Erreur : FI')
     }
   }
 

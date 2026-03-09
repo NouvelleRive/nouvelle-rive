@@ -94,8 +94,8 @@ function CheckoutContent() {
       })
       const data = await response.json()
       if (data.success && data.checkoutUrl) window.location.href = data.checkoutUrl
-      else alert('Erreur lors de la création du paiement')
-    } catch (error) { console.error('Erreur:', error); alert('Une erreur est survenue') }
+      else alert('Erreur : PAY')
+    } catch (error) { console.error('Erreur:', error); alert('Erreur : PAY') }
     finally { setProcessing(false) }
   }
 

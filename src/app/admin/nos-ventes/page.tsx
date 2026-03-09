@@ -181,7 +181,7 @@ export default function AdminNosVentesPage() {
         alert(data.error || 'Erreur sync')
       }
     } catch (e) {
-      alert('Erreur de synchronisation')
+      alert('Erreur : SQ500')
     } finally {
       setSyncLoading(false)
     }
@@ -204,7 +204,7 @@ export default function AdminNosVentesPage() {
         alert(result.error || 'Erreur import')
       }
     } catch (err) {
-      alert('Erreur lors de l\'import')
+      alert('Erreur : FI')
     } finally {
       setImportLoading(false)
     }
@@ -251,10 +251,10 @@ export default function AdminNosVentesPage() {
         await loadData()
         await loadAllProduits()
       } else {
-        alert(data.error || 'Erreur')
+        alert('Erreur : FI')
       }
     } catch {
-      alert('Erreur')
+      alert('Erreur : FI')
     } finally {
       setAttribuerLoading(false)
     }
@@ -296,10 +296,10 @@ export default function AdminNosVentesPage() {
         setVenteSelectionnee(null)
         await loadVentes()
       } else {
-        alert(data.error || 'Erreur')
+        alert('Erreur : FI')
       }
     } catch {
-      alert('Erreur')
+      alert('Erreur : FI')
     } finally {
       setModifierPrixLoading(false)
     }
@@ -342,10 +342,10 @@ export default function AdminNosVentesPage() {
         await loadVentes()
         if (remettreEnStock) await loadData()
       } else {
-        alert(data.error || 'Erreur')
+        alert('Erreur : FI')
       }
     } catch {
-      alert('Erreur')
+      alert('Erreur : FI')
     } finally {
       setSupprimerLoading(false)
     }
@@ -372,10 +372,10 @@ export default function AdminNosVentesPage() {
       if (data.success) {
         await loadVentes()
       } else {
-        alert(data.error || 'Erreur')
+        alert('Erreur : FI')
       }
     } catch {
-      alert('Erreur')
+      alert('Erreur : FI')
     }
   }
 
@@ -402,10 +402,10 @@ export default function AdminNosVentesPage() {
         await loadVentes()
         await loadData()
       } else {
-        alert('Erreur lors de l\'ajout')
+        alert('Erreur : FI')
       }
     } catch {
-      alert('Erreur')
+      alert('Erreur : FI')
     } finally {
       setAjoutLoading(false)
     }

@@ -319,7 +319,7 @@
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur marquage:', err)
-        alert('Erreur lors du marquage')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -343,7 +343,7 @@
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur annulation:', err)
-        alert('Erreur lors de l\'annulation')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -368,7 +368,7 @@
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur signalement:', err)
-        alert('Erreur lors du signalement')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -391,7 +391,7 @@
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur réception:', err)
-        alert('Erreur lors de la réception')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -417,7 +417,7 @@
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur suppression:', err)
-        alert('Erreur lors de la suppression')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -449,7 +449,7 @@
         onProductUpdate?.()
       } catch (err: any) {
         console.error('Erreur récupération:', err)
-        alert(err.message || 'Erreur lors de la récupération')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -471,7 +471,7 @@
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur annulation:', err)
-        alert('Erreur lors de l\'annulation')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -546,7 +546,7 @@
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur édition:', err)
-        alert('Erreur lors de l\'édition')
+        alert('Erreur : FI')
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev)
@@ -696,7 +696,7 @@
                               restockParVendeuse: vendeusePrenom,
                             })
                           } catch (err) {
-                            alert('Erreur lors du restock')
+                            alert('Erreur : FI')
                           }
                         }}
                         disabled={isProcessing}
@@ -746,7 +746,7 @@
                                 ...(nouvelleQte === 0 ? { statut: 'outOfStock', dateRupture: Timestamp.now() } : {}),
                               })
                             } catch (err) {
-                              alert('Erreur lors du déstockage')
+                              alert('Erreur : FI')
                             }
                           }}
                           disabled={isProcessing}
@@ -764,7 +764,7 @@
                                 dateDemandeDestock: null,
                               })
                             } catch (err) {
-                              alert('Erreur annulation')
+                              alert('Erreur : FI')
                             }
                           }}
                           disabled={isProcessing}

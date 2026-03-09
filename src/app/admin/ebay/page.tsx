@@ -133,11 +133,10 @@ useEffect(() => {
         alert(`✅ ${successCount} produit(s) publié(s) sur eBay !`)
         await loadData()
       } else {
-        const errMsg = data.error || data.results?.find((r: any) => !r.success)?.error || data.message || 'Erreur inconnue'
-alert(`❌ Erreur : ${errMsg}`)
+        alert('❌ Erreur : EB500')
       }
     } catch (err: any) {
-      alert(`❌ Erreur réseau : ${err.message}`)
+      alert('❌ Erreur : EB500')
     } finally {
       setPublishing(false)
       setSelectedIds(new Set())

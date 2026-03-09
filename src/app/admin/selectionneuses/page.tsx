@@ -366,7 +366,7 @@
         sessionStorage.setItem('scrollPos', String(scrollPos))
 
       } catch (err: any) {
-        alert('❌ Erreur : ' + (err?.message || ''))
+        alert('❌ Erreur : FI')
       } finally {
         setSaving(false)
       }
@@ -399,7 +399,7 @@
         window.location.reload()
 
       } catch (err: any) {
-        alert('❌ Erreur : ' + (err?.message || ''))
+        alert('❌ Erreur : FI')
       }
     }
 
@@ -417,10 +417,10 @@
           alert(`✅ ${data.message}\n\nErreurs: ${data.results.errors.length > 0 ? data.results.errors.join('\n') : 'Aucune'}`)
           window.location.reload()
         } else {
-          alert('❌ Erreur: ' + data.error)
+          alert('❌ Erreur: FI')
         }
       } catch (err: any) {
-        alert('❌ Erreur: ' + err.message)
+        alert('❌ Erreur: FI')
       }
     }
 
@@ -528,7 +528,7 @@
         setDeposantesParticulieres(snap.docs.map(d => ({ id: d.id, ...d.data() })))
 
       } catch (err: any) {
-        alert('❌ Erreur : ' + (err?.message || ''))
+        alert('❌ Erreur : FI')
       } finally {
         setSavingDeposante(false)
       }
@@ -545,7 +545,7 @@
         const snap = await getDocs(collection(db, 'deposante'))
         setDeposantesParticulieres(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       } catch (err: any) {
-        alert('❌ Erreur : ' + (err?.message || ''))
+        alert('❌ Erreur : FI')
       }
     }
 

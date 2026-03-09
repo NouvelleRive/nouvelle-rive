@@ -107,7 +107,7 @@ export default function AdminAteliersPage() {
         alert(data.error || 'Erreur')
       }
     } catch (err) {
-      alert('Erreur de connexion')
+      alert('Erreur : FI')
     } finally {
       setSubmitting(false)
     }
@@ -131,7 +131,7 @@ export default function AdminAteliersPage() {
         alert(data.error || 'Erreur')
       }
     } catch (err) {
-      alert('Erreur')
+      alert('Erreur : FI')
     }
   }
 
