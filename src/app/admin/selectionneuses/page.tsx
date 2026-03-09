@@ -161,7 +161,7 @@
 
     const saveCapacite = async () => {
       setSavingCapacite(true)
-      await setDoc(doc(db, 'config', 'capacite'), { maxPap, maxMaro })
+      await setDoc(doc(db, 'config', 'capacite'), { maxPap, maxMaro }, { merge: true })
       setSavingCapacite(false)
     }
       useEffect(() => {
@@ -594,7 +594,7 @@
             />
 
             <div className="mt-6 bg-white rounded-xl border p-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Capacité restocks</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Capacité dépôt</p>
               <div className="flex items-end gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Max PAP</label>
