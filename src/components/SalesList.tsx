@@ -277,13 +277,7 @@ export default function SalesList({
           <div className="bg-white border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
             <span className="text-xs text-blue-600">CA</span>
             <span className="font-bold text-blue-600">{stats.ca.toFixed(2)}€</span>
-          </div>
-          {isDeposante && chineuse?.taux && (
-            <div className="bg-white border border-[#22209C]/30 rounded-lg px-3 py-2 flex items-center gap-2">
-              <span className="text-xs text-[#22209C]">Ma cagnotte</span>
-              <span className="font-bold text-[#22209C]">{(stats.ca * chineuse.taux / 100).toFixed(2)}€</span>
-            </div>
-          )}
+          </div>         
         </div>
       </div>
 
