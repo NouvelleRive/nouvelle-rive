@@ -1,7 +1,7 @@
   // app/admin/layout.tsx
   'use client'
 
-  import { useEffect, useState, useRef } from 'react'
+  import { useEffect, useState } from 'react'
   import { useRouter, usePathname } from 'next/navigation'
   import { User, onAuthStateChanged } from 'firebase/auth'
   import { auth } from '@/lib/firebaseConfig'
@@ -18,20 +18,6 @@
     const router = useRouter()
     const { selectedChineuse, setSelectedChineuse, chineusesList, produitsFiltres } = useAdmin()
     const [menuOpen, setMenuOpen] = useState(false)
-
-    const [equipeOpen, setEquipeOpen] = useState(false)
-  const equipeRef = useRef<HTMLDivElement>(null)
-
-  // Fermer dropdown Équipe au clic extérieur
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (equipeRef.current && !equipeRef.current.contains(e.target as Node)) {
-        setEquipeOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
     // Fermer le menu quand on change de page
     useEffect(() => {
@@ -89,45 +75,22 @@
       )
     })}
 
-    {/* Dropdown Équipe */}
+    {/* Chineuses & Vente */}
     {!selectedChineuse && (
-      <div ref={equipeRef} className="relative">
-        <button
-          onClick={() => setEquipeOpen(!equipeOpen)}
-          className={`text-sm font-medium transition-all flex items-center gap-1 ${
-            isActive('/admin/selectionneuses') || isActive('/admin/vendeuses')
-              ? 'text-[#22209C] underline'
-              : 'text-gray-600 hover:text-[#22209C]'
-          }`}
+      <>
+        <Link
+          href="/admin/selectionneuses"
+          className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/selectionneuses'))}`}
         >
-          Équipe
-          <svg className={`w-3 h-3 transition-transform ${equipeOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {equipeOpen && (
-          <div className="absolute top-full left-0 mt-2 bg-white border rounded-lg shadow-lg py-1 min-w-[160px] z-50">
-            <Link
-              href="/admin/selectionneuses"
-              onClick={() => setEquipeOpen(false)}
-              className={`block px-4 py-2 text-sm transition-colors ${
-                isActive('/admin/selectionneuses') ? 'text-[#22209C] font-semibold bg-blue-50' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Chineuses
-            </Link>
-            <Link
-              href="/admin/vendeuses"
-              onClick={() => setEquipeOpen(false)}
-              className={`block px-4 py-2 text-sm transition-colors ${
-                isActive('/admin/vendeuses') ? 'text-[#22209C] font-semibold bg-blue-50' : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              Vente
-            </Link>
-          </div>
-        )}
-      </div>
+          Selectionneuses
+        </Link>
+        <Link
+          href="/admin/vendeuses"
+          className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/vendeuses'))}`}
+        >
+          Vente
+        </Link>
+      </>
     )}
   </div>
 
@@ -241,14 +204,13 @@
                 )
               })}
 
-              {/* Équipe - Mobile */}
+              {/* Chineuses & Vente - Mobile */}
               {!selectedChineuse && (
                 <>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider pt-2 mt-2 border-t">Équipe</div>
-                  <Link href="/admin/selectionneuses" className={`text-sm font-medium py-2 ${isActive('/admin/selectionneuses') ? 'text-[#22209C] underline' : 'text-gray-600'}`}>
+                  <Link href="/admin/selectionneuses" className={`text-sm font-medium py-2 transition-all ${getTabClassName(isActive('/admin/selectionneuses'))}`}>
                     Chineuses
                   </Link>
-                  <Link href="/admin/vendeuses" className={`text-sm font-medium py-2 ${isActive('/admin/vendeuses') ? 'text-[#22209C] underline' : 'text-gray-600'}`}>
+                  <Link href="/admin/vendeuses" className={`text-sm font-medium py-2 transition-all ${getTabClassName(isActive('/admin/vendeuses'))}`}>
                     Vente
                   </Link>
                 </>
