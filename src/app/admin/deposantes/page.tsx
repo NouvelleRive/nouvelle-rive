@@ -395,6 +395,29 @@
           {/* STATS RESTOCKS */}
           <div className="mt-6 lg:mt-0">
             <div className="bg-white rounded-xl border p-2 sticky top-20">
+              <div className="border-b pb-2 mb-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-2">Déposantes</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs w-16">PAP</span>
+                  <input type="number" value={maxPap} onChange={e => setMaxPap(parseInt(e.target.value) || 0)} className="w-14 border rounded px-2 py-0.5 text-xs" />
+                  <span className="text-xs text-gray-400">max</span>
+                </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs w-16">Maro</span>
+                  <input type="number" value={maxMaro} onChange={e => setMaxMaro(parseInt(e.target.value) || 0)} className="w-14 border rounded px-2 py-0.5 text-xs" />
+                  <span className="text-xs text-gray-400">max</span>
+                </div>
+                <button onClick={saveCapacite} disabled={savingCapacite} className="text-xs px-3 py-1 bg-orange-500 text-white rounded mb-2">
+                  {savingCapacite ? '...' : 'Enregistrer'}
+                </button>
+                {deposantesParticulieres.map((d: any) => (
+                  <div key={d.id} className="flex items-center justify-between py-0.5 text-xs text-orange-500">
+                    <span className="font-bold truncate mr-2">{(d.nom || d.trigramme || '').toUpperCase()}</span>
+                    <span className="whitespace-nowrap flex-shrink-0">{produits.filter((p: any) => p.trigramme === d.trigramme).length} art.</span>
+                  </div>
+                ))}
+                {deposantesParticulieres.length === 0 && <p className="text-xs text-gray-400">Aucune déposante</p>}
+              </div>
               <div>
                 {[...deposants]
                   .map((d: any) => {
