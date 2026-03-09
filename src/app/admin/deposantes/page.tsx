@@ -1009,66 +1009,6 @@
             </div>
           </div>
         )}
-        {/* SECTION DÉPOSANTES PARTICULIÈRES */}
-      <div className="mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-orange-500">Déposantes</h2>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">PAP</span>
-              <input type="number" value={maxPap} onChange={e => setMaxPap(parseInt(e.target.value) || 0)} className="w-14 border rounded px-2 py-1 text-xs" />
-              <span className="text-xs text-gray-500">Maroquinerie</span>
-              <input type="number" value={maxMaro} onChange={e => setMaxMaro(parseInt(e.target.value) || 0)} className="w-14 border rounded px-2 py-1 text-xs" />
-              <button onClick={saveCapacite} disabled={savingCapacite} className="text-xs px-3 py-1 bg-orange-500 text-white rounded">
-                {savingCapacite ? '...' : 'Enregistrer'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {deposantesParticulieres.length === 0 && (
-            <p className="text-center text-gray-400 py-8">Aucune déposante pour l'instant</p>
-          )}
-          {deposantesParticulieres.map((d: any) => {
-            const nbProduits = produits.filter((p: any) => p.trigramme === d.trigramme).length
-            const nbVendues = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).length
-            const caTotal = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).reduce((sum: number, p: any) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
-            return (
-              <div key={d.id} className="bg-white border border-orange-200 rounded-lg overflow-hidden">
-                <div className="p-4 flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 bg-orange-500 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
-                      {d.trigramme || '?'}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-lg">{(d.nom || d.prenom || '').toUpperCase()} {d.nom ? '' : (d.prenom || '').toUpperCase()}</p>
-                      <p className="text-sm text-gray-500">{d.email || '—'}</p>
-                      <p className="text-xs text-orange-500 font-medium mt-1">
-                        {d.contratSigne ? '✓ Contrat signé' : '⚠️ Contrat non signé'} · {d.modePaiement === 'cash' ? 'Virement' : d.modePaiement === 'bon' ? "Bon d'achat" : '—'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="hidden md:flex items-center gap-4 text-sm">
-                    <div className="text-center px-3 py-2 bg-gray-50 rounded-lg">
-                      <p className="text-gray-500 text-xs">Produits</p>
-                      <p className="font-bold text-lg">{nbProduits}</p>
-                    </div>
-                    <div className="text-center px-3 py-2 bg-green-50 rounded-lg">
-                      <p className="text-gray-500 text-xs">Ventes</p>
-                      <p className="font-bold text-lg text-green-600">{nbVendues}</p>
-                    </div>
-                    <div className="text-center px-3 py-2 bg-orange-50 rounded-lg">
-                      <p className="text-gray-500 text-xs">CA</p>
-                      <p className="font-bold text-lg text-orange-500">{caTotal.toFixed(0)} €</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-      </>
+        </>
     )
   }
