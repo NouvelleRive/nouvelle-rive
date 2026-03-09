@@ -5,9 +5,34 @@
   import { useAdmin } from '@/lib/admin/context'
   import { Search, Plus, X, Trash2, Edit2 } from 'lucide-react'
   import { getAuth } from 'firebase/auth'
-  import { collection, doc, getDocs, setDoc } from 'firebase/firestore'
+  import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore'
   import { db } from '@/lib/firebaseConfig'
   import PlanningCalendar from '@/components/PlanningCalendar'
+
+  const CATEGORIES_DEPOSANTE = [
+    { label: 'TODO', idsquare: 'TODO' },
+  ]
+
+  function generateTrigramme(prenom: string, nom: string): string {
+    const p = prenom.trim().toUpperCase().replace(/[^A-Z]/g, '')
+    const n = nom.trim().toUpperCase().replace(/[^A-Z]/g, '')
+    if (!p && !n) return ''
+    if (!p) return n.slice(0, 3)
+    if (!n) return p.slice(0, 3)
+    return p[0] + n.slice(0, 2)
+  }
+
+  async function findUniqueTrigramme(base: string, excludeUid?: string): Promise<string> {
+    const snap = await getDocs(query(collection(db, 'deposante'), where('trigramme', '==', base)))
+    const taken = snap.docs.filter(d => d.id !== excludeUid)
+    if (taken.length === 0) return base
+    for (let i = 2; i <= 99; i++) {
+      const candidate = base + i
+      const s2 = await getDocs(query(collection(db, 'deposante'), where('trigramme', '==', candidate)))
+      if (s2.empty) return candidate
+    }
+    return base
+  }
 
   type CategorieItem = {
     label: string
@@ -86,6 +111,22 @@
     stockType: 'unique',
   }
 
+  const EMPTY_DEPOSANTE_FORM = {
+    id: '',
+    prenom: '',
+    nom: '',
+    trigramme: '',
+    email: '',
+    telephone: '',
+    adresse1: '',
+    adresse2: '',
+    iban: '',
+    bic: '',
+    banqueAdresse: '',
+    modePaiement: 'virement' as 'virement' | 'bon',
+    pieceIdentiteUrl: '',
+  }
+
   export default function AdminDeposantesPage() {
     const { selectedChineuse, deposants, produits, loading } = useAdmin()
     const [rechercheDeposante, setRechercheDeposante] = useState('')
@@ -100,6 +141,13 @@
     const [maxPap, setMaxPap] = useState(0)
     const [maxMaro, setMaxMaro] = useState(0)
     const [savingCapacite, setSavingCapacite] = useState(false)
+    const [filterType, setFilterType] = useState<'toutes' | 'chineuses' | 'deposantes'>('toutes')
+    const [showDeposanteModal, setShowDeposanteModal] = useState(false)
+    const [deposanteFormData, setDeposanteFormData] = useState(EMPTY_DEPOSANTE_FORM)
+    const [savingDeposante, setSavingDeposante] = useState(false)
+    const [deposanteImageFile, setDeposanteImageFile] = useState<File | null>(null)
+    const [deposanteImagePreview, setDeposanteImagePreview] = useState<string | null>(null)
+    const [generatingTrigramme, setGeneratingTrigramme] = useState(false)
 
     useEffect(() => {
       getDocs(collection(db, 'deposante')).then(snap => {
@@ -362,6 +410,160 @@
       }
     }
 
+    // =====================
+    // DEPOSANTE HANDLERS
+    // =====================
+    const openCreateDeposanteModal = () => {
+      setDeposanteFormData(EMPTY_DEPOSANTE_FORM)
+      setDeposanteImageFile(null)
+      setDeposanteImagePreview(null)
+      setShowDeposanteModal(true)
+    }
+
+    const openEditDeposanteModal = (d: any) => {
+      setDeposanteFormData({
+        id: d.id || '',
+        prenom: d.prenom || '',
+        nom: d.nom || '',
+        trigramme: d.trigramme || '',
+        email: d.email || '',
+        telephone: d.telephone || '',
+        adresse1: d.adresse1 || '',
+        adresse2: d.adresse2 || '',
+        iban: d.iban || '',
+        bic: d.bic || '',
+        banqueAdresse: d.banqueAdresse || '',
+        modePaiement: d.modePaiement || 'virement',
+        pieceIdentiteUrl: d.pieceIdentiteUrl || '',
+      })
+      setDeposanteImageFile(null)
+      setDeposanteImagePreview(d.pieceIdentiteUrl || null)
+      setShowDeposanteModal(true)
+    }
+
+    const handleDeposanteImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) {
+        setDeposanteImageFile(file)
+        setDeposanteImagePreview(URL.createObjectURL(file))
+      }
+    }
+
+    const handleAutoGenerateTrigramme = async () => {
+      if (!deposanteFormData.prenom && !deposanteFormData.nom) return
+      setGeneratingTrigramme(true)
+      const base = generateTrigramme(deposanteFormData.prenom, deposanteFormData.nom)
+      const unique = await findUniqueTrigramme(base, deposanteFormData.id || undefined)
+      setDeposanteFormData({ ...deposanteFormData, trigramme: unique })
+      setGeneratingTrigramme(false)
+    }
+
+    const handleSaveDeposante = async () => {
+      if (!deposanteFormData.prenom.trim() || !deposanteFormData.nom.trim()) {
+        alert('Prénom et nom sont obligatoires')
+        return
+      }
+
+      setSavingDeposante(true)
+      try {
+        let finalPieceIdentiteUrl = deposanteFormData.pieceIdentiteUrl
+
+        // Upload piece identite if new file selected
+        if (deposanteImageFile) {
+          const auth = getAuth()
+          const token = await auth.currentUser?.getIdToken()
+          const ext = deposanteImageFile.name.split('.').pop()
+          const uid = deposanteFormData.id || crypto.randomUUID()
+          const filename = `pieces-identite/${uid}.${ext}`
+          const res = await fetch(`/api/bunny-upload?filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(deposanteImageFile.type)}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: deposanteImageFile,
+          })
+          const data = await res.json()
+          if (data.url) finalPieceIdentiteUrl = data.url
+        }
+
+        const docId = deposanteFormData.id || crypto.randomUUID()
+        const payload: any = {
+          prenom: deposanteFormData.prenom.trim(),
+          nom: deposanteFormData.nom.trim(),
+          trigramme: deposanteFormData.trigramme.trim().toUpperCase(),
+          email: deposanteFormData.email.trim(),
+          telephone: deposanteFormData.telephone.trim(),
+          adresse1: deposanteFormData.adresse1.trim(),
+          adresse2: deposanteFormData.adresse2.trim(),
+          iban: deposanteFormData.iban.trim(),
+          bic: deposanteFormData.bic.trim(),
+          banqueAdresse: deposanteFormData.banqueAdresse.trim(),
+          modePaiement: deposanteFormData.modePaiement,
+          pieceIdentiteUrl: finalPieceIdentiteUrl,
+        }
+
+        if (!deposanteFormData.id) {
+          payload.createdAt = serverTimestamp()
+        }
+
+        await setDoc(doc(db, 'deposante', docId), payload, { merge: true })
+
+        alert(`✅ Déposante ${deposanteFormData.id ? 'mise à jour' : 'créée'} !`)
+        setShowDeposanteModal(false)
+
+        // Re-fetch deposantes
+        const snap = await getDocs(collection(db, 'deposante'))
+        setDeposantesParticulieres(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+
+      } catch (err: any) {
+        alert('❌ Erreur : ' + (err?.message || ''))
+      } finally {
+        setSavingDeposante(false)
+      }
+    }
+
+    const handleDeleteDeposante = async (id: string, nom: string) => {
+      if (!confirm(`Supprimer la déposante "${nom}" ?`)) return
+
+      try {
+        await deleteDoc(doc(db, 'deposante', id))
+        alert('✅ Déposante supprimée')
+
+        // Re-fetch deposantes
+        const snap = await getDocs(collection(db, 'deposante'))
+        setDeposantesParticulieres(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      } catch (err: any) {
+        alert('❌ Erreur : ' + (err?.message || ''))
+      }
+    }
+
+    // =====================
+    // UNIFIED LIST
+    // =====================
+    const unifiedList = useMemo(() => {
+      const chineuses = deposantesFiltreesParChineuse.map((d: any) => ({ ...d, _type: 'chineuse' as const }))
+      const deposantes = deposantesParticulieres.map((d: any) => ({ ...d, _type: 'deposante' as const }))
+
+      let combined = [...chineuses, ...deposantes]
+
+      // Apply filter
+      if (filterType === 'chineuses') combined = chineuses
+      if (filterType === 'deposantes') combined = deposantes
+
+      // Apply search
+      if (rechercheDeposante) {
+        combined = combined.filter((d: any) => {
+          const searchStr = [d.email, d.nom, d.prenom, d.trigramme].filter(Boolean).join(' ').toLowerCase()
+          return searchStr.includes(rechercheDeposante.toLowerCase())
+        })
+      }
+
+      // Sort alphabetically by nom
+      return combined.sort((a: any, b: any) => {
+        const nomA = (a.nom || '').toLowerCase()
+        const nomB = (b.nom || '').toLowerCase()
+        return nomA.localeCompare(nomB)
+      })
+    }, [deposantesFiltreesParChineuse, deposantesParticulieres, filterType, rechercheDeposante])
+
     // Helper pour afficher si un champ est vide
     const fieldStatus = (value: string | undefined) => {
       if (!value || value.trim() === '') {
@@ -427,112 +629,26 @@
           </div>
         </div>
 
-        <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-4">Déposantes</p>
-        <div className="space-y-4 mb-8">
-          {deposantesParticulieres.length === 0 && (
-            <div className="bg-white border border-orange-200 rounded-lg overflow-hidden opacity-40">
-              <div className="p-4 flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 bg-orange-500 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">DEP</div>
-                  <div className="flex-1">
-                    <p className="font-bold text-lg">DÉPOSANTE</p>
-                    <p className="text-sm text-gray-500">email@example.com</p>
-                    <p className="text-sm text-orange-500 font-medium mt-1 italic">"Accroche de la déposante"</p>
-                  </div>
-                </div>
-                <div className="hidden md:flex items-center gap-4 text-sm mr-4">
-                  <div className="text-center px-3 py-2 bg-gray-50 rounded-lg"><p className="text-gray-500 text-xs">Produits</p><p className="font-bold text-lg">0</p></div>
-                  <div className="text-center px-3 py-2 bg-green-50 rounded-lg"><p className="text-gray-500 text-xs">Ventes</p><p className="font-bold text-lg text-green-600">0</p></div>
-                  <div className="text-center px-3 py-2 bg-orange-50 rounded-lg"><p className="text-gray-500 text-xs">CA</p><p className="font-bold text-lg text-orange-500">0 €</p></div>
-                </div>
-              </div>
-            </div>
-          )}
-          {deposantesParticulieres.map((d: any) => {
-            const rawCats = d?.['Catégorie'] ?? []
-            const cats = Array.isArray(rawCats) ? rawCats.map((c: any) => c?.label || '').filter(Boolean) : []
-            const nbProduits = produits.filter((p: any) => p.trigramme === d.trigramme).length
-            const nbVendues = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).length
-            const caTotal = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).reduce((sum: number, p: any) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
-            const accroche = d?.accroche || ''
-            const description = d?.description || ''
-            const champsManquants = [
-              !d.email,
-              !d.iban,
-              !d.contratSigne,
-            ].filter(Boolean).length
-            return (
-              <div key={d.id} className="bg-white border border-orange-200 rounded-lg overflow-hidden">
-                <div className="p-4 flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    {d.imageUrl ? (
-                      <img src={d.imageUrl} alt={d.nom} className="w-14 h-14 rounded-lg object-cover" />
-                    ) : (
-                      <div className="w-14 h-14 bg-orange-500 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
-                        {d.trigramme || '?'}
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-lg">{((d.prenom || '') + ' ' + (d.nom || '')).toUpperCase().trim()}</p>
-                        {champsManquants > 0 && (
-                          <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
-                            {champsManquants} champ{champsManquants > 1 ? 's' : ''} manquant{champsManquants > 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500">{d.email || '—'}</p>
-                      {accroche && <p className="text-sm text-orange-500 font-medium mt-1 italic">"{accroche}"</p>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="hidden md:flex items-center gap-4 text-sm mr-4">
-                      <div className="text-center px-3 py-2 bg-gray-50 rounded-lg">
-                        <p className="text-gray-500 text-xs">Produits</p>
-                        <p className="font-bold text-lg">{nbProduits}</p>
-                      </div>
-                      <div className="text-center px-3 py-2 bg-green-50 rounded-lg">
-                        <p className="text-gray-500 text-xs">Ventes</p>
-                        <p className="font-bold text-lg text-green-600">{nbVendues}</p>
-                      </div>
-                      <div className="text-center px-3 py-2 bg-orange-50 rounded-lg">
-                        <p className="text-gray-500 text-xs">CA</p>
-                        <p className="font-bold text-lg text-orange-500">{caTotal.toFixed(0)} €</p>
-                      </div>
-                    </div>
-                    <button onClick={() => openEditModal(d)} className="p-2 text-gray-500 hover:text-[#22209C]" title="Modifier">
-                      <Edit2 size={18} />
-                    </button>
-                    <button onClick={() => handleDelete(d.id, d.nom)} className="p-2 text-red-400 hover:text-red-600" title="Supprimer">
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-                {description && (
-                  <div className="px-4 pb-3">
-                    <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
-                  </div>
-                )}
-                {cats.length > 0 && (
-                  <div className="px-4 py-3 bg-gray-50 border-t">
-                    <div className="flex flex-wrap gap-2">
-                      {cats.map((cat: string, idx: number) => (
-                        <span key={idx} className="text-xs bg-orange-100 text-orange-600 px-3 py-1.5 rounded-full font-medium">
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        {/* FILTER BAR */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            {(['toutes', 'chineuses', 'deposantes'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+                  filterType === type
+                    ? 'bg-black text-white'
+                    : 'bg-white border text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {type === 'toutes' ? 'Toutes' : type === 'chineuses' ? 'Chineuses' : 'Déposantes'}
+              </button>
+            ))}
+          </div>
 
-        <p className="text-xs font-bold uppercase tracking-widest text-[#22209C] mb-4">Chineuses</p>
-        <div className="flex items-center gap-4 mb-4">
           {!selectedChineuse && (
-            <div className="flex-1 relative">
+            <div className="flex-1 relative w-full sm:w-auto">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
@@ -543,57 +659,73 @@
               />
             </div>
           )}
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded hover:opacity-90"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Ajouter</span>
-          </button>
-          
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded hover:opacity-90"
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Chineuse</span>
+            </button>
+            <button
+              onClick={openCreateDeposanteModal}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90"
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Déposante</span>
+            </button>
+          </div>
         </div>
 
+        {/* UNIFIED LIST */}
         <div className="space-y-4">
-          {deposantesFiltrees.map((d: any) => {
+          {unifiedList.map((d: any) => {
+            const isChineuse = d._type === 'chineuse'
             const rawCats = d?.['Catégorie'] ?? []
             const cats = Array.isArray(rawCats) ? rawCats.map((c: any) => c?.label || '').filter(Boolean) : []
-            const nbProduits = produits.filter((p) => p.chineur === d.email || p.chineurUid === d.id).length
-            const nbVendues = produits.filter((p) => (p.chineur === d.email || p.chineurUid === d.id) && p.vendu).length
-            const caTotal = produits.filter((p) => (p.chineur === d.email || p.chineurUid === d.id) && p.vendu).reduce((sum, p) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
+
+            const nbProduits = isChineuse
+              ? produits.filter((p: any) => p.chineur === d.email || p.chineurUid === d.id).length
+              : produits.filter((p: any) => p.trigramme === d.trigramme).length
+            const nbVendues = isChineuse
+              ? produits.filter((p: any) => (p.chineur === d.email || p.chineurUid === d.id) && p.vendu).length
+              : produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).length
+            const caTotal = isChineuse
+              ? produits.filter((p: any) => (p.chineur === d.email || p.chineurUid === d.id) && p.vendu).reduce((sum: number, p: any) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
+              : produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).reduce((sum: number, p: any) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
 
             const accroche = d?.accroche || ''
             const description = d?.description || ''
-            
-            // Compter les champs manquants
-            const catRapport = (d['Catégorie de rapport'] || [])[0] || {}
-            const champsManquants = [
-              !d.email,
-              !d.instagram,
-              !d.accroche,
-              !d.description,
-              !d.specialite,
-              !d.lien,
-              !d.imageUrl,
-              !d.siret,
-              !d.iban,  
-            ].filter(Boolean).length
+
+            const champsManquants = isChineuse
+              ? [!d.email, !d.instagram, !d.accroche, !d.description, !d.specialite, !d.lien, !d.imageUrl, !d.siret, !d.iban].filter(Boolean).length
+              : [!d.email, !d.iban, !d.contratSigne].filter(Boolean).length
+
+            const borderClass = isChineuse ? 'border-[#22209C]' : 'border-orange-300'
+            const avatarBgClass = isChineuse ? 'bg-[#22209C]' : 'bg-orange-500'
+            const accentColor = isChineuse ? 'text-[#22209C]' : 'text-orange-500'
+            const caBgClass = isChineuse ? 'bg-blue-50' : 'bg-orange-50'
 
             return (
-              <div key={d.id} className="bg-white border rounded-lg overflow-hidden">
-                {/* Header avec infos principales */}
+              <div key={`${d._type}-${d.id}`} className={`bg-white border ${borderClass} rounded-lg overflow-hidden`}>
                 <div className="p-4 flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
                     {d.imageUrl ? (
                       <img src={d.imageUrl} alt={d.nom} className="w-14 h-14 rounded-lg object-cover" />
                     ) : (
-                      <div className="w-14 h-14 bg-[#22209C] text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      <div className={`w-14 h-14 ${avatarBgClass} text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0`}>
                         {d.trigramme || '?'}
                       </div>
                     )}
 
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-lg">{(d.nom || '').toUpperCase()}</p>
+                        <p className="font-bold text-lg">
+                          {isChineuse
+                            ? (d.nom || '').toUpperCase()
+                            : ((d.prenom || '') + ' ' + (d.nom || '')).toUpperCase().trim()}
+                        </p>
                         {champsManquants > 0 && (
                           <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
                             {champsManquants} champ{champsManquants > 1 ? 's' : ''} manquant{champsManquants > 1 ? 's' : ''}
@@ -601,11 +733,11 @@
                         )}
                       </div>
                       <p className="text-sm text-gray-500">
-                        {Array.isArray(d.emails) && d.emails.length > 0 
-                          ? d.emails.join(', ') 
+                        {isChineuse && Array.isArray(d.emails) && d.emails.length > 0
+                          ? d.emails.join(', ')
                           : (d.email || '—')}
                       </p>
-                      {accroche && <p className="text-sm text-[#22209C] font-medium mt-1 italic">"{accroche}"</p>}
+                      {accroche && <p className={`text-sm ${accentColor} font-medium mt-1 italic`}>"{accroche}"</p>}
                     </div>
                   </div>
 
@@ -619,36 +751,44 @@
                         <p className="text-gray-500 text-xs">Ventes</p>
                         <p className="font-bold text-lg text-green-600">{nbVendues}</p>
                       </div>
-                      <div className="text-center px-3 py-2 bg-blue-50 rounded-lg">
+                      <div className={`text-center px-3 py-2 ${caBgClass} rounded-lg`}>
                         <p className="text-gray-500 text-xs">CA</p>
-                        <p className="font-bold text-lg text-[#22209C]">{caTotal.toFixed(0)} €</p>
+                        <p className={`font-bold text-lg ${accentColor}`}>{caTotal.toFixed(0)} €</p>
                       </div>
                     </div>
 
-                    <button onClick={() => openEditModal(d)} className="p-2 text-gray-500 hover:text-[#22209C]" title="Modifier">
+                    <button
+                      onClick={() => isChineuse ? openEditModal(d) : openEditDeposanteModal(d)}
+                      className="p-2 text-gray-500 hover:text-[#22209C]"
+                      title="Modifier"
+                    >
                       <Edit2 size={18} />
                     </button>
-                    <button onClick={() => handleDelete(d.id, d.nom)} className="p-2 text-red-400 hover:text-red-600" title="Supprimer">
+                    <button
+                      onClick={() => isChineuse ? handleDelete(d.id, d.nom) : handleDeleteDeposante(d.id, d.nom)}
+                      className="p-2 text-red-400 hover:text-red-600"
+                      title="Supprimer"
+                    >
                       <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
 
-                {/* Description */}
                 {description && (
                   <div className="px-4 pb-3">
                     <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
                   </div>
                 )}
 
-                {/* Catégories en pastilles - affiché en bas */}
                 {cats.length > 0 && (
                   <div className="px-4 py-3 bg-gray-50 border-t">
                     <div className="flex flex-wrap gap-2">
                       {cats.map((cat: string, idx: number) => (
-                        <span 
-                          key={idx} 
-                          className="text-xs bg-[#22209C]/10 text-[#22209C] px-3 py-1.5 rounded-full font-medium"
+                        <span
+                          key={idx}
+                          className={`text-xs px-3 py-1.5 rounded-full font-medium ${
+                            isChineuse ? 'bg-[#22209C]/10 text-[#22209C]' : 'bg-orange-100 text-orange-600'
+                          }`}
                         >
                           {cat}
                         </span>
@@ -660,7 +800,7 @@
             )
           })}
 
-          {!deposantesFiltrees.length && <p className="text-center text-gray-400 py-8">Aucune déposante</p>}
+          {!unifiedList.length && <p className="text-center text-gray-400 py-8">Aucun résultat</p>}
         </div>
 
         {showModal && (
@@ -1084,6 +1224,216 @@
                   className="px-4 py-2 bg-[#22209C] text-white rounded hover:opacity-90 disabled:opacity-50"
                 >
                   {saving ? 'Enregistrement...' : formData.id ? 'Mettre à jour' : 'Créer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DEPOSANTE MODAL */}
+        {showDeposanteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
+                <h2 className="text-lg font-bold">{deposanteFormData.id ? 'Modifier la' : 'Nouvelle'} déposante</h2>
+                <button onClick={() => setShowDeposanteModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                {/* IDENTITÉ */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Prénom *</label>
+                    <input
+                      type="text"
+                      value={deposanteFormData.prenom}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, prenom: e.target.value })}
+                      placeholder="Marie"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nom *</label>
+                    <input
+                      type="text"
+                      value={deposanteFormData.nom}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, nom: e.target.value })}
+                      placeholder="Dupont"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Trigramme</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={deposanteFormData.trigramme}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, trigramme: e.target.value.toUpperCase() })}
+                      placeholder="MDU"
+                      maxLength={5}
+                      className="flex-1 border rounded px-3 py-2 uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAutoGenerateTrigramme}
+                      disabled={generatingTrigramme}
+                      className="px-3 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
+                    >
+                      {generatingTrigramme ? '...' : 'Auto-générer'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={deposanteFormData.email}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, email: e.target.value })}
+                      placeholder="marie@example.com"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Téléphone</label>
+                    <input
+                      type="text"
+                      value={deposanteFormData.telephone}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, telephone: e.target.value })}
+                      placeholder="+33 6 xx xx xx xx"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Adresse ligne 1</label>
+                    <input
+                      type="text"
+                      value={deposanteFormData.adresse1}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, adresse1: e.target.value })}
+                      placeholder="123 Rue de la Paix"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Adresse ligne 2</label>
+                    <input
+                      type="text"
+                      value={deposanteFormData.adresse2}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, adresse2: e.target.value })}
+                      placeholder="75002 Paris"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                {/* COORDONNÉES BANCAIRES */}
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Coordonnées bancaires</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">IBAN</label>
+                      <input
+                        type="text"
+                        value={deposanteFormData.iban}
+                        onChange={(e) => setDeposanteFormData({ ...deposanteFormData, iban: e.target.value })}
+                        placeholder="FR76 xxxx xxxx xxxx xxxx xxxx xxx"
+                        className="w-full border rounded px-3 py-2 font-mono text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">BIC</label>
+                      <input
+                        type="text"
+                        value={deposanteFormData.bic}
+                        onChange={(e) => setDeposanteFormData({ ...deposanteFormData, bic: e.target.value })}
+                        placeholder="BNPAFRPP"
+                        className="w-full border rounded px-3 py-2 font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-1">Adresse banque</label>
+                    <input
+                      type="text"
+                      value={deposanteFormData.banqueAdresse}
+                      onChange={(e) => setDeposanteFormData({ ...deposanteFormData, banqueAdresse: e.target.value })}
+                      placeholder="BNP Paribas - 16 Boulevard des Italiens, 75009 Paris"
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                {/* MODE PAIEMENT */}
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Mode de paiement</h3>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDeposanteFormData({ ...deposanteFormData, modePaiement: 'virement' })}
+                      className={`px-4 py-2 text-sm font-medium rounded border ${
+                        deposanteFormData.modePaiement === 'virement'
+                          ? 'bg-black text-white border-black'
+                          : 'bg-white text-black border-gray-300'
+                      }`}
+                    >
+                      VIREMENT
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeposanteFormData({ ...deposanteFormData, modePaiement: 'bon' })}
+                      className={`px-4 py-2 text-sm font-medium rounded border ${
+                        deposanteFormData.modePaiement === 'bon'
+                          ? 'bg-black text-white border-black'
+                          : 'bg-white text-black border-gray-300'
+                      }`}
+                    >
+                      BON D'ACHAT
+                    </button>
+                  </div>
+                </div>
+
+                {/* PIÈCE D'IDENTITÉ */}
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Pièce d'identité</h3>
+                  <div className="flex items-center gap-4">
+                    {deposanteImagePreview && (
+                      <div className="w-20 h-14 border rounded overflow-hidden">
+                        <img src={deposanteImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <label className="flex-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50">
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleDeposanteImageChange}
+                        className="hidden"
+                      />
+                      <p className="text-sm text-gray-500">
+                        {deposanteImagePreview ? 'Remplacer le document' : 'Cliquez pour ajouter'}
+                      </p>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 p-4 border-t sticky bottom-0 bg-white">
+                <button onClick={() => setShowDeposanteModal(false)} className="px-4 py-2 border rounded hover:bg-gray-50">
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveDeposante}
+                  disabled={savingDeposante}
+                  className="px-4 py-2 bg-orange-500 text-white rounded hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingDeposante ? 'Enregistrement...' : deposanteFormData.id ? 'Mettre à jour' : 'Créer'}
                 </button>
               </div>
             </div>
