@@ -61,7 +61,7 @@
               </Link>
 
               {/* Tabs Desktop */}
-              <div className="hidden lg:flex items-center space-x-6">
+              <div className="hidden lg:flex flex-wrap items-center space-x-6">
     {visibleTabs.map((tab) => {
       const active = isActive(tab.href)
       return (
