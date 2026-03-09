@@ -95,7 +95,7 @@
         <button
           onClick={() => setEquipeOpen(!equipeOpen)}
           className={`text-sm font-medium transition-all flex items-center gap-1 ${
-            isActive('/admin/deposantes') || isActive('/admin/vendeuses')
+            isActive('/admin/selectionneuses') || isActive('/admin/vendeuses')
               ? 'text-[#22209C] underline'
               : 'text-gray-600 hover:text-[#22209C]'
           }`}
@@ -108,10 +108,10 @@
         {equipeOpen && (
           <div className="absolute top-full left-0 mt-2 bg-white border rounded-lg shadow-lg py-1 min-w-[160px] z-50">
             <Link
-              href="/admin/deposantes"
+              href="/admin/selectionneuses"
               onClick={() => setEquipeOpen(false)}
               className={`block px-4 py-2 text-sm transition-colors ${
-                isActive('/admin/deposantes') ? 'text-[#22209C] font-semibold bg-blue-50' : 'text-gray-700 hover:bg-gray-50'
+                isActive('/admin/selectionneuses') ? 'text-[#22209C] font-semibold bg-blue-50' : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
               Chineuses
@@ -245,7 +245,7 @@
               {!selectedChineuse && (
                 <>
                   <div className="text-xs text-gray-400 uppercase tracking-wider pt-2 mt-2 border-t">Équipe</div>
-                  <Link href="/admin/deposantes" className={`text-sm font-medium py-2 ${isActive('/admin/deposantes') ? 'text-[#22209C] underline' : 'text-gray-600'}`}>
+                  <Link href="/admin/selectionneuses" className={`text-sm font-medium py-2 ${isActive('/admin/selectionneuses') ? 'text-[#22209C] underline' : 'text-gray-600'}`}>
                     Chineuses
                   </Link>
                   <Link href="/admin/vendeuses" className={`text-sm font-medium py-2 ${isActive('/admin/vendeuses') ? 'text-[#22209C] underline' : 'text-gray-600'}`}>
