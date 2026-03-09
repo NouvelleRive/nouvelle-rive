@@ -433,6 +433,8 @@
             <p className="text-center text-gray-400 py-8">Aucune déposante pour l'instant</p>
           )}
           {deposantesParticulieres.map((d: any) => {
+            const rawCats = d?.['Catégorie'] ?? []
+            const cats = Array.isArray(rawCats) ? rawCats.map((c: any) => c?.label || '').filter(Boolean) : []
             const nbProduits = produits.filter((p: any) => p.trigramme === d.trigramme).length
             const nbVendues = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).length
             const caTotal = produits.filter((p: any) => p.trigramme === d.trigramme && p.vendu).reduce((sum: number, p: any) => sum + (p.prixVenteReel ?? p.prix ?? 0), 0)
@@ -440,8 +442,8 @@
             const description = d?.description || ''
             const champsManquants = [
               !d.email,
-              !d.contratSigne,
               !d.iban,
+              !d.contratSigne,
             ].filter(Boolean).length
             return (
               <div key={d.id} className="bg-white border border-orange-200 rounded-lg overflow-hidden">
@@ -495,11 +497,17 @@
                     <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
                   </div>
                 )}
-                <div className="px-4 py-3 bg-orange-50 border-t border-orange-100">
-                  <p className="text-xs text-orange-500 font-medium">
-                    {d.contratSigne ? '✓ Contrat signé' : '⚠️ Contrat non signé'} · {d.modePaiement === 'cash' ? 'Virement' : d.modePaiement === 'bon' ? "Bon d'achat" : 'Mode de paiement non défini'}
-                  </p>
-                </div>
+                {cats.length > 0 && (
+                  <div className="px-4 py-3 bg-orange-50 border-t border-orange-100">
+                    <div className="flex flex-wrap gap-2">
+                      {cats.map((cat: string, idx: number) => (
+                        <span key={idx} className="text-xs bg-orange-100 text-orange-600 px-3 py-1.5 rounded-full font-medium">
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
