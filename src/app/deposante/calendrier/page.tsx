@@ -1,13 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore'
+import { peutPrendreRdv, getPlacesDisponibles } from '@/lib/capaciteDepot'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
 import PlanningCalendar from '@/components/PlanningCalendar'
 
 export default function DeposanteCalendrierPage() {
   const [userNom, setUserNom] = useState<string>('')
+  const [placesDisponibles, setPlacesDisponibles] = useState<{ pap: number, maro: number, total: number } | null>(null)
+  const [loadingPlaces, setLoadingPlaces] = useState(true)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -17,18 +20,55 @@ export default function DeposanteCalendrierPage() {
         const data = snap.docs[0].data()
         setUserNom((data.nom || data.trigramme || '').toUpperCase())
       }
+
+      // Fetch capacité + produits déposantes
+      const [configSnap, produitsSnap] = await Promise.all([
+        getDoc(doc(db, 'config', 'capacite')),
+        getDocs(collection(db, 'produits'))
+      ])
+      const config = configSnap.exists()
+        ? { maxPap: configSnap.data().maxPap || 0, maxMaro: configSnap.data().maxMaro || 0 }
+        : { maxPap: 0, maxMaro: 0 }
+      const produits = produitsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      setPlacesDisponibles(getPlacesDisponibles(produits, config))
+      setLoadingPlaces(false)
     })
     return () => unsub()
   }, [])
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
-      <PlanningCalendar
-        mode="restock"
-        participants={userNom ? [{ nom: userNom, type: 'deposante' }] : []}
-        userType="deposante"
-        userNom={userNom}
-      />
+      {/* Status bar places */}
+      {!loadingPlaces && placesDisponibles && (
+        <div className="mb-4 text-sm font-medium">
+          <span className={placesDisponibles.pap === 0 ? 'text-orange-500' : 'text-gray-600'}>
+            PAP : {placesDisponibles.pap} place{placesDisponibles.pap !== 1 ? 's' : ''}
+          </span>
+          <span className="mx-2 text-gray-400">·</span>
+          <span className={placesDisponibles.maro === 0 ? 'text-orange-500' : 'text-gray-600'}>
+            MARO : {placesDisponibles.maro} place{placesDisponibles.maro !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
+      {loadingPlaces ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500"></div>
+        </div>
+      ) : placesDisponibles && placesDisponibles.total === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-orange-500 font-medium">
+            Le rack est complet pour le moment. Vous serez notifiée dès qu'une place se libère.
+          </p>
+        </div>
+      ) : (
+        <PlanningCalendar
+          mode="restock"
+          participants={userNom ? [{ nom: userNom, type: 'deposante' }] : []}
+          userType="deposante"
+          userNom={userNom}
+        />
+      )}
     </div>
   )
 }
