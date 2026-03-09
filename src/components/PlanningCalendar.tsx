@@ -252,8 +252,8 @@ export default function PlanningCalendar({
           const slot = restockSlots[key]
           const editable = canEditRestock(slot)
           const options = getRestockOptions(slot)
-          const color = slot ? (slot.type === 'chineuse' ? '#22209C' : '#16a34a') : '#9ca3af'
-          const bg = slot ? (slot.type === 'chineuse' ? '#22209C20' : '#22c55e20') : 'transparent'
+          const color = slot ? '#111111' : '#9ca3af'
+          const bg = slot ? '#11111115' : 'transparent'
           return (
             <div key={cr} className="mb-0.5">
               {editable && options.length > 0 ? (
@@ -331,10 +331,11 @@ export default function PlanningCalendar({
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#22209C]" />
         </div>
       ) : (
-        <div className="bg-white rounded-xl border overflow-hidden">
+        <div className="bg-white rounded-xl border overflow-hidden overflow-x-auto">
+          <div className="min-w-[560px]">
           <div className="grid grid-cols-7 border-b bg-gray-50">
             {JOURS_SEMAINE.map((j, i) => (
-              <div key={i} className="text-center text-xs font-bold text-gray-500 py-2">{j}</div>
+              <div key={i} className="text-center text-xs font-bold text-gray-500 py-3">{j}</div>
             ))}
           </div>
           <div className="grid grid-cols-7">
@@ -351,7 +352,7 @@ export default function PlanningCalendar({
               return (
                 <div
                   key={ds}
-                  className={`border-b border-r min-h-[80px] p-1 ${isToday ? 'bg-blue-50' : ''} ${mode === 'restock' && isWeekend ? 'bg-gray-50/70' : ''}`}
+                  className={`border-b border-r min-h-[90px] p-1.5 ${isToday ? 'bg-blue-50' : ''} ${mode === 'restock' && isWeekend ? 'bg-gray-50/70' : ''}`}
                 >
                   <div className={`text-xs font-medium mb-1 ${isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'}`}>
                     {day}
@@ -363,6 +364,7 @@ export default function PlanningCalendar({
                 </div>
               )
             })}
+          </div>
           </div>
         </div>
       )}
