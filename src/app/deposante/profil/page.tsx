@@ -135,7 +135,7 @@ export default function ProfilDeposantePage() {
   // =====================
   // GÉNÉRATION PDF CONTRAT
   // =====================
-  const generateContratPDF = () => {
+  const generateContratPDF = async () => {
     const canvas = canvasRef.current
     const sigDataUrl = canvas ? canvas.toDataURL('image/png') : null
     const doc = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -205,6 +205,8 @@ export default function ProfilDeposantePage() {
     txt('Signature du Déposant', pageW / 2 + 5, y + 70, { size: 7 })
 
     doc.save(`contrat_NR_${nom}_${format(new Date(), 'ddMMyy')}.pdf`)
+    const token = await auth.currentUser?.getIdToken()
+    if (token) await fetch('/api/deposante', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ contratSigne: true }) })
   }
 
   async function handleUploadId(e: React.ChangeEvent<HTMLInputElement>) {
