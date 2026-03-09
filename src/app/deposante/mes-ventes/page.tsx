@@ -77,6 +77,7 @@ export default function DeposanteMesVentes() {
       chineuse={chineuse}
       userEmail={user?.email || undefined}
       isAdmin={false}
+      isDeposante={true}
       loading={loading}
       onRefresh={handleRefresh}
     />
