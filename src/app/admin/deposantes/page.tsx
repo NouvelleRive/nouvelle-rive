@@ -484,10 +484,10 @@
                         <p className="font-bold text-lg text-orange-500">{caTotal.toFixed(0)} €</p>
                       </div>
                     </div>
-                    <button className="p-2 text-gray-500 hover:text-orange-500" title="Modifier">
+                    <button onClick={() => openEditModal(d)} className="p-2 text-gray-500 hover:text-[#22209C]" title="Modifier">
                       <Edit2 size={18} />
                     </button>
-                    <button className="p-2 text-red-400 hover:text-red-600" title="Supprimer">
+                    <button onClick={() => handleDelete(d.id, d.nom)} className="p-2 text-red-400 hover:text-red-600" title="Supprimer">
                       <Trash2 size={18} />
                     </button>
                   </div>
