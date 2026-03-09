@@ -280,7 +280,7 @@ export default function PlanningCalendar({
               key={task.id}
               onClick={() => onToggleTask?.(task.id, !done)}
               className={`w-full text-left text-[9px] rounded px-1 py-0.5 mb-0.5 flex items-center gap-0.5 transition-colors ${
-                done ? 'bg-green-100 text-green-700' : task.isRolled ? 'bg-orange-100 text-orange-700' : 'bg-red-50 text-red-600'
+                done ? 'bg-green-100 text-green-700' : task.isRolled ? 'bg-orange-100 text-orange-700' : 'bg-orange-50 text-orange-500'
               }`}
               title={task.isRolled ? `Reportée depuis le ${task.originalDate}` : task.texte}
             >
