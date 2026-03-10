@@ -9,7 +9,7 @@ import { auth } from '@/lib/firebaseConfig'
 
 export default function NavbarPublic() {
   const pathname = usePathname()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [compteHref, setCompteHref] = useState('/client/login')
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
   const bleuElectrique = '#0000FF'
@@ -17,7 +17,10 @@ export default function NavbarPublic() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user)
+      if (!user) { setCompteHref('/client/login'); return }
+      if (user.email === 'nouvelleriveparis@gmail.com') setCompteHref('/admin/nos-produits')
+      else if (user.email === 'nouvellerivecommandes@gmail.com') setCompteHref('/vendeuse/commandes')
+      else setCompteHref('/client')
     })
     return () => unsubscribe()
   }, [])
@@ -66,7 +69,7 @@ export default function NavbarPublic() {
 
           {/* Bouton Mon Compte */}
           <Link
-            href={isAuthenticated ? '/client' : '/client/login'}
+            href={compteHref}
             className="mt-1 md:mt-2 px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
             style={{ 
               fontSize: '9px',
