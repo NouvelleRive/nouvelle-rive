@@ -94,39 +94,15 @@ export default function LoginPage() {
         )}
 
         {/* GRILLE PRINCIPALE */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
 
-          <div className="flex flex-col md:contents">
-          {/* ── ROW : TITRES ── */}
-          <div className="px-6 pt-5 pb-1">
+          {/* ── COLONNE 1 : CLIENT ── */}
+          <div className="flex flex-col px-6 py-5 space-y-2">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
               Mon compte client
               {isSignupClient && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
             </h2>
-          </div>
-          <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
-              Vendre chez Nouvelle Rive
-              {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
-            </h2>
-          </div>
-          <div className="px-6 pt-5 pb-1 md:border-l border-gray-100">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace professionnel·les</h2>
-          </div>
-
-          {/* ── ROW : SOUS-TITRES ── */}
-          <div className="px-6 py-1">
             <p className="text-xs text-gray-500">Je veux revoir les pépites que j'ai achetées &amp; paramétrer mes alertes.</p>
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <p className="text-xs text-gray-500">Je suis un·e particulier·e, je veux vendre mes affaires.</p>
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <p className="text-xs text-gray-500">Je suis un·e professionnel·le, je veux rejoindre l'équipe.</p>
-          </div>
-
-          {/* ── ROW : LIEN SPÉCIAL ── */}
-          <div className="px-6 py-1">
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -141,96 +117,80 @@ export default function LoginPage() {
               </svg>
               Continuer avec Google
             </button>
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100 flex items-center">
-            <Link href="/client/deposant/conditions" className="text-sm underline" style={{ color: '#22209C' }}>
-              Découvrir nos conditions de dépôt →
-            </Link>
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100 flex items-center">
-            <Link href="/nous-rencontrer" className="text-sm underline" style={{ color: '#22209C' }}>
-              Découvrir la boutique →
-            </Link>
-          </div>
-
-          {/* ── ROW : EMAIL ── */}
-          <div className="px-6 py-1">
             {isSignupClient && (
-              <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="grid grid-cols-2 gap-2">
                 <input value={prenomClient} onChange={e => setPrenomClient(e.target.value)} placeholder="Prénom" className={inputCls} />
                 <input value={nomClient} onChange={e => setNomClient(e.target.value)} placeholder="Nom" className={inputCls} />
               </div>
             )}
-            <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={emailClient} onChange={e => setEmailClient(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={emailDeposante} onChange={e => setEmailDeposante(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={emailPro} onChange={e => setEmailPro(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
-          </div>
-
-          {/* ── ROW : MOT DE PASSE ── */}
-          <div className="px-6 py-1">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
-            <input type="password" value={passwordClient} onChange={e => setPasswordClient(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
-            {!isSignupClient && (
-              <button type="button" onClick={() => handleForgotPassword(emailClient)} className="text-xs text-gray-400 hover:underline mt-1 block">
-                Mot de passe oublié ?
-              </button>
-            )}
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
-            <input type="password" value={passwordDeposante} onChange={e => setPasswordDeposante(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
-            <input type="password" value={passwordPro} onChange={e => setPasswordPro(e.target.value)} required className={inputCls} placeholder="••••••••" />
-          </div>
-
-          {/* ── ROW : BOUTON SE CONNECTER ── */}
-          <div className="px-6 py-1">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={emailClient} onChange={e => setEmailClient(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
+              <input type="password" value={passwordClient} onChange={e => setPasswordClient(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
+              {!isSignupClient && (
+                <button type="button" onClick={() => handleForgotPassword(emailClient)} className="text-xs text-gray-400 hover:underline mt-1 block">
+                  Mot de passe oublié ?
+                </button>
+              )}
+            </div>
             <button onClick={handleClientSubmit} disabled={loading} className={btnCls}>
               {loading ? 'Chargement...' : isSignupClient ? 'Créer mon compte' : 'Se connecter'}
             </button>
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <button onClick={handleDeposanteSubmit} disabled={loading} className={btnCls}>
-              {loading ? 'Chargement...' : isSignupDeposante ? 'Créer mon compte' : 'Se connecter'}
-            </button>
-          </div>
-          <div className="px-6 py-1 md:border-l border-gray-100">
-            <button onClick={handleProSubmit} disabled={loading} className={btnCls}>
-              {loading ? 'Chargement...' : isSignupPro ? 'Créer mon compte' : 'Se connecter'}
-            </button>
-          </div>
-
-          {/* ── ROW : CRÉER UN COMPTE ── */}
-          <div className="px-6 pt-1 pb-5">
             <button onClick={() => setIsSignupClient(!isSignupClient)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupClient ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
           </div>
-          </div>
 
-          <div className="flex flex-col md:contents">
-          <div className="px-6 pt-1 pb-5 md:border-l border-gray-100">
+          {/* ── COLONNE 2 : DÉPOSANTE ── */}
+          <div className="flex flex-col px-6 py-5 space-y-2 border-t md:border-t-0 md:border-l border-gray-100">
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
+              Vendre chez Nouvelle Rive
+              {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
+            </h2>
+            <p className="text-xs text-gray-500">Je suis un·e particulier·e, je veux vendre mes affaires.</p>
+            <Link href="/client/deposant/conditions" className="text-sm underline" style={{ color: '#22209C' }}>
+              Découvrir nos conditions de dépôt →
+            </Link>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={emailDeposante} onChange={e => setEmailDeposante(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
+              <input type="password" value={passwordDeposante} onChange={e => setPasswordDeposante(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
+            </div>
+            <button onClick={handleDeposanteSubmit} disabled={loading} className={btnCls}>
+              {loading ? 'Chargement...' : isSignupDeposante ? 'Créer mon compte' : 'Se connecter'}
+            </button>
             <button onClick={() => setIsSignupDeposante(!isSignupDeposante)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupDeposante ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
           </div>
-          </div>
 
-          <div className="flex flex-col md:contents">
-          <div className="px-6 pt-1 pb-5 md:border-l border-gray-100">
+          {/* ── COLONNE 3 : PRO ── */}
+          <div className="flex flex-col px-6 py-5 space-y-2 border-t md:border-t-0 md:border-l border-gray-100">
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace professionnel·les</h2>
+            <p className="text-xs text-gray-500">Je suis un·e professionnel·le, je veux rejoindre l'équipe.</p>
+            <Link href="/nous-rencontrer" className="text-sm underline" style={{ color: '#22209C' }}>
+              Découvrir la boutique →
+            </Link>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" value={emailPro} onChange={e => setEmailPro(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
+              <input type="password" value={passwordPro} onChange={e => setPasswordPro(e.target.value)} required className={inputCls} placeholder="••••••••" />
+            </div>
+            <button onClick={handleProSubmit} disabled={loading} className={btnCls}>
+              {loading ? 'Chargement...' : isSignupPro ? 'Créer mon compte' : 'Se connecter'}
+            </button>
             <a href="https://www.instagram.com/nouvellerive/?hl=fr" target="_blank" rel="noopener noreferrer" className="w-full text-xs text-center hover:underline block" style={{ color: '#22209C' }}>
               Contacter Nouvelle Rive →
             </a>
-          </div>
           </div>
 
         </div>
