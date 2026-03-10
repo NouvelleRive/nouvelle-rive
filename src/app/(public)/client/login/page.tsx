@@ -96,6 +96,7 @@ export default function LoginPage() {
         {/* GRILLE PRINCIPALE */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
 
+          <div className="flex flex-col md:contents">
           {/* ── ROW : TITRES ── */}
           <div className="px-6 pt-5 pb-1">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
@@ -214,15 +215,22 @@ export default function LoginPage() {
               {isSignupClient ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
           </div>
+          </div>
+
+          <div className="flex flex-col md:contents">
           <div className="px-6 pt-1 pb-5 md:border-l border-gray-100">
             <button onClick={() => setIsSignupDeposante(!isSignupDeposante)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupDeposante ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
             </button>
           </div>
+          </div>
+
+          <div className="flex flex-col md:contents">
           <div className="px-6 pt-1 pb-5 md:border-l border-gray-100">
             <a href="https://www.instagram.com/nouvellerive/?hl=fr" target="_blank" rel="noopener noreferrer" className="w-full text-xs text-center hover:underline block" style={{ color: '#22209C' }}>
               Contacter Nouvelle Rive →
             </a>
+          </div>
           </div>
 
         </div>
