@@ -18,6 +18,14 @@ export default function ClientPage() {
         router.push('/client/login')
         return
       }
+      if (currentUser.email === 'nouvelleriveparis@gmail.com') {
+        router.push('/admin/nos-produits')
+        return
+      }
+      if (currentUser.email === 'nouvellerivecommandes@gmail.com') {
+        router.push('/vendeuse/commandes')
+        return
+      }
       setUser(currentUser)
       setLoading(false)
     })
