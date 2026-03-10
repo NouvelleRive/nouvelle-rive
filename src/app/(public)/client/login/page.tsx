@@ -94,10 +94,10 @@ export default function LoginPage() {
         )}
 
         {/* GRILLE PRINCIPALE */}
-        <div className="grid grid-cols-1 md:grid-cols-3 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-0 md:bg-white md:border md:border-gray-200 md:rounded-xl md:shadow-sm">
 
           {/* ── COLONNE 1 : CLIENT ── */}
-          <div className="flex flex-col px-6 py-5 space-y-2 border-b md:border-b-0">
+          <div className="flex flex-col px-6 py-5 space-y-2 bg-white border border-gray-200 rounded-xl shadow-sm md:border-0 md:rounded-none md:shadow-none">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
               Mon compte client
               {isSignupClient && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
@@ -145,7 +145,7 @@ export default function LoginPage() {
           </div>
 
           {/* ── COLONNE 2 : DÉPOSANTE ── */}
-          <div className="flex flex-col px-6 py-5 space-y-2 border-b md:border-b-0 md:border-l border-gray-200">
+          <div className="flex flex-col px-6 py-5 space-y-2 bg-white border border-gray-200 rounded-xl shadow-sm md:border-0 md:rounded-none md:shadow-none md:border-l md:border-gray-200">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
               Vendre chez Nouvelle Rive
               {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
@@ -171,7 +171,7 @@ export default function LoginPage() {
           </div>
 
           {/* ── COLONNE 3 : PRO ── */}
-          <div className="flex flex-col px-6 py-5 space-y-2 md:border-l border-gray-200">
+          <div className="flex flex-col px-6 py-5 space-y-2 bg-white border border-gray-200 rounded-xl shadow-sm md:border-0 md:rounded-none md:shadow-none md:border-l md:border-gray-200">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace professionnel·les</h2>
             <p className="text-xs text-gray-500">Je suis un·e professionnel·le, je veux rejoindre l'équipe.</p>
             <Link href="/nous-rencontrer" className="text-sm underline" style={{ color: '#22209C' }}>
