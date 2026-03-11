@@ -93,12 +93,14 @@ export default function ClientPage() {
               >
                 Je suis un particulier
               </Link>
-              <Link
-                href="/client/pro/inscription"
+              <a
+                href="https://www.instagram.com/nouvellerive/?hl=fr"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="block p-3 border border-white text-white text-sm hover:bg-white hover:text-black transition-colors"
               >
                 Je suis un professionnel
-              </Link>
+              </a>
             </div>
           </div>
         </div>
