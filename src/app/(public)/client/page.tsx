@@ -88,7 +88,7 @@ export default function ClientPage() {
             <h2 className="text-lg font-bold uppercase mb-6 text-white">NOUVELLE RIVE</h2>
             <div className="space-y-3">
               <Link
-                href="/client/deposant/inscription"
+                href="/client/deposant/conditions"
                 className="block p-3 border border-white text-white text-sm hover:bg-white hover:text-black transition-colors"
               >
                 Je suis un particulier
