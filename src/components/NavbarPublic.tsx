@@ -17,10 +17,7 @@ export default function NavbarPublic() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) { setCompteHref('/client/login'); return }
-      if (user.email === 'nouvelleriveparis@gmail.com') setCompteHref('/admin/nos-produits')
-      else if (user.email === 'nouvellerivecommandes@gmail.com') setCompteHref('/vendeuse/commandes')
-      else setCompteHref('/client')
+      setCompteHref(user ? '/client' : '/client/login')
     })
     return () => unsubscribe()
   }, [])
