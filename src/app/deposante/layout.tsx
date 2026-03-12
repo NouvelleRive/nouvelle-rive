@@ -151,6 +151,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
         }
       } catch (e) {
         console.error('Erreur layout deposante', e)
+        setShowWelcome(true)
       } finally {
         setLoading(false)
       }
