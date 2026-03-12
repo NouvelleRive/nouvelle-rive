@@ -7,6 +7,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import jsPDF from 'jspdf'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { useRouter } from 'next/navigation'
 
 function generateTrigramme(prenom: string, nom: string): string {
   const p = prenom.trim().toUpperCase().replace(/[^A-Z]/g, '')
@@ -51,6 +52,7 @@ export default function ProfilDeposantePage() {
   const [generatingTri, setGeneratingTri] = useState(false)
   const [isDrawing, setIsDrawing] = useState(false)
   const [signed, setSigned] = useState(false)
+  const router = useRouter()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -77,7 +79,7 @@ export default function ProfilDeposantePage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) return
+      if (!u) { router.push('/client/login'); return }
       setEmail(u.email || '')
       setCurrentUid(u.uid)
 
