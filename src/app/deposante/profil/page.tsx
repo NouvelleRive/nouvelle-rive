@@ -83,24 +83,29 @@ export default function ProfilDeposantePage() {
       setEmail(u.email || '')
       setCurrentUid(u.uid)
 
-      const snap = await getDocs(
-        query(collection(db, 'deposante'), where('authUid', '==', u.uid))
-      )
-      if (!snap.empty) {
-        const d = snap.docs[0].data()
-        setPrenom(d?.prenom || '')
-        setNom(d?.nom || '')
-        setTelephone(d?.telephone || '')
-        setAdresse1(d?.adresse1 || '')
-        setAdresse2(d?.adresse2 || '')
-        setIban(d?.iban || '')
-        setBic(d?.bic || '')
-        setBanqueAdresse(d?.banqueAdresse || '')
-        setModePaiement(d?.modePaiement || '')
-        setPieceIdentiteUrl(d?.pieceIdentiteUrl || '')
-        setTrigramme(d?.trigramme || '')
+      try {
+        const snap = await getDocs(
+          query(collection(db, 'deposante'), where('authUid', '==', u.uid))
+        )
+        if (!snap.empty) {
+          const d = snap.docs[0].data()
+          setPrenom(d?.prenom || '')
+          setNom(d?.nom || '')
+          setTelephone(d?.telephone || '')
+          setAdresse1(d?.adresse1 || '')
+          setAdresse2(d?.adresse2 || '')
+          setIban(d?.iban || '')
+          setBic(d?.bic || '')
+          setBanqueAdresse(d?.banqueAdresse || '')
+          setModePaiement(d?.modePaiement || '')
+          setPieceIdentiteUrl(d?.pieceIdentiteUrl || '')
+          setTrigramme(d?.trigramme || '')
+        }
+      } catch (e) {
+        console.error('Erreur chargement profil deposante', e)
+      } finally {
+        setLoaded(true)
       }
-      setLoaded(true)
     })
     return () => unsub()
   }, [])
