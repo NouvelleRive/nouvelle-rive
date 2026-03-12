@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, createContext, useContext } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
@@ -9,6 +9,8 @@ import { db } from '@/lib/firebaseConfig'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
 type Etapes = { profil: boolean; contrat: boolean; pieces: boolean; rdv: boolean }
+export const EtapesContext = createContext<Etapes>({ profil: false, contrat: false, pieces: false, rdv: false })
+export const useEtapes = () => useContext(EtapesContext)
 
 function ProgressBar({ etapes }: { etapes: Etapes }) {
   const steps = [
@@ -178,6 +180,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <EtapesContext.Provider value={etapes}>
     <div className="min-h-screen bg-gray-50">
       <DeposanteNavbar />
       <ProgressBar etapes={etapes} />
@@ -202,5 +205,6 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
         {children}
       </main>
     </div>
+    </EtapesContext.Provider>
   )
 }

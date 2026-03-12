@@ -5,8 +5,10 @@ import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore'
 import ProductList, { Produit } from '@/components/ProductList'
+import { useEtapes } from '../layout'
 
 export default function DeposanteMesProduits() {
+  const etapes = useEtapes()
   const [produits, setProduits] = useState<Produit[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -42,6 +44,9 @@ export default function DeposanteMesProduits() {
 
     return () => unsubAuth()
   }, [])
+
+if (!etapes.profil) return <div className="p-12 text-center text-gray-500">Complète ton profil pour continuer →</div>
+  if (!etapes.contrat) return <div className="p-12 text-center text-gray-500">Signe ton contrat pour continuer →</div>
 
   return (
     <ProductList

@@ -6,12 +6,14 @@ import { getPlacesDisponibles } from '@/lib/capaciteDepot'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
 import PlanningCalendar from '@/components/PlanningCalendar'
+import { useEtapes } from '../layout'
 
 export default function DeposanteCalendrierPage() {
   const [userNom, setUserNom] = useState<string>('')
   const [placesDisponibles, setPlacesDisponibles] = useState<{ pap: number, maro: number, total: number } | null>(null)
   const [loadingPlaces, setLoadingPlaces] = useState(true)
   const [userTrigramme, setUserTrigramme] = useState<string>('')
+  const etapes = useEtapes()
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -47,6 +49,10 @@ export default function DeposanteCalendrierPage() {
     })
     return () => unsub()
   }, [])
+
+  if (!etapes.profil) return <div className="p-12 text-center text-gray-500">Complète ton profil pour continuer →</div>
+  if (!etapes.contrat) return <div className="p-12 text-center text-gray-500">Signe ton contrat pour continuer →</div>
+  if (!etapes.pieces) return <div className="p-12 text-center text-gray-500">Ajoute tes pièces pour continuer →</div>
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
