@@ -15,7 +15,7 @@ export default function DeposanteCalendrierPage() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) return
+      if (!user) { setLoadingPlaces(false); return }
       const snap = await getDocs(query(collection(db, 'chineuse'), where('email', '==', user.email)))
       if (!snap.empty) {
         const data = snap.docs[0].data()
@@ -37,8 +37,13 @@ export default function DeposanteCalendrierPage() {
       const produits = produitsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
       const restockSlots = restockSnap.exists() ? restockSnap.data().slots || {} : {}
       const today = now.toISOString().split('T')[0]
-      setPlacesDisponibles(getPlacesDisponibles(produits, config, restockSlots, today))
-      setLoadingPlaces(false)
+      try {
+        setPlacesDisponibles(getPlacesDisponibles(produits, config, restockSlots, today))
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setLoadingPlaces(false)
+      }
     })
     return () => unsub()
   }, [])

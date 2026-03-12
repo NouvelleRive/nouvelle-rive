@@ -15,9 +15,12 @@ export default function DeposanteMesProduits() {
       if (!user?.email) { setLoading(false); return }
 
       // Récupérer le trigramme depuis la collection deposante
-      const depSnap = await getDocs(
-        query(collection(db, 'deposante'), where('email', '==', user.email))
-      )
+      let depSnap
+      try {
+        depSnap = await getDocs(query(collection(db, 'deposante'), where('email', '==', user.email)))
+      } catch (e) {
+        console.error(e); setLoading(false); return
+      }
       if (depSnap.empty) { setLoading(false); return }
 
       const trigramme = depSnap.docs[0].data().trigramme || ''
