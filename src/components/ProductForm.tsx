@@ -1574,7 +1574,7 @@ async function compressImage(file: File): Promise<string> {
               </div>
 
               {/* SKU */}
-              <div>
+              <div className="col-span-2 md:col-span-1">
                 <label className="block text-sm font-medium mb-1">
                   SKU {isAdmin && <span className="text-orange-500 text-xs">(modifiable)</span>}
                 </label>
