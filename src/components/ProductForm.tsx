@@ -490,6 +490,7 @@ async function compressImage(file: File): Promise<string> {
     // Compteur d'uploads en cours (pour le loader)
     const [uploadingCount, setUploadingCount] = useState(0)
     const [generatingDesc, setGeneratingDesc] = useState(false)
+    const [generatingTryon, setGeneratingTryon] = useState(false)
     const [deletePhotoConfirm, setDeletePhotoConfirm] = useState<{type: 'face' | 'faceOnModel' | 'dos' | 'dosOnModel' | 'detail', index?: number} | null>(null)
     const [suggestedDesc, setSuggestedDesc] = useState<{fr: string, en: string} | null>(null)
     // État pour l'ordre des photos
@@ -776,6 +777,66 @@ async function compressImage(file: File): Promise<string> {
         setGeneratingDesc(false)
       }
     }
+
+    const handleGenerateTryon = async () => {
+    const faceUrl = formData.existingPhotos.face
+    const dosUrl = formData.existingPhotos.dos
+    if (!faceUrl) {
+      alert('Photo face requise pour générer les portés')
+      return
+    }
+    setGeneratingTryon(true)
+    try {
+      const requests: Promise<void>[] = []
+
+      // Porté face
+      requests.push(
+        fetch('/api/generate-tryon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: faceUrl, productName: formData.nom, view: 'front' }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success && data.onModelUrl) {
+              setFormData(prev => ({
+                ...prev,
+                existingPhotos: { ...prev.existingPhotos, faceOnModel: data.onModelUrl },
+                deletedPhotos: { ...prev.deletedPhotos, faceOnModel: false },
+              }))
+            }
+          })
+      )
+
+      // Porté dos (si photo dos existe)
+      if (dosUrl) {
+        requests.push(
+          fetch('/api/generate-tryon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrl: dosUrl, productName: formData.nom, view: 'back' }),
+          })
+            .then(r => r.json())
+            .then(data => {
+              if (data.success && data.onModelUrl) {
+                setFormData(prev => ({
+                  ...prev,
+                  existingPhotos: { ...prev.existingPhotos, dosOnModel: data.onModelUrl },
+                  deletedPhotos: { ...prev.deletedPhotos, dosOnModel: false },
+                }))
+              }
+            })
+        )
+      }
+
+      await Promise.all(requests)
+    } catch (err) {
+      console.error('Erreur génération portés:', err)
+      alert('Erreur lors de la génération des portés')
+    } finally {
+      setGeneratingTryon(false)
+    }
+  }
 
     // Accepter suggestion popup
     const handleAcceptSuggestion = async () => {
@@ -2002,6 +2063,29 @@ async function compressImage(file: File): Promise<string> {
                                 <span className="absolute bottom-1 left-1 text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded">Portée dos</span>
               </div>
             )}
+            {/* Bouton générer portés */}
+            <div className="mt-4 pt-4 border-t">
+              <button
+                type="button"
+                onClick={handleGenerateTryon}
+                disabled={generatingTryon || !formData.existingPhotos.face}
+                className="w-full py-2.5 border-2 border-dashed border-purple-400 text-purple-700 rounded-lg font-medium hover:bg-purple-50 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+              >
+                {generatingTryon ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-700"></div>
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    🪄 Générer les portés{formData.existingPhotos.dos ? ' (face + dos)' : ' (face)'}
+                  </>
+                )}
+              </button>
+              {!formData.existingPhotos.face && (
+                <p className="text-xs text-gray-400 mt-1 text-center">Photo face requise</p>
+              )}
+            </div>
             {/* Section réordonnancement */}
             <PhotoReorderSection
               photos={photoOrder}
