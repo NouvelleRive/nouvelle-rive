@@ -2069,22 +2069,17 @@ async function compressImage(file: File): Promise<string> {
                 type="button"
                 onClick={handleGenerateTryon}
                 disabled={generatingTryon || !formData.existingPhotos.face}
-                className="w-full py-2.5 border-2 border-dashed border-purple-400 text-purple-700 rounded-lg font-medium hover:bg-purple-50 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                className="px-4 py-2 bg-[#22209C] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
               >
                 {generatingTryon ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-700"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     Génération en cours...
                   </>
                 ) : (
-                  <>
-                    🪄 Générer les portés{formData.existingPhotos.dos ? ' (face + dos)' : ' (face)'}
-                  </>
+                  <>✨ Générer les portés</>
                 )}
               </button>
-              {!formData.existingPhotos.face && (
-                <p className="text-xs text-gray-400 mt-1 text-center">Photo face requise</p>
-              )}
             </div>
             {/* Section réordonnancement */}
             <PhotoReorderSection
@@ -2130,7 +2125,7 @@ async function compressImage(file: File): Promise<string> {
                   }
                 }}
                 disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}
-                className="w-full py-2.5 border-2 border-dashed border-[#22209C] text-[#22209C] rounded-lg font-medium hover:bg-[#22209C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                className="px-4 py-2 bg-[#22209C] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
               >
                 {generatingDesc ? (
                   <>
@@ -2138,7 +2133,7 @@ async function compressImage(file: File): Promise<string> {
                     Analyse en cours...
                   </>
                 ) : (
-                  <>🤖 Préremplir les champs secondaires</>
+                  <>✨ Préremplir les champs secondaires</>
                 )}
               </button>
               {!formData.existingPhotos.face && (
