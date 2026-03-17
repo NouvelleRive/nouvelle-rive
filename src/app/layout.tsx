@@ -6,6 +6,9 @@ import ConditionalBackground from "@/components/ConditionalBackground";
 export const metadata: Metadata = {
   title: "Nouvelle Rive",
   description: "Espace vendeur·euse",
+  verification: {
+    google: "QWUCoEjaDcFHWH1Oj35_QgUna7F7v23dtujYKyp6sTA",
+  },
 };
 
 export default function RootLayout({
