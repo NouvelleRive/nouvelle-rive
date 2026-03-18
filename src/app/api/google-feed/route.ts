@@ -25,7 +25,17 @@ function escapeXml(str: string): string {
 export async function GET() {
   try {
     const db = getFirestore()
-    const snap = await db.collection('produits').get()
+    const [snap, chineuseSnap] = await Promise.all([
+      db.collection('produits').get(),
+      db.collection('chineuse').get(),
+    ])
+
+    const chineuseMap: Record<string, string> = {}
+    chineuseSnap.docs.forEach(d => {
+      const tri = (d.data().trigramme || '').toUpperCase()
+      const wearType = d.data().wearType || 'womenswear'
+      if (tri) chineuseMap[tri] = wearType
+    })
 
     const produits = snap.docs
       .map(d => ({ id: d.id, ...d.data() } as any))
@@ -46,6 +56,9 @@ export async function GET() {
       const description = p.description || `${cat} vintage ${p.marque || ''} ${p.taille || ''}`.trim()
       const url = `https://www.nouvellerive.eu/boutique/${p.id}`
       const prix = typeof p.prix === 'number' ? p.prix.toFixed(2) : '0.00'
+      const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || ''
+      const wearType = chineuseMap[tri] || 'womenswear'
+      const gender = wearType === 'menswear' ? 'male' : wearType === 'unisex' ? 'unisex' : 'female'
 
       return `
     <item>
@@ -63,6 +76,9 @@ export async function GET() {
       ${p.color ? `<g:color>${escapeXml(p.color)}</g:color>` : ''}
       ${p.taille ? `<g:size>${escapeXml(p.taille)}</g:size>` : ''}
       ${p.material ? `<g:material>${escapeXml(p.material)}</g:material>` : ''}
+      <g:gender>${gender}</g:gender>
+      <g:age_group>adult</g:age_group>
+      ${!p.color ? `<g:color>Multicolore</g:color>` : ''}
     </item>`
     }).join('\n')
 
