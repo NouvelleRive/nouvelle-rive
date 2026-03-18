@@ -91,7 +91,7 @@ export default function SalesGrid({
 
   return (
     <div
-      className="grid grid-cols-3 lg:grid-cols-6 gap-[1px] bg-black"
+      className="grid grid-cols-3 lg:grid-cols-6 gap-[1px] bg-gray-200"
       style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
     >
       {ventes.map((vente) => {
