@@ -255,8 +255,7 @@ export default function ProfilDeposantePage() {
       if (!token) { setMsg('❌ Non connecté'); setSaving(false); return }
       if (!trigramme && prenom && nom) {
         const base = generateTrigramme(prenom, nom)
-        const unique = await findUniqueTrigramme(base, currentUid)
-        setTrigramme(unique)
+        setTrigramme(base)
       }
       if (!pieceIdentiteUrl) { setMsg('❌ Pièce d\'identité obligatoire'); setSaving(false); return }
 
