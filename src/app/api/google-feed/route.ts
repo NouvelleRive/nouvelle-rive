@@ -25,9 +25,7 @@ function escapeXml(str: string): string {
 export async function GET() {
   try {
     const db = getFirestore()
-    const snap = await db.collection('produits')
-      .where('statut', '!=', 'supprime')
-      .get()
+    const snap = await db.collection('produits').get()
 
     const produits = snap.docs
       .map(d => ({ id: d.id, ...d.data() } as any))
