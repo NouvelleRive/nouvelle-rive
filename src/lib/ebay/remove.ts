@@ -53,12 +53,17 @@ export async function removeFromEbay(
     console.log(`🗑️ Retrait eBay: SKU=${sku}, OfferId=${offerId}`)
 
     // 1. Retirer l'offer si on a l'ID
+    let offerWithdrawn = true
     if (offerId) {
-      await withdrawOffer(offerId)
+      offerWithdrawn = await withdrawOffer(offerId)
     }
 
     // 2. Supprimer l'inventoryItem
-    await deleteInventoryItem(sku)
+    const itemDeleted = await deleteInventoryItem(sku)
+
+    if (!offerWithdrawn && !itemDeleted) {
+      return { success: false, error: 'Échec retrait offer ET inventory' }
+    }
 
     return { success: true }
 
