@@ -133,6 +133,28 @@ export default function ProfilDeposantePage() {
 
   const stopDraw = () => setIsDrawing(false)
 
+  const startDrawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d'); if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0]
+    ctx.beginPath(); ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top)
+    setIsDrawing(true)
+  }
+
+  const drawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    if (!isDrawing) return
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d'); if (!ctx) return
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0]
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
+    ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top); ctx.stroke()
+    setSigned(true)
+  }
+
   const clearCanvas = () => {
     const canvas = canvasRef.current; if (!canvas) return
     canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
@@ -411,6 +433,9 @@ export default function ProfilDeposantePage() {
               onMouseMove={draw}
               onMouseUp={stopDraw}
               onMouseLeave={stopDraw}
+              onTouchStart={startDrawTouch}
+              onTouchMove={drawTouch}
+              onTouchEnd={stopDraw}
             />
             <p style={{ fontSize: '11px', color: '#999', marginTop: '6px' }}>Signez dans le cadre ci-dessus</p>
             <button
