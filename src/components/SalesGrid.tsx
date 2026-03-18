@@ -117,11 +117,7 @@ export default function SalesGrid({
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span style={{ fontSize: 9, color: '#ccc', letterSpacing: '0.1em' }}>
-                    PHOTO
-                  </span>
-                </div>
+                <div className="w-full h-full bg-gray-100" />
               )}
             </div>
 
