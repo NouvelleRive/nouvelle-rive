@@ -230,7 +230,7 @@ export default function SalesFilters({
     docPDF.save(`attestation_${String(m).padStart(2, '0')}${String(annee).slice(-2)}_${nom}.pdf`)
   }
 
-  const generateInvoiceFor = (monthValue: string) => {
+  const generateInvoiceFor = async (monthValue: string) => {
     if (!chineuse && !userEmail) return
     const dep = deposants.find((d: any) => d.email === userEmail || d.nom === chineuse?.nom || d.trigramme === chineuse?.codeChineuse)
     const ch = { ...chineuse, taux: chineuse?.taux ?? dep?.taux, siret: chineuse?.siret || dep?.siret, adresse1: chineuse?.adresse1 || dep?.adresse1, adresse2: chineuse?.adresse2 || dep?.adresse2, tva: chineuse?.tva || dep?.tva, iban: chineuse?.iban || dep?.iban, bic: chineuse?.bic || dep?.bic, banqueAdresse: chineuse?.banqueAdresse || dep?.banqueAdresse }
@@ -295,7 +295,38 @@ export default function SalesFilters({
     docPDF.text('IBAN', margin, yBank); docPDF.text(ch?.iban || 'xxx', margin + 120, yBank)
     docPDF.text('BIC', margin, yBank + 16); docPDF.text(ch?.bic || 'xxx', margin + 120, yBank + 16)
     docPDF.text('Adresse Banque', margin, yBank + 32); docPDF.text(ch?.banqueAdresse || 'xxx', margin + 120, yBank + 32)
-    docPDF.save(`facture_${ref}.pdf`)
+    const pdfBase64 = docPDF.output('datauristring').split(',')[1]
+    try {
+      const res = await fetch('/api/embed-facturx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pdfBase64,
+          invoiceData: {
+            ref,
+            dateEmission: format(new Date(), 'yyyy-MM-dd'),
+            nom: ch?.nom || userEmail || '',
+            siret: ch?.siret,
+            tva: ch?.tva,
+            iban: ch?.iban,
+            ca,
+            commissionHT,
+            commissionTTC,
+            tvaMontant: tva,
+            net,
+            periode: periodeTxt,
+          }
+        })
+      })
+      const { pdfBase64: resultBase64 } = await res.json()
+      const link = document.createElement('a')
+      link.href = `data:application/pdf;base64,${resultBase64}`
+      link.download = `facture_${ref}.pdf`
+      link.click()
+    } catch (err) {
+      console.error('Erreur Factur-X, fallback PDF simple:', err)
+      docPDF.save(`facture_${ref}.pdf`)
+    }
   }
 
   const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
