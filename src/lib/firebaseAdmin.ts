@@ -2,6 +2,7 @@
 import { getApps, initializeApp, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
+import { getStorage } from 'firebase-admin/storage'
 
 if (!getApps().length) {
   const projectId = process.env.FIREBASE_PROJECT_ID
@@ -15,6 +16,7 @@ if (!getApps().length) {
 
   initializeApp({
     credential: cert({ projectId, clientEmail, privateKey }),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   })
 }
 
@@ -23,3 +25,4 @@ export const adminAuth = getAuth()
 
 // ✅ Ignorer les valeurs undefined lors de l'écriture dans Firestore
 adminDb.settings({ ignoreUndefinedProperties: true })
+export const adminStorage = getStorage()
