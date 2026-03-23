@@ -19,7 +19,9 @@ export async function POST(req: NextRequest) {
     const path = `pieces-identite/${decoded.uid}.${ext}`
 
     const body = await req.arrayBuffer()
-    const bucket = adminStorage.bucket()
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET
+    console.log('BUCKET:', bucketName)
+    const bucket = adminStorage.bucket(bucketName)
     const file = bucket.file(path)
 
     await file.save(Buffer.from(body), {
