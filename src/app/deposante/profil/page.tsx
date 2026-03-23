@@ -141,7 +141,7 @@ export default function ProfilDeposantePage() {
     const touch = e.touches[0]
     ctx.beginPath(); const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
-      ctx.moveTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top + 10) * scaleY)    isDrawingRef.current = true
+      ctx.moveTo((touch.clientX - rect.left - 1) * scaleX, (touch.clientY - rect.top - 1) * scaleY)    isDrawingRef.current = true
   }
 
   const drawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
@@ -154,7 +154,7 @@ export default function ProfilDeposantePage() {
     ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
     const scaleX = canvas.width / rect.width
 const scaleY = canvas.height / rect.height
-ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top + 10) * scaleY); ctx.stroke()
+ctx.lineTo((touch.clientX - rect.left - 1) * scaleX, (touch.clientY - rect.top - 1) * scaleY); ctx.stroke()
     setSigned(true)
   }
 
