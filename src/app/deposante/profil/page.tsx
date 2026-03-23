@@ -358,21 +358,17 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
                 <div style={{ width: '80px', height: '52px', border: '1px solid #000', backgroundImage: `url(${pieceIdentiteUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                 <div>
                   <p style={{ fontSize: '12px', color: '#444', marginBottom: '6px' }}>Document enregistré ✅</p>
-                  <button onClick={() => fileInputRef.current?.click()} style={{ fontSize: '11px', letterSpacing: '0.15em', fontWeight: '600', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  <label htmlFor="piece-identite-input" style={{ fontSize: '11px', letterSpacing: '0.15em', fontWeight: '600', textDecoration: 'underline', cursor: 'pointer' }}>
                     Remplacer
-                  </button>
+                  </label>
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingId}
-                style={{ padding: '12px 24px', border: '1px solid #000', backgroundColor: '#fff', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
-              >
-                {uploadingId ? 'UPLOAD EN COURS...' : 'AJOUTER UN DOCUMENT →'}
-              </button>
-            )}
-            <input ref={fileInputRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleUploadId} />
+             <label htmlFor="piece-identite-input" style={{ display: 'inline-block', padding: '12px 24px', border: '1px solid #000', backgroundColor: '#fff', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
+              {uploadingId ? 'UPLOAD EN COURS...' : 'AJOUTER UN DOCUMENT →'}
+            </label>
+                        )}
+            <input ref={fileInputRef} id="piece-identite-input" type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={handleUploadId} />
           </div>
 
           {/* COORDONNÉES BANCAIRES */}
