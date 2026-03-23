@@ -36,7 +36,7 @@
     ".next/types/**/*.ts",
     "tailwind.config.js",
     ".next/dev/types/**/*.ts"
-  ],
+, "src/app/(public)/legal/mentions-cgv/mention-cgv"  ],
   "exclude": [
     "node_modules"
   ]
