@@ -141,7 +141,8 @@ export default function ProfilDeposantePage() {
     const touch = e.touches[0]
     ctx.beginPath(); const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
-      ctx.moveTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY)    isDrawingRef.current = true
+      ctx.moveTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY)
+    isDrawingRef.current = true
   }
 
   const drawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
