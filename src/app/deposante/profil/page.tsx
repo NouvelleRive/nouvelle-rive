@@ -284,7 +284,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
         const base = generateTrigramme(prenom, nom)
         setTrigramme(base)
       }
-      if (!pieceIdentiteUrl) { setMsg('❌ Pièce d\'identité obligatoire'); setSaving(false); return }
+      if (!pieceIdentiteUrl) setMsg('⚠️ N\'oubliez pas d\'ajouter votre pièce d\'identité')
 
       const res = await fetch('/api/deposante', {
         method: 'PATCH',
