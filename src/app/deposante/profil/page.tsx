@@ -50,7 +50,7 @@ export default function ProfilDeposantePage() {
   const [trigramme, setTrigramme] = useState('')
   const [currentUid, setCurrentUid] = useState<string>('')
   const [generatingTri, setGeneratingTri] = useState(false)
-  const [isDrawing, setIsDrawing] = useState(false)
+  const isDrawingRef = useRef(false)
   const [signed, setSigned] = useState(false)
   const router = useRouter()
 
@@ -118,11 +118,11 @@ export default function ProfilDeposantePage() {
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const rect = canvas.getBoundingClientRect()
     ctx.beginPath(); ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
-    setIsDrawing(true)
+    isDrawingRef.current = true
   }
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return
+    if (!isDrawingRef.current) return
     const canvas = canvasRef.current; if (!canvas) return
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const rect = canvas.getBoundingClientRect()
@@ -131,7 +131,7 @@ export default function ProfilDeposantePage() {
     setSigned(true)
   }
 
-  const stopDraw = () => setIsDrawing(false)
+  const stopDraw = () => { isDrawingRef.current = false }
 
   const startDrawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault()
@@ -139,19 +139,22 @@ export default function ProfilDeposantePage() {
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const rect = canvas.getBoundingClientRect()
     const touch = e.touches[0]
-    ctx.beginPath(); ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top)
-    setIsDrawing(true)
+    ctx.beginPath(); const scaleX = canvas.width / rect.width
+      const scaleY = canvas.height / rect.height
+      ctx.moveTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY)    isDrawingRef.current = true
   }
 
   const drawTouch = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault()
-    if (!isDrawing) return
+    if (!isDrawingRef.current) return
     const canvas = canvasRef.current; if (!canvas) return
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const rect = canvas.getBoundingClientRect()
     const touch = e.touches[0]
     ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
-    ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top); ctx.stroke()
+    const scaleX = canvas.width / rect.width
+const scaleY = canvas.height / rect.height
+ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY); ctx.stroke()
     setSigned(true)
   }
 
