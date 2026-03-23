@@ -248,11 +248,12 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
     setUploadingId(true)
     try {
       const token = await auth.currentUser?.getIdToken()
-      const ext = file.name.split('.').pop()
-      const filename = `pieces-identite/${auth.currentUser?.uid}.${ext}`
-      const res = await fetch(`/api/bunny-upload?filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(file.type)}`, {
+      const res = await fetch('/api/upload-id', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': file.type,
+        },
         body: file,
       })
       const data = await res.json()
