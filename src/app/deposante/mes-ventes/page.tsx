@@ -6,9 +6,11 @@ import { User, onAuthStateChanged } from 'firebase/auth'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import SalesList, { Vente, ChineuseMeta } from '@/components/SalesList'
+import { useEtapes } from '../layout'
 
 export default function DeposanteMesVentes() {
   const router = useRouter()
+  const etapes = useEtapes()
   const [user, setUser] = useState<User | null>(null)
   const [ventes, setVentes] = useState<Vente[]>([])
   const [chineuse, setChineuse] = useState<ChineuseMeta | null>(null)
@@ -69,6 +71,10 @@ export default function DeposanteMesVentes() {
   const handleRefresh = async () => {
     if (user?.email) await fetchVentes(chineuse?.codeChineuse || '', user.email)
   }
+
+  if (!etapes.profil) return <div className="p-12 text-center text-gray-500">Complète ton profil pour continuer →</div>
+  if (!etapes.contrat) return <div className="p-12 text-center text-gray-500">Signe ton contrat pour continuer →</div>
+  if (!etapes.pieces) return <div className="p-12 text-center text-gray-500">Ajoute tes pièces pour continuer →</div>
 
   return (
     <SalesList
