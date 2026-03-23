@@ -256,6 +256,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
         body: file,
       })
       const data = await res.json()
+      console.log('upload result:', res.status, data)
       if (data.url) setPieceIdentiteUrl(data.url)
     } catch {
       setMsg('❌ Erreur upload')
