@@ -440,7 +440,7 @@ ctx.lineTo((touch.clientX - rect.left - 1) * scaleX, (touch.clientY - rect.top -
               onTouchMove={drawTouch}
               onTouchEnd={stopDraw}
             />
-            <p style={{ fontSize: '11px', color: '#999', marginTop: '6px' }}>Signez dans le cadre ci-dessus</p>
+            <p style={{ fontSize: '11px', color: '#999', marginTop: '6px' }}>Signez avec la pointe du doigt dans le cadre ci-dessus</p>
             <button
               onClick={generateContratPDF}
               style={{ marginTop: '16px', padding: '12px 24px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
