@@ -428,7 +428,7 @@ export default function ProfilDeposantePage() {
               ref={canvasRef}
               width={640}
               height={140}
-              style={{ width: '100%', border: '1px solid #000', cursor: 'crosshair', backgroundColor: '#fafafa', display: 'block' }}
+              style={{ width: '100%', border: '1px solid #000', cursor: 'crosshair', backgroundColor: '#fafafa', display: 'block', touchAction: 'none' }}
               onMouseDown={startDraw}
               onMouseMove={draw}
               onMouseUp={stopDraw}
