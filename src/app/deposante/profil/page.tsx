@@ -8,6 +8,7 @@ import jsPDF from 'jspdf'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
+import { SIGNATURE_NR } from '@/lib/signatureNR'
 
 function generateTrigramme(prenom: string, nom: string): string {
   const p = prenom.trim().toUpperCase().replace(/[^A-Z]/g, '')
@@ -228,7 +229,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
     txt('Pour NR1 SAS — Nouvelle Rive', m, y, { bold: true })
     txt(`Pour le Déposant — ${prenom} ${nom}`.toUpperCase(), pageW / 2, y, { bold: true }); y += 14
     txt('Salomé Kassabi', m, y); y += 40
-    doc.rect(m, y, 180, 60)
+    doc.addImage('data:image/png;base64,' + SIGNATURE_NR, 'PNG', m, y, 180, 60)
     txt('Signature NR1 SAS', m + 5, y + 70, { size: 7 })
     if (sigDataUrl && signed) {
       doc.addImage(sigDataUrl, 'PNG', pageW / 2, y, 180, 60)
