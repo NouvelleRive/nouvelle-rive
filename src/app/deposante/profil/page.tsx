@@ -230,11 +230,9 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
     txt(`Pour le·la déposant·e — ${prenom} ${nom}`.toUpperCase(), pageW / 2, y, { bold: true }); y += 14
     y += 40
     doc.addImage('data:image/png;base64,' + SIGNATURE_NR, 'PNG', m, y, 180, 106)
-    txt('Signature NR1 SAS', m + 5, y + 118, { size: 7 })
     if (sigDataUrl && signed) {
       doc.addImage(sigDataUrl, 'PNG', pageW / 2, y, 220, 150)
     }
-    txt('Signature du·de la Déposant·e', pageW / 2 + 5, y + 155, { size: 7 })
 
     doc.save(`contrat_NR_${nom}_${format(new Date(), 'ddMMyy')}.pdf`)
     const token = await auth.currentUser?.getIdToken()
