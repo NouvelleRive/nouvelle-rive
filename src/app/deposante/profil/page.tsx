@@ -232,9 +232,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
     doc.addImage('data:image/png;base64,' + SIGNATURE_NR, 'PNG', m, y, 180, 106)
     txt('Signature NR1 SAS', m + 5, y + 118, { size: 7 })
     if (sigDataUrl && signed) {
-    doc.addImage(sigDataUrl, 'PNG', pageW / 2, y, 220, 150)
-    } else {
-      doc.rect(pageW / 2, y, 220, 150)
+      doc.addImage(sigDataUrl, 'PNG', pageW / 2, y, 220, 150)
     }
     txt('Signature du Déposant', pageW / 2 + 5, y + 162, { size: 7 })
 
