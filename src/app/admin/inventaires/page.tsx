@@ -10,6 +10,7 @@ import {
   updateDoc,
   addDoc,
   setDoc,
+  writeBatch,
   orderBy,
   Timestamp,
 } from 'firebase/firestore'
@@ -235,19 +236,26 @@ export default function AdminInventairesPage() {
         return p.inventaireId !== inv.id
       })
 
-      // Sauvegarder chaque manquant
-      for (const p of manquants) {
-        const trigramme = deposants.find(d => d.email === p.chineur)?.trigramme || p.chineur?.split('@')[0] || 'N/A'
-        await setDoc(doc(db, 'inventaires', inv.id, 'manquants', p.sku || p.id), {
-          sku: p.sku || '',
-          produitId: p.id,
-          nom: p.nom,
-          prix: p.prix || 0,
-          trigramme: trigramme,
-          signalePar: 'Admin',
-          dateSignalement: Timestamp.now(),
-          traite: false,
-        })
+      // Sauvegarder chaque manquant en batches
+      const BATCH_SIZE = 400
+      for (let i = 0; i < manquants.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db)
+        const chunk = manquants.slice(i, i + BATCH_SIZE)
+        for (const p of chunk) {
+          const trigramme = deposants.find(d => d.email === p.chineur)?.trigramme || p.chineur?.split('@')[0] || 'N/A'
+          const docId = (p.sku || p.id).replace(/\//g, '_').replace(/\s/g, '_')
+          batch.set(doc(db, 'inventaires', inv.id, 'manquants', docId), {
+            sku: p.sku || '',
+            produitId: p.id,
+            nom: p.nom,
+            prix: p.prix || 0,
+            trigramme: trigramme,
+            signalePar: 'Admin',
+            dateSignalement: Timestamp.now(),
+            traite: false,
+          })
+        }
+        await batch.commit()
       }
 
       // Mettre à jour le statut
