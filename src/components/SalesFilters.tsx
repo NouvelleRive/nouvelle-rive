@@ -293,7 +293,12 @@ export default function SalesFilters({
       x += col.width
     })
     const yPay = rowY + 42
-    docPDF.text('À payer', margin, yPay); docPDF.text(fmtEUR(net), margin, yPay + 16)
+    docPDF.text('Montant HT', margin, yPay); docPDF.text(fmtEUR(commissionHT), margin + 160, yPay)
+    docPDF.text('TVA 20%', margin, yPay + 18); docPDF.text(fmtEUR(tva), margin + 160, yPay + 18)
+    docPDF.setFont('helvetica', 'bold')
+    docPDF.text('Total TTC', margin, yPay + 36); docPDF.text(fmtEUR(commissionTTC), margin + 160, yPay + 36)
+    docPDF.setFont('helvetica', 'normal')
+    docPDF.text('Net à reverser', margin, yPay + 60); docPDF.text(fmtEUR(net), margin + 160, yPay + 60)
     const yBank = yPay + 56
     docPDF.text('IBAN', margin, yBank); docPDF.text(ch?.iban || 'xxx', margin + 120, yBank)
     docPDF.text('BIC', margin, yBank + 16); docPDF.text(ch?.bic || 'xxx', margin + 120, yBank + 16)
