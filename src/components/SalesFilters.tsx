@@ -271,10 +271,10 @@ export default function SalesFilters({
     const cols: Col[] = [
       { lines: ['Descriptif'], width: contentW * 0.40, align: 'left' },
       { lines: ["Prix de l'article"], width: contentW * 0.14, align: 'right' },
-      { lines: ['Commission', 'NR HT'], width: contentW * 0.14, align: 'right' },
-      { lines: ['Commission', 'NR TTC'], width: contentW * 0.14, align: 'right' },
-      { lines: ['TVA'], width: contentW * 0.08, align: 'right' },
-      { lines: ['Net à nous', 'devoir'], width: contentW * 0.10, align: 'right' },
+      { lines: ['Commission', 'NR HT'], width: contentW * 0.13, align: 'right' },
+      { lines: ['Commission', 'NR TTC'], width: contentW * 0.13, align: 'right' },
+      { lines: ['TVA'], width: contentW * 0.07, align: 'right' },
+      { lines: ['Net à nous', 'devoir'], width: contentW * 0.12, align: 'right' },
     ]
     docPDF.setTextColor(255, 255, 255)
     let x = margin + 8
@@ -299,7 +299,7 @@ export default function SalesFilters({
     docPDF.text('Total TTC', margin, yPay + 36); docPDF.text(fmtEUR(commissionTTC), margin + 160, yPay + 36)
     docPDF.setFont('helvetica', 'normal')
     docPDF.text('Net à reverser', margin, yPay + 60); docPDF.text(fmtEUR(net), margin + 160, yPay + 60)
-    const yBank = yPay + 56
+    const yBank = yPay + 100
     docPDF.text('IBAN', margin, yBank); docPDF.text(ch?.iban || 'xxx', margin + 120, yBank)
     docPDF.text('BIC', margin, yBank + 16); docPDF.text(ch?.bic || 'xxx', margin + 120, yBank + 16)
     docPDF.text('Adresse Banque', margin, yBank + 32); docPDF.text(ch?.banqueAdresse || 'xxx', margin + 120, yBank + 32)
