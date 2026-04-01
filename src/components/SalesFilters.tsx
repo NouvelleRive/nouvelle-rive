@@ -261,8 +261,11 @@ export default function SalesFilters({
     const periodeTxt = format(start, 'LLLL yyyy', { locale: fr })
     docPDF.text('Ref facture', margin, yMetaTop); docPDF.text(ref, margin + 110, yMetaTop)
     docPDF.text('Période', margin, yMetaTop + 16); docPDF.text(periodeTxt, margin + 110, yMetaTop + 16)
-    docPDF.text("Date d'édition", margin, yMetaTop + 32); docPDF.text(format(new Date(), 'dd/MM/yyyy', { locale: fr }), margin + 110, yMetaTop + 32)
-    const yHead = yMetaTop + 62, hHead = 36
+    const dateEmission = new Date()
+    const dateEcheance = new Date(dateEmission); dateEcheance.setDate(dateEcheance.getDate() + 30)
+    docPDF.text('Date', margin, yMetaTop + 32); docPDF.text(format(dateEmission, 'dd/MM/yyyy', { locale: fr }), margin + 110, yMetaTop + 32)
+    docPDF.text('Échéance', margin, yMetaTop + 48); docPDF.text(format(dateEcheance, 'dd/MM/yyyy', { locale: fr }), margin + 110, yMetaTop + 48)
+    const yHead = yMetaTop + 78, hHead = 36
     docPDF.setFillColor(34, 32, 156); docPDF.rect(margin, yHead, contentW, hHead, 'F')
     type Col = { lines: string[]; width: number; align?: 'left' | 'right' }
     const cols: Col[] = [
