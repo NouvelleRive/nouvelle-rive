@@ -259,7 +259,7 @@ export default function SalesFilters({
     ;['5 route du Grand Pont', '78110 Le Vésinet', 'FR5894189520'].forEach(t => { docPDF.text(t, rightX, yRight); yRight += 16 })
     const yMetaTop = Math.max(yLeft, yRight) + 24
     const periodeTxt = format(start, 'LLLL yyyy', { locale: fr })
-    docPDF.text('Ref facture', margin, yMetaTop); docPDF.text(ref, margin + 110, yMetaTop)
+    docPDF.text('Numéro de facture', margin, yMetaTop); docPDF.text(ref, margin + 110, yMetaTop)
     docPDF.text('Période', margin, yMetaTop + 16); docPDF.text(periodeTxt, margin + 110, yMetaTop + 16)
     const dateEmission = new Date()
     const dateEcheance = new Date(dateEmission); dateEcheance.setDate(dateEcheance.getDate() + 30)
