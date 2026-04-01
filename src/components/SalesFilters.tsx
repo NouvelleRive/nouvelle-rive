@@ -332,9 +332,9 @@ export default function SalesFilters({
       link.download = `facture_${ref}.pdf`
       link.click()
     } catch (err) {
-      console.error('Erreur Factur-X, fallback PDF simple:', err)
-      docPDF.save(`facture_${ref}.pdf`)
-    }
+    console.error('Erreur Factur-X détaillée:', JSON.stringify(err))
+    alert('Erreur Factur-X : ' + (err as Error).message)
+  }
   }
 
   const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
