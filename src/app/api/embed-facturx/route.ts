@@ -48,7 +48,7 @@ function generateFacturXML(d: InvoiceData): string {
       </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
         <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount>${d.commissionHT.toFixed(2)}</ram:ChargeAmount>
+          <ram:ChargeAmount>-${d.commissionHT.toFixed(2)}</ram:ChargeAmount>
         </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
@@ -61,7 +61,7 @@ function generateFacturXML(d: InvoiceData): string {
           <ram:RateApplicablePercent>20</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount>${d.commissionHT.toFixed(2)}</ram:LineTotalAmount>
+          <ram:LineTotalAmount>-${d.commissionHT.toFixed(2)}</ram:LineTotalAmount>
         </ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>
@@ -122,8 +122,8 @@ function generateFacturXML(d: InvoiceData): string {
         </ram:DueDateDateTime>
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount>${(d.commissionHT + d.net).toFixed(2)}</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount>${d.commissionHT.toFixed(2)}</ram:TaxBasisTotalAmount>
+        <ram:LineTotalAmount>${(d.net - d.commissionHT).toFixed(2)}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>-${d.commissionHT.toFixed(2)}</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="EUR">${d.tvaMontant.toFixed(2)}</ram:TaxTotalAmount>
         <ram:GrandTotalAmount>${d.commissionTTC.toFixed(2)}</ram:GrandTotalAmount>
         <ram:DuePayableAmount>${d.commissionTTC.toFixed(2)}</ram:DuePayableAmount>
