@@ -108,7 +108,7 @@
               {!selectedChineuse && (
                 <>
                   <Link href="/admin/selectionneuses" className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/selectionneuses'))}`}>Selectionneuses</Link>
-                  <Link href="/admin/vendeuses" className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/vendeuses'))}`}>Vente</Link>
+                  <Link href="/admin/vendeuses" className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/vendeuses'))}`}>Vendeuses</Link>
                 </>
               )}
             </div>
@@ -174,7 +174,7 @@
                     Chineuses
                   </Link>
                   <Link href="/admin/vendeuses" className={`text-sm font-medium py-2 transition-all ${getTabClassName(isActive('/admin/vendeuses'))}`}>
-                    Vente
+                    Vendeuses
                   </Link>
                 </>
               )}
