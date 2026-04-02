@@ -190,6 +190,7 @@ export default function AdminPaiementsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -210,7 +211,7 @@ export default function AdminPaiementsPage() {
                     className={`border-b border-gray-100 ${statut.paye ? 'bg-green-50' : 'hover:bg-gray-50'}`}
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{chineuse.nom || chineuse.email}</div>
+                      <div className="font-medium text-gray-900">{(chineuse.nom || chineuse.email || '').toUpperCase()}</div>
                       <div className="text-xs text-gray-400">{nbVentes} vente{nbVentes > 1 ? 's' : ''}</div>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-600">{ca.toFixed(2)}€</td>
@@ -261,6 +262,7 @@ export default function AdminPaiementsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
