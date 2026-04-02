@@ -122,7 +122,7 @@ function generateFacturXML(d: InvoiceData): string {
         </ram:DueDateDateTime>
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount>${d.commissionHT.toFixed(2)}</ram:LineTotalAmount>
+        <ram:LineTotalAmount>${(d.commissionHT + d.net).toFixed(2)}</ram:LineTotalAmount>
         <ram:TaxBasisTotalAmount>${d.commissionHT.toFixed(2)}</ram:TaxBasisTotalAmount>
         <ram:TaxTotalAmount currencyID="EUR">${d.tvaMontant.toFixed(2)}</ram:TaxTotalAmount>
         <ram:GrandTotalAmount>${d.commissionTTC.toFixed(2)}</ram:GrandTotalAmount>
