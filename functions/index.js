@@ -386,3 +386,59 @@ exports.onProductDeleted = functions
 
     return null;
   });
+  exports.checkGmailFactures = functions
+  .region("europe-west1")
+  .pubsub.schedule("every 1 hours")
+  .onRun(async (context) => {
+    const fetch = require('node-fetch')
+
+    // Obtenir un access token Gmail
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+        grant_type: 'refresh_token',
+      }),
+    })
+    const { access_token } = await tokenRes.json()
+
+    // Récupérer tous les statuts paiements du mois en cours
+    const now = new Date()
+    const mois = `${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`
+
+    // Récupérer toutes les chineuses
+    const chineusesSnap = await db.collection('chineuse').get()
+    const chineuses = chineusesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+
+    for (const ch of chineuses) {
+      const trigramme = (ch.trigramme || '').toUpperCase()
+      if (!trigramme) continue
+
+      const m = String(now.getMonth() + 1).padStart(2, '0')
+      const y = String(now.getFullYear()).slice(-2)
+      const ref = `NR${m}${y}-${trigramme}`
+
+      // Chercher dans Gmail
+      const query = encodeURIComponent(`"${ref}" has:attachment`)
+      const gmailRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=5`,
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      )
+      const gmailData = await gmailRes.json()
+      const found = !!(gmailData.messages && gmailData.messages.length > 0)
+
+      if (found) {
+        const statutRef = db.collection('paiements').doc(mois).collection('statuts').doc(ch.id)
+        const existing = await statutRef.get()
+        if (!existing.exists || !existing.data().factureRecue) {
+          await statutRef.set({ factureRecue: true }, { merge: true })
+          console.log(`✅ Facture reçue: ${ref}`)
+        }
+      }
+    }
+
+    return null
+  })

@@ -59,13 +59,13 @@ export default function MesVentesPage() {
   }, [router])
 
 async function fetchVentes(trigramme: string, email: string) {
-  setLoading(true)
-  try {
-    const param = trigramme
-      ? `trigramme=${encodeURIComponent(trigramme)}`
-      : `chineurEmail=${encodeURIComponent(email)}`
+    setLoading(true)
+    try {
+      const param = trigramme
+        ? `trigramme=${encodeURIComponent(trigramme)}`
+        : `chineurEmail=${encodeURIComponent(email)}`
       const res = await fetch(`/api/ventes?${param}`)
-    const data = await res.json()
+      const data = await res.json()
       if (data.success) {
         setVentes(data.ventes || [])
       }
@@ -75,6 +75,14 @@ async function fetchVentes(trigramme: string, email: string) {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!user?.email) return
+    const interval = setInterval(() => {
+      fetchVentes(chineuse?.codeChineuse || '', user.email!)
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [user?.email, chineuse?.codeChineuse])
 
   const handleRefresh = async () => {
   if (user?.email) {
