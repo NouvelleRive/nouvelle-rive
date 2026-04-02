@@ -91,6 +91,8 @@ export default function AdminNosVentesPage() {
 
   useEffect(() => {
     loadVentes()
+    const interval = setInterval(loadVentes, 5 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
 
   const ventesFiltrees = useMemo(() => {
