@@ -62,42 +62,46 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true })
     }
 
-    const order = event.data?.object?.order
-    
-    if (!order) {
-      console.log('⏭️ [POS] Pas de données order')
+    const orderId = event.data?.object?.order_id || event.data?.object?.order?.id
+    if (!orderId) {
+      console.log('⏭️ [POS] Pas d\'orderId')
       return NextResponse.json({ received: true })
     }
 
-    // Vérifier que la commande est complétée et payée
+    const { result: orderResult } = await squareClient.ordersApi.retrieveOrder(orderId)
+    const order = orderResult.order
+
+    if (!order) {
+      console.log('⏭️ [POS] Ordre non trouvé:', orderId)
+      return NextResponse.json({ received: true })
+    }
+
     if (order.state !== 'COMPLETED') {
       console.log('⏭️ [POS] Commande non complétée, état:', order.state)
       return NextResponse.json({ received: true })
     }
 
-    // Vérifier que c'est une vente en boutique (pas en ligne)
     if (order.metadata?.productId) {
-      console.log('⏭️ [POS] Vente en ligne détectée, ignorée (géré par autre webhook)')
+      console.log('⏭️ [POS] Vente en ligne détectée, ignorée')
       return NextResponse.json({ received: true })
     }
 
-    const orderId = order.id
-    const lineItems = order.line_items || []
+    const lineItems = order.lineItems || []
     
     console.log('🏪 [POS] Vente en boutique détectée:', orderId, '- Articles:', lineItems.length)
 
     let nbProduitsTraites = 0
 
     for (const item of lineItems) {
-      const catalogObjectId = item.catalog_object_id
+      const catalogObjectId = item.catalogObjectId
       const quantiteVendue = parseInt(item.quantity) || 1
       const itemName = item.name || 'Produit inconnu'
       
       if (!catalogObjectId) {
         console.log('📝 [POS] Article sans catalogObjectId (montant perso):', itemName)
         
-        const prixVenteReel = item.total_money?.amount 
-          ? Number(item.total_money.amount) / 100 
+        const prixVenteReel = item.totalMoney?.amount 
+          ? Number(item.totalMoney.amount) / 100 
           : null
 
         for (let i = 0; i < quantiteVendue; i++) {
@@ -173,8 +177,8 @@ export async function POST(request: Request) {
         console.log(`   Quantité: ${quantiteActuelle} → ${nouvelleQuantite}`)
 
         // Calculer le prix de vente réel
-        const prixVenteReel = item.total_money?.amount 
-          ? Number(item.total_money.amount) / 100 
+        const prixVenteReel = item.totalMoney?.amount 
+          ? Number(item.totalMoney.amount) / 100 
           : null
 
         // Préparer les données de mise à jour
