@@ -55,47 +55,11 @@
       <>
         <nav className="bg-white border-b sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex items-center justify-between h-14">
-              {/* Logo */}
+            {/* Ligne 1 : Logo + Je suis + Hamburger */}
+            <div className="flex items-center justify-between h-12">
               <Link href="/admin" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
                 Nouvelle Rive
               </Link>
-
-              {/* Tabs Desktop */}
-              <div className="hidden lg:flex flex-wrap items-center space-x-6">
-    {visibleTabs.map((tab) => {
-      const active = isActive(tab.href)
-      return (
-        <Link 
-          key={tab.key} 
-          href={tab.href} 
-          className={`text-sm font-medium transition-all ${getTabClassName(active)}`}
-        >
-          {tab.label}
-        </Link>
-      )
-    })}
-
-    {/* Chineuses & Vente */}
-    {!selectedChineuse && (
-      <>
-        <Link
-          href="/admin/selectionneuses"
-          className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/selectionneuses'))}`}
-        >
-          Selectionneuses
-        </Link>
-        <Link
-          href="/admin/vendeuses"
-          className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/vendeuses'))}`}
-        >
-          Vente
-        </Link>
-      </>
-    )}
-  </div>
-
-              {/* Filtre "Je suis" - Desktop */}
               <div className="hidden lg:flex items-center gap-3">
                 <span className="text-sm text-gray-500">Je suis</span>
                 <select
@@ -107,9 +71,7 @@
                       const chineuse = chineusesList.find(c => c.uid === e.target.value)
                       if (chineuse) {
                         setSelectedChineuse(chineuse)
-                        if (pathname.includes('/admin/ebay')) {
-                          router.push('/admin/nos-produits')
-                        }
+                        if (pathname.includes('/admin/ebay')) router.push('/admin/nos-produits')
                       }
                     }
                   }}
@@ -123,32 +85,32 @@
                   ))}
                 </select>
               </div>
-
-              {/* Hamburger Mobile */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="lg:hidden flex flex-col justify-center items-center w-8 h-8"
                 aria-label="Menu"
               >
-                <span 
-                  className="block w-6 h-0.5 bg-[#22209C] transition-all duration-300"
-                  style={{
-                    transform: menuOpen ? 'rotate(45deg) translateY(6px)' : 'none'
-                  }}
-                />
-                <span 
-                  className="block w-6 h-0.5 bg-[#22209C] my-1.5 transition-all duration-300"
-                  style={{
-                    opacity: menuOpen ? 0 : 1
-                  }}
-                />
-                <span 
-                  className="block w-6 h-0.5 bg-[#22209C] transition-all duration-300"
-                  style={{
-                    transform: menuOpen ? 'rotate(-45deg) translateY(-6px)' : 'none'
-                  }}
-                />
+                <span className="block w-6 h-0.5 bg-[#22209C] transition-all duration-300" style={{ transform: menuOpen ? 'rotate(45deg) translateY(6px)' : 'none' }} />
+                <span className="block w-6 h-0.5 bg-[#22209C] my-1.5 transition-all duration-300" style={{ opacity: menuOpen ? 0 : 1 }} />
+                <span className="block w-6 h-0.5 bg-[#22209C] transition-all duration-300" style={{ transform: menuOpen ? 'rotate(-45deg) translateY(-6px)' : 'none' }} />
               </button>
+            </div>
+            {/* Ligne 2 : Tabs Desktop */}
+            <div className="hidden lg:flex items-center gap-x-6 border-t pt-2 pb-2">
+              {visibleTabs.map((tab) => {
+                const active = isActive(tab.href)
+                return (
+                  <Link key={tab.key} href={tab.href} className={`text-sm font-medium transition-all ${getTabClassName(active)}`}>
+                    {tab.label}
+                  </Link>
+                )
+              })}
+              {!selectedChineuse && (
+                <>
+                  <Link href="/admin/selectionneuses" className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/selectionneuses'))}`}>Selectionneuses</Link>
+                  <Link href="/admin/vendeuses" className={`text-sm font-medium transition-all ${getTabClassName(isActive('/admin/vendeuses'))}`}>Vente</Link>
+                </>
+              )}
             </div>
           </div>
 
