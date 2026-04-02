@@ -81,7 +81,12 @@ async function fetchVentes(trigramme: string, email: string) {
     const interval = setInterval(() => {
       fetchVentes(chineuse?.codeChineuse || '', user.email!)
     }, 5 * 60 * 1000)
-    return () => clearInterval(interval)
+    const onFocus = () => fetchVentes(chineuse?.codeChineuse || '', user.email!)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [user?.email, chineuse?.codeChineuse])
 
   const handleRefresh = async () => {
