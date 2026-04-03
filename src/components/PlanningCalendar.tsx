@@ -36,6 +36,7 @@ interface PlanningCalendarProps {
   onToggleTask?: (taskId: string, completed: boolean) => void
   currentMonth?: { year: number; month: number }
   onNavigate?: (delta: number) => void
+  dailyCA?: Record<string, number>
 }
 
 export default function PlanningCalendar({
@@ -57,6 +58,7 @@ export default function PlanningCalendar({
   onToggleTask,
   currentMonth: externalMonth,
   onNavigate: externalNavigate,
+  dailyCA = {},
 }: PlanningCalendarProps) {
 
   const [internalMonth, setInternalMonth] = useState(() => {
@@ -367,7 +369,14 @@ export default function PlanningCalendar({
                 const isToday = day === now.getDate() && currentMonth.month === now.getMonth() && currentMonth.year === now.getFullYear()
                 return (
                   <div key={ds} className={`border-b border-r min-h-[100px] p-1 ${isToday ? 'bg-blue-50' : ''}`}>
-                    <div className={`text-xs font-medium mb-1 ${isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'}`}>{day}</div>
+                    <div className="flex items-center justify-between mb-1">
+  <span className={`text-xs font-medium ${isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'}`}>{day}</span>
+  {dailyCA[ds] !== undefined && (
+    <span className={`text-[9px] font-semibold ${dailyCA[ds] >= 1000 ? 'text-green-600' : 'text-red-400'}`}>
+      {dailyCA[ds].toLocaleString('fr-FR')}€
+    </span>
+  )}
+</div>
                     {mode === 'planning' && renderPlanningDropdowns(ds)}
                     {mode === 'restock' && renderRestockDropdowns(ds, false)}
                     {mode === 'unified' && renderUnifiedCell(ds)}
