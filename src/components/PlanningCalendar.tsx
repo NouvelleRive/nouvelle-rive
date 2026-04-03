@@ -37,6 +37,7 @@ interface PlanningCalendarProps {
   currentMonth?: { year: number; month: number }
   onNavigate?: (delta: number) => void
   dailyCA?: Record<string, number>
+  dailyCAByCreneau?: Record<string, { '12-20': number; '11-17': number }>
 }
 
 export default function PlanningCalendar({
@@ -59,6 +60,7 @@ export default function PlanningCalendar({
   currentMonth: externalMonth,
   onNavigate: externalNavigate,
   dailyCA = {},
+  dailyCAByCreneau = {},
 }: PlanningCalendarProps) {
 
   const [internalMonth, setInternalMonth] = useState(() => {
@@ -372,9 +374,21 @@ export default function PlanningCalendar({
                     <div className="flex items-center justify-between mb-1">
   <span className={`text-xs font-medium ${isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'}`}>{day}</span>
   {dailyCA[ds] !== undefined && (
-    <span className={`text-[9px] font-semibold ${dailyCA[ds] >= 1000 ? 'text-green-600' : 'text-red-400'}`}>
-      {dailyCA[ds].toLocaleString('fr-FR')}€
-    </span>
+    <div className="text-right">
+      <div className={`text-[9px] font-semibold ${dailyCA[ds] >= 1000 ? 'text-green-600' : 'text-red-400'}`}>
+        {dailyCA[ds].toLocaleString('fr-FR')}€
+      </div>
+      {dailyCAByCreneau[ds] && (
+        <div className="flex gap-1 justify-end">
+          <span className={`text-[8px] ${dailyCAByCreneau[ds]['12-20'] >= 1000 ? 'text-green-500' : 'text-red-300'}`}>
+            ▸{Math.round(dailyCAByCreneau[ds]['12-20'])}€
+          </span>
+          <span className={`text-[8px] ${dailyCAByCreneau[ds]['11-17'] >= 1000 ? 'text-green-500' : 'text-red-300'}`}>
+            ▸{Math.round(dailyCAByCreneau[ds]['11-17'])}€
+          </span>
+        </div>
+      )}
+    </div>
   )}
 </div>
                     {mode === 'planning' && renderPlanningDropdowns(ds)}
