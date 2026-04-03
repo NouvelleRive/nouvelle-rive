@@ -388,6 +388,22 @@
   return ca
 }, [ventesAll, currentMonth])
 
+  const dailyCAByCreneau = useMemo(() => {
+    const ca: Record<string, { '12-20': number; '11-17': number }> = {}
+    ventesAll.forEach(p => {
+      if (!(p.dateVente instanceof Timestamp)) return
+      const date = p.dateVente.toDate()
+      if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
+      const dateStr = format(date, 'yyyy-MM-dd')
+      const hour = date.getHours()
+      const montant = p.prixVenteReel || 0
+      if (!ca[dateStr]) ca[dateStr] = { '12-20': 0, '11-17': 0 }
+      if (hour >= 12 && hour < 20) ca[dateStr]['12-20'] += montant
+      if (hour >= 11 && hour < 17) ca[dateStr]['11-17'] += montant
+    })
+    return ca
+  }, [ventesAll, currentMonth])
+
     // Jours de CP = jours supposés - jours réels travaillés
     const joursCP = (v: Vendeuse) => {
       const supposees = heuresSupposees(v)
@@ -610,6 +626,7 @@
               onAutoFill={autoFill}
               showAutoFill={true}
 dailyCA={dailyCA}
+              dailyCAByCreneau={dailyCAByCreneau}
             />
           </div>
 
