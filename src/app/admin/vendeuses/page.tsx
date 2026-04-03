@@ -376,6 +376,18 @@
       return map
     }, [ventesAll, planningSlots, currentMonth])
 
+    const dailyCA = useMemo(() => {
+  const ca: Record<string, number> = {}
+  ventesAll.forEach(p => {
+    if (!(p.dateVente instanceof Timestamp)) return
+    const date = p.dateVente.toDate()
+    if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
+    const dateStr = format(date, 'yyyy-MM-dd')
+    ca[dateStr] = (ca[dateStr] || 0) + (p.prixVenteReel || 0)
+  })
+  return ca
+}, [ventesAll, currentMonth])
+
     // Jours de CP = jours supposés - jours réels travaillés
     const joursCP = (v: Vendeuse) => {
       const supposees = heuresSupposees(v)
@@ -597,6 +609,7 @@
               onAssign={assignSlot}
               onAutoFill={autoFill}
               showAutoFill={true}
+dailyCA={dailyCA}
             />
           </div>
 
