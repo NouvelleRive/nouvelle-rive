@@ -7,7 +7,7 @@ import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
 const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
-const CRENEAUX_RESTOCK = ['14h', '18h'] as const
+const CRENEAUX_RESTOCK = ['13h', '16h', '18h'] as const
 const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean }
@@ -218,6 +218,10 @@ export default function PlanningCalendar({
   )
 
   const renderRestockDropdowns = (ds: string, usePlanningSlots = false) => {
+    const [y, m, d] = ds.split('-').map(Number)
+    const dow = new Date(y, m - 1, d).getDay()
+    if (dow === 0 || dow === 6) return null
+    const creneaux: string[] = dow === 2 ? ['13h', '16h', '18h'] : ['13h', '16h']
     const slots = usePlanningSlots ? planningSlots : planningRestockSlots
     const vList = usePlanningSlots ? vendeuses : vendeusesRestock
     const noms = ['12-20', '11-17']
@@ -230,7 +234,7 @@ export default function PlanningCalendar({
     return (
       <>
         
-        {CRENEAUX_RESTOCK.map(cr => {
+        {creneaux.map(cr => {
           const key = `${ds}_${cr}`
           const slot = restockSlots[key]
           const editable = canEditRestock(slot)
