@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { CheckCircle, Clock, ExternalLink, Mail } from 'lucide-react'
+import { CheckCircle, Download, ExternalLink, Mail } from 'lucide-react'
 
 type Chineuse = {
   id: string
@@ -20,6 +20,8 @@ type Chineuse = {
   trigramme?: string
   taux?: number
   iban?: string
+  bic?: string
+  raisonSociale?: string
 }
 
 type Vente = {
@@ -143,6 +145,89 @@ export default function AdminPaiementsPage() {
   const totalDu = paiementsParChineuse.reduce((s, p) => s + p.net, 0)
   const totalPaye = paiementsParChineuse.filter(p => statuts[p.chineuse.id]?.paye).reduce((s, p) => s + p.net, 0)
 
+  const exporterSepaXML = () => {
+    const aExporter = paiementsParChineuse.filter(p => {
+      const s = statuts[p.chineuse.id]
+      return s?.factureRecue && !s?.paye && p.chineuse.iban
+    })
+    if (aExporter.length === 0) {
+      alert('Aucun paiement à exporter (facture reçue + non payé + IBAN renseigné)')
+      return
+    }
+
+    const now = new Date()
+    const msgId = `NR-${moisSelectionne}-${now.getTime()}`
+    const dateISO = now.toISOString().split('.')[0]
+    const totalAmount = aExporter.reduce((s, p) => s + p.net, 0)
+
+    const transactions = aExporter.map((p) => {
+      const iban = (p.chineuse.iban || '').replace(/\s/g, '')
+      const bic = (p.chineuse.bic || '').replace(/\s/g, '')
+      const nom = (p.chineuse.raisonSociale || p.chineuse.nom || p.chineuse.email || '').slice(0, 70)
+      return `
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>${p.ref}</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">${p.net.toFixed(2)}</InstdAmt>
+        </Amt>
+        ${bic ? `<CdtrAgt><FinInstnId><BIC>${bic}</BIC></FinInstnId></CdtrAgt>` : ''}
+        <Cdtr>
+          <Nm>${nom}</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id><IBAN>${iban}</IBAN></Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>${p.ref}</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>`
+    }).join('')
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>${msgId}</MsgId>
+      <CreDtTm>${dateISO}</CreDtTm>
+      <NbOfTxs>${aExporter.length}</NbOfTxs>
+      <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
+      <InitgPty>
+        <Nm>NR1 SAS</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>${msgId}-001</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <NbOfTxs>${aExporter.length}</NbOfTxs>
+      <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl><Cd>SEPA</Cd></SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>${now.toISOString().split('T')[0]}</ReqdExctnDt>
+      <Dbtr>
+        <Nm>NR1 SAS</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id><IBAN>FR7617418000010001189894769</IBAN></Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId><BIC>SNNNFR22XXX</BIC></FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>SLEV</ChrgBr>${transactions}
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>`
+
+    const blob = new Blob([xml], { type: 'application/xml' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `virements_${moisSelectionne}.xml`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[50vh]">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22209C]" />
@@ -168,7 +253,7 @@ export default function AdminPaiementsPage() {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <div className="px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
           <span className="text-orange-600 font-semibold">{totalDu.toFixed(2)}€</span>
           <span className="text-orange-500 ml-1 text-sm">total dû</span>
@@ -181,6 +266,13 @@ export default function AdminPaiementsPage() {
           <span className="text-red-600 font-semibold">{(totalDu - totalPaye).toFixed(2)}€</span>
           <span className="text-red-500 ml-1 text-sm">restant</span>
         </div>
+        <button
+          onClick={exporterSepaXML}
+          className="ml-auto flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
+        >
+          <Download size={16} />
+          Exporter SEPA XML
+        </button>
       </div>
 
       {/* Liste */}

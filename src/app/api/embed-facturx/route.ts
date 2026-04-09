@@ -74,7 +74,7 @@ function generateFacturXML(d: InvoiceData): string {
       </ram:SpecifiedTradeProduct>
       <ram:SpecifiedLineTradeAgreement>
         <ram:NetPriceProductTradePrice>
-          <ram:ChargeAmount>${d.net.toFixed(2)}</ram:ChargeAmount>
+          <ram:ChargeAmount>${d.ca.toFixed(2)}</ram:ChargeAmount>
         </ram:NetPriceProductTradePrice>
       </ram:SpecifiedLineTradeAgreement>
       <ram:SpecifiedLineTradeDelivery>
@@ -87,7 +87,7 @@ function generateFacturXML(d: InvoiceData): string {
           <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount>${d.net.toFixed(2)}</ram:LineTotalAmount>
+          <ram:LineTotalAmount>${d.ca.toFixed(2)}</ram:LineTotalAmount>
         </ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>
@@ -110,9 +110,9 @@ function generateFacturXML(d: InvoiceData): string {
       <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
       ${ibanClean ? `<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode><ram:PayeePartyCreditorFinancialAccount><ram:IBANID>${ibanClean}</ram:IBANID></ram:PayeePartyCreditorFinancialAccount></ram:SpecifiedTradeSettlementPaymentMeans>` : ''}
       <ram:ApplicableTradeTax>
-        <ram:CalculatedAmount>${d.tvaMontant.toFixed(2)}</ram:CalculatedAmount>
+        <ram:CalculatedAmount>-${d.tvaMontant.toFixed(2)}</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:BasisAmount>${d.commissionHT.toFixed(2)}</ram:BasisAmount>
+        <ram:BasisAmount>-${d.commissionHT.toFixed(2)}</ram:BasisAmount>
         <ram:CategoryCode>S</ram:CategoryCode>
         <ram:RateApplicablePercent>20</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
@@ -122,11 +122,11 @@ function generateFacturXML(d: InvoiceData): string {
         </ram:DueDateDateTime>
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount>-${d.commissionHT.toFixed(2)}</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount>-${d.commissionHT.toFixed(2)}</ram:TaxBasisTotalAmount>
-        <ram:TaxTotalAmount currencyID="EUR">${d.tvaMontant.toFixed(2)}</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount>${d.commissionTTC.toFixed(2)}</ram:GrandTotalAmount>
-        <ram:DuePayableAmount>${d.commissionTTC.toFixed(2)}</ram:DuePayableAmount>
+        <ram:LineTotalAmount>${(d.ca - d.commissionHT).toFixed(2)}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>${(d.ca - d.commissionHT).toFixed(2)}</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="EUR">-${d.tvaMontant.toFixed(2)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>${d.net.toFixed(2)}</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>${d.net.toFixed(2)}</ram:DuePayableAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>
