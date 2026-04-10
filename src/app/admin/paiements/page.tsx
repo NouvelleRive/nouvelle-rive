@@ -160,10 +160,12 @@ export default function AdminPaiementsPage() {
     const dateISO = now.toISOString().split('.')[0]
     const totalAmount = aExporter.reduce((s, p) => s + p.net, 0)
 
+    const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
     const transactions = aExporter.map((p) => {
       const iban = (p.chineuse.iban || '').replace(/\s/g, '')
       const bic = (p.chineuse.bic || '').replace(/\s/g, '')
-      const nom = (p.chineuse.raisonSociale || p.chineuse.nom || p.chineuse.email || '').slice(0, 70)
+      const nom = stripAccents((p.chineuse.raisonSociale || p.chineuse.nom || p.chineuse.email || '')).slice(0, 70)
       return `
       <CdtTrfTxInf>
         <PmtId>
