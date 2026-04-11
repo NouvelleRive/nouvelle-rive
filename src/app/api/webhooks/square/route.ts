@@ -242,6 +242,20 @@ export async function POST(request: Request) {
 
           await adminDb.collection('ventes').add(venteData)
           console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€)`)
+
+          // Mettre à jour le produit (quantité, vendu)
+          if (produitDoc) {
+            const qty = parseInt(item.quantity) || 1
+            const newQty = Math.max(0, (produitData.quantite || 1) - qty)
+            const updateData: any = { quantite: newQty }
+            if (newQty === 0) {
+              updateData.vendu = true
+              updateData.dateVente = Timestamp.now()
+              updateData.prixVenteReel = prix
+            }
+            await adminDb.collection('produits').doc(produitDoc.id).update(updateData)
+            console.log(`✅ Produit mis à jour: ${sku} → quantité ${newQty}`)
+          }
         }
 
         return NextResponse.json({ received: true })
