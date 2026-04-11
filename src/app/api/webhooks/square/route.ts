@@ -63,22 +63,43 @@ export async function POST(request: Request) {
     
     console.log('🔔 Webhook Square reçu:', event.type)
 
-    // On ne traite que payment.updated (ignorer payment.created pour éviter les doublons)
-    if (event.type !== 'payment.updated') {
+    // On ne traite que les paiements complétés
+    if (event.type !== 'payment.updated' && event.type !== 'payment.created') {
       return NextResponse.json({ received: true })
     }
 
     const payment = event.data?.object?.payment
-    
+
     if (!payment || payment.status !== 'COMPLETED') {
       console.log('⏭️ Paiement non complété, ignoré')
       return NextResponse.json({ received: true })
     }
 
+    const paymentId = payment.id
     const orderId = payment.order_id
-    
+
     if (!orderId) {
       console.log('⚠️ Pas d\'order_id dans le paiement')
+      return NextResponse.json({ received: true })
+    }
+
+    // Déduplication par paymentId — même logique que syncVentesDepuisSquare
+    const dedupeSnap = await adminDb.collection('ventes')
+      .where('paymentId', '==', paymentId)
+      .limit(1)
+      .get()
+    if (!dedupeSnap.empty) {
+      console.log(`⏭️ Paiement ${paymentId} déjà traité, skip`)
+      return NextResponse.json({ received: true })
+    }
+
+    // Aussi checker par orderId (pour les ventes créées avant l'ajout de paymentId)
+    const orderDedupeSnap = await adminDb.collection('ventes')
+      .where('orderId', '==', orderId)
+      .limit(1)
+      .get()
+    if (!orderDedupeSnap.empty) {
+      console.log(`⏭️ Order ${orderId} déjà traité, skip`)
       return NextResponse.json({ received: true })
     }
 
@@ -139,16 +160,6 @@ export async function POST(request: Request) {
       if (!productId) {
         console.log('🏪 Vente caisse détectée (pas de productId)')
 
-        // Déduplication globale par orderId (évite doublons si payment.created + payment.updated)
-        const existingOrder = await adminDb.collection('ventes')
-          .where('orderId', '==', orderId)
-          .limit(1)
-          .get()
-        if (!existingOrder.empty) {
-          console.log(`⏭️ Ventes déjà créées pour order ${orderId}, skip`)
-          return NextResponse.json({ received: true })
-        }
-
         for (const item of lineItems) {
           const itemName = item.name || ''
           const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
@@ -193,17 +204,6 @@ export async function POST(request: Request) {
             if (produitDoc) produitData = produitDoc.data()
           }
 
-          // Déduplication par orderId + lineItemUid
-          const dedupeSnap = await adminDb.collection('ventes')
-            .where('orderId', '==', orderId)
-            .where('lineItemUid', '==', item.uid)
-            .limit(1)
-            .get()
-          if (!dedupeSnap.empty) {
-            console.log(`⏭️ Vente caisse déjà importée: ${sku || itemName}`)
-            continue
-          }
-
           const trigramme = sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
           let chineurEmail = produitData?.chineur || null
           let chineurUid = produitData?.chineurUid || null
@@ -220,6 +220,7 @@ export async function POST(request: Request) {
           }
 
           const venteData = {
+            paymentId,
             orderId,
             lineItemUid: item.uid || null,
             dateVente: Timestamp.now(),
@@ -460,6 +461,7 @@ export async function POST(request: Request) {
       }
 
       const venteData = {
+        paymentId,
         orderId,
         lineItemUid: lineItems[0]?.uid || null,
         dateVente: Timestamp.fromDate(now),
