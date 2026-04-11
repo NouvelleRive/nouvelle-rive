@@ -92,11 +92,14 @@ export default function AdminNosVentesPage() {
   useEffect(() => {
     loadVentes()
     const interval = setInterval(loadVentes, 5 * 60 * 1000)
-    const onFocus = () => loadVentes()
-    window.addEventListener('focus', onFocus)
+    // Recharger seulement quand on revient d'un autre onglet, pas à la fermeture d'un modal
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadVentes()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
       clearInterval(interval)
-      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [])
 
