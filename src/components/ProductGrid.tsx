@@ -87,8 +87,16 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   useEffect(() => {
     const saved = sessionStorage.getItem('productGrid_scrollY')
     if (saved) {
-      setTimeout(() => window.scrollTo(0, parseInt(saved)), 50)
+      const y = parseInt(saved)
       sessionStorage.removeItem('productGrid_scrollY')
+      // Scroll immédiat sans smooth pour éviter le flash
+      window.scrollTo(0, y)
+      // Re-scroll après le premier paint au cas où le layout n'était pas prêt
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          window.scrollTo(0, y)
+        })
+      })
     }
   }, [])
   
@@ -335,6 +343,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
           >
             <Link
               href={`/boutique/${produit.id}`}
+              scroll={false}
               className="block"
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
