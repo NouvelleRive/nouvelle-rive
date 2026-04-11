@@ -139,6 +139,16 @@ export async function POST(request: Request) {
       if (!productId) {
         console.log('🏪 Vente caisse détectée (pas de productId)')
 
+        // Déduplication globale par orderId (évite doublons si payment.created + payment.updated)
+        const existingOrder = await adminDb.collection('ventes')
+          .where('orderId', '==', orderId)
+          .limit(1)
+          .get()
+        if (!existingOrder.empty) {
+          console.log(`⏭️ Ventes déjà créées pour order ${orderId}, skip`)
+          return NextResponse.json({ received: true })
+        }
+
         for (const item of lineItems) {
           const itemName = item.name || ''
           const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
