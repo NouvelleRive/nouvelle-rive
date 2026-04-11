@@ -343,7 +343,6 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
           >
             <Link
               href={`/boutique/${produit.id}`}
-              scroll={false}
               className="block"
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
