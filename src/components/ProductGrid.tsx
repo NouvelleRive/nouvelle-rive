@@ -82,6 +82,15 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
   const triRef = useRef<HTMLDivElement>(null)
+
+  // Restaurer la position de scroll au retour d'une page produit
+  useEffect(() => {
+    const saved = sessionStorage.getItem('productGrid_scrollY')
+    if (saved) {
+      setTimeout(() => window.scrollTo(0, parseInt(saved)), 50)
+      sessionStorage.removeItem('productGrid_scrollY')
+    }
+  }, [])
   
   const [filters, setFilters] = useState({
     promotion: false,
@@ -324,9 +333,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
             className="relative group"
             style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
-            <Link 
+            <Link
               href={`/boutique/${produit.id}`}
               className="block"
+              onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
               <div className="aspect-square bg-white overflow-hidden relative">
               {produit.imageUrls?.[0] ? (
