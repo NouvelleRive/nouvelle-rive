@@ -135,8 +135,105 @@ export async function POST(request: Request) {
         ? Number(lineItems[0].basePriceMoney.amount) / 100 
         : 0
       
+      // Vente caisse (pas de productId) → créer la vente par SKU et sortir
       if (!productId) {
-        console.log('⚠️ Pas de productId dans les metadata')
+        console.log('🏪 Vente caisse détectée (pas de productId)')
+
+        for (const item of lineItems) {
+          const itemName = item.name || ''
+          const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
+
+          // Chercher le SKU dans le nom (ex: "TDO4 Collier mix or argent")
+          let sku: string | null = null
+          const skuMatch = itemName.match(/^([A-Za-z]{2,4}\d{1,4})/i)
+          if (skuMatch) sku = skuMatch[1].toUpperCase()
+
+          // Chercher le SKU dans le catalogue Square
+          if (!sku && item.catalogObjectId) {
+            try {
+              const { result } = await squareClient.catalogApi.retrieveCatalogObject(item.catalogObjectId)
+              const obj = result.object
+              if (obj?.type === 'ITEM_VARIATION' && obj.itemVariationData?.sku) {
+                sku = obj.itemVariationData.sku
+              }
+            } catch (e) {
+              console.warn('⚠️ Erreur catalogue:', e)
+            }
+          }
+
+          // Chercher le produit Firestore par SKU
+          let produitDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null
+          let produitData: any = null
+          if (sku) {
+            const skuNorm = sku.toLowerCase().replace(/\s+/g, '')
+            const snap = await adminDb.collection('produits')
+              .where('sku', '==', sku)
+              .limit(1)
+              .get()
+            if (snap.empty) {
+              // Essayer en minuscule
+              const snap2 = await adminDb.collection('produits')
+                .where('sku', '==', skuNorm.toUpperCase())
+                .limit(1)
+                .get()
+              if (!snap2.empty) produitDoc = snap2.docs[0] as any
+            } else {
+              produitDoc = snap.docs[0] as any
+            }
+            if (produitDoc) produitData = produitDoc.data()
+          }
+
+          // Déduplication par orderId + lineItemUid
+          const dedupeSnap = await adminDb.collection('ventes')
+            .where('orderId', '==', orderId)
+            .where('lineItemUid', '==', item.uid)
+            .limit(1)
+            .get()
+          if (!dedupeSnap.empty) {
+            console.log(`⏭️ Vente caisse déjà importée: ${sku || itemName}`)
+            continue
+          }
+
+          const trigramme = sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
+          let chineurEmail = produitData?.chineur || null
+          let chineurUid = produitData?.chineurUid || null
+
+          if (!chineurEmail && trigramme) {
+            const chineuseSnap = await adminDb.collection('chineuse')
+              .where('trigramme', '==', trigramme)
+              .limit(1)
+              .get()
+            if (!chineuseSnap.empty) {
+              chineurEmail = chineuseSnap.docs[0].data().email || null
+              chineurUid = chineuseSnap.docs[0].id
+            }
+          }
+
+          const venteData = {
+            orderId,
+            lineItemUid: item.uid || null,
+            dateVente: Timestamp.now(),
+            prixVenteReel: prix,
+            quantite: parseInt(item.quantity) || 1,
+            nomSquare: itemName,
+            produitId: produitDoc?.id || null,
+            nom: produitData?.nom || itemName,
+            sku: produitData?.sku || sku,
+            skuSquare: sku,
+            chineur: chineurEmail,
+            chineurUid,
+            trigramme,
+            prixInitial: produitData?.prix || null,
+            attribue: !!produitDoc,
+            source: 'square',
+            skuSource: 'webhook_caisse',
+            createdAt: Timestamp.now(),
+          }
+
+          await adminDb.collection('ventes').add(venteData)
+          console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€)`)
+        }
+
         return NextResponse.json({ received: true })
       }
 
