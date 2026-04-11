@@ -349,7 +349,7 @@ export default function SalesList({
       )}
 
       {/* Toggle vue */}
-      <div className="flex gap-1">
+      <div className="flex gap-1 mb-3">
         <button
           onClick={() => setViewMode('grid')}
           className={`p-2 rounded-lg border transition ${viewMode === 'grid' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
