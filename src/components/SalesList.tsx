@@ -332,22 +332,8 @@ export default function SalesList({
         </div>
       )}
 
-      {/* Header sélection + Toggle vue */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg mb-4">
-        {isAdmin ? (
-          <div className="flex items-center gap-3">
-            <button onClick={selectAll} className="text-gray-500 hover:text-gray-700">
-              {selectedIds.size === ventesFiltrées.length && ventesFiltrées.length > 0 ? (
-                <CheckSquare size={20} />
-              ) : (
-                <Square size={20} />
-              )}
-            </button>
-            <span className="text-sm text-gray-500">
-              {selectedIds.size === 0 ? 'Tout sélectionner' : `${selectedIds.size} sélectionnée(s)`}
-            </span>
-          </div>
-        ) : <div />}
+      {/* Toggle vue + Sélection */}
+      <div className="flex items-center gap-3 mb-4">
         <div className="flex gap-1">
           <button
             onClick={() => setViewMode('grid')}
@@ -364,6 +350,18 @@ export default function SalesList({
             <List size={16} />
           </button>
         </div>
+        {isAdmin && (
+          <button onClick={selectAll} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
+            {selectedIds.size === ventesFiltrées.length && ventesFiltrées.length > 0 ? (
+              <CheckSquare size={20} />
+            ) : (
+              <Square size={20} />
+            )}
+            <span className="text-sm">
+              {selectedIds.size === 0 ? 'Tout sélectionner' : `${selectedIds.size} sélectionnée(s)`}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Ventes */}
