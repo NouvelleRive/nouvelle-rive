@@ -127,15 +127,21 @@ export async function syncVentesDepuisSquare(
   const produitsSnap = await adminDb.collection('produits').get()
   const produitsBySku = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>()
   
+  const produitsByNom = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>()
+
   for (const doc of produitsSnap.docs) {
     const data = doc.data()
     if (data.sku) {
-      // Index par SKU normalisé (minuscule, sans espaces)
       const skuNorm = data.sku.toLowerCase().replace(/\s+/g, '')
       produitsBySku.set(skuNorm, doc)
     }
+    // Index par nom normalisé pour fallback (ex: bijoux Ines Pineau sans SKU sur étiquette)
+    if (data.nom) {
+      const nomNorm = data.nom.toLowerCase().replace(/\s+/g, ' ').trim()
+      produitsByNom.set(nomNorm, doc)
+    }
   }
-  console.log(`📦 ${produitsBySku.size} produits indexés par SKU`)
+  console.log(`📦 ${produitsBySku.size} produits indexés par SKU, ${produitsByNom.size} par nom`)
 
   // 2. Charger ventes existantes pour déduplication AMÉLIORÉE
   const ventesExistantesParOrder = new Set<string>()
@@ -359,6 +365,30 @@ export async function syncVentesDepuisSquare(
             skuSource = 'fallback_name'
             console.log(`🔗 Fallback match: "${itemName}" → SKU ${sku}`)
             break
+          }
+        }
+      }
+
+      // FALLBACK 2: Match par nom du produit (ex: bijoux Ines Pineau sans SKU sur étiquette)
+      if (!produitDoc && itemName && itemName !== 'Montant personnalisé') {
+        const nomSquareNorm = itemName.toLowerCase().replace(/\s+/g, ' ').trim()
+        // Match exact
+        const found = produitsByNom.get(nomSquareNorm)
+        if (found) {
+          produitDoc = found
+          sku = found.data().sku || null
+          skuSource = 'fallback_nom'
+          console.log(`🔗 Match par nom: "${itemName}" → ${sku}`)
+        } else {
+          // Match partiel : le nom Square est contenu dans un nom Firestore ou vice-versa
+          for (const [nomFS, doc] of produitsByNom) {
+            if (nomFS.includes(nomSquareNorm) || nomSquareNorm.includes(nomFS)) {
+              produitDoc = doc
+              sku = doc.data().sku || null
+              skuSource = 'fallback_nom_partiel'
+              console.log(`🔗 Match partiel nom: "${itemName}" → ${sku} ("${nomFS}")`)
+              break
+            }
           }
         }
       }
