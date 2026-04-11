@@ -317,8 +317,50 @@ export async function POST(request: Request) {
 
       const commandeRef = await adminDb.collection('commandes').add(nouvelleCommande)
       const commandeId = commandeRef.id
-      
+
       console.log('✅ Commande créée:', commandeId)
+
+      // 2b. Créer la vente dans la collection ventes (pour paiements/CA)
+      const trigramme = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
+      let chineurEmail = produitData.chineur || null
+      let chineurUid = produitData.chineurUid || null
+
+      // Chercher la chineuse par trigramme si pas de chineur sur le produit
+      if (!chineurEmail && trigramme) {
+        const chineuseSnap = await adminDb.collection('chineuse')
+          .where('trigramme', '==', trigramme)
+          .limit(1)
+          .get()
+        if (!chineuseSnap.empty) {
+          const chData = chineuseSnap.docs[0].data()
+          chineurEmail = chData.email || null
+          chineurUid = chineuseSnap.docs[0].id
+        }
+      }
+
+      const venteData = {
+        orderId,
+        lineItemUid: lineItems[0]?.uid || null,
+        dateVente: Timestamp.fromDate(now),
+        prixVenteReel: produitData.prix || productPrice,
+        quantite: 1,
+        nomSquare: productName,
+        produitId: productId,
+        nom: produitData.nom || productName,
+        sku: produitData.sku || null,
+        skuSquare: produitData.sku || null,
+        chineur: chineurEmail,
+        chineurUid,
+        trigramme,
+        prixInitial: produitData.prix || null,
+        attribue: true,
+        source: 'square',
+        skuSource: 'webhook',
+        createdAt: Timestamp.now(),
+      }
+
+      await adminDb.collection('ventes').add(venteData)
+      console.log('✅ Vente créée automatiquement:', produitData.sku)
 
       // 3. Mettre à jour les autres commandes du groupe
       if (autresCommandesIds.length > 0) {
