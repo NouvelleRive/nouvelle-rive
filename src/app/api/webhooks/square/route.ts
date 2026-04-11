@@ -63,8 +63,8 @@ export async function POST(request: Request) {
     
     console.log('🔔 Webhook Square reçu:', event.type)
 
-    // On ne traite que les paiements complétés
-    if (event.type !== 'payment.updated' && event.type !== 'payment.created') {
+    // On ne traite que payment.updated (ignorer payment.created pour éviter les doublons)
+    if (event.type !== 'payment.updated') {
       return NextResponse.json({ received: true })
     }
 
