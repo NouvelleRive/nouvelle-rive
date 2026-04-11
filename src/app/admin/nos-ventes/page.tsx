@@ -252,11 +252,14 @@ export default function AdminNosVentesPage() {
       })
       const data = await res.json()
       if (data.success) {
+        // Mettre à jour la vente localement pour garder filtres + scroll
+        setVentes(prev => prev.map(v =>
+          v.id === venteSelectionnee.id
+            ? { ...v, produitId: selectedProduitId, isAttribue: true, attribue: true, prixVenteReel: editPrixVente ? parseFloat(editPrixVente) : v.prixVenteReel, ...data.vente }
+            : v
+        ))
         setShowModalAttribuer(false)
         setVenteSelectionnee(null)
-        await loadVentes()
-        await loadData()
-        await loadAllProduits()
       } else {
         alert('Erreur : FI')
       }
@@ -299,9 +302,13 @@ export default function AdminNosVentesPage() {
       })
       const data = await res.json()
       if (data.success) {
+        setVentes(prev => prev.map(v =>
+          v.id === venteSelectionnee.id
+            ? { ...v, prixVenteReel: parseFloat(editPrixVente) }
+            : v
+        ))
         setShowModalModifier(false)
         setVenteSelectionnee(null)
-        await loadVentes()
       } else {
         alert('Erreur : FI')
       }
@@ -344,9 +351,9 @@ export default function AdminNosVentesPage() {
       })
       const data = await res.json()
       if (data.success) {
+        setVentes(prev => prev.filter(v => v.id !== venteSelectionnee.id))
         setShowModalSupprimer(false)
         setVenteSelectionnee(null)
-        await loadVentes()
         if (remettreEnStock) await loadData()
       } else {
         alert('Erreur : FI')
