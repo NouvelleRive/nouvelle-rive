@@ -332,38 +332,38 @@ export default function SalesList({
         </div>
       )}
 
-      {/* Header sélection (admin) */}
-      {isAdmin && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg mb-2">
-          <button onClick={selectAll} className="text-gray-500 hover:text-gray-700">
-            {selectedIds.size === ventesFiltrées.length && ventesFiltrées.length > 0 ? (
-              <CheckSquare size={20} />
-            ) : (
-              <Square size={20} />
-            )}
+      {/* Header sélection + Toggle vue */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 rounded-lg mb-4">
+        {isAdmin ? (
+          <div className="flex items-center gap-3">
+            <button onClick={selectAll} className="text-gray-500 hover:text-gray-700">
+              {selectedIds.size === ventesFiltrées.length && ventesFiltrées.length > 0 ? (
+                <CheckSquare size={20} />
+              ) : (
+                <Square size={20} />
+              )}
+            </button>
+            <span className="text-sm text-gray-500">
+              {selectedIds.size === 0 ? 'Tout sélectionner' : `${selectedIds.size} sélectionnée(s)`}
+            </span>
+          </div>
+        ) : <div />}
+        <div className="flex gap-1">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-lg border transition ${viewMode === 'grid' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
+            title="Vue grille"
+          >
+            <LayoutGrid size={16} />
           </button>
-          <span className="text-sm text-gray-500">
-            {selectedIds.size === 0 ? 'Tout sélectionner' : `${selectedIds.size} sélectionnée(s)`}
-          </span>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-lg border transition ${viewMode === 'list' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
+            title="Vue liste"
+          >
+            <List size={16} />
+          </button>
         </div>
-      )}
-
-      {/* Toggle vue */}
-      <div className="flex gap-1 mb-3">
-        <button
-          onClick={() => setViewMode('grid')}
-          className={`p-2 rounded-lg border transition ${viewMode === 'grid' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
-          title="Vue grille"
-        >
-          <LayoutGrid size={16} />
-        </button>
-        <button
-          onClick={() => setViewMode('list')}
-          className={`p-2 rounded-lg border transition ${viewMode === 'list' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
-          title="Vue liste"
-        >
-          <List size={16} />
-        </button>
       </div>
 
       {/* Ventes */}
