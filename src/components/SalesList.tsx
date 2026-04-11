@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil } from 'lucide-react'
+import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil, LayoutGrid, List } from 'lucide-react'
 import SalesFilters from '@/components/SalesFilters'
 import SalesGrid from '@/components/SalesGrid'
 
@@ -347,6 +347,24 @@ export default function SalesList({
           </span>
         </div>
       )}
+
+      {/* Toggle vue */}
+      <div className="flex gap-1">
+        <button
+          onClick={() => setViewMode('grid')}
+          className={`p-2 rounded-lg border transition ${viewMode === 'grid' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
+          title="Vue grille"
+        >
+          <LayoutGrid size={16} />
+        </button>
+        <button
+          onClick={() => setViewMode('list')}
+          className={`p-2 rounded-lg border transition ${viewMode === 'list' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
+          title="Vue liste"
+        >
+          <List size={16} />
+        </button>
+      </div>
 
       {/* Ventes */}
       {viewMode === 'grid' ? (

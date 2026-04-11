@@ -381,23 +381,7 @@ export default function SalesFilters({
             ...(isAdmin && { statut: { value: filtreStatut, onChange: (v) => setFiltreStatut(v as any), options: [{ value: 'all', label: 'Tous statuts' }, { value: 'attribue', label: 'Attribuées' }, { value: 'non-attribue', label: 'Non attribuées' }] } }),
           }}
         />
-        {/* Toggle vue */}
-        <div className="flex gap-1 mt-3">
-          <button
-            onClick={() => onViewModeChange('grid')}
-            className={`p-2 rounded-lg border transition ${viewMode === 'grid' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
-            title="Vue grille"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            onClick={() => onViewModeChange('list')}
-            className={`p-2 rounded-lg border transition ${viewMode === 'list' ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'}`}
-            title="Vue liste"
-          >
-            <List size={16} />
-          </button>
-        </div>
+        {/* Toggle vue déplacé dans SalesList, juste au-dessus des articles */}
       </div>
 
       {/* TÉLÉCHARGER */}
