@@ -1615,6 +1615,10 @@ async function compressImage(file: File): Promise<string> {
                 </select>
               </div>
 
+            </div>
+
+            {/* Taille / Prix / Quantité — toujours 3 colonnes égales */}
+            <div className="grid grid-cols-3 gap-3 mt-3">
               {/* Taille */}
               <div>
                 <label className="block text-sm font-medium mb-1">
