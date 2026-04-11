@@ -68,7 +68,7 @@
       if (snapshot.empty) {
         // Nouveau déposant — créer le document
         updateData.createdAt = FieldValue.serverTimestamp()
-        updateData.contratSigne = false
+        if (updateData.contratSigne === undefined) updateData.contratSigne = false
         updateData.cagnotte = 0
         const newRef = adminDb.collection('deposante').doc(decoded.uid)
         await newRef.set(updateData)

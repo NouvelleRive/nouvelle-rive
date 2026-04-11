@@ -9,7 +9,8 @@ import { db } from '@/lib/firebaseConfig'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 
 type Etapes = { profil: boolean; contrat: boolean; pieces: boolean; rdv: boolean }
-export const EtapesContext = createContext<Etapes>({ profil: false, contrat: false, pieces: false, rdv: false })
+type EtapesContextType = Etapes & { refreshEtapes: () => void }
+export const EtapesContext = createContext<EtapesContextType>({ profil: false, contrat: false, pieces: false, rdv: false, refreshEtapes: () => {} })
 export const useEtapes = () => useContext(EtapesContext)
 
 function ProgressBar({ etapes }: { etapes: Etapes }) {
@@ -127,36 +128,43 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   const [etapes, setEtapes] = useState<Etapes>({ profil: false, contrat: false, pieces: false, rdv: false })
   const [showWelcome, setShowWelcome] = useState(false)
 
+  const loadEtapes = async (u: User) => {
+    try {
+      const snap = await getDocs(query(collection(db, 'deposante'), where('authUid', '==', u.uid)))
+      if (!snap.empty) {
+        const d = snap.docs[0].data()
+        const profilOk = !!(d.prenom && d.nom && d.adresse1 && d.telephone && d.iban && d.pieceIdentiteUrl)
+        const contratOk = !!d.contratSigne
+        const prodSnap = await getDocs(query(collection(db, 'produits'), where('chineur', '==', u.email)))
+        const piecesOk = prodSnap.size > 0
+        const restockSnap = await getDocs(collection(db, 'restocks'))
+        let rdvOk = false
+        restockSnap.docs.forEach(doc => {
+          Object.values(doc.data()).forEach((slot: any) => {
+            if (slot?.nom === (d.trigramme || '').toUpperCase()) rdvOk = true
+          })
+        })
+        setEtapes({ profil: profilOk, contrat: contratOk, pieces: piecesOk, rdv: rdvOk })
+        if (!d.hasSeenWelcome) setShowWelcome(true)
+      } else {
+        setShowWelcome(true)
+      }
+    } catch (e) {
+      console.error('Erreur layout deposante', e)
+      setShowWelcome(true)
+    }
+  }
+
+  const refreshEtapes = () => {
+    if (user) loadEtapes(user)
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push('/client/login'); return }
       setUser(u)
-      try {
-        const snap = await getDocs(query(collection(db, 'deposante'), where('authUid', '==', u.uid)))
-        if (!snap.empty) {
-          const d = snap.docs[0].data()
-          const profilOk = !!(d.prenom && d.nom && d.adresse1 && d.telephone && d.iban && d.pieceIdentiteUrl)
-          const contratOk = !!d.contratSigne
-          const prodSnap = await getDocs(query(collection(db, 'produits'), where('chineur', '==', u.email)))
-          const piecesOk = prodSnap.size > 0
-          const restockSnap = await getDocs(collection(db, 'restocks'))
-          let rdvOk = false
-          restockSnap.docs.forEach(doc => {
-            Object.values(doc.data()).forEach((slot: any) => {
-              if (slot?.nom === (d.trigramme || '').toUpperCase()) rdvOk = true
-            })
-          })
-          setEtapes({ profil: profilOk, contrat: contratOk, pieces: piecesOk, rdv: rdvOk })
-          if (!d.hasSeenWelcome) setShowWelcome(true)
-        } else {
-          setShowWelcome(true)
-        }
-      } catch (e) {
-        console.error('Erreur layout deposante', e)
-        setShowWelcome(true)
-      } finally {
-        setLoading(false)
-      }
+      await loadEtapes(u)
+      setLoading(false)
     })
     return () => unsubscribe()
   }, [router])
@@ -180,7 +188,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <EtapesContext.Provider value={etapes}>
+    <EtapesContext.Provider value={{ ...etapes, refreshEtapes }}>
     <div className="min-h-screen bg-gray-50">
       <DeposanteNavbar />
       <ProgressBar etapes={etapes} />

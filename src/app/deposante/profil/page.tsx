@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import { SIGNATURE_NR } from '@/lib/signatureNR'
+import { useEtapes } from '@/app/deposante/layout'
 
 function generateTrigramme(prenom: string, nom: string): string {
   const p = prenom.trim().toUpperCase().replace(/[^A-Z]/g, '')
@@ -32,6 +33,7 @@ async function findUniqueTrigramme(base: string, excludeUid?: string): Promise<s
 }
 
 export default function ProfilDeposantePage() {
+  const { refreshEtapes } = useEtapes()
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -236,7 +238,10 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
 
     doc.save(`contrat_NR_${nom}_${format(new Date(), 'ddMMyy')}.pdf`)
     const token = await auth.currentUser?.getIdToken()
-    if (token) await fetch('/api/deposante', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ contratSigne: true }) })
+    if (token) {
+      await fetch('/api/deposante', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ contratSigne: true }) })
+      refreshEtapes()
+    }
   }
 
   async function handleUploadId(e: React.ChangeEvent<HTMLInputElement>) {
