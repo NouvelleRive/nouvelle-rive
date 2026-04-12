@@ -68,6 +68,7 @@
     specialite?: string
     lien?: string
     imageUrl?: string
+    imagePosition?: string
     ordre?: number
     displayOnWebsite?: boolean
     slug?: string
@@ -95,6 +96,7 @@
     specialite: '',
     lien: '',
     imageUrl: '',
+    imagePosition: '50% 50%',
     ordre: 0,
     categories: [] as CategorieItem[],
     categorieRapportLabel: '',
@@ -218,6 +220,7 @@
         specialite: d.specialite || '',
         lien: d.lien || '',
         imageUrl: d.imageUrl || '',
+        imagePosition: d.imagePosition || '50% 50%',
         ordre: d.ordre || 0,
         categories: cats,
         categorieRapportLabel: catRapport.label || '',
@@ -323,6 +326,7 @@
           specialite: formData.specialite.trim(),
           lien: formData.lien.trim(),
           imageUrl: finalImageUrl,
+          imagePosition: formData.imagePosition,
           ordre: formData.ordre,
           categories: formData.categories,
           // Infos comptables À LA RACINE
@@ -1051,9 +1055,27 @@
                       <label className="block text-sm font-medium mb-1">
                         Photo {fieldStatus(formData.imageUrl)}
                       </label>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-start gap-4">
                         {imagePreview && (
-                          <img src={imagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
+                          <div className="relative w-24 shrink-0">
+                            <div
+                              className="aspect-[3/4] overflow-hidden rounded-lg cursor-crosshair border"
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect()
+                                const x = Math.round(((e.clientX - rect.left) / rect.width) * 100)
+                                const y = Math.round(((e.clientY - rect.top) / rect.height) * 100)
+                                setFormData({ ...formData, imagePosition: `${x}% ${y}%` })
+                              }}
+                            >
+                              <img
+                                src={imagePreview}
+                                alt="Preview"
+                                className="w-full h-full object-cover"
+                                style={{ objectPosition: formData.imagePosition }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-gray-400 text-center mt-1">Cliquez pour recadrer</p>
+                          </div>
                         )}
                         <label className="flex-1 border-2 border-dashed rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50">
                           <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />

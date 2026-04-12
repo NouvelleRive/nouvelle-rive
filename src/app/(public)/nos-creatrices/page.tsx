@@ -11,6 +11,7 @@ type Creatrice = {
   nom: string
   specialite: string
   imageUrl: string
+  imagePosition: string
   slug: string
   ordre: number
 }
@@ -39,6 +40,7 @@ export default function NosCreateursPage() {
             nom: docData.nom || doc.id,
             specialite: docData.specialite || '',
             imageUrl: docData.imageUrl || '',
+            imagePosition: docData.imagePosition || '50% 50%',
             slug: docData.slug || doc.id,
             ordre: docData.ordre || 999,
           })
@@ -142,6 +144,7 @@ export default function NosCreateursPage() {
                   src={c.imageUrl}
                   alt={c.nom}
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                  style={{ objectPosition: c.imagePosition }}
                   onError={(e) => { e.currentTarget.style.display = 'none' }}
                 />
               ) : (
