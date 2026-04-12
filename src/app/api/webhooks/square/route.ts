@@ -146,9 +146,9 @@ export async function POST(request: Request) {
           const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
           const venteDocId = `${paymentId}_${idx}`
 
-          // Chercher le SKU dans le nom (ex: "TDO4 Collier mix or argent")
+          // Chercher le SKU dans le nom (ex: "TDO4 Collier..." ou "IP24_BO01 Bague...")
           let sku: string | null = null
-          const skuMatch = itemName.match(/^([A-Za-z]{2,4}\d{1,4})/i)
+          const skuMatch = itemName.match(/^([A-Za-z]{2,4}\d{1,4}(?:[_][A-Za-z0-9]+)*)/i)
           if (skuMatch) sku = skuMatch[1].toUpperCase()
 
           // Chercher le SKU dans le catalogue Square
