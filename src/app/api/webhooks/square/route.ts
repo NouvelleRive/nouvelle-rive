@@ -83,26 +83,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true })
     }
 
-    // Déduplication par paymentId — même logique que syncVentesDepuisSquare
-    const dedupeSnap = await adminDb.collection('ventes')
-      .where('paymentId', '==', paymentId)
-      .limit(1)
-      .get()
-    if (!dedupeSnap.empty) {
-      console.log(`⏭️ Paiement ${paymentId} déjà traité, skip`)
-      return NextResponse.json({ received: true })
-    }
-
-    // Aussi checker par orderId (pour les ventes créées avant l'ajout de paymentId)
-    const orderDedupeSnap = await adminDb.collection('ventes')
-      .where('orderId', '==', orderId)
-      .limit(1)
-      .get()
-    if (!orderDedupeSnap.empty) {
-      console.log(`⏭️ Order ${orderId} déjà traité, skip`)
-      return NextResponse.json({ received: true })
-    }
-
     console.log('✅ Paiement complété pour order:', orderId)
 
     // Récupérer les metadata depuis Square
@@ -160,9 +140,11 @@ export async function POST(request: Request) {
       if (!productId) {
         console.log('🏪 Vente caisse détectée (pas de productId)')
 
-        for (const item of lineItems) {
+        for (let idx = 0; idx < lineItems.length; idx++) {
+          const item = lineItems[idx]
           const itemName = item.name || ''
           const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
+          const venteDocId = `${paymentId}_${idx}`
 
           // Chercher le SKU dans le nom (ex: "TDO4 Collier mix or argent")
           let sku: string | null = null
@@ -241,8 +223,8 @@ export async function POST(request: Request) {
             createdAt: Timestamp.now(),
           }
 
-          await adminDb.collection('ventes').add(venteData)
-          console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€)`)
+          await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
+          console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€) [${venteDocId}]`)
 
           // Mettre à jour le produit (quantité, vendu)
           if (produitDoc) {
@@ -482,7 +464,7 @@ export async function POST(request: Request) {
         createdAt: Timestamp.now(),
       }
 
-      await adminDb.collection('ventes').add(venteData)
+      await adminDb.collection('ventes').doc(`${paymentId}_0`).set(venteData, { merge: true })
       console.log('✅ Vente créée automatiquement:', produitData.sku)
 
       // 3. Mettre à jour les autres commandes du groupe
