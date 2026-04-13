@@ -3,7 +3,7 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Wand2, Plus, Check } from 'lucide-react'
-import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, getDocs, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
 const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
@@ -123,7 +123,14 @@ export default function PlanningCalendar({
     if (!nom) delete newSlots[key]
     else newSlots[key] = { nom, type: type as 'chineuse' | 'deposante', ...(trigramme ? { trigramme } : {}) }
     setRestockSlots(newSlots)
-    await setDoc(doc(db, 'restocks', monthKey), { slots: newSlots }, { merge: true })
+    const ref = doc(db, 'restocks', monthKey)
+    const snap = await getDoc(ref)
+    if (snap.exists()) {
+      // updateDoc remplace le champ slots entièrement (contrairement à setDoc + merge qui fusionne en profondeur)
+      await updateDoc(ref, { slots: newSlots })
+    } else {
+      await setDoc(ref, { slots: newSlots })
+    }
   }
 
   const handleRestockChange = (ds: string, cr: string, val: string) => {
