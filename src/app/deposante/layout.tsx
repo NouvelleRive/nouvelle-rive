@@ -6,11 +6,11 @@ import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { db } from '@/lib/firebaseConfig'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore'
 
 type Etapes = { profil: boolean; contrat: boolean; pieces: boolean; rdv: boolean }
-type EtapesContextType = Etapes & { refreshEtapes: () => void }
-export const EtapesContext = createContext<EtapesContextType>({ profil: false, contrat: false, pieces: false, rdv: false, refreshEtapes: () => {} })
+type EtapesContextType = Etapes & { refreshEtapes: () => void; setEtape: (key: keyof Etapes, value: boolean) => void }
+export const EtapesContext = createContext<EtapesContextType>({ profil: false, contrat: false, pieces: false, rdv: false, refreshEtapes: () => {}, setEtape: () => {} })
 export const useEtapes = () => useContext(EtapesContext)
 
 function ProgressBar({ etapes }: { etapes: Etapes }) {
@@ -159,6 +159,10 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
     if (user) loadEtapes(user)
   }
 
+  const setEtape = (key: keyof Etapes, value: boolean) => {
+    setEtapes(prev => ({ ...prev, [key]: value }))
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push('/client/login'); return }
@@ -168,6 +172,20 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
     })
     return () => unsubscribe()
   }, [router])
+
+  // Listener temps réel sur le doc deposante pour détecter contratSigne automatiquement
+  useEffect(() => {
+    if (!user) return
+    const q = query(collection(db, 'deposante'), where('authUid', '==', user.uid))
+    const unsub = onSnapshot(q, (snap) => {
+      if (snap.empty) return
+      const d = snap.docs[0].data()
+      const profilOk = !!(d.prenom && d.nom && d.adresse1 && d.telephone && d.iban && d.pieceIdentiteUrl)
+      const contratOk = !!d.contratSigne
+      setEtapes(prev => ({ ...prev, profil: profilOk, contrat: contratOk }))
+    })
+    return () => unsub()
+  }, [user])
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -188,7 +206,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <EtapesContext.Provider value={{ ...etapes, refreshEtapes }}>
+    <EtapesContext.Provider value={{ ...etapes, refreshEtapes, setEtape }}>
     <div className="min-h-screen bg-gray-50">
       <DeposanteNavbar />
       <ProgressBar etapes={etapes} />

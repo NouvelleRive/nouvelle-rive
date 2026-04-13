@@ -33,7 +33,7 @@ async function findUniqueTrigramme(base: string, excludeUid?: string): Promise<s
 }
 
 export default function ProfilDeposantePage() {
-  const { refreshEtapes } = useEtapes()
+  const { refreshEtapes, setEtape } = useEtapes()
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -239,8 +239,17 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
     doc.save(`contrat_NR_${nom}_${format(new Date(), 'ddMMyy')}.pdf`)
     const token = await auth.currentUser?.getIdToken()
     if (token) {
-      await fetch('/api/deposante', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ contratSigne: true }) })
-      refreshEtapes()
+      // Mise à jour optimiste immédiate (avant l'API)
+      setEtape('contrat', true)
+      const res = await fetch('/api/deposante', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ contratSigne: true }) })
+      const data = await res.json()
+      if (!data.success) {
+        // Revenir en arrière si l'API échoue
+        setEtape('contrat', false)
+        alert('Erreur sauvegarde contrat — réessayez')
+      } else {
+        refreshEtapes()
+      }
     }
   }
 
