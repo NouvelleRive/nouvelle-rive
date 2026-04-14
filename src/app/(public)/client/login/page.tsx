@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/firebaseConfig'
@@ -12,10 +12,23 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth'
 
+// Détection des navigateurs in-app (WhatsApp, Instagram, Facebook, etc.)
+// qui cassent Firebase Auth à cause de sessionStorage partitionné
+function isInAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  return /FBAN|FBAV|Instagram|WhatsApp|Line\/|Twitter|TikTok|Snapchat|LinkedInApp/i.test(ua)
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [inApp, setInApp] = useState(false)
+
+  useEffect(() => {
+    setInApp(isInAppBrowser())
+  }, [])
 
   // Col 1 — Client
   const [emailClient, setEmailClient] = useState('')
@@ -102,6 +115,16 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-gray-50 px-4 py-12">
       <div className="w-full max-w-5xl">
+
+        {inApp && (
+          <div className="mb-4 bg-amber-50 border border-amber-300 text-amber-800 text-sm p-4 rounded-lg">
+            <p className="font-semibold mb-1">⚠️ Ouvre cette page dans Safari ou Chrome</p>
+            <p className="text-xs">
+              La connexion ne fonctionne pas dans le navigateur de WhatsApp/Instagram/Facebook.
+              Appuie sur les <strong>••• en haut à droite</strong> puis <strong>« Ouvrir dans le navigateur »</strong>.
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-lg text-center">{error}</div>
