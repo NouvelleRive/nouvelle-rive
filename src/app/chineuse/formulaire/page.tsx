@@ -6,14 +6,13 @@ import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import {
   collection,
-  addDoc,
+  setDoc,
   serverTimestamp,
   getDoc,
   doc,
   getDocs,
   query,
   where,
-  updateDoc,
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import ProductForm, { ProductFormData, Cat, ExcelImportData } from '@/components/ProductForm'
@@ -162,9 +161,9 @@ export default function FormulairePage() {
     
     setLoading(true)
     try {
-      // ✅ VÉRIFICATION UNICITÉ SKU
-      const isUnique = await checkSkuUnique(sku)
-      if (!isUnique) {
+      // ✅ Vérifier si un produit avec ce SKU existe déjà (doc ID = SKU)
+      const existingDoc = await getDoc(doc(db, 'produits', sku))
+      if (existingDoc.exists()) {
         alert(`❌ Le SKU "${sku}" est déjà utilisé par un autre produit.`)
         setLoading(false)
         return
@@ -220,7 +219,8 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
         createdAt: serverTimestamp(),
       }
 
-      const docRef = await addDoc(collection(db, 'produits'), payload)
+      // setDoc avec SKU comme ID = impossible de créer un doublon même en double-cliquant
+      await setDoc(doc(db, 'produits', sku), payload)
 
       alert('✅ Produit ajouté avec succès !')
 
@@ -256,9 +256,9 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
           rowSku = `${trigramme}${currentSkuNum}`
         }
 
-        // ✅ VÉRIFICATION UNICITÉ SKU
-        const isUnique = await checkSkuUnique(rowSku)
-        if (!isUnique) {
+        // ✅ Vérifier si un produit avec ce SKU existe déjà (doc ID = SKU)
+        const existingDoc = await getDoc(doc(db, 'produits', rowSku))
+        if (existingDoc.exists()) {
           console.warn(`SKU "${rowSku}" existe déjà, ignoré`)
           continue
         }
@@ -288,8 +288,8 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
           createdAt: serverTimestamp(),
         }
         
-        const docRef = await addDoc(collection(db, 'produits'), payload)
-        
+        await setDoc(doc(db, 'produits', rowSku), payload)
+
         successCount++
       }
       
