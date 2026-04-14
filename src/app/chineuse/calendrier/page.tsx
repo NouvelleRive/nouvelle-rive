@@ -19,17 +19,25 @@ export default function ChineuseCalendrierPage() {
       if (!user) return
       setUserEmail(user.email || '')
 
-      // Fetch profil chineuse
-      const snap = await getDocs(query(collection(db, 'chineuse'), where('email', '==', user.email)))
+      // Fetch profil chineuse — chercher dans le champ emails (array) pour les comptes multi-users (ex: PS)
+      let snap = await getDocs(query(collection(db, 'chineuse'), where('emails', 'array-contains', user.email)))
+      if (snap.empty) {
+        // Fallback sur email principal
+        snap = await getDocs(query(collection(db, 'chineuse'), where('email', '==', user.email)))
+      }
+      let trigramme = ''
       if (!snap.empty) {
         const data = snap.docs[0].data()
         const nom = (data.nom || data.trigramme || '').toUpperCase()
+        trigramme = data.trigramme || ''
         setUserNom(nom)
         setChineuseId(snap.docs[0].id)
       }
 
-      // Fetch produits
-      const prodSnap = await getDocs(query(collection(db, 'produits'), where('chineur', '==', user.email)))
+      // Fetch produits par trigramme (pour voir tous les produits du compte partagé)
+      const prodSnap = trigramme
+        ? await getDocs(query(collection(db, 'produits'), where('trigramme', '==', trigramme)))
+        : await getDocs(query(collection(db, 'produits'), where('chineur', '==', user.email)))
       const produits = prodSnap.docs.map(d => ({ ...d.data() }))
       setNbArticles(produits.filter((p: any) => !p.vendu).length)
 
