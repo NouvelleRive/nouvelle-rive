@@ -22,10 +22,15 @@ export default function MesProduits() {
 
       console.log('Email connecté:', user.email)
 
-      // Récupérer le trigramme de l'utilisateur
-      const chineuseSnap = await getDocs(
+      // Récupérer le trigramme — essayer emails array d'abord, puis email principal
+      let chineuseSnap = await getDocs(
         query(collection(db, 'chineuse'), where('emails', 'array-contains', user.email))
       )
+      if (chineuseSnap.empty) {
+        chineuseSnap = await getDocs(
+          query(collection(db, 'chineuse'), where('email', '==', user.email))
+        )
+      }
       let trigramme = ''
       if (!chineuseSnap.empty) {
         trigramme = chineuseSnap.docs[0].data().trigramme || ''

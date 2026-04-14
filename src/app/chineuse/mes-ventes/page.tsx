@@ -27,10 +27,15 @@ export default function MesVentesPage() {
       // Charger les infos chineuse depuis la RACINE du document (après migration)
       let trigramme = ''
       try {
-        const deposantsSnap = await getDocs(
+        let deposantsSnap = await getDocs(
           query(collection(db, 'chineuse'), where('emails', 'array-contains', u.email))
         )
-        
+        if (deposantsSnap.empty) {
+          deposantsSnap = await getDocs(
+            query(collection(db, 'chineuse'), where('email', '==', u.email))
+          )
+        }
+
         if (!deposantsSnap.empty) {
           const depData = deposantsSnap.docs[0].data()
           trigramme = depData.trigramme || ''

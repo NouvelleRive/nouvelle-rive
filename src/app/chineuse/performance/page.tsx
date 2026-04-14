@@ -20,9 +20,15 @@ export default function ChineusePerformancePage() {
         return
       }
       try {
-        const snap = await getDocs(
-          query(collection(db, 'chineuse'), where('email', '==', u.email))
+        // Chercher dans emails (array) d'abord pour les comptes multi-users (PS, etc.)
+        let snap = await getDocs(
+          query(collection(db, 'chineuse'), where('emails', 'array-contains', u.email))
         )
+        if (snap.empty) {
+          snap = await getDocs(
+            query(collection(db, 'chineuse'), where('email', '==', u.email))
+          )
+        }
         if (!snap.empty) {
           const data = snap.docs[0].data()
           setTrigramme(data.trigramme || '')
