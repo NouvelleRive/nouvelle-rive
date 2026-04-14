@@ -226,15 +226,33 @@ export async function POST(request: Request) {
           await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
           console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€) [${venteDocId}]`)
 
-          // Mettre à jour le produit (quantité, vendu)
+          // Mettre à jour le produit (quantité, vendu/outOfStock selon stockType)
           if (produitDoc) {
             const qty = parseInt(item.quantity) || 1
             const newQty = Math.max(0, (produitData.quantite || 1) - qty)
             const updateData: any = { quantite: newQty }
             if (newQty === 0) {
-              updateData.vendu = true
-              updateData.dateVente = Timestamp.now()
-              updateData.prixVenteReel = prix
+              // Vérifier si la chineuse est en petite série (smallBatch)
+              let isSmallBatch = false
+              if (trigramme) {
+                const chineuseSnap = await adminDb.collection('chineuse')
+                  .where('trigramme', '==', trigramme)
+                  .limit(1)
+                  .get()
+                if (!chineuseSnap.empty) {
+                  isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
+                }
+              }
+              if (isSmallBatch) {
+                // Petite série : garder le produit, juste marquer outOfStock
+                updateData.statut = 'outOfStock'
+                updateData.dateRupture = Timestamp.now()
+                updateData.prixVenteReel = prix
+              } else {
+                updateData.vendu = true
+                updateData.dateVente = Timestamp.now()
+                updateData.prixVenteReel = prix
+              }
             }
             await adminDb.collection('produits').doc(produitDoc.id).update(updateData)
             console.log(`✅ Produit mis à jour: ${sku} → quantité ${newQty}`)
