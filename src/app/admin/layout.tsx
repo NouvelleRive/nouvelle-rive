@@ -115,10 +115,11 @@
           </div>
 
           {/* Menu Mobile Dropdown */}
-          <div 
-            className="lg:hidden overflow-hidden transition-all duration-300 ease-in-out border-t"
+          <div
+            className="lg:hidden transition-all duration-300 ease-in-out border-t"
             style={{
-              maxHeight: menuOpen ? '500px' : '0',
+              maxHeight: menuOpen ? 'calc(100vh - 3rem)' : '0',
+              overflowY: menuOpen ? 'auto' : 'hidden',
               opacity: menuOpen ? 1 : 0,
               borderTopColor: menuOpen ? '#e5e7eb' : 'transparent'
             }}
