@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
       texteEcoCirculaire,
       wearType,
       stockType,
+      taux,
     } = body
 
     if (!nom?.trim()) {
@@ -153,6 +154,7 @@ export async function POST(req: NextRequest) {
       texteEcoCirculaire: texteEcoCirculaire || 1,
       wearType: wearType || 'womenswear',
       stockType: stockType || 'unique',
+      taux: typeof taux === 'number' ? taux : 0,
     }
 
     // Ajouter l'UID Auth si on l'a
@@ -177,7 +179,6 @@ export async function POST(req: NextRequest) {
       docData['Catégorie de rapport'] = [{
         label: categorieRapport.label?.trim() || '',
         idsquare: categorieRapport.idsquare?.trim() || '',
-        taux: typeof categorieRapport.taux === 'number' ? categorieRapport.taux : 0,
       }]
     } else {
       docData['Catégorie de rapport'] = []

@@ -43,7 +43,7 @@ type Deposant = {
   trigramme?: string
   type?: string
   taux?: number
-  'Catégorie de rapport'?: { taux?: number }[]
+  'Catégorie de rapport'?: { label?: string; idsquare?: string }[]
 }
 
 type VenteDoc = {
@@ -400,7 +400,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       .map(([tri, data]) => {
         const dep = deposants.find(d => d.trigramme === tri)
         const isNR = tri === 'NR'
-        const taux = dep?.['Catégorie de rapport']?.[0]?.taux ?? dep?.taux ?? 0
+        const taux = dep?.taux ?? 0
         const benef = isNR ? data.ca : Math.round(data.ca * taux / 100)
         return {
           key: tri,
@@ -594,7 +594,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         const isNR = tri === 'NR'
         if (isNR) return s + prix
         const dep = deposants.find(d => d.trigramme === tri)
-        const taux = dep?.['Catégorie de rapport']?.[0]?.taux ?? dep?.taux ?? 0
+        const taux = dep?.taux ?? 0
         return s + Math.round(prix * taux / 100)
       }, 0)
       return { name: max === Infinity ? `${min}€+` : `${min}-${max}€`, ca: benef, color: colors[i] }

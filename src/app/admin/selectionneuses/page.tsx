@@ -225,7 +225,7 @@
         categories: cats,
         categorieRapportLabel: catRapport.label || '',
         categorieRapportIdsquare: catRapport.idsquare || '',
-        taux: catRapport.taux ?? 40,
+        taux: (d as any).taux ?? 40,
         siret: d.siret || '',
         tva: d.tva || '',
         iban: d.iban || '',
@@ -340,11 +340,11 @@
           texteEcoCirculaire: formData.texteEcoCirculaire,
           wearType: formData.wearType,
           stockType: formData.stockType,
+          taux: formData.taux,
           // categorieRapport = JUSTE label + idsquare
           categorieRapport: {
             label: formData.categorieRapportLabel.trim(),
             idsquare: formData.categorieRapportIdsquare.trim(),
-            taux: formData.taux,
           },
         }
 
