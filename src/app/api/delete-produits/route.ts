@@ -65,9 +65,26 @@
       const data = produitSnap.data() as any
 
       // Vérifier que l'utilisateur est admin ou propriétaire
-      if (!isAdmin && data.chineur !== userEmail) {
-      return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 403 })
-    }
+      // Pour les comptes multi-users (ex: PS), on cherche aussi via le champ emails (array)
+      // et on autorise si le trigramme du produit correspond à celui du compte chineuse
+      let autorise = isAdmin || data.chineur === userEmail
+      if (!autorise && userEmail) {
+        let chineuseSnap = await adminDb.collection('chineuse')
+          .where('emails', 'array-contains', userEmail).limit(1).get()
+        if (chineuseSnap.empty) {
+          chineuseSnap = await adminDb.collection('chineuse')
+            .where('email', '==', userEmail).limit(1).get()
+        }
+        if (!chineuseSnap.empty) {
+          const triUser = (chineuseSnap.docs[0].data() as any)?.trigramme
+          if (triUser && data.trigramme && triUser === data.trigramme) {
+            autorise = true
+          }
+        }
+      }
+      if (!autorise) {
+        return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 403 })
+      }
 
       // --- Traitement selon la raison ---
       // La Cloud Function se charge de la sync Square automatiquement
