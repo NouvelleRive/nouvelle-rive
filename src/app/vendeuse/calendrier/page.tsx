@@ -193,6 +193,7 @@ export default function VendeuseCalendrierPage() {
     })
     const ca1220 = new Map<string, number>()
     const ca1117 = new Map<string, number>()
+    const caJour = new Map<string, number>()
     ventesAll.forEach(p => {
       if (!(p.dateVente instanceof Timestamp)) return
       const date = p.dateVente.toDate()
@@ -202,9 +203,11 @@ export default function VendeuseCalendrierPage() {
       const montant = p.prixVenteReel || 0
       if (hour >= 12 && hour < 20) ca1220.set(dateStr, (ca1220.get(dateStr) || 0) + montant)
       if (hour >= 11 && hour < 17) ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
+      // CA jour : toutes les ventes, y compris après 20h
+      caJour.set(dateStr, (caJour.get(dateStr) || 0) + montant)
     })
-    ca1220.forEach((ca, ds) => { if (ca < 1000) return; const vid = planningSlots[`${ds}_12-20`]; if (!vid) return; const cur = map.get(vid); if (cur) map.set(vid, { ...cur, bonus: cur.bonus + ca * 0.01 }) })
-    ca1117.forEach((ca, ds) => { if (ca < 1000) return; const vid = planningSlots[`${ds}_11-17`]; if (!vid) return; const cur = map.get(vid); if (cur) map.set(vid, { ...cur, bonus: cur.bonus + ca * 0.01 }) })
+    ca1220.forEach((ca, ds) => { if ((caJour.get(ds) || 0) < 1000) return; const vid = planningSlots[`${ds}_12-20`]; if (!vid) return; const cur = map.get(vid); if (cur) map.set(vid, { ...cur, bonus: cur.bonus + ca * 0.01 }) })
+    ca1117.forEach((ca, ds) => { if ((caJour.get(ds) || 0) < 1000) return; const vid = planningSlots[`${ds}_11-17`]; if (!vid) return; const cur = map.get(vid); if (cur) map.set(vid, { ...cur, bonus: cur.bonus + ca * 0.01 }) })
     return map
   }, [ventesAll, planningSlots, currentMonth])
 

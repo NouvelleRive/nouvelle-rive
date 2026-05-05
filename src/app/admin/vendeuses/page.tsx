@@ -336,9 +336,10 @@
         }
       })
 
-      // Pass 2 : bonus par créneau
+      // Pass 2 : bonus par créneau (seuil sur CA total du jour 11-20)
       const ca1220 = new Map<string, number>()
       const ca1117 = new Map<string, number>()
+      const caJour = new Map<string, number>()
 
       ventesAll.forEach(p => {
         if (!(p.dateVente instanceof Timestamp)) return
@@ -355,10 +356,12 @@
         if (hour >= 11 && hour < 17) {
           ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
         }
+        // CA jour : on prend toutes les ventes de la journée, y compris après 20h
+        caJour.set(dateStr, (caJour.get(dateStr) || 0) + montant)
       })
 
       ca1220.forEach((ca, dateStr) => {
-        if (ca < 1000) return
+        if ((caJour.get(dateStr) || 0) < 1000) return
         const vendeuseId = planningSlots[`${dateStr}_12-20`]
         if (!vendeuseId) return
         const cur = map.get(vendeuseId)
@@ -366,7 +369,7 @@
       })
 
       ca1117.forEach((ca, dateStr) => {
-        if (ca < 1000) return
+        if ((caJour.get(dateStr) || 0) < 1000) return
         const vendeuseId = planningSlots[`${dateStr}_11-17`]
         if (!vendeuseId) return
         const cur = map.get(vendeuseId)
