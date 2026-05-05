@@ -43,6 +43,23 @@ export async function POST(req: NextRequest) {
 
     console.log(`📋 ${ventes.length} ventes chargées`)
 
+    // Charger les chineuses pour identifier celles en small batch (upcycling :
+    // plusieurs exemplaires d'un même SKU vendus le même jour = légitime).
+    const chineusesSnap = await adminDb.collection('chineuse').get()
+    const trigrammesSmallBatch = new Set<string>()
+    for (const doc of chineusesSnap.docs) {
+      const data = doc.data()
+      if (data.stockType === 'smallBatch' && data.trigramme) {
+        trigrammesSmallBatch.add(data.trigramme.toUpperCase())
+      }
+    }
+    console.log(`🧵 ${trigrammesSmallBatch.size} chineuses small batch exclues du dédoublonnage SKU/jour`)
+
+    const isSmallBatchVente = (v: { trigramme?: string | null; sku?: string | null }) => {
+      const tri = (v.trigramme || (v.sku || '').match(/^[A-Za-z]+/)?.[0] || '').toUpperCase()
+      return trigrammesSmallBatch.has(tri)
+    }
+
     // Filtrer par mois si spécifié
     if (mois) {
       const [m, y] = mois.split('-').map(Number)
@@ -79,11 +96,47 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Identifier les doublons à supprimer
+    // RÈGLE 0 : Même orderId + lineItemUid Square = même vente physique (dédupe certaine)
     // RÈGLE 1 : Ventes avec MÊME SKU + même prix + même jour = doublon (garder 1)
     // RÈGLE 2 : Vente NON attribuée avec doublon ATTRIBUÉ correspondant
     const aSupprimer: string[] = []
     const dejaSupprimes = new Set<string>() // Éviter de supprimer deux fois
     const details: Array<{ garde: any; supprime: any; prix: number; raison: string }> = []
+
+    // ÉTAPE 0 : Dédupe par orderId + lineItemUid (clé naturelle Square)
+    // Quand deux webhooks (square + square-pos) traitent la même vente, ils créent
+    // deux docs avec mêmes orderId+lineItemUid mais des IDs Firestore différents.
+    const parOrderLineItem = new Map<string, any[]>()
+    for (const v of ventes) {
+      if (!v.orderId || !v.lineItemUid) continue
+      const key = `${v.orderId}::${v.lineItemUid}`
+      if (!parOrderLineItem.has(key)) parOrderLineItem.set(key, [])
+      parOrderLineItem.get(key)!.push(v)
+    }
+    for (const [key, ventesMemeOrder] of parOrderLineItem) {
+      if (ventesMemeOrder.length <= 1) continue
+      // Garder en priorité une vente attribuée, sinon la plus ancienne par createdAt
+      ventesMemeOrder.sort((a, b) => {
+        if (a.attribue && !b.attribue) return -1
+        if (!a.attribue && b.attribue) return 1
+        const ta = a.createdAt?.toMillis?.() ?? 0
+        const tb = b.createdAt?.toMillis?.() ?? 0
+        return ta - tb
+      })
+      const aGarder = ventesMemeOrder[0]
+      for (let i = 1; i < ventesMemeOrder.length; i++) {
+        const doublon = ventesMemeOrder[i]
+        if (dejaSupprimes.has(doublon.id)) continue
+        aSupprimer.push(doublon.id)
+        dejaSupprimes.add(doublon.id)
+        details.push({
+          garde: { id: aGarder.id, nom: aGarder.nom, sku: aGarder.sku, attribue: aGarder.attribue },
+          supprime: { id: doublon.id, nom: doublon.nom, sku: doublon.sku, attribue: doublon.attribue },
+          prix: doublon.prixVenteReel,
+          raison: `Même ligne Square (${key})`,
+        })
+      }
+    }
 
     // Table de correspondance nom chineuse → trigrammes possibles
     const chineuseToTrigrammes: Record<string, string[]> = {
@@ -269,15 +322,17 @@ export async function POST(req: NextRequest) {
       if (groupe.length <= 1) continue // Pas de doublon possible
 
       // ÉTAPE 1 : Chercher les doublons avec MÊME SKU (le plus évident)
+      // Exclure les chineuses small batch (upcycling) — pour elles, plusieurs ventes
+      // d'un même SKU le même jour sont légitimes (ex: BRI1 vendu 2-3x par jour).
       const parSku = new Map<string, any[]>()
       for (const v of groupe) {
-        if (v.sku) {
-          const skuNorm = v.sku.toLowerCase().trim()
-          if (!parSku.has(skuNorm)) parSku.set(skuNorm, [])
-          parSku.get(skuNorm)!.push(v)
-        }
+        if (!v.sku) continue
+        if (isSmallBatchVente(v)) continue
+        const skuNorm = v.sku.toLowerCase().trim()
+        if (!parSku.has(skuNorm)) parSku.set(skuNorm, [])
+        parSku.get(skuNorm)!.push(v)
       }
-      
+
       for (const [sku, ventesMemeSku] of parSku) {
         if (ventesMemeSku.length > 1) {
           // Garder la première, supprimer les autres
@@ -299,8 +354,9 @@ export async function POST(req: NextRequest) {
       }
 
       // ÉTAPE 2 : Chercher les ventes non attribuées qui matchent une attribuée
-      const attribuees = groupe.filter(v => v.attribue === true && !dejaSupprimes.has(v.id))
-      const nonAttribuees = groupe.filter(v => v.attribue !== true && !dejaSupprimes.has(v.id))
+      // Idem : on n'applique pas ce dédoublonnage aux ventes small batch.
+      const attribuees = groupe.filter(v => v.attribue === true && !dejaSupprimes.has(v.id) && !isSmallBatchVente(v))
+      const nonAttribuees = groupe.filter(v => v.attribue !== true && !dejaSupprimes.has(v.id) && !isSmallBatchVente(v))
 
       if (attribuees.length > 0 && nonAttribuees.length > 0) {
         for (const nonAttribuee of nonAttribuees) {

@@ -87,42 +87,53 @@ export async function POST(request: Request) {
     }
 
     const lineItems = order.lineItems || []
-    
+
+    // Date stable côté Square pour rester correcte même si le webhook re-fire plus tard
+    const saleDate = order.closedAt
+      ? new Date(order.closedAt)
+      : order.createdAt
+        ? new Date(order.createdAt)
+        : new Date()
+    const saleTimestamp = Timestamp.fromDate(saleDate)
+
     console.log('🏪 [POS] Vente en boutique détectée:', orderId, '- Articles:', lineItems.length)
 
     let nbProduitsTraites = 0
 
-    for (const item of lineItems) {
+    for (let idx = 0; idx < lineItems.length; idx++) {
+      const item = lineItems[idx]
       const catalogObjectId = item.catalogObjectId
       const quantiteVendue = parseInt(item.quantity) || 1
       const itemName = item.name || 'Produit inconnu'
-      
+      // ID déterministe partagé avec le webhook /webhooks/square pour qu'un seul
+      // doc soit écrit même si les deux webhooks (payment.* et order.*) fire.
+      const venteDocId = `${orderId}_${item.uid || `i${idx}`}`
+
       if (!catalogObjectId) {
         console.log('📝 [POS] Article sans catalogObjectId (montant perso):', itemName)
-        
-        const prixVenteReel = item.totalMoney?.amount 
-          ? Number(item.totalMoney.amount) / 100 
+
+        const prixVenteReel = item.totalMoney?.amount
+          ? Number(item.totalMoney.amount) / 100
           : null
 
-        for (let i = 0; i < quantiteVendue; i++) {
-          await adminDb.collection('ventes').add({
-            produitId: null,
-            nom: itemName,
-            sku: null,
-            trigramme: null,
-            chineur: null,
-            chineurUid: null,
-            prixInitial: null,
-            prixVenteReel: prixVenteReel ? prixVenteReel / quantiteVendue : null,
-            dateVente: Timestamp.now(),
-            orderId: orderId,
-            lineItemUid: item.uid || null,
-            source: 'boutique',
-            attribue: false,
-            createdAt: Timestamp.now(),
-          })
-        }
-        console.log(`✅ [POS] ${quantiteVendue} vente(s) montant perso enregistrée(s)`)
+        await adminDb.collection('ventes').doc(venteDocId).set({
+          produitId: null,
+          nom: itemName,
+          sku: null,
+          trigramme: null,
+          chineur: null,
+          chineurUid: null,
+          prixInitial: null,
+          prixVenteReel,
+          quantite: quantiteVendue,
+          dateVente: saleTimestamp,
+          orderId: orderId,
+          lineItemUid: item.uid || null,
+          source: 'boutique',
+          attribue: false,
+          createdAt: saleTimestamp,
+        }, { merge: true })
+        console.log(`✅ [POS] Vente montant perso enregistrée (qté ${quantiteVendue}) [${venteDocId}]`)
         nbProduitsTraites++
         continue
       }
@@ -184,7 +195,6 @@ export async function POST(request: Request) {
         // Préparer les données de mise à jour
         const updateData: any = {
           quantite: nouvelleQuantite,
-          updatedAt: Timestamp.now()
         }
 
         if (nouvelleQuantite === 0) {
@@ -203,13 +213,13 @@ export async function POST(request: Request) {
 
           if (isSmallBatch) {
             updateData.statut = 'outOfStock'
-            updateData.dateRupture = Timestamp.now()
+            updateData.dateRupture = saleTimestamp
             updateData.squareOrderId = orderId
             if (prixVenteReel) updateData.prixVenteReel = prixVenteReel
             // PAS de vendu = true → le produit reste dans l'admin
           } else {
             updateData.vendu = true
-            updateData.dateVente = Timestamp.now()
+            updateData.dateVente = saleTimestamp
             updateData.squareOrderId = orderId
             if (prixVenteReel) updateData.prixVenteReel = prixVenteReel
           }
@@ -239,26 +249,28 @@ export async function POST(request: Request) {
         }
 
         // Créer une entrée dans la collection "ventes" pour le suivi
-        for (let i = 0; i < quantiteVendue; i++) {
-          await adminDb.collection('ventes').add({
-            produitId: produitId,
-            nom: produitData.nom || itemName,
-            sku: produitData.sku || null,
-            categorie: produitData.categorie || null,
-            marque: produitData.marque || null,
-            chineur: produitData.chineur || null,
-            chineurUid: produitData.chineurUid || null,
-            categorieRapport: produitData.categorieRapport || null,
-            trigramme: produitData.trigramme || null,
-            prixInitial: produitData.prix || null,
-            prixVenteReel: prixVenteReel ? prixVenteReel / quantiteVendue : null,
-            dateVente: Timestamp.now(),
-            orderId: orderId,
-            source: 'boutique',
-            createdAt: Timestamp.now(),
-          })
-        }
-        console.log(`✅ [POS] ${quantiteVendue} vente(s) enregistrée(s) dans collection ventes`)
+        // Un seul doc par line item, partagé avec le webhook /webhooks/square via venteDocId
+        await adminDb.collection('ventes').doc(venteDocId).set({
+          produitId: produitId,
+          nom: produitData.nom || itemName,
+          sku: produitData.sku || null,
+          categorie: produitData.categorie || null,
+          marque: produitData.marque || null,
+          chineur: produitData.chineur || null,
+          chineurUid: produitData.chineurUid || null,
+          categorieRapport: produitData.categorieRapport || null,
+          trigramme: produitData.trigramme || null,
+          prixInitial: produitData.prix || null,
+          prixVenteReel,
+          quantite: quantiteVendue,
+          dateVente: saleTimestamp,
+          orderId: orderId,
+          lineItemUid: item.uid || null,
+          source: 'boutique',
+          attribue: true,
+          createdAt: saleTimestamp,
+        }, { merge: true })
+        console.log(`✅ [POS] Vente enregistrée (qté ${quantiteVendue}) [${venteDocId}]`)
 
         nbProduitsTraites++
 

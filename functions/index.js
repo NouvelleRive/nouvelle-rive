@@ -413,32 +413,78 @@ exports.onProductDeleted = functions
     const chineusesSnap = await db.collection('chineuse').get()
     const chineuses = chineusesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
 
+    const m = String(now.getMonth() + 1).padStart(2, '0')
     for (const ch of chineuses) {
-      const trigramme = (ch.trigramme || '').toUpperCase()
-      if (!trigramme) continue
+  if (!ch.email || !ch.trigramme) continue
+  const trigramme = ch.trigramme.toUpperCase()
 
-      const m = String(now.getMonth() + 1).padStart(2, '0')
-      const y = String(now.getFullYear()).slice(-2)
-      const ref = `NR${m}${y}-${trigramme}`
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const searchY = lastMonth.getFullYear()
+  const searchM = String(lastMonth.getMonth() + 1).padStart(2, '0')
+  const allEmails = [ch.email, ...(ch.emails || [])].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i)
+const fromClause = allEmails.map(e => `from:${e}`).join(' OR ')
+const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) after:${searchY}/${searchM}/01`)
 
-      // Chercher dans Gmail
-      const query = encodeURIComponent(`"${ref}" has:attachment`)
-      const gmailRes = await fetch(
-        `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=5`,
-        { headers: { Authorization: `Bearer ${access_token}` } }
-      )
-      const gmailData = await gmailRes.json()
-      const found = !!(gmailData.messages && gmailData.messages.length > 0)
+  const gmailRes = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=20`,
+    { headers: { Authorization: `Bearer ${access_token}` } }
+  )
+  const gmailData = await gmailRes.json()
+  if (gmailData.error) { console.error(`❌ Gmail error ${ch.email}:`, JSON.stringify(gmailData.error)); continue }
+  if (!gmailData.messages) { console.log(`📭 Aucun mail avec PJ: ${ch.email}`); continue }
 
-      if (found) {
-        const statutRef = db.collection('paiements').doc(mois).collection('statuts').doc(ch.id)
-        const existing = await statutRef.get()
-        if (!existing.exists || !existing.data().factureRecue) {
-          await statutRef.set({ factureRecue: true }, { merge: true })
-          console.log(`✅ Facture reçue: ${ref}`)
-        }
-      }
+  console.log(`📬 ${gmailData.messages.length} mail(s) de ${ch.email}`)
+
+  for (const msg of gmailData.messages) {
+    const msgRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    )
+    const msgData = await msgRes.json()
+
+    const getAllParts = (payload) => {
+      if (!payload) return []
+      const parts = payload.parts || []
+      return [...parts, ...parts.flatMap(p => getAllParts(p))]
     }
 
+    for (const part of getAllParts(msgData.payload)) {
+      const filename = (part.filename || '').toUpperCase().trim()
+      if (!filename) continue
+
+      const refMatch = filename.match(/NR(\d{2})(\d{2})-([A-Z]+)/)
+      if (!refMatch) continue
+
+      const refM = refMatch[1]
+      const refY = "20" + refMatch[2]
+      const refTrigramme = refMatch[3]
+      const refMois = `${refM}-${refY}`
+      const ref = `NR${refM}${refMatch[2]}-${refTrigramme}`
+
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const prevMois = `${String(prevDate.getMonth() + 1).padStart(2, '0')}-${prevDate.getFullYear()}`
+      if (refMois !== prevMois) {
+        console.log(`⏭️ Facture ignorée: ${ref} (${refMois} ≠ ${prevMois}), skip`)
+        continue
+      }
+
+      if (refTrigramme !== trigramme) {
+        console.log(`⚠️ Trigramme PJ (${refTrigramme}) ≠ chineuse (${trigramme}), skip`)
+        continue
+      }
+
+      console.log(`📎 Match: ${filename} → ${ref} (${refMois})`)
+
+      const statutRef = db.collection('paiements').doc(refMois).collection('statuts').doc(ch.id)
+      const existing = await statutRef.get()
+      if (!existing.exists || !existing.data().factureRecue) {
+        await statutRef.set({ factureRecue: true }, { merge: true })
+        console.log(`✅ Facture reçue: ${ref} → ${ch.email} (${refMois})`)
+      }
+    }
+  }
+}
+
+console.log(`✅ checkGmailFactures terminé`)
     return null
   })

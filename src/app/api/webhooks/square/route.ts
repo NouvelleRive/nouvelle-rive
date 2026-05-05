@@ -63,8 +63,9 @@ export async function POST(request: Request) {
     
     console.log('🔔 Webhook Square reçu:', event.type)
 
-    // On ne traite que les paiements complétés
-    if (event.type !== 'payment.updated' && event.type !== 'payment.created') {
+    // On ne traite que la création initiale d'un paiement (jamais ses mises à jour
+    // ultérieures, qui ré-écraseraient la date de vente lors d'un re-fire de Square)
+    if (event.type !== 'payment.created') {
       return NextResponse.json({ received: true })
     }
 
@@ -95,7 +96,15 @@ export async function POST(request: Request) {
     try {
       const { result } = await squareClient.ordersApi.retrieveOrder(orderId)
       const order = result.order
-      
+
+      // Date stable côté Square pour rester correcte même si le webhook re-fire plus tard
+      const saleDate = order?.closedAt
+        ? new Date(order.closedAt)
+        : order?.createdAt
+          ? new Date(order.createdAt)
+          : new Date()
+      const saleTimestamp = Timestamp.fromDate(saleDate)
+
       if (order?.metadata) {
         productId = order.metadata.productId
         
@@ -144,7 +153,9 @@ export async function POST(request: Request) {
           const item = lineItems[idx]
           const itemName = item.name || ''
           const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
-          const venteDocId = `${paymentId}_${idx}`
+          // ID déterministe basé sur orderId+lineItemUid : partagé avec le webhook
+          // square-pos pour qu'un seul doc soit écrit même si les deux webhooks fire.
+          const venteDocId = `${orderId}_${item.uid || `i${idx}`}`
 
           // Chercher le SKU dans le nom (ex: "TDO4 Collier..." ou "IP24_BO01 Bague...")
           let sku: string | null = null
@@ -205,7 +216,7 @@ export async function POST(request: Request) {
             paymentId,
             orderId,
             lineItemUid: item.uid || null,
-            dateVente: Timestamp.now(),
+            dateVente: saleTimestamp,
             prixVenteReel: prix,
             quantite: parseInt(item.quantity) || 1,
             nomSquare: itemName,
@@ -220,7 +231,7 @@ export async function POST(request: Request) {
             attribue: !!produitDoc,
             source: 'square',
             skuSource: 'webhook_caisse',
-            createdAt: Timestamp.now(),
+            createdAt: saleTimestamp,
           }
 
           await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
@@ -246,11 +257,11 @@ export async function POST(request: Request) {
               if (isSmallBatch) {
                 // Petite série : garder le produit, juste marquer outOfStock
                 updateData.statut = 'outOfStock'
-                updateData.dateRupture = Timestamp.now()
+                updateData.dateRupture = saleTimestamp
                 updateData.prixVenteReel = prix
               } else {
                 updateData.vendu = true
-                updateData.dateVente = Timestamp.now()
+                updateData.dateVente = saleTimestamp
                 updateData.prixVenteReel = prix
               }
             }
@@ -302,11 +313,11 @@ export async function POST(request: Request) {
       if (nouvelleQuantite === 0) {
         if (isSmallBatch) {
           updateData.statut = 'outOfStock'
-          updateData.dateRupture = Timestamp.now()
+          updateData.dateRupture = saleTimestamp
           updateData.squareOrderId = orderId
         } else {
           updateData.vendu = true
-          updateData.dateVente = Timestamp.now()
+          updateData.dateVente = saleTimestamp
           updateData.squareOrderId = orderId
         }
       }
@@ -432,9 +443,8 @@ export async function POST(request: Request) {
         numeroGroupe,
         regroupeAvec: autresCommandesIds,
         nombreAchatsClient: nombreAchats,
-        
+
         createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
       }
 
       const commandeRef = await adminDb.collection('commandes').add(nouvelleCommande)
@@ -464,7 +474,7 @@ export async function POST(request: Request) {
         paymentId,
         orderId,
         lineItemUid: lineItems[0]?.uid || null,
-        dateVente: Timestamp.fromDate(now),
+        dateVente: saleTimestamp,
         prixVenteReel: produitData.prix || productPrice,
         quantite: 1,
         nomSquare: productName,
@@ -479,11 +489,13 @@ export async function POST(request: Request) {
         attribue: true,
         source: 'square',
         skuSource: 'webhook',
-        createdAt: Timestamp.now(),
+        createdAt: saleTimestamp,
       }
 
-      await adminDb.collection('ventes').doc(`${paymentId}_0`).set(venteData, { merge: true })
-      console.log('✅ Vente créée automatiquement:', produitData.sku)
+      // ID déterministe partagé avec square-pos pour éviter les doublons cross-webhook
+      const venteDocIdOnline = `${orderId}_${lineItems[0]?.uid || 'i0'}`
+      await adminDb.collection('ventes').doc(venteDocIdOnline).set(venteData, { merge: true })
+      console.log('✅ Vente créée automatiquement:', produitData.sku, `[${venteDocIdOnline}]`)
 
       // 3. Mettre à jour les autres commandes du groupe
       if (autresCommandesIds.length > 0) {
@@ -493,7 +505,6 @@ export async function POST(request: Request) {
           const autreRef = adminDb.collection('commandes').doc(autreCommandeId)
           batch.update(autreRef, {
             regroupeAvec: FieldValue.arrayUnion(commandeId),
-            updatedAt: Timestamp.now()
           })
         }
         
