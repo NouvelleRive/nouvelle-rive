@@ -56,8 +56,14 @@ export async function POST(req: NextRequest) {
     console.log(`🧵 ${trigrammesSmallBatch.size} chineuses small batch exclues du dédoublonnage SKU/jour`)
 
     const isSmallBatchVente = (v: { trigramme?: string | null; sku?: string | null }) => {
-      const tri = (v.trigramme || (v.sku || '').match(/^[A-Za-z]+/)?.[0] || '').toUpperCase()
-      return trigrammesSmallBatch.has(tri)
+      if (v.trigramme && trigrammesSmallBatch.has(v.trigramme.toUpperCase())) return true
+      if (v.sku) {
+        const skuUpper = v.sku.toUpperCase()
+        for (const tri of trigrammesSmallBatch) {
+          if (skuUpper.startsWith(tri)) return true
+        }
+      }
+      return false
     }
 
     // Filtrer par mois si spécifié

@@ -396,7 +396,7 @@ export default function SalesList({
                       </div>
                       {vente.description && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{vente.description}</p>}
                       <p className="text-sm text-gray-400 mt-1">
-                        Vendu le {format(getDateFromVente(vente), 'dd/MM/yyyy')}{cat && <span className="ml-2">• {cat}</span>}
+                        Vendu le {format(getDateFromVente(vente), 'dd/MM/yyyy à HH:mm')}{cat && <span className="ml-2">• {cat}</span>}
                         {vente.createdAt && (() => {
                           const entree = typeof (vente.createdAt as any).toDate === 'function' ? (vente.createdAt as any).toDate() : new Date(vente.createdAt as string)
                           const jours = Math.round((getDateFromVente(vente).getTime() - entree.getTime()) / (1000 * 60 * 60 * 24))
