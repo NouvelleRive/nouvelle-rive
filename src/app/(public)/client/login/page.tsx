@@ -22,7 +22,9 @@ function isInAppBrowser(): boolean {
 
 export default function LoginPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  const [loadingClient, setLoadingClient] = useState(false)
+  const [loadingDeposante, setLoadingDeposante] = useState(false)
+  const [loadingPro, setLoadingPro] = useState(false)
   const [error, setError] = useState('')
   const [inApp, setInApp] = useState(false)
 
@@ -49,14 +51,14 @@ export default function LoginPage() {
   const [isSignupPro] = useState(false)
 
   const handleClientSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setLoading(true)
+    e.preventDefault(); setError(''); setLoadingClient(true)
     try {
       if (isSignupClient) await createUserWithEmailAndPassword(auth, emailClient, passwordClient)
       else await signInWithEmailAndPassword(auth, emailClient, passwordClient)
       router.push('/client')
     } catch (err: any) {
       setError(err.code === 'auth/email-already-in-use' ? 'Email déjà utilisé' : err.code === 'auth/wrong-password' ? 'Mot de passe incorrect' : err.code === 'auth/user-not-found' ? 'Aucun compte avec cet email' : 'Erreur de connexion')
-    } finally { setLoading(false) }
+    } finally { setLoadingClient(false) }
   }
 
   const handleGoogleSignIn = async () => {
@@ -75,7 +77,7 @@ export default function LoginPage() {
   }
 
   const handleDeposanteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setLoading(true)
+    e.preventDefault(); setError(''); setLoadingDeposante(true)
     try {
       let userCredential
       if (isSignupDeposante) {
@@ -95,18 +97,18 @@ export default function LoginPage() {
       else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') setError('Mot de passe incorrect')
       else if (err.code === 'auth/user-not-found') setError('Aucun compte avec cet email')
       else setError('Erreur de connexion')
-    } finally { setLoading(false) }
+    } finally { setLoadingDeposante(false) }
   }
 
   const handleProSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(''); setLoading(true)
+    e.preventDefault(); setError(''); setLoadingPro(true)
     try {
       if (isSignupPro) await createUserWithEmailAndPassword(auth, emailPro, passwordPro)
       else await signInWithEmailAndPassword(auth, emailPro, passwordPro)
       router.push('/chineuse/formulaire')
     } catch (err: any) {
       setError('Erreur de connexion')
-    } finally { setLoading(false) }
+    } finally { setLoadingPro(false) }
   }
 
   const inputCls = "w-full border border-gray-200 px-4 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C] transition text-sm"
@@ -143,7 +145,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={loading}
+              disabled={loadingClient}
               className="w-full flex items-center justify-center gap-3 border-2 border-gray-200 bg-white text-gray-700 py-1.5 rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition font-medium text-sm"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -173,8 +175,8 @@ export default function LoginPage() {
                 </button>
               )}
             </div>
-            <button onClick={handleClientSubmit} disabled={loading} className={btnCls}>
-              {loading ? 'Chargement...' : isSignupClient ? 'Créer mon compte' : 'Se connecter'}
+            <button onClick={handleClientSubmit} disabled={loadingClient} className={btnCls}>
+              {loadingClient ? 'Chargement...' : isSignupClient ? 'Créer mon compte' : 'Se connecter'}
             </button>
             <button onClick={() => setIsSignupClient(!isSignupClient)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupClient ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
@@ -208,8 +210,8 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button onClick={handleDeposanteSubmit} disabled={loading} className={btnCls}>
-              {loading ? 'Chargement...' : isSignupDeposante ? 'Créer mon compte' : 'Se connecter'}
+            <button onClick={handleDeposanteSubmit} disabled={loadingDeposante} className={btnCls}>
+              {loadingDeposante ? 'Chargement...' : isSignupDeposante ? 'Créer mon compte' : 'Se connecter'}
             </button>
             <button onClick={() => setIsSignupDeposante(!isSignupDeposante)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
               {isSignupDeposante ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
@@ -231,8 +233,8 @@ export default function LoginPage() {
               <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
               <input type="password" value={passwordPro} onChange={e => setPasswordPro(e.target.value)} required className={inputCls} placeholder="••••••••" />
             </div>
-            <button onClick={handleProSubmit} disabled={loading} className={btnCls}>
-              {loading ? 'Chargement...' : isSignupPro ? 'Créer mon compte' : 'Se connecter'}
+            <button onClick={handleProSubmit} disabled={loadingPro} className={btnCls}>
+              {loadingPro ? 'Chargement...' : isSignupPro ? 'Créer mon compte' : 'Se connecter'}
             </button>
             <a href="https://www.instagram.com/nouvellerive/?hl=fr" target="_blank" rel="noopener noreferrer" className="w-full text-xs text-center hover:underline block" style={{ color: '#22209C' }}>
               Contacter Nouvelle Rive →

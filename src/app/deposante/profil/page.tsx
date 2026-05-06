@@ -120,7 +120,9 @@ export default function ProfilDeposantePage() {
     const canvas = canvasRef.current; if (!canvas) return
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const rect = canvas.getBoundingClientRect()
-    ctx.beginPath(); ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top)
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    ctx.beginPath(); ctx.moveTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY)
     isDrawingRef.current = true
   }
 
@@ -129,8 +131,10 @@ export default function ProfilDeposantePage() {
     const canvas = canvasRef.current; if (!canvas) return
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const rect = canvas.getBoundingClientRect()
-    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top); ctx.stroke()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
+    ctx.lineTo((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY); ctx.stroke()
     setSigned(true)
   }
 
@@ -155,7 +159,7 @@ export default function ProfilDeposantePage() {
     const ctx = canvas.getContext('2d'); if (!ctx) return
     const rect = canvas.getBoundingClientRect()
     const touch = e.touches[0]
-    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
+    ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#000'
     const scaleX = canvas.width / rect.width
 const scaleY = canvas.height / rect.height
 ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * scaleY); ctx.stroke()
@@ -193,7 +197,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
     txt('Le Dépositaire :', m, y, { bold: true }); y += 14
     txt('NR1 SAS — Nouvelle Rive', m, y); y += 12
     txt('5 route du Grand Pont, 78110 Le Vésinet', m, y); y += 12
-    txt('SIRET : 94189520300011 — Représenté par Salomé Kassabi', m, y); y += 22
+    txt('SIRET : 94189520300011', m, y); y += 22
     txt('Et le Déposant :', m, y, { bold: true }); y += 14
     txt(`${prenom} ${nom}`.toUpperCase(), m, y); y += 12
     if (adresse1) { txt(adresse1, m, y); y += 12 }
@@ -404,26 +408,33 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
 
           {/* MODE DE PAIEMENT */}
           <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
-            <p style={{ ...label, marginBottom: '8px' }}>MODE DE PAIEMENT PRÉFÉRÉ</p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              {(['cash', 'bon'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setModePaiement(mode)}
-                  style={{
-                    padding: '12px 24px',
-                    border: '1px solid #000',
-                    backgroundColor: modePaiement === mode ? '#000' : '#fff',
-                    color: modePaiement === mode ? '#fff' : '#000',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    letterSpacing: '0.2em',
-                    fontWeight: '600',
-                  }}
-                >
-                  {mode === 'cash' ? 'VIREMENT (40%)' : "BON D'ACHAT (30%)"}
-                </button>
-              ))}
+            <p style={{ ...label, marginBottom: '20px' }}>MODE DE PAIEMENT PRÉFÉRÉ</p>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {(['cash', 'bon'] as const).map((mode) => {
+                const selected = modePaiement === mode
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => setModePaiement(mode)}
+                    style={{
+                      padding: '14px 24px',
+                      border: '1px solid #000',
+                      backgroundColor: selected ? '#000' : '#fff',
+                      color: selected ? '#fff' : '#000',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', letterSpacing: '0.2em', fontWeight: 600 }}>
+                      {mode === 'cash' ? 'VIREMENT' : "BON D'ACHAT"}
+                    </div>
+                    <div style={{ fontSize: '11px', opacity: 0.75, marginTop: 4 }}>
+                      {mode === 'cash' ? '40% de commission' : '30% de commission'}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -439,9 +450,9 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
             </div>
             <canvas
               ref={canvasRef}
-              width={640}
-              height={140}
-              style={{ width: '100%', border: '1px solid #000', cursor: 'crosshair', backgroundColor: '#fafafa', display: 'block', touchAction: 'none' }}
+              width={1200}
+              height={300}
+              style={{ width: '100%', height: '300px', border: '1px solid #000', cursor: 'crosshair', backgroundColor: '#fafafa', display: 'block', touchAction: 'none' }}
               onMouseDown={startDraw}
               onMouseMove={draw}
               onMouseUp={stopDraw}

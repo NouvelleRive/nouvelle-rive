@@ -25,7 +25,6 @@ export default function MentionsCGVPage() {
             <p><strong>Siège social :</strong> 5 Route du Grand Pont, 78110 Le Vésinet, France</p>
             <p><strong>Adresse commerciale :</strong> 8 rue des Écouffes, 75004 Paris, France</p>
             <p><strong>Email :</strong> <a href="mailto:nouvelleriveparis@gmail.com" style={{ color: bleuElectrique }}>nouvelleriveparis@gmail.com</a></p>
-            <p><strong>Directrice de publication :</strong> Salomé Kassabi</p>
             <p><strong>Hébergeur :</strong> Vercel Inc., 340 Pine Street Suite 701, San Francisco, CA 94104, USA</p>
           </div>
         </section>
