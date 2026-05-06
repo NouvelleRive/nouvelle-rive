@@ -216,21 +216,21 @@
 
         {/* Slider Rick Owens Style */}
         <div className="relative" style={{ borderBottom: '1px solid #000' }}>
-          {/* Navigation buttons */}
+          {/* Navigation buttons — positionnés au milieu de la photo (et non du slider entier) */}
           <button
             onClick={() => scroll('left')}
-            className="absolute left-8 top-1/2 -translate-y-1/2 z-10 p-4 hover:opacity-70"
+            className="absolute left-4 md:left-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70 bg-white/70 backdrop-blur-sm rounded-full"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          
+
           <button
             onClick={() => scroll('right')}
-            className="absolute right-8 top-1/2 -translate-y-1/2 z-10 p-4 hover:opacity-70"
+            className="absolute right-4 md:right-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70 bg-white/70 backdrop-blur-sm rounded-full"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -291,7 +291,7 @@
                   </div>
 
                   {/* Info éditoriale */}
-                  <div className="p-12 md:p-16 lg:p-20 flex flex-col justify-start bg-white relative overflow-hidden">
+                  <div className="p-12 md:p-16 lg:p-20 flex flex-col justify-center bg-white relative overflow-hidden">
                     {/* Numéro géant en arrière-plan */}
                     <div 
                       className="absolute pointer-events-none select-none"
