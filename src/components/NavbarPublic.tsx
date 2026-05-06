@@ -103,20 +103,22 @@ export default function NavbarPublic() {
         style={{ fontFamily: fontHelvetica, zIndex: 10 }}
       >
         {/* NOUVELLE RIVE + Bouton Mon Compte */}
-        <div className="px-4 md:px-6 pt-4 md:pt-6 pb-3 md:pb-4 flex justify-between items-start">
-          {/* Logo - taille responsive */}
-          <h1 
-            className="uppercase"
-            style={{ 
-              fontSize: 'clamp(32px, 10vw, 72px)',
-              fontWeight: '700',
-              letterSpacing: '-0.01em',
-              lineHeight: '1',
-              color: '#000'
-            }}
-          >
-            NOUVELLE RIVE
-          </h1>
+        <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex justify-between items-start`}>
+          {/* Logo - masqué quand la vidéo est affichée (déjà dans la vidéo) */}
+          {!showVideo && (
+            <h1
+              className="uppercase"
+              style={{
+                fontSize: 'clamp(32px, 10vw, 72px)',
+                fontWeight: '700',
+                letterSpacing: '-0.01em',
+                lineHeight: '1',
+                color: '#000'
+              }}
+            >
+              NOUVELLE RIVE
+            </h1>
+          )}
 
           {/* Boutons Panier + Mon Compte (cachés quand vidéo affichée) */}
           {!showVideo && (
