@@ -523,40 +523,32 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
 
           {/* ACTIONS BAS DE PAGE */}
           <div style={{ paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {!contratSigne ? (
-              <>
-                <button
-                  onClick={() => save()}
-                  disabled={saving || !dirty}
-                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: (saving || !dirty) ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600', opacity: !dirty ? 0.4 : 1 }}
-                >
-                  {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
-                </button>
-                <button
-                  onClick={openContratModal}
-                  disabled={saving}
-                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
-                >
-                  LIRE ET SIGNER LE CONTRAT →
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={async () => { if (dirty) await save({ silent: true }); router.push('/deposante/formulaire') }}
-                  disabled={saving}
-                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
-                >
-                  CRÉER MES PIÈCES →
-                </button>
-                <button
-                  onClick={() => save()}
-                  disabled={saving || !dirty}
-                  style={{ padding: '12px 24px', backgroundColor: 'transparent', color: '#000', border: '1px solid #000', cursor: (saving || !dirty) ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', alignSelf: 'flex-start', opacity: !dirty ? 0.4 : 1 }}
-                >
-                  {saving ? 'ENREGISTREMENT...' : 'METTRE À JOUR MES INFOS'}
-                </button>
-              </>
+            {dirty && (
+              <button
+                onClick={() => save()}
+                disabled={saving}
+                style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+              >
+                {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
+              </button>
+            )}
+            {!contratSigne && (
+              <button
+                onClick={openContratModal}
+                disabled={saving}
+                style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+              >
+                LIRE ET SIGNER LE CONTRAT →
+              </button>
+            )}
+            {contratSigne && (
+              <button
+                onClick={async () => { if (dirty) await save({ silent: true }); router.push('/deposante/formulaire') }}
+                disabled={saving}
+                style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+              >
+                CRÉER MES PIÈCES →
+              </button>
             )}
             {msg && <span style={{ fontSize: '13px', color: msg.includes('❌') ? 'red' : 'green' }}>{msg}</span>}
           </div>
