@@ -268,13 +268,23 @@ export async function POST(request: Request) {
     const event = JSON.parse(body)
     console.log('🔔 Webhook Square reçu:', event.type)
 
+    // payment.updated : on N'ÉCRIT JAMAIS DE VENTE depuis cet event (la vente
+    // est créée par payment.created). On loggue juste si Square signale un
+    // problème (paiement annulé ou échoué) pour que ça remonte dans les logs.
+    if (event.type === 'payment.updated') {
+      const p = event.data?.object?.payment
+      if (p && (p.status === 'CANCELED' || p.status === 'FAILED')) {
+        console.warn('⚠️ payment.updated avec statut problématique:', p.id, '—', p.status)
+      }
+      return NextResponse.json({ received: true })
+    }
+
     if (event.type !== 'payment.created') {
       return NextResponse.json({ received: true })
     }
 
     const payment = event.data?.object?.payment
-    if (!payment || payment.status !== 'COMPLETED') {
-      console.log('⏭️ Paiement non complété, ignoré')
+    if (!payment) {
       return NextResponse.json({ received: true })
     }
 
@@ -284,7 +294,7 @@ export async function POST(request: Request) {
       console.log('⚠️ Pas d\'order_id dans le paiement')
       return NextResponse.json({ received: true })
     }
-    console.log('✅ Paiement complété pour order:', orderId)
+    console.log('✅ payment.created reçu pour order:', orderId, '— status:', payment.status)
 
     const { result } = await squareClient.ordersApi.retrieveOrder(orderId)
     const order = result.order

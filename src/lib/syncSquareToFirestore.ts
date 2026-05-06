@@ -246,7 +246,7 @@ export async function syncVentesDepuisSquare(
   let nbNonAttribuees = 0
   let nbSkipped = 0
 
-  const ventesToAdd: any[] = []
+  const ventesToAdd: { docId: string; data: any }[] = []
   const produitsToUpdate: { ref: FirebaseFirestore.DocumentReference; data: any }[] = []
 
   for (const order of allOrders) {
@@ -257,7 +257,9 @@ export async function syncVentesDepuisSquare(
     const orderReferenceId = order.referenceId || ''
     const orderTicketName = order.ticketName || ''
 
-    for (const item of order.lineItems || []) {
+    const lineItems = order.lineItems || []
+    for (let idx = 0; idx < lineItems.length; idx++) {
+      const item = lineItems[idx]
       const lineItemUid = item.uid
       const prixCents = item.totalMoney?.amount
       const prix = prixCents ? Number(prixCents) / 100 : null
@@ -461,7 +463,11 @@ export async function syncVentesDepuisSquare(
         nbNonAttribuees++
       }
 
-      ventesToAdd.push(venteData)
+      // ID déterministe identique à celui des webhooks square / square-pos —
+      // permet à la sync manuelle d'écraser/compléter les ventes déjà créées
+      // par webhook au lieu d'en créer un doublon avec auto-id.
+      const venteDocId = `${order.id}_${lineItemUid || `i${idx}`}`
+      ventesToAdd.push({ docId: venteDocId, data: venteData })
       nbImported++
     }
   }
@@ -471,8 +477,8 @@ export async function syncVentesDepuisSquare(
 
   for (let i = 0; i < ventesToAdd.length; i += BATCH_SIZE) {
     const batch = adminDb.batch()
-    for (const vente of ventesToAdd.slice(i, i + BATCH_SIZE)) {
-      batch.set(adminDb.collection('ventes').doc(), vente)
+    for (const { docId, data } of ventesToAdd.slice(i, i + BATCH_SIZE)) {
+      batch.set(adminDb.collection('ventes').doc(docId), data, { merge: true })
     }
     await batch.commit()
   }
