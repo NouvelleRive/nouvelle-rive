@@ -210,16 +210,15 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
       <ProgressBar etapes={etapes} />
       {showWelcome && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-md w-full p-8" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#22209C] mb-4">Bienvenue chez Nouvelle Rive</p>
-            <h2 className="text-2xl font-bold mb-4">Voici les étapes pour déposer vos pièces</h2>
-            <ol className="space-y-3 text-sm text-gray-700 mb-8">
-              <li className="flex gap-3"><span className="font-bold text-[#22209C]">1.</span> Complétez votre profil (identité, coordonnées bancaires, pièce d'identité) <strong>et signez</strong> votre contrat de dépôt-vente</li>
-              <li className="flex gap-3"><span className="font-bold text-[#22209C]">2.</span> Ajoutez vos pièces (5 maximum)</li>
-              <li className="flex gap-3"><span className="font-bold text-[#22209C]">3.</span> Prenez rendez-vous pour déposer vos articles en boutique</li>
+          <div className="bg-white max-w-sm w-full p-8 text-center" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+            <h2 className="text-xl font-bold mb-6">Bienvenue 👋</h2>
+            <ol className="space-y-2 text-sm text-gray-800 mb-8 text-left">
+              <li>1. Profil &amp; contrat</li>
+              <li>2. Vos pièces (5 max)</li>
+              <li>3. RDV en boutique</li>
             </ol>
             <button onClick={dismissWelcome} className="w-full py-3 text-white text-xs font-semibold uppercase tracking-widest" style={{ backgroundColor: '#22209C' }}>
-              Commencer par mon profil →
+              Commencer →
             </button>
           </div>
         </div>
