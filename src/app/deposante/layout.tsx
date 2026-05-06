@@ -14,26 +14,28 @@ export const EtapesContext = createContext<EtapesContextType>({ profil: false, c
 export const useEtapes = () => useContext(EtapesContext)
 
 function ProgressBar({ etapes }: { etapes: Etapes }) {
+  const pathname = usePathname()
   const steps = [
-    { label: 'Profil & contrat', href: '/deposante/profil', done: etapes.profil && etapes.contrat },
-    { label: 'Mes pièces', href: '/deposante/formulaire', done: etapes.pieces },
-    { label: 'RDV', href: '/deposante/calendrier', done: etapes.rdv },
+    { label: 'Profil & contrat', href: '/deposante/profil', done: etapes.profil && etapes.contrat, matches: ['/deposante/profil'] },
+    { label: 'Mes pièces', href: '/deposante/formulaire', done: etapes.pieces, matches: ['/deposante/formulaire', '/deposante/mes-produits'] },
+    { label: 'RDV', href: '/deposante/calendrier', done: etapes.rdv, matches: ['/deposante/calendrier'] },
   ]
   return (
     <div className="bg-white border-b">
       <div className="max-w-6xl mx-auto px-4 py-2 flex items-center">
         {steps.map((step, i) => {
           const prev = i === 0 ? true : steps[i - 1].done
+          const current = step.matches.some(p => pathname?.startsWith(p))
           return (
             <div key={step.label} className="flex items-center">
               <Link
                 href={prev ? step.href : '#'}
                 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest px-3 py-1 ${
-                  step.done ? 'text-[#22209C]' : prev ? 'text-gray-400 hover:text-[#22209C]' : 'text-gray-300 pointer-events-none'
+                  step.done ? 'text-[#22209C]' : current ? 'text-[#22209C]' : prev ? 'text-gray-400 hover:text-[#22209C]' : 'text-gray-300 pointer-events-none'
                 }`}
               >
                 <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] border ${
-                  step.done ? 'bg-[#22209C] border-[#22209C] text-white' : 'border-gray-300 text-gray-300'
+                  step.done ? 'bg-[#22209C] border-[#22209C] text-white' : current ? 'bg-white border-[#22209C] text-[#22209C]' : 'border-gray-300 text-gray-300'
                 }`}>
                   {step.done ? '✓' : i + 1}
                 </span>

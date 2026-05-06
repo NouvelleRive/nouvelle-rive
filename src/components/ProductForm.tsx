@@ -1546,8 +1546,8 @@ async function compressImage(file: File): Promise<string> {
                 <label className="block text-sm font-medium mb-1">Nom de la pièce *</label>
                 <div className="flex">
                   {mode === 'create' && sku && (
-                    <span className="px-3 py-1.5 bg-gray-100 border border-r-0 rounded-l text-sm text-gray-600">
-                      {sku} -
+                    <span className="px-3 py-1.5 bg-gray-100 border border-r-0 rounded-l text-sm text-gray-600 whitespace-nowrap">
+                      {sku} —
                     </span>
                   )}
                   <input
@@ -1590,7 +1590,9 @@ async function compressImage(file: File): Promise<string> {
                   <input
                     type="text"
                     value={sku || '—'}
-                    className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-gray-600"
+                    readOnly
+                    tabIndex={-1}
+                    className="w-full border rounded px-2 py-1.5 text-sm bg-gray-50 text-gray-600 cursor-not-allowed select-none"
                   />
                 )}
                 {nextAvailableSku && (
