@@ -1373,12 +1373,32 @@ async function compressImage(file: File): Promise<string> {
 
     const handleFormSubmit = async (e: React.FormEvent) => {
       e.preventDefault()
-      
+
       // En mode création, vérifier que la catégorie a un idsquare (sauf pour les flux qui n'en exigent pas, ex: déposantes)
       if (mode === 'create' && requireSquareCategory) {
         const match = displayCategories.find((c) => c?.label === formData.categorie)
         if (!match?.idsquare) {
           alert('❌ Catégorie non définie dans Square.\n\nContactez NOUVELLE RIVE pour configurer cette catégorie.')
+          return
+        }
+      }
+
+      // Marque obligatoire en création
+      if (mode === 'create' && !formData.marque.trim()) {
+        alert('❌ La marque est obligatoire.')
+        return
+      }
+
+      // Au moins une photo en création
+      if (mode === 'create') {
+        const hasExistingPhoto = !!(
+          (formData.existingPhotos.face && !formData.deletedPhotos.face) ||
+          (formData.existingPhotos.dos && !formData.deletedPhotos.dos) ||
+          (formData.existingPhotos.details && formData.existingPhotos.details.some((_, i) => !formData.deletedPhotos.detailsIndexes?.includes(i)))
+        )
+        const hasNewPhoto = !!(formData.photoFace || formData.photoDos || (formData.photosDetails && formData.photosDetails.length > 0))
+        if (!hasExistingPhoto && !hasNewPhoto) {
+          alert('❌ Au moins une photo est obligatoire.')
           return
         }
       }
@@ -1742,8 +1762,11 @@ async function compressImage(file: File): Promise<string> {
 
           {/* PHOTOS */}
           <div className="bg-white border rounded-lg p-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">📸 Photos</h3>
-            
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">📸 Photos *</h3>
+            <div className="bg-blue-50 border border-blue-200 text-blue-900 text-xs px-3 py-2 rounded mb-4">
+              💡 Nous vous suggérons de mettre <strong>minimum 4 photos</strong> (face, dos, détails) pour une meilleure mise en valeur de votre pièce.
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               
               {/* Photo Face */}
@@ -2155,11 +2178,12 @@ async function compressImage(file: File): Promise<string> {
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Marque</label>
+                <label className="block text-xs text-gray-600 mb-1">Marque *</label>
                 <input
                   type="text"
                   value={formData.marque}
                   onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
+                  required={mode === 'create'}
                   className="w-full border rounded px-2 py-1.5 text-sm"
                   placeholder="Chanel..."
                 />
