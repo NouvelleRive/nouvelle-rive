@@ -122,6 +122,22 @@ async function main() {
       },
     },
     {
+      id: 'escarpins-cuir',
+      data: {
+        nom: 'Escarpins en Cuir',
+        dateCreation: '1953',
+        histoire: "Marilyn Monroe l'a immortalisé en 1955 dans Sept Ans de Réflexion : la robe blanche et les escarpins. Mais l'escarpin tel qu'on le connaît naît plus tôt, avec Roger Vivier qui crée le premier talon aiguille pour Christian Dior en 1953. Outil d'élégance, arme de séduction, l'escarpin en cuir reste l'allié de toutes les silhouettes — Carrie Bradshaw avec ses Manolo Blahnik en a fait son fétiche dans Sex and the City.",
+        valeurNeuf: 750,
+        tendancePrix: 'monte',
+        pourquoiMust: "L'élégance intemporelle qui transforme n'importe quelle silhouette",
+        categorieRecherche: 'escarpin',
+        marque: '',
+        chineuseTrigrammes: [],
+        categoriesIn: [],
+        materialContient: '',
+      },
+    },
+    {
       id: 'fourrure-vintage',
       data: {
         nom: 'Fourrures Vintage',
