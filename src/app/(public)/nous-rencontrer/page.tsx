@@ -181,14 +181,14 @@ export default function NousRencontrerPage() {
                     @nouvelleriveparis
                   </a>
                   <a
-                    href="https://www.tiktok.com/@nouvelleriveparis"
+                    href="https://www.tiktok.com/@nouvelle.rive"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 hover:opacity-60 transition-opacity"
                     style={{ fontSize: '16px', color: bleuElectrique }}
                   >
                     <span style={{ fontSize: '11px', letterSpacing: '0.15em', color: '#000', fontWeight: 600, minWidth: 70 }}>TIKTOK</span>
-                    @nouvelleriveparis
+                    @nouvelle.rive
                   </a>
                 </div>
               </div>
