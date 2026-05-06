@@ -61,7 +61,7 @@ export default function NavbarPublic() {
             loop
             playsInline
             preload="metadata"
-            className="w-full h-[70vh] md:h-screen object-cover"
+            className="w-full h-auto md:h-screen md:object-cover block"
           />
           {/* Boutons Panier + Mon Compte en overlay */}
           <div
