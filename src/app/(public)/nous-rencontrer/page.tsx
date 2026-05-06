@@ -220,7 +220,7 @@ export default function NousRencontrerPage() {
               playsInline
               preload="metadata"
               className="w-full"
-              style={{ objectFit: 'cover', height: '100%', filter: 'saturate(1.6) contrast(1.05)' }}
+              style={{ objectFit: 'cover', height: '100%', filter: 'saturate(1.25) contrast(1.03)' }}
             />
           </div>
         </div>
