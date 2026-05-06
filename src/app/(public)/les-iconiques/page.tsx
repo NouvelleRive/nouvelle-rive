@@ -74,36 +74,37 @@
           })
           setImageIndices(initialIndices)
 
-          // Fetch produits pour chaque iconique
+          // Fetch tous les produits non-vendus une fois, puis matche côté client
+          // (les catégories sont parfois string, parfois { label }, parfois absentes — match flexible nécessaire)
+          const allProduitsSnapshot = await getDocs(
+            query(collection(db, 'produits'), where('vendu', '==', false))
+          )
+          const allProduits = allProduitsSnapshot.docs
+            .map(d => ({ id: d.id, ...d.data() } as any))
+            .filter(p => (p.quantite ?? 1) > 0 && p.statut !== 'retour' && p.statut !== 'supprime')
+
           const produitsData: { [key: string]: Produit[] } = {}
           for (const item of data) {
-            try {
-              const qProduits = query(
-              collection(db, 'produits'),
-              where('Catégorie', 'array-contains', item.categorieRecherche)
-            )
-            const produitsSnapshot = await getDocs(qProduits)
-            const itemProduits: Produit[] = []
-            produitsSnapshot.forEach((doc) => {
-              const pData = doc.data()
-              // Exclure produits vendus (quantité 0) ou retournés/supprimés
-              if ((pData.quantite ?? 1) <= 0) return
-              if (pData.statut === 'retour' || pData.statut === 'supprime') return
-              
-              itemProduits.push({
-                id: doc.id,
-                nom: pData.nom || pData.Nom || '',
-                prix: pData.prix || pData.Prix || 0,
-                imageUrl: pData.imageUrl || pData.ImageURL || '',
-                slug: pData.slug || doc.id
-              })
-            })
-            produitsData[item.id] = itemProduits.slice(0, 6) // Max 6 produits
-              
-            } catch (error) {
-              console.error(`Erreur fetch produits pour ${item.nom}:`, error)
+            const needle = (item.categorieRecherche || '').toLowerCase().trim()
+            if (!needle) {
               produitsData[item.id] = []
+              continue
             }
+            const matched = allProduits.filter(p => {
+              const cat = typeof p.categorie === 'object'
+                ? (p.categorie?.label || '').toLowerCase()
+                : (p.categorie || '').toLowerCase()
+              const nom = (p.nom || p.Nom || '').toLowerCase()
+              const desc = (p.description || '').toLowerCase()
+              return cat.includes(needle) || nom.includes(needle) || desc.includes(needle)
+            })
+            produitsData[item.id] = matched.slice(0, 6).map(p => ({
+              id: p.id,
+              nom: p.nom || p.Nom || '',
+              prix: p.prix || p.Prix || 0,
+              imageUrl: p.imageUrls?.[0] || p.imageUrl || p.photos?.face || '',
+              slug: p.id, // les fiches produit sont accédées par id, pas par slug
+            }))
           }
           setProduits(produitsData)
         } catch (error) {
