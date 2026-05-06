@@ -40,20 +40,8 @@
           sharpInstance = sharpInstance.rotate(rotation)
         }
 
-       const tempBuffer = await sharpInstance
-          .resize(1200, 1200, { fit: 'inside' })
-          .toBuffer()
-        const meta = await sharp(tempBuffer).metadata()
-        const w = meta.width || 1200
-        const h = meta.height || 1200
-        const finalBuffer = await sharp(tempBuffer)
-          .extend({
-            top: Math.floor((1200 - h) / 2),
-            bottom: Math.ceil((1200 - h) / 2),
-            left: Math.floor((1200 - w) / 2),
-            right: Math.ceil((1200 - w) / 2),
-            background: { r: 255, g: 255, b: 255 }
-          })
+        const finalBuffer = await sharpInstance
+          .resize(1200, 1200, { fit: 'cover', position: 'centre' })
           .flatten({ background: { r: 255, g: 255, b: 255 } })
           .png({ quality: 90 })
           .toBuffer()

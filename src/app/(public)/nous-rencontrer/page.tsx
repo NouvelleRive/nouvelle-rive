@@ -124,7 +124,7 @@ export default function NousRencontrerPage() {
 
             {/* Bouton */}
             <a 
-              href="https://www.google.com/maps/search/?api=1&query=8+rue+des+Ecouffes+Paris" 
+              href="https://www.google.com/maps/place/NOUVELLE+RIVE/@48.8565713,2.3585257,17z/data=!4m6!3m5!1s0x47e66f1afea642dd:0xbaab4baf5127a88e!8m2!3d48.8565713!4d2.3585257!16s%2Fg%2F11x8cxw8q0"
               target="_blank" 
               rel="noopener noreferrer" 
               className="inline-block py-4 px-8 text-white transition-opacity hover:opacity-80"
@@ -142,7 +142,7 @@ export default function NousRencontrerPage() {
           {/* Droite - Map */}
           <div className="h-[400px] lg:h-auto lg:min-h-[600px]">
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2625.2!2d2.3592!3d48.8565!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e671e19ff53a01%3A0x36401da7abfa068d!2s8%20Rue%20des%20%C3%89couffes%2C%2075004%20Paris!5e0!3m2!1sen!2sfr!4v1234567890"
+              src="https://maps.google.com/maps?q=Nouvelle+Rive,+8+rue+des+%C3%89couffes,+75004+Paris&z=17&output=embed"
               width="100%"
               height="100%"
               style={{ border: 0, filter: 'grayscale(100%)' }}
