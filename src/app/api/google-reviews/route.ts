@@ -18,6 +18,7 @@ const MOCK_DATA = {
       rating: 5,
       text: "Une pépite dans le Marais. Sélection vintage incroyable, accueil au top, on repart toujours avec une trouvaille. La devanture bleu Klein est sublime.",
       relativeTime: 'il y a 2 semaines',
+      reply: { text: "Merci infiniment Camille ! Hâte de te revoir bientôt 💙", relativeTime: 'il y a 2 semaines' },
     },
     {
       author: 'Léa M.',
@@ -25,6 +26,7 @@ const MOCK_DATA = {
       rating: 5,
       text: "Boutique magnifique, des pièces uniques et l'équipe est adorable. Mes meilleures trouvailles vintage de Paris ! Je recommande à 1000%.",
       relativeTime: 'il y a 1 mois',
+      reply: { text: "Léa merci pour ces mots, ça nous touche beaucoup. À très vite chez Nouvelle Rive !", relativeTime: 'il y a 4 semaines' },
     },
     {
       author: 'Sophie R.',
@@ -32,6 +34,7 @@ const MOCK_DATA = {
       rating: 5,
       text: "Adresse coup de cœur. Le concept féministe + la sélection pointue + le quartier = magique. Bravo à toute l'équipe.",
       relativeTime: 'il y a 1 mois',
+      reply: { text: "Sophie, ton retour nous fait chaud au cœur. C'est tout le sens du projet, merci d'en faire partie.", relativeTime: 'il y a 1 mois' },
     },
     {
       author: 'Margaux T.',
@@ -39,6 +42,7 @@ const MOCK_DATA = {
       rating: 5,
       text: "Vintage curated avec goût, prix raisonnables, ambiance chaleureuse. Le 3W reborn version mode, c'est oui.",
       relativeTime: 'il y a 2 mois',
+      reply: null,
     },
     {
       author: 'Inès P.',
@@ -46,6 +50,7 @@ const MOCK_DATA = {
       rating: 4,
       text: "Très belle boutique, sélection soignée. J'ai trouvé une veste Mugler qui me suit partout depuis. Rien à redire.",
       relativeTime: 'il y a 3 mois',
+      reply: { text: "Merci Inès ! Cette veste Mugler avait une histoire, on est heureuses qu'elle soit chez toi maintenant.", relativeTime: 'il y a 3 mois' },
     },
   ],
 }
