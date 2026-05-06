@@ -50,8 +50,8 @@ export async function GET(req: NextRequest) {
   const monthKey = dateStr.slice(0, 7)
   const actions: string[] = []
 
-  // 11h50 — rappel pointage arrivée
-  if (inWindow(h, m, 11, 50)) {
+  // 12h10 — rappel pointage arrivée
+  if (inWindow(h, m, 12, 10)) {
     const planningSnap = await adminDb.collection('planning').doc(monthKey).get()
     const slots = planningSnap.exists ? (planningSnap.data()?.slots || {}) : {}
     const slotsToday = [
