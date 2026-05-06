@@ -103,22 +103,24 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 19h55 — rappel pointage départ
-  if (inWindow(h, m, 19, 55)) {
-    const ptgSnap = await adminDb.collection('pointages').where('date', '==', dateStr).get()
-    let need = false
-    for (const d of ptgSnap.docs) {
-      const x = d.data()
-      if (x.arrivee && !x.depart) { need = true; break }
-    }
-    if (need) {
+  // Rappels pointage départ — déclenchés 5 min avant la fin de chaque créneau
+  // 16h55 pour slot 11-17, 19h55 pour slot 12-20.
+  for (const slot of [{ name: '11-17', trigH: 16, trigM: 55 }, { name: '12-20', trigH: 19, trigM: 55 }]) {
+    if (!inWindow(h, m, slot.trigH, slot.trigM)) continue
+    const planningSnap = await adminDb.collection('planning').doc(monthKey).get()
+    const slots = planningSnap.exists ? (planningSnap.data()?.slots || {}) : {}
+    const vid = slots[`${dateStr}_${slot.name}`]
+    if (!vid) continue
+    const ptg = await adminDb.collection('pointages').doc(`${dateStr}_${vid}`).get()
+    const x = ptg.exists ? ptg.data() : null
+    if (x?.arrivee && !x?.depart) {
       await sendPushToOwner('boutique', {
         title: '⏰ Pense à pointer le départ',
-        body: 'Avant de partir, clique sur "Je pars" dans la page calendrier',
+        body: `N'oublie pas de pointer le départ ${slot.name}h`,
         url: '/vendeuse/calendrier',
-        tag: `depart-${dateStr}`,
+        tag: `depart-${slot.name}-${dateStr}`,
       })
-      actions.push('rappel-depart')
+      actions.push(`rappel-depart-${slot.name}`)
     }
   }
 
