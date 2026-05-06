@@ -16,7 +16,7 @@ export const useEtapes = () => useContext(EtapesContext)
 function ProgressBar({ etapes }: { etapes: Etapes }) {
   const steps = [
     { label: 'Profil & contrat', href: '/deposante/profil', done: etapes.profil && etapes.contrat },
-    { label: 'Mes pièces', href: '/deposante/mes-produits', done: etapes.pieces },
+    { label: 'Mes pièces', href: '/deposante/formulaire', done: etapes.pieces },
     { label: 'RDV', href: '/deposante/calendrier', done: etapes.rdv },
   ]
   return (
@@ -57,7 +57,7 @@ function DeposanteNavbar() {
   }, [pathname])
 
   const links = [
-    { href: '/deposante/mes-produits', label: 'Mes pièces' },
+    { href: '/deposante/formulaire', label: 'Mes pièces' },
     { href: '/deposante/mes-ventes', label: 'Mes ventes' },
     { href: '/deposante/profil', label: 'Mon profil' },
     { href: '/deposante/calendrier', label: 'Calendrier' },

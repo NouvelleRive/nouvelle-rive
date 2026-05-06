@@ -75,6 +75,7 @@ export default function ProfilDeposantePage() {
   const [contratUrl, setContratUrl] = useState('')
   const [submittingContrat, setSubmittingContrat] = useState(false)
   const [showVerifiedPopup, setShowVerifiedPopup] = useState(false)
+  const [dirty, setDirty] = useState(false)
   const router = useRouter()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -139,6 +140,8 @@ export default function ProfilDeposantePage() {
         console.error('Erreur chargement profil deposante', e)
       } finally {
         setLoaded(true)
+        // Reset dirty au prochain tick pour laisser les setters d'état se propager
+        setTimeout(() => setDirty(false), 0)
       }
     })
     return () => unsub()
@@ -334,7 +337,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
       })
       const data = await res.json()
       console.log('upload result:', res.status, data)
-      if (data.url) setPieceIdentiteUrl(data.url)
+      if (data.url) { setPieceIdentiteUrl(data.url); setDirty(true) }
     } catch {
       setMsg('❌ Erreur upload')
     } finally {
@@ -370,6 +373,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
       })
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Erreur')
+      setDirty(false)
       if (!silent) setMsg('Enregistré ✅')
     } catch (err: any) {
       if (!silent) setMsg('❌ ' + (err?.message || 'Erreur'))
@@ -395,11 +399,11 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={label}>PRÉNOM *</label>
-                <input value={prenom} onChange={e => setPrenom(e.target.value)} style={inputStyle} />
+                <input value={prenom} onChange={e => { setPrenom(e.target.value); setDirty(true) }} style={inputStyle} />
               </div>
               <div>
                 <label style={label}>NOM *</label>
-                <input value={nom} onChange={e => setNom(e.target.value)} style={inputStyle} />
+                <input value={nom} onChange={e => { setNom(e.target.value); setDirty(true) }} style={inputStyle} />
               </div>
             </div>
           </div>
@@ -414,16 +418,16 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
               </div>
               <div>
                 <label style={label}>TÉLÉPHONE *</label>
-                <input value={telephone} onChange={e => setTelephone(e.target.value)} style={inputStyle} placeholder="+33 6 xx xx xx xx" />
+                <input value={telephone} onChange={e => { setTelephone(e.target.value); setDirty(true) }} style={inputStyle} placeholder="+33 6 xx xx xx xx" />
               </div>
             </div>
             <div style={{ marginBottom: '16px' }}>
               <label style={label}>ADRESSE (LIGNE 1) *</label>
-              <input value={adresse1} onChange={e => setAdresse1(e.target.value)} style={inputStyle} />
+              <input value={adresse1} onChange={e => { setAdresse1(e.target.value); setDirty(true) }} style={inputStyle} />
             </div>
             <div>
               <label style={label}>ADRESSE (LIGNE 2)</label>
-              <input value={adresse2} onChange={e => setAdresse2(e.target.value)} style={inputStyle} />
+              <input value={adresse2} onChange={e => { setAdresse2(e.target.value); setDirty(true) }} style={inputStyle} />
             </div>
           </div>
 
@@ -454,16 +458,16 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={label}>IBAN *</label>
-                <input value={iban} onChange={e => setIban(e.target.value)} style={inputStyle} placeholder="FR76 xxxx xxxx xxxx xxxx xxxx xxx" />
+                <input value={iban} onChange={e => { setIban(e.target.value); setDirty(true) }} style={inputStyle} placeholder="FR76 xxxx xxxx xxxx xxxx xxxx xxx" />
               </div>
               <div>
                 <label style={label}>BIC *</label>
-                <input value={bic} onChange={e => setBic(e.target.value)} style={inputStyle} />
+                <input value={bic} onChange={e => { setBic(e.target.value); setDirty(true) }} style={inputStyle} />
               </div>
             </div>
             <div>
               <label style={label}>ADRESSE DE LA BANQUE</label>
-              <input value={banqueAdresse} onChange={e => setBanqueAdresse(e.target.value)} style={inputStyle} />
+              <input value={banqueAdresse} onChange={e => { setBanqueAdresse(e.target.value); setDirty(true) }} style={inputStyle} />
             </div>
           </div>
 
@@ -476,7 +480,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
                 return (
                   <button
                     key={mode}
-                    onClick={() => setModePaiement(mode)}
+                    onClick={() => { setModePaiement(mode); setDirty(true) }}
                     style={{
                       padding: '14px 24px',
                       border: '1px solid #000',
@@ -523,8 +527,8 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
               <>
                 <button
                   onClick={() => save()}
-                  disabled={saving}
-                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+                  disabled={saving || !dirty}
+                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: (saving || !dirty) ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600', opacity: !dirty ? 0.4 : 1 }}
                 >
                   {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
                 </button>
@@ -539,7 +543,7 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
             ) : (
               <>
                 <button
-                  onClick={async () => { await save({ silent: true }); router.push('/deposante/formulaire') }}
+                  onClick={async () => { if (dirty) await save({ silent: true }); router.push('/deposante/formulaire') }}
                   disabled={saving}
                   style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
                 >
@@ -547,8 +551,8 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
                 </button>
                 <button
                   onClick={() => save()}
-                  disabled={saving}
-                  style={{ padding: '12px 24px', backgroundColor: 'transparent', color: '#000', border: '1px solid #000', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', alignSelf: 'flex-start' }}
+                  disabled={saving || !dirty}
+                  style={{ padding: '12px 24px', backgroundColor: 'transparent', color: '#000', border: '1px solid #000', cursor: (saving || !dirty) ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', alignSelf: 'flex-start', opacity: !dirty ? 0.4 : 1 }}
                 >
                   {saving ? 'ENREGISTREMENT...' : 'METTRE À JOUR MES INFOS'}
                 </button>
