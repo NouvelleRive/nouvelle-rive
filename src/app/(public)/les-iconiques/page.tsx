@@ -6,7 +6,6 @@
   import { db } from '@/lib/firebaseConfig'
   import ProductGrid from '@/components/ProductGrid'
   import { LUXURY_BRANDS } from '@/lib/admin/helpers'
-  import { useLang, t } from '@/lib/i18n'
 
   type Iconique = {
     id: string
@@ -29,7 +28,6 @@
   type Produit = any
 
   export default function LesIconiquesPage() {
-    const lang = useLang()
     const [iconiques, setIconiques] = useState<Iconique[]>([])
     const [produits, setProduits] = useState<{ [key: string]: Produit[] }>({})
     const [loading, setLoading] = useState(true)
@@ -220,7 +218,7 @@
         <main className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
             <p className="uppercase tracking-widest" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-              {t('Chargement des iconiques...', 'Loading icons...', lang)}
+              Chargement des iconiques...
             </p>
           </div>
         </main>
@@ -232,10 +230,10 @@
         <main className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
             <p className="uppercase tracking-widest mb-4" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-              {t('Aucun produit iconique pour le moment', 'No iconic pieces yet', lang)}
+              Aucun produit iconique pour le moment
             </p>
             <Link href="/" className="uppercase text-xs tracking-widest underline hover:opacity-50">
-              {t("Retour à l'accueil", 'Back to home', lang)}
+              Retour à l'accueil
             </Link>
           </div>
         </main>
@@ -255,7 +253,7 @@
               textTransform: 'uppercase'
             }}
           >
-            {lang === 'en' ? <>VINTAGE<br />ICONS</> : <>LES ICONIQUES<br />DU VINTAGE</>}
+            LES ICONIQUES<br />DU VINTAGE
           </h1>
         </div>
         <div className="w-full border-t border-black" />
@@ -331,7 +329,7 @@
                       </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                        <p className="text-gray-400 text-xs uppercase tracking-wider">{t('Image à venir', 'Image coming soon', lang)}</p>
+                        <p className="text-gray-400 text-xs uppercase tracking-wider">Image à venir</p>
                       </div>
                     )}
                   </div>
@@ -394,7 +392,7 @@
                           className="font-bold uppercase"
                           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', lineHeight: '1.4' }}
                         >
-                          {t('DATE DE CREATION', 'YEAR CREATED', lang)} :{' '}
+                          DATE DE CREATION :{' '}
                           <span className="font-normal">{item.dateCreation}</span>
                         </p>
                       </div>
@@ -407,7 +405,7 @@
                           className="font-bold uppercase"
                           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', display: 'inline', lineHeight: '1.4' }}
                         >
-                          {t('HISTOIRE', 'STORY', lang)} :{' '}
+                          HISTOIRE :{' '}
                         </p>
                         <span 
                           className="font-normal"
@@ -428,8 +426,8 @@
                         className="font-bold uppercase"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', lineHeight: '1.4' }}
                       >
-                        {t('VALEUR NEUF', 'RETAIL VALUE', lang)} :{' '}
-                        <span className="font-normal">{item.valeurNeuf.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')}€</span>
+                        VALEUR NEUF :{' '}
+                        <span className="font-normal">{item.valeurNeuf.toLocaleString('fr-FR')}€</span>
                       </p>
                     </div>
 
@@ -439,11 +437,9 @@
                         className="font-bold uppercase"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', lineHeight: '1.4' }}
                       >
-                        {t('TENDANCE MARCHÉ', 'MARKET TREND', lang)} :{' '}
+                        TENDANCE MARCHÉ :{' '}
                         <span className="font-normal lowercase">
-                          {item.tendancePrix === 'monte'
-                            ? t('prix en hausse', 'rising prices', lang)
-                            : t('prix en baisse', 'falling prices', lang)}
+                          {item.tendancePrix === 'monte' ? 'prix en hausse' : 'prix en baisse'}
                         </span>
                       </p>
                     </div>
@@ -459,7 +455,7 @@
                         className="uppercase tracking-widest font-semibold"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
                       >
-                        {t('Nos', 'Our', lang)} {item.nom}
+                        Nos {item.nom}
                       </p>
                     </div>
                     <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />

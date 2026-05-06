@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useLang, t } from '@/lib/i18n'
 
 const bleuElectrique = '#0000FF'
 
@@ -18,13 +19,12 @@ type Data = {
   total: number
   mapsUri: string | null
   reviews: Review[]
-  preview?: boolean
 }
 
-function Stars({ rating }: { rating: number }) {
+function Stars({ rating, lang }: { rating: number; lang: 'fr' | 'en' }) {
   const full = Math.round(rating)
   return (
-    <span aria-label={`${rating} sur 5`} style={{ color: bleuElectrique, letterSpacing: '0.1em' }}>
+    <span aria-label={lang === 'en' ? `${rating} out of 5` : `${rating} sur 5`} style={{ color: bleuElectrique, letterSpacing: '0.1em' }}>
       {'★'.repeat(full)}
       <span style={{ color: '#ddd' }}>{'★'.repeat(5 - full)}</span>
     </span>
@@ -32,19 +32,20 @@ function Stars({ rating }: { rating: number }) {
 }
 
 export default function GoogleReviews() {
+  const lang = useLang()
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetch('/api/google-reviews')
+    fetch(`/api/google-reviews?lang=${lang}`)
       .then(r => r.json())
       .then(d => {
         if (d.error) setError(d.error)
         else setData(d)
       })
       .catch(e => setError(e.message))
-  }, [])
+  }, [lang])
 
   const scrollBy = (dir: 1 | -1) => {
     const el = scrollerRef.current
@@ -58,7 +59,7 @@ export default function GoogleReviews() {
   if (!data) {
     return (
       <div className="px-6 py-12 text-center" style={{ fontSize: '11px', color: '#999', letterSpacing: '0.2em' }}>
-        CHARGEMENT DES AVIS…
+        {t('CHARGEMENT DES AVIS…', 'LOADING REVIEWS…', lang)}
       </div>
     )
   }
@@ -78,17 +79,14 @@ export default function GoogleReviews() {
             lineHeight: '1',
           }}
         >
-          Vos avis
-          {data.preview && (
-            <span style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#999', fontWeight: '400', marginLeft: '12px' }}>
-              (PREVIEW)
-            </span>
-          )}
+          {t('Vos avis', 'Your reviews', lang)}
         </h2>
         <div className="flex items-center gap-3" style={{ fontSize: '14px' }}>
-          <Stars rating={data.rating} />
+          <Stars rating={data.rating} lang={lang} />
           <span style={{ fontWeight: '600' }}>{data.rating.toFixed(1)}</span>
-          <span style={{ color: '#666' }}>· {data.total} avis</span>
+          <span style={{ color: '#666' }}>
+            · {data.total} {lang === 'en' ? 'reviews' : 'avis'}
+          </span>
         </div>
       </div>
 
@@ -153,7 +151,7 @@ export default function GoogleReviews() {
                   <span style={{ fontSize: '11px', color: '#666' }}>{r.relativeTime}</span>
                 </div>
               </div>
-              <Stars rating={r.rating} />
+              <Stars rating={r.rating} lang={lang} />
               <p
                 style={{
                   fontSize: '13px',
@@ -173,7 +171,7 @@ export default function GoogleReviews() {
 
         {/* Flèches navigation (desktop only) */}
         <button
-          aria-label="Précédent"
+          aria-label={t('Précédent', 'Previous', lang)}
           onClick={() => scrollBy(-1)}
           className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 items-center justify-center transition-opacity hover:opacity-60"
           style={{
@@ -188,7 +186,7 @@ export default function GoogleReviews() {
           <span style={{ fontSize: '18px', lineHeight: 1 }}>←</span>
         </button>
         <button
-          aria-label="Suivant"
+          aria-label={t('Suivant', 'Next', lang)}
           onClick={() => scrollBy(1)}
           className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 items-center justify-center transition-opacity hover:opacity-60"
           style={{
@@ -219,7 +217,7 @@ export default function GoogleReviews() {
             borderBottom: `1px solid ${bleuElectrique}`,
           }}
         >
-          VOIR TOUS LES AVIS SUR GOOGLE
+          {t('VOIR TOUS LES AVIS SUR GOOGLE', 'SEE ALL REVIEWS ON GOOGLE', lang)}
         </a>
       </div>
     </section>

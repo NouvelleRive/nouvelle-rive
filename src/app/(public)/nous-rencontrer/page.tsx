@@ -45,11 +45,11 @@ export default function NousRencontrerPage() {
     lang
   )
 
-  // Typewriter effect
+  // Typewriter effect — relance à chaque changement de langue
   useEffect(() => {
     setDisplayedText('')
     let currentIndex = 0
-    
+
     const interval = setInterval(() => {
       if (currentIndex <= introText.length) {
         setDisplayedText(introText.slice(0, currentIndex))
@@ -60,7 +60,7 @@ export default function NousRencontrerPage() {
     }, 30)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [introText])
 
   return (
     <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
