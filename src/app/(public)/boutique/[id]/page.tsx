@@ -272,7 +272,7 @@ export default function ProduitPage() {
                 <img
                   src={url}
                   alt={`${produit.nom} - Photo ${index + 1}`}
-                  className="w-full aspect-square object-cover"
+                  className="w-full h-auto object-cover"
                 />
               </div>
             ))}
