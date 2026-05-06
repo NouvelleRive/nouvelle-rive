@@ -550,6 +550,7 @@
           vendeuses={vendeuses}
           monthKey={monthKey}
           monthLabel={monthLabel}
+          planningSlots={planningSlots}
         />
 
         {/* ======================== */}

@@ -7,11 +7,37 @@ import { auth } from '@/lib/firebaseConfig'
 
 type Vendeuse = { id: string; prenom?: string; nom?: string; couleur?: string; actif?: boolean }
 type Pointage = { id: string; vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
+type PlanningSlots = Record<string, string>
 
 const fmtTime = (iso: string | null) => {
   if (!iso) return '—'
   const d = new Date(iso)
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+// Renvoie le créneau prévu pour une vendeuse à une date (ou null)
+const getSlot = (planningSlots: PlanningSlots, date: string, vendeuseId: string): '12-20' | '11-17' | null => {
+  if (planningSlots[`${date}_12-20`] === vendeuseId) return '12-20'
+  if (planningSlots[`${date}_11-17`] === vendeuseId) return '11-17'
+  return null
+}
+
+// Décalage en minutes entre l'heure réelle et l'heure prévue du slot
+const decalageMin = (iso: string | null, dateStr: string, slot: '12-20' | '11-17' | null, type: 'arr' | 'dep'): number | null => {
+  if (!iso || !slot) return null
+  const d = new Date(iso)
+  const target = new Date(d)
+  if (type === 'arr') target.setHours(slot === '12-20' ? 12 : 11, 0, 0, 0)
+  else target.setHours(slot === '12-20' ? 20 : 17, 0, 0, 0)
+  return Math.round((d.getTime() - target.getTime()) / 60000)
+}
+
+const SEUIL_DECALAGE_MIN = 10
+
+// Style bleu si décalage > seuil (en + ou en -)
+const timeClassName = (decalage: number | null): string => {
+  if (decalage === null) return ''
+  return Math.abs(decalage) > SEUIL_DECALAGE_MIN ? 'text-blue-600 font-semibold' : ''
 }
 
 const durationHours = (a: string | null, d: string | null): number => {
@@ -30,10 +56,14 @@ export default function PointagesSection({
   vendeuses,
   monthKey,
   monthLabel,
+  planningSlots = {},
+  readOnly = false,
 }: {
   vendeuses: Vendeuse[]
   monthKey: string
   monthLabel: string
+  planningSlots?: PlanningSlots
+  readOnly?: boolean
 }) {
   const [pointages, setPointages] = useState<Pointage[]>([])
   const [loading, setLoading] = useState(false)
@@ -133,20 +163,25 @@ export default function PointagesSection({
               <tr>
                 <th className="text-left px-3 py-2">Date</th>
                 <th className="text-left px-3 py-2">Vendeuse</th>
+                <th className="text-left px-3 py-2">Prévu</th>
                 <th className="text-left px-3 py-2">Arrivée</th>
                 <th className="text-left px-3 py-2">Départ</th>
                 <th className="text-left px-3 py-2">Durée</th>
-                <th className="px-3 py-2"></th>
+                {!readOnly && <th className="px-3 py-2"></th>}
               </tr>
             </thead>
             <tbody>
               {sortedPointages.map(p => {
                 const isEdit = editingId === p.id
+                const slot = getSlot(planningSlots, p.date, p.vendeuseId)
+                const decArr = decalageMin(p.arrivee, p.date, slot, 'arr')
+                const decDep = decalageMin(p.depart, p.date, slot, 'dep')
                 return (
                   <tr key={p.id} className="border-t">
                     <td className="px-3 py-2">{p.date}</td>
                     <td className="px-3 py-2 font-medium">{getVendeuseNom(p.vendeuseId)}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 text-xs text-gray-500">{slot ? `${slot}h` : '—'}</td>
+                    <td className={`px-3 py-2 ${timeClassName(decArr)}`} title={decArr !== null ? `${decArr > 0 ? '+' : ''}${decArr} min vs prévu` : ''}>
                       {isEdit ? (
                         <input
                           type="datetime-local"
@@ -156,7 +191,7 @@ export default function PointagesSection({
                         />
                       ) : fmtTime(p.arrivee)}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className={`px-3 py-2 ${timeClassName(decDep)}`} title={decDep !== null ? `${decDep > 0 ? '+' : ''}${decDep} min vs prévu` : ''}>
                       {isEdit ? (
                         <input
                           type="datetime-local"
@@ -167,16 +202,18 @@ export default function PointagesSection({
                       ) : fmtTime(p.depart)}
                     </td>
                     <td className="px-3 py-2">{fmtDuration(durationHours(p.arrivee, p.depart))}</td>
-                    <td className="px-3 py-2 text-right">
-                      {isEdit ? (
-                        <div className="flex gap-1 justify-end">
-                          <button onClick={() => saveEdit(p.id)} className="text-green-600 hover:bg-green-50 p-1 rounded"><Save size={14} /></button>
-                          <button onClick={() => setEditingId(null)} className="text-gray-400 hover:bg-gray-100 p-1 rounded"><X size={14} /></button>
-                        </div>
-                      ) : (
-                        <button onClick={() => startEdit(p)} className="text-gray-500 hover:text-[#22209C]"><Pencil size={14} /></button>
-                      )}
-                    </td>
+                    {!readOnly && (
+                      <td className="px-3 py-2 text-right">
+                        {isEdit ? (
+                          <div className="flex gap-1 justify-end">
+                            <button onClick={() => saveEdit(p.id)} className="text-green-600 hover:bg-green-50 p-1 rounded"><Save size={14} /></button>
+                            <button onClick={() => setEditingId(null)} className="text-gray-400 hover:bg-gray-100 p-1 rounded"><X size={14} /></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => startEdit(p)} className="text-gray-500 hover:text-[#22209C]"><Pencil size={14} /></button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 )
               })}

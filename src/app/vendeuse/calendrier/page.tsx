@@ -8,6 +8,7 @@ import { db, auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import PlanningCalendar from '@/components/PlanningCalendar'
 import PointageWidget from '@/components/PointageWidget'
+import PointagesSection from '@/components/admin/PointagesSection'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -348,6 +349,16 @@ export default function VendeuseCalendrierPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <PointagesSection
+          vendeuses={vendeuses as any}
+          monthKey={monthKey}
+          monthLabel={monthLabel}
+          planningSlots={planningSlots}
+          readOnly={!isAdmin}
+        />
       </div>
     </div>
   )
