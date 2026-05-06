@@ -376,6 +376,7 @@ async function compressImage(file: File): Promise<string> {
     // Options
     showExcelImport?: boolean
     requireSquareCategory?: boolean
+    lockQuantity?: boolean
   }
 
   // =====================
@@ -436,6 +437,7 @@ async function compressImage(file: File): Promise<string> {
     submitLabel,
     showExcelImport = true,
     requireSquareCategory = true,
+    lockQuantity = false,
   }: ProductFormProps) {
     
     // Refs pour les inputs caméra
@@ -1670,9 +1672,11 @@ async function compressImage(file: File): Promise<string> {
                 <label className="block text-sm font-medium mb-1">Quantité</label>
                 <input
                   type="number"
-                  value={formData.quantite}
-                  onChange={(e) => setFormData({ ...formData, quantite: e.target.value })}
-                  className="w-full border rounded px-2 py-1.5 text-sm"
+                  value={lockQuantity ? '1' : formData.quantite}
+                  onChange={lockQuantity ? undefined : (e) => setFormData({ ...formData, quantite: e.target.value })}
+                  readOnly={lockQuantity}
+                  tabIndex={lockQuantity ? -1 : undefined}
+                  className={`w-full border rounded px-2 py-1.5 text-sm ${lockQuantity ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''}`}
                 />
               </div>
             </div>

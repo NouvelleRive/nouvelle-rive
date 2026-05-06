@@ -200,6 +200,7 @@ export default function DeposanteFormulairePage() {
         loading={loading}
         showExcelImport={false}
         requireSquareCategory={false}
+        lockQuantity={true}
       />
 
       {!trigramme?.trim() && (
