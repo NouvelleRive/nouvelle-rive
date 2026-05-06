@@ -488,3 +488,28 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
 console.log(`✅ checkGmailFactures terminé`)
     return null
   })
+
+// =============================================================================
+// Rappels pointage / récap / restocks → ping de l'endpoint Vercel toutes les 5 min
+// L'endpoint /api/cron/reminders calcule lui-même l'heure de Paris et déclenche
+// les notifs au bon moment (12h10, 12h30, 12h50/15h50/17h50, 19h55).
+// =============================================================================
+exports.pingReminders = functions
+  .region("europe-west1")
+  .pubsub.schedule("every 5 minutes")
+  .timeZone("Europe/Paris")
+  .onRun(async () => {
+    const fetch = require('node-fetch')
+    const url = 'https://www.nouvellerive.eu/api/cron/reminders'
+    const secret = process.env.CRON_SECRET || ''
+    try {
+      const res = await fetch(url, {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      })
+      const body = await res.text()
+      console.log(`pingReminders ${res.status}: ${body.slice(0, 200)}`)
+    } catch (err) {
+      console.error('pingReminders failed:', err)
+    }
+    return null
+  })
