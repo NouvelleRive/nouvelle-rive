@@ -28,7 +28,7 @@ function VendeuseNavbar() {
       <div className="max-w-6xl mx-auto px-4 py-3">
         <div className="hidden sm:flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/vendeuse/commandes" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
+            <Link href="/vendeuse/calendrier" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
               Nouvelle Rive
             </Link>
             <Link href="/vendeuse/inventaire" className="text-xs text-gray-400 hover:text-[#22209C] border border-gray-200 rounded px-2 py-1 flex items-center gap-1">
@@ -56,7 +56,7 @@ function VendeuseNavbar() {
 
         <div className="sm:hidden">
           <div className="flex items-center justify-center mb-3 gap-3">
-            <Link href="/vendeuse/commandes" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
+            <Link href="/vendeuse/calendrier" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
               Nouvelle Rive
             </Link>
             <Link href="/vendeuse/inventaire" className="text-xs text-gray-400 hover:text-[#22209C] border border-gray-200 rounded px-2 py-1 flex items-center gap-1">

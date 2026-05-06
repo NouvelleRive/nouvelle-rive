@@ -10,6 +10,7 @@
   import { db } from '@/lib/firebaseConfig'
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
   import PlanningCalendar from '@/components/PlanningCalendar'
+  import PointagesSection from '@/components/admin/PointagesSection'
 
   // =====================
   // TYPES
@@ -491,6 +492,15 @@
             <p className="text-gray-400 text-sm text-center py-8">Aucune vendeuse ajoutée</p>
           )}
         </div>
+
+        {/* ======================== */}
+        {/* SECTION POINTAGES        */}
+        {/* ======================== */}
+        <PointagesSection
+          vendeuses={vendeuses}
+          monthKey={monthKey}
+          monthLabel={monthLabel}
+        />
 
         {/* ======================== */}
         {/* MODAL AJOUT              */}
