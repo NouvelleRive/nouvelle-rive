@@ -38,20 +38,21 @@ export default function LanguageSwitcher() {
   useEffect(() => {
     setLang(readGoogtrans())
 
-    // Tueur de bannière Google Translate : élimine l'iframe dès qu'elle apparaît
+    // Tueur de bannière Google Translate : élimine UNIQUEMENT l'iframe de bannière
+    // (NE PAS toucher les autres iframes GT, elles font le travail de traduction)
     const killBanner = () => {
-      document
-        .querySelectorAll<HTMLElement>('.goog-te-banner-frame, .skiptranslate iframe')
-        .forEach((el) => {
-          if (el.tagName === 'IFRAME') el.remove()
-        })
-      if (document.body.style.top) document.body.style.top = '0px'
-      if (document.body.style.position) document.body.style.position = 'static'
-      document.documentElement.style.marginTop = '0px'
+      const banner = document.querySelector<HTMLElement>('.goog-te-banner-frame')
+      if (banner) banner.remove()
+      if (document.body.style.top && document.body.style.top !== '0px') {
+        document.body.style.top = '0px'
+      }
+      if (document.body.style.position === 'relative') {
+        document.body.style.position = 'static'
+      }
     }
     killBanner()
     const observer = new MutationObserver(killBanner)
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] })
+    observer.observe(document.body, { childList: true })
 
     if (googleScriptInjected || document.getElementById('google-translate-script')) {
       googleScriptInjected = true
