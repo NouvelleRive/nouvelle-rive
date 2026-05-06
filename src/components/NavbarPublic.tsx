@@ -54,7 +54,7 @@ export default function NavbarPublic() {
     <>
       {/* Vidéo bannière (boutique uniquement) */}
       {showVideo && (
-        <div className="w-full overflow-hidden bg-black">
+        <div className="relative w-full overflow-hidden bg-black">
           <video
             ref={videoRef}
             src="/banner.mp4"
@@ -65,6 +65,36 @@ export default function NavbarPublic() {
             preload="metadata"
             className="w-full h-[70vh] md:h-screen object-cover"
           />
+          {/* Boutons Panier + Mon Compte en overlay */}
+          <div
+            className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-2 z-10"
+            style={{ fontFamily: fontHelvetica }}
+          >
+            <Link
+              href="/panier"
+              className="relative px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+              style={{
+                fontSize: '9px',
+                letterSpacing: '0.1em',
+                fontWeight: '600',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              PANIER {hydrated && count > 0 ? `(${count})` : ''}
+            </Link>
+            <Link
+              href={compteHref}
+              className="px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+              style={{
+                fontSize: '9px',
+                letterSpacing: '0.1em',
+                fontWeight: '600',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              MON COMPTE
+            </Link>
+          </div>
         </div>
       )}
 
@@ -88,33 +118,35 @@ export default function NavbarPublic() {
             NOUVELLE RIVE
           </h1>
 
-          {/* Boutons Panier + Mon Compte */}
-          <div className="flex items-center gap-2 mt-1 md:mt-2">
-            <Link
-              href="/panier"
-              className="relative px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
-              style={{
-                fontSize: '9px',
-                letterSpacing: '0.1em',
-                fontWeight: '600',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              PANIER {hydrated && count > 0 ? `(${count})` : ''}
-            </Link>
-            <Link
-              href={compteHref}
-              className="px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
-              style={{
-                fontSize: '9px',
-                letterSpacing: '0.1em',
-                fontWeight: '600',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              MON COMPTE
-            </Link>
-          </div>
+          {/* Boutons Panier + Mon Compte (cachés quand vidéo affichée) */}
+          {!showVideo && (
+            <div className="flex items-center gap-2 mt-1 md:mt-2">
+              <Link
+                href="/panier"
+                className="relative px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+                style={{
+                  fontSize: '9px',
+                  letterSpacing: '0.1em',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                PANIER {hydrated && count > 0 ? `(${count})` : ''}
+              </Link>
+              <Link
+                href={compteHref}
+                className="px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+                style={{
+                  fontSize: '9px',
+                  letterSpacing: '0.1em',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                MON COMPTE
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Ligne */}
