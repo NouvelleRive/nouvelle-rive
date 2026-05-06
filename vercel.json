@@ -7,11 +7,5 @@
     "src/app/api/sync/ebay-orders/route.ts": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/sync/ebay-orders",
-      "schedule": "*/10 * * * *"
-    }
-  ]
+  }
 }

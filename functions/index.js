@@ -513,3 +513,28 @@ exports.pingReminders = functions
     }
     return null
   })
+
+// =============================================================================
+// Sync ventes eBay → ping de l'endpoint Vercel toutes les 10 min
+// L'API de notifications eBay ne pousse pas les ventes ; le polling Fulfillment
+// est la méthode officielle. Idempotent (IDs déterministes côté Firestore).
+// =============================================================================
+exports.pingEbaySync = functions
+  .region("europe-west1")
+  .pubsub.schedule("every 10 minutes")
+  .timeZone("Europe/Paris")
+  .onRun(async () => {
+    const fetch = require('node-fetch')
+    const url = 'https://www.nouvellerive.eu/api/sync/ebay-orders'
+    const secret = process.env.CRON_SECRET || ''
+    try {
+      const res = await fetch(url, {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      })
+      const body = await res.text()
+      console.log(`pingEbaySync ${res.status}: ${body.slice(0, 200)}`)
+    } catch (err) {
+      console.error('pingEbaySync failed:', err)
+    }
+    return null
+  })
