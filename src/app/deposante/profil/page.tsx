@@ -503,7 +503,12 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
           {contratSigne && (
             <div style={{ borderBottom: '1px solid #000', padding: '32px 0' }}>
               <p style={{ ...label, marginBottom: '8px' }}>CONTRAT DE DÉPÔT-VENTE</p>
-              <p style={{ fontSize: '14px', color: '#000', marginBottom: '12px' }}>✅ Votre contrat est signé et enregistré.</p>
+              <p style={{ fontSize: '14px', color: '#000', marginBottom: '16px' }}>✅ Votre contrat est signé et enregistré.</p>
+              <div style={{ backgroundColor: '#f5f5ff', border: `1px solid ${bleu}`, padding: '16px 20px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '13px', lineHeight: 1.6, margin: 0 }}>
+                  Vos informations vont être vérifiées par notre équipe. Si des éléments sont erronés ou manquants, nous ne pourrons pas prendre votre dépôt.
+                </p>
+              </div>
               {contratUrl && (
                 <a href={contratUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', textDecoration: 'underline', color: bleu }}>
                   VOIR LE CONTRAT (PDF) →
@@ -514,21 +519,40 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
 
           {/* ACTIONS BAS DE PAGE */}
           <div style={{ paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button
-              onClick={() => save()}
-              disabled={saving}
-              style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
-            >
-              {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
-            </button>
-            {!contratSigne && (
-              <button
-                onClick={openContratModal}
-                disabled={saving}
-                style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
-              >
-                LIRE ET SIGNER LE CONTRAT →
-              </button>
+            {!contratSigne ? (
+              <>
+                <button
+                  onClick={() => save()}
+                  disabled={saving}
+                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+                >
+                  {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
+                </button>
+                <button
+                  onClick={openContratModal}
+                  disabled={saving}
+                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+                >
+                  LIRE ET SIGNER LE CONTRAT →
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={async () => { await save({ silent: true }); router.push('/deposante/formulaire') }}
+                  disabled={saving}
+                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+                >
+                  CRÉER MES PIÈCES →
+                </button>
+                <button
+                  onClick={() => save()}
+                  disabled={saving}
+                  style={{ padding: '12px 24px', backgroundColor: 'transparent', color: '#000', border: '1px solid #000', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', alignSelf: 'flex-start' }}
+                >
+                  {saving ? 'ENREGISTREMENT...' : 'METTRE À JOUR MES INFOS'}
+                </button>
+              </>
             )}
             {msg && <span style={{ fontSize: '13px', color: msg.includes('❌') ? 'red' : 'green' }}>{msg}</span>}
           </div>
