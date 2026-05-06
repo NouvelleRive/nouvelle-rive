@@ -2,7 +2,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useLang, t } from '@/lib/i18n'
@@ -79,16 +78,20 @@ export default function NosCreateursPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <div className="border-b border-black">
-        <div className="max-w-4xl mx-auto px-6 py-16">
-          <h1
-            className="text-4xl md:text-6xl font-bold tracking-tight uppercase"
-            style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-          >
-            {t('Nos Créatrices/Curateurices', 'Our Designers / Curators', lang)}
-          </h1>
-        </div>
+      <div className="px-6 py-20" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+        <h1
+          style={{
+            fontSize: 'clamp(40px, 8vw, 120px)',
+            fontWeight: 700,
+            letterSpacing: '-0.03em',
+            lineHeight: 0.9,
+            textTransform: 'uppercase',
+          }}
+        >
+          {t('Nos Créatrices', 'Our Designers', lang)}<br />/ {t('Curateurices', 'Curators', lang)}
+        </h1>
       </div>
+      <div className="w-full border-t border-black" />
 
       {/* Recherche */}
       <div className="py-6 px-6" style={{ borderBottom: '1px solid #000' }}>
@@ -133,9 +136,8 @@ export default function NosCreateursPage() {
         style={{ borderLeft: '1px solid #000' }}
       >
         {filtered.map((c) => (
-          <Link 
-            key={c.id} 
-            href={`/nos-creatrices/${c.slug}`}
+          <div
+            key={c.id}
             className="group"
             style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
@@ -176,7 +178,7 @@ export default function NosCreateursPage() {
                 {c.specialite}
               </p>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 
