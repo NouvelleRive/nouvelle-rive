@@ -89,7 +89,7 @@
         const oy = offset?.y || 0
         console.log('📐 Applying offset - ox:', ox, 'oy:', oy)
         
-      // D'abord appliquer l'offset
+      // Appliquer l'offset (extend avec blanc), puis zoom (resize), puis cover crop carré
         let processedBuffer = await sharp(rotated)
           .extend({
             top: Math.max(0, oy),
@@ -100,48 +100,19 @@
           })
           .toBuffer()
 
-        // Appliquer le zoom
-        const meta = await sharp(processedBuffer).metadata()
-        const currentW = meta.width || 1200
-        const currentH = meta.height || 1200
+        if (zoom !== 1) {
+          const meta = await sharp(processedBuffer).metadata()
+          const w = meta.width || 1200
+          const h = meta.height || 1200
+          processedBuffer = await sharp(processedBuffer)
+            .resize(Math.max(1, Math.round(w * zoom)), Math.max(1, Math.round(h * zoom)))
+            .toBuffer()
+        }
 
-        if (zoom > 1) {
-          // Zoom in: cropper le centre
-          const cropW = Math.round(currentW / zoom)
-          const cropH = Math.round(currentH / zoom)
-          const left = Math.round((currentW - cropW) / 2)
-          const top = Math.round((currentH - cropH) / 2)
-          
-          processedBuffer = await sharp(processedBuffer)
-            .extract({ left, top, width: cropW, height: cropH })
-            .resize(960, 960, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
-            .toBuffer()
-        } else if (zoom < 1) {
-          // Zoom out: réduire et ajouter du blanc
-          const targetSize = Math.round(1200 * zoom)
-          
-          processedBuffer = await sharp(processedBuffer)
-            .resize(targetSize, targetSize, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
-            .extend({
-              top: Math.round((1200 - targetSize) / 2),
-              bottom: Math.ceil((1200 - targetSize) / 2),
-              left: Math.round((1200 - targetSize) / 2),
-              right: Math.ceil((1200 - targetSize) / 2),
-              background: { r: 255, g: 255, b: 255 }
-            })
-            .resize(1200, 1200)
-            .toBuffer()
-        } else {
-          // zoom === 1, juste resize normal
-          processedBuffer = await sharp(processedBuffer)
-            .resize(960, 960, { fit: 'inside' })
-            .extend({
-              top: 120, bottom: 120, left: 120, right: 120,
-              background: { r: 255, g: 255, b: 255 }
-            })
-            .resize(1200, 1200, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
-            .toBuffer()
-                }
+        // Crop carré 1200×1200 cover (jamais de bandes blanches)
+        processedBuffer = await sharp(processedBuffer)
+          .resize(1200, 1200, { fit: 'cover', position: 'centre' })
+          .toBuffer()
 
         // Finaliser
         const rotatedBuffer = await sharp(processedBuffer)
@@ -254,7 +225,7 @@
         sharpInstance = sharpInstance.rotate(rotation)
       }
 
-      // Trim + resize 1140 + centrage 1200x1200 blanc + retouches couleur
+      // Trim + cover crop 1200x1200 (jamais de bandes blanches sur les côtés)
       const trimResult = await sharpInstance.trim().toBuffer({ resolveWithObject: true })
       const trimmedBuffer = trimResult.data
       const trimLeft = Math.abs(trimResult.info.trimOffsetLeft || 0)
@@ -262,22 +233,8 @@
       const trimW = trimResult.info.width
       const trimH = trimResult.info.height
 
-      const resized = await sharp(trimmedBuffer)
-        .resize(1000, 1000, { fit: 'inside' })
-        .toBuffer()
-
-      const meta = await sharp(resized).metadata()
-      const w = meta.width || 1140
-      const h = meta.height || 1140
-
-      const finalBuffer = await sharp(resized)
-        .extend({
-          top: Math.floor((1200 - h) / 2),
-          bottom: Math.ceil((1200 - h) / 2),
-          left: Math.floor((1200 - w) / 2),
-          right: Math.ceil((1200 - w) / 2),
-          background: { r: 255, g: 255, b: 255 }
-        })
+      const finalBuffer = await sharp(trimmedBuffer)
+        .resize(1200, 1200, { fit: 'cover', position: 'centre' })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .modulate({ brightness: 1.08, saturation: 1.20 })
         .gamma(1.05)
@@ -285,7 +242,7 @@
         .png({ quality: 90 })
         .toBuffer()
 
-      console.log('🖼️ Image détourée:', w, 'x', h)
+      console.log('🖼️ Image détourée (cover 1200×1200):', trimW, 'x', trimH)
 
       // 4. Upload vers Bunny
       const storageZone = process.env.BUNNY_STORAGE_ZONE
@@ -318,24 +275,12 @@
       const finalUrl = `${cdnUrl}/${path}`
       console.log('✅ Upload Bunny réussi:', finalUrl)
 
-      // Source alignée pour restauration (même cadrage que le détouré)
+      // Source alignée pour restauration (même cadrage cover que le détouré)
       let sourceSharp = sharp(preBuffer)
       if (rotation !== 0) sourceSharp = sourceSharp.rotate(rotation)
-      const croppedSource = await sourceSharp
+      const sourceBuffer = await sourceSharp
         .extract({ left: trimLeft, top: trimTop, width: trimW, height: trimH })
-        .resize(1000, 1000, { fit: 'inside' })
-        .toBuffer()
-      const smeta = await sharp(croppedSource).metadata()
-      const sw = smeta.width || 1000
-      const sh = smeta.height || 1000
-      const sourceBuffer = await sharp(croppedSource)
-        .extend({
-          top: Math.floor((1200 - sh) / 2),
-          bottom: Math.ceil((1200 - sh) / 2),
-          left: Math.floor((1200 - sw) / 2),
-          right: Math.ceil((1200 - sw) / 2),
-          background: { r: 255, g: 255, b: 255 }
-        })
+        .resize(1200, 1200, { fit: 'cover', position: 'centre' })
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .png({ quality: 90 })
         .toBuffer()
