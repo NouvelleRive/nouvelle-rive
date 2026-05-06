@@ -44,6 +44,7 @@ function CheckoutContent() {
   }, [hydrated, count, router])
 
   const fraisLivraison = calculerLivraison(sousTotal, modeLivraison, adresse.paysCode)
+  const fraisLivraisonPreview = calculerLivraison(sousTotal, 'livraison', adresse.paysCode)
   const total = sousTotal + fraisLivraison
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -187,8 +188,8 @@ function CheckoutContent() {
                   <input type="radio" name="mode" value="livraison" checked={modeLivraison === 'livraison'} onChange={() => setModeLivraison('livraison')} className="w-4 h-4 accent-black" />
                   <div>
                     <p style={{ fontSize: '13px' }}>Livraison à domicile</p>
-                    <p style={{ fontSize: '11px', color: fraisLivraison === 0 && modeLivraison === 'livraison' ? bleuElectrique : '#666' }}>
-                      {modeLivraison === 'livraison' && fraisLivraison === 0 ? 'Offerte' : `À partir de 15€`}
+                    <p style={{ fontSize: '11px', color: fraisLivraisonPreview === 0 ? bleuElectrique : '#666' }}>
+                      {fraisLivraisonPreview === 0 ? 'Offerte' : `À partir de ${fraisLivraisonPreview}€`}
                     </p>
                   </div>
                 </label>
