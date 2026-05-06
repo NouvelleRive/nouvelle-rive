@@ -33,6 +33,7 @@ export default function NavbarPublic() {
   // Contenu de navigation
   const boutiqueLinks = [
     { href: '/boutique', label: 'NEW IN' },
+    { href: '/nous-rencontrer', label: 'NOTRE BOUTIQUE 8 RUE DES ECOUFFES' },
     { href: '/hiver', label: 'HIVER' },
     { href: '/soiree', label: 'SOIRÉE' },
     { href: '/les-iconiques', label: 'LES ICONIQUES DU VINTAGE' },
@@ -44,7 +45,6 @@ export default function NavbarPublic() {
     { href: '/enfant', label: 'ENFANT' },
     { href: '/accessoires', label: 'ACCESSOIRES' },
     { href: '/ateliers', label: 'ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE' },
-    { href: '/nous-rencontrer', label: '8 RUE DES ECOUFFES #IRL' },
   ]
 
   const isHiver = pathname === '/hiver'
