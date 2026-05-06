@@ -68,7 +68,7 @@ export default function RestockPage() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-sm w-full p-6">
           <h2 className="text-lg font-semibold mb-4 text-center text-gray-900">
-            Qui êtes-vous ?
+            Wow t'es trop bg, cmt tu t'appelles ?
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {vendeusesListe.map((prenom) => (
