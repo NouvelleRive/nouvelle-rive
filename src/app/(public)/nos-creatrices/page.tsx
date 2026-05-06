@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useLang, t } from '@/lib/i18n'
@@ -131,17 +132,17 @@ export default function NosCreateursPage() {
       </div>
 
       {/* Grille - format portrait 3:4 */}
-      <div 
+      <div
         className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
         style={{ borderLeft: '1px solid #000' }}
       >
         {filtered.map((c) => (
-          <div
+          <Link
             key={c.id}
+            href={`/nos-creatrices/${c.slug}`}
             className="group"
             style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
-            {/* Format portrait 3:4 au lieu de aspect-square */}
             <div className="aspect-[3/4] bg-gray-100 overflow-hidden relative">
               {c.imageUrl ? (
                 <img
@@ -158,18 +159,18 @@ export default function NosCreateursPage() {
               )}
             </div>
             <div className="py-4 px-3 text-center bg-white">
-              <h2 
+              <h2
                 className="uppercase font-semibold"
-                style={{ 
+                style={{
                   fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                   fontSize: '11px',
                 }}
               >
                 {c.nom}
               </h2>
-              <p 
+              <p
                 className="mt-1 uppercase"
-                style={{ 
+                style={{
                   fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                   fontSize: '10px',
                   color: '#666'
@@ -178,7 +179,7 @@ export default function NosCreateursPage() {
                 {c.specialite}
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
