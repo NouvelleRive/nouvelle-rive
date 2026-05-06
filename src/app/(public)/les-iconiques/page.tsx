@@ -5,6 +5,7 @@
   import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
   import { db } from '@/lib/firebaseConfig'
   import ProductGrid from '@/components/ProductGrid'
+  import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 
   type Iconique = {
     id: string
@@ -15,8 +16,11 @@
     valeurNeuf: number
     tendancePrix: 'monte' | 'descend'
     pourquoiMust: string
-    categorieRecherche: string
-    marque?: string
+    categorieRecherche: string  // mot dans le nom OU la catégorie (ex: "trench")
+    marque?: string  // marque exacte, ou 'luxe' pour matcher LUXURY_BRANDS
+    chineuseTrigrammes?: string[]  // trigrammes de chineuses (ex: ["GIG", "CDB"])
+    categoriesIn?: string[]  // catégories du produit qui matchent (ex: ["manteau", "veste"])
+    materialContient?: string  // matériau contient (ex: "fourrure")
     images: string[]
     ordre: number
   }
@@ -57,6 +61,9 @@
               pourquoiMust: docData.pourquoiMust || '',
               categorieRecherche: docData.categorieRecherche || '',
               marque: docData.marque || '',
+              chineuseTrigrammes: docData.chineuseTrigrammes || [],
+              categoriesIn: docData.categoriesIn || [],
+              materialContient: docData.materialContient || '',
               images: docData.images || [],
               ordre: docData.ordre || 0,
             })
@@ -84,18 +91,47 @@
           for (const item of data) {
             const needleNom = (item.categorieRecherche || '').toLowerCase().trim()
             const needleMarque = (item.marque || '').toLowerCase().trim()
-            if (!needleNom && !needleMarque) {
+            const needleMaterial = (item.materialContient || '').toLowerCase().trim()
+            const trigs = (item.chineuseTrigrammes || []).map(t => t.toUpperCase())
+            const catsIn = (item.categoriesIn || []).map(c => c.toLowerCase())
+
+            // Si aucun filtre défini → liste vide (évite d'afficher tous les produits)
+            if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0) {
               produitsData[item.id] = []
               continue
             }
+
             const matched = allProduits.filter(p => {
               const nom = (p.nom || p.Nom || '').toLowerCase()
               const marque = (p.marque || '').toLowerCase()
-              // Filtre par mot dans le NOM du produit (ex. "trench")
-              const matchNom = !needleNom || nom.includes(needleNom)
-              // Filtre par MARQUE du produit (ex. "burberry")
-              const matchMarque = !needleMarque || marque.includes(needleMarque)
-              return matchNom && matchMarque
+              const cat = typeof p.categorie === 'object'
+                ? (p.categorie?.label || '').toLowerCase()
+                : (p.categorie || '').toLowerCase()
+              const material = (p.material || '').toLowerCase()
+              const trigramme = (p.trigramme || '').toUpperCase()
+
+              // Filtre 1 : mot dans le NOM ou la CATÉGORIE
+              if (needleNom && !nom.includes(needleNom) && !cat.includes(needleNom)) return false
+
+              // Filtre 2 : MARQUE (mot exact, ou 'luxe' = LUXURY_BRANDS)
+              if (needleMarque) {
+                if (needleMarque === 'luxe') {
+                  if (!LUXURY_BRANDS.some(b => marque.includes(b))) return false
+                } else {
+                  if (!marque.includes(needleMarque)) return false
+                }
+              }
+
+              // Filtre 3 : CHINEUSE par trigramme
+              if (trigs.length > 0 && !trigs.includes(trigramme)) return false
+
+              // Filtre 4 : CATÉGORIE doit contenir un des labels listés
+              if (catsIn.length > 0 && !catsIn.some(c => cat.includes(c))) return false
+
+              // Filtre 5 : MATÉRIAU contient
+              if (needleMaterial && !material.includes(needleMaterial)) return false
+
+              return true
             })
             produitsData[item.id] = matched
           }
