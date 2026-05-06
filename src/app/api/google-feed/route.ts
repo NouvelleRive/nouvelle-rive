@@ -52,11 +52,14 @@ export async function GET() {
       const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie || ''
       const imageUrl = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
       const rawNom = (p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '').trim()
-      const marque = (p.marque || '').trim()
+      // Google US considère "Redskins" comme un terme offensant — on remplace pour éviter le rejet
+      const marqueRaw = (p.marque || '').trim()
+      const marque = /redskins/i.test(marqueRaw) ? 'Vintage' : marqueRaw
 
       // Évite "Ralph Lauren - Ralph Lauren - …" : on n'ajoute la marque que si le nom ne commence pas déjà par
-      const nomStartsWithBrand = marque && rawNom.toLowerCase().startsWith(marque.toLowerCase())
-      let fullTitle = (marque && !nomStartsWithBrand) ? `${marque} - ${rawNom}` : rawNom
+      const cleanedNom = rawNom.replace(/redskins/gi, 'Vintage')
+      const nomStartsWithBrand = marque && cleanedNom.toLowerCase().startsWith(marque.toLowerCase())
+      let fullTitle = (marque && !nomStartsWithBrand) ? `${marque} - ${cleanedNom}` : cleanedNom
       if (!fullTitle) fullTitle = `${marque || 'Vintage'} ${cat}`.trim()
       // Google : titre max 150 caractères
       if (fullTitle.length > 150) fullTitle = fullTitle.slice(0, 147) + '...'
