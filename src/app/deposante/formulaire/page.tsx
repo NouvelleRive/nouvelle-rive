@@ -200,13 +200,15 @@ export default function DeposanteFormulairePage() {
           <p className="text-sm text-gray-500">Hello {deposanteNom} 👋</p>
           <h1 className="text-xl font-bold text-[#22209C]">DÉPOSER UNE PIÈCE</h1>
         </div>
-        <Link
+        <a
           href="/client/deposant/produits-acceptes"
-          className="shrink-0 inline-flex items-center px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white whitespace-nowrap"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 inline-flex items-center px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white whitespace-nowrap cursor-pointer hover:opacity-90 transition-opacity"
           style={{ backgroundColor: '#0000FF' }}
         >
-          Consulter la liste des marques acceptées
-        </Link>
+          Consulter la liste des marques acceptées →
+        </a>
       </div>
 
       <ProductForm
@@ -241,13 +243,15 @@ export default function DeposanteFormulairePage() {
             <p className="text-sm mb-4 leading-relaxed">
               <strong>{rejectedBrand}</strong> ne fait pas partie des marques acceptées.
             </p>
-            <Link
+            <a
               href="/client/deposant/produits-acceptes"
-              className="block text-center w-full py-3 text-white text-xs font-semibold uppercase tracking-widest mb-2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center w-full py-3 text-white text-xs font-semibold uppercase tracking-widest mb-2 cursor-pointer hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#0000FF' }}
             >
-              Voir la liste des marques acceptées
-            </Link>
+              Voir la liste des marques acceptées →
+            </a>
             <button
               onClick={() => setRejectedBrand('')}
               className="block text-center w-full py-2 text-xs text-gray-500 hover:text-black"
