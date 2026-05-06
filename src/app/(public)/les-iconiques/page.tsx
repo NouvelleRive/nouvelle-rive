@@ -4,6 +4,7 @@
   import Link from 'next/link'
   import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
   import { db } from '@/lib/firebaseConfig'
+  import ProductGrid from '@/components/ProductGrid'
 
   type Iconique = {
     id: string
@@ -19,13 +20,7 @@
     ordre: number
   }
 
-  type Produit = {
-    id: string
-    nom: string
-    prix: number
-    imageUrl: string
-    slug: string
-  }
+  type Produit = any
 
   export default function LesIconiquesPage() {
     const [iconiques, setIconiques] = useState<Iconique[]>([])
@@ -98,13 +93,8 @@
               const desc = (p.description || '').toLowerCase()
               return cat.includes(needle) || nom.includes(needle) || desc.includes(needle)
             })
-            produitsData[item.id] = matched.slice(0, 6).map(p => ({
-              id: p.id,
-              nom: p.nom || p.Nom || '',
-              prix: p.prix || p.Prix || 0,
-              imageUrl: p.imageUrls?.[0] || p.imageUrl || p.photos?.face || '',
-              slug: p.id, // les fiches produit sont accédées par id, pas par slug
-            }))
+            // Garde le shape complet pour ProductGrid (imageUrls, marque, taille, etc.)
+            produitsData[item.id] = matched
           }
           setProduits(produitsData)
         } catch (error) {
@@ -405,57 +395,23 @@
                       </p>
                     </div>
 
-                    {/* Produits correspondants */}
-                    {produits[item.id] && produits[item.id].length > 0 && (
-                      <div className="mt-8 pt-8 relative z-10" style={{ borderTop: '1px solid #e5e5e5' }}>
-                        <p 
-                          className="uppercase tracking-wider text-xs mb-4 font-semibold"
-                          style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
-                        >
-                          Nos {item.nom}
-                        </p>
-                        <div className="grid grid-cols-2 gap-4">
-                          {produits[item.id].map((produit) => (
-                            <Link
-                              key={produit.id}
-                              href={`/boutique/${produit.slug}`}
-                              className="group"
-                            >
-                              <div 
-                                className="aspect-square bg-gray-100 mb-2 overflow-hidden"
-                                style={{ border: '1px solid #000' }}
-                              >
-                                {produit.imageUrl ? (
-                                  <img
-                                    src={produit.imageUrl}
-                                    alt={produit.nom}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <p className="text-gray-400 text-xs">Image à venir</p>
-                                  </div>
-                                )}
-                              </div>
-                              <p 
-                                className="text-xs mb-1 line-clamp-2"
-                                style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
-                              >
-                                {produit.nom}
-                              </p>
-                              <p 
-                                className="text-xs font-semibold"
-                                style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
-                              >
-                                {produit.prix} €
-                              </p>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
+
+                {/* Produits correspondants — pleine largeur en dessous de la photo + texte */}
+                {produits[item.id] && produits[item.id].length > 0 && (
+                  <div style={{ borderTop: '1px solid #000' }}>
+                    <div className="px-6 md:px-12 pt-10 pb-4">
+                      <p
+                        className="uppercase tracking-widest font-semibold"
+                        style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
+                      >
+                        Nos {item.nom}
+                      </p>
+                    </div>
+                    <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
