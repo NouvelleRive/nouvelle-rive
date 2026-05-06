@@ -15,29 +15,27 @@ export const useEtapes = () => useContext(EtapesContext)
 
 function ProgressBar({ etapes }: { etapes: Etapes }) {
   const steps = [
-    { key: 'profil', label: 'Profil', href: '/deposante/profil' },
-    { key: 'contrat', label: 'Contrat', href: '/deposante/profil' },
-    { key: 'pieces', label: 'Mes pièces', href: '/deposante/mes-produits' },
-    { key: 'rdv', label: 'RDV', href: '/deposante/calendrier' },
+    { label: 'Profil & contrat', href: '/deposante/profil', done: etapes.profil && etapes.contrat },
+    { label: 'Mes pièces', href: '/deposante/mes-produits', done: etapes.pieces },
+    { label: 'RDV', href: '/deposante/calendrier', done: etapes.rdv },
   ]
   return (
     <div className="bg-white border-b">
       <div className="max-w-6xl mx-auto px-4 py-2 flex items-center">
         {steps.map((step, i) => {
-          const done = etapes[step.key as keyof Etapes]
-          const prev = i === 0 ? true : etapes[steps[i - 1].key as keyof Etapes]
+          const prev = i === 0 ? true : steps[i - 1].done
           return (
-            <div key={step.key} className="flex items-center">
+            <div key={step.label} className="flex items-center">
               <Link
                 href={prev ? step.href : '#'}
                 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest px-3 py-1 ${
-                  done ? 'text-[#22209C]' : prev ? 'text-gray-400 hover:text-[#22209C]' : 'text-gray-300 pointer-events-none'
+                  step.done ? 'text-[#22209C]' : prev ? 'text-gray-400 hover:text-[#22209C]' : 'text-gray-300 pointer-events-none'
                 }`}
               >
                 <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] border ${
-                  done ? 'bg-[#22209C] border-[#22209C] text-white' : 'border-gray-300 text-gray-300'
+                  step.done ? 'bg-[#22209C] border-[#22209C] text-white' : 'border-gray-300 text-gray-300'
                 }`}>
-                  {done ? '✓' : i + 1}
+                  {step.done ? '✓' : i + 1}
                 </span>
                 {step.label}
               </Link>
@@ -216,10 +214,9 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
             <p className="text-xs font-semibold uppercase tracking-widest text-[#22209C] mb-4">Bienvenue chez Nouvelle Rive</p>
             <h2 className="text-2xl font-bold mb-4">Voici les étapes pour déposer vos pièces</h2>
             <ol className="space-y-3 text-sm text-gray-700 mb-8">
-              <li className="flex gap-3"><span className="font-bold text-[#22209C]">1.</span> Complétez votre profil (identité, coordonnées bancaires, pièce d'identité)</li>
-              <li className="flex gap-3"><span className="font-bold text-[#22209C]">2.</span> Signez votre contrat de dépôt-vente</li>
-              <li className="flex gap-3"><span className="font-bold text-[#22209C]">3.</span> Ajoutez vos pièces (5 maximum)</li>
-              <li className="flex gap-3"><span className="font-bold text-[#22209C]">4.</span> Prenez rendez-vous pour déposer vos articles en boutique</li>
+              <li className="flex gap-3"><span className="font-bold text-[#22209C]">1.</span> Complétez votre profil (identité, coordonnées bancaires, pièce d'identité) <strong>et signez</strong> votre contrat de dépôt-vente</li>
+              <li className="flex gap-3"><span className="font-bold text-[#22209C]">2.</span> Ajoutez vos pièces (5 maximum)</li>
+              <li className="flex gap-3"><span className="font-bold text-[#22209C]">3.</span> Prenez rendez-vous pour déposer vos articles en boutique</li>
             </ol>
             <button onClick={dismissWelcome} className="w-full py-3 text-white text-xs font-semibold uppercase tracking-widest" style={{ backgroundColor: '#22209C' }}>
               Commencer par mon profil →
