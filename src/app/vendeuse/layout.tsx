@@ -7,7 +7,6 @@ import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { ClipboardList, Package, ShoppingBag, Shirt, Calendar } from 'lucide-react'
-import PointageWidget from '@/components/PointageWidget'
 
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -124,7 +123,6 @@ export default function VendeuseLayout({ children }: { children: React.ReactNode
   return (
     <div className="min-h-screen bg-gray-50">
       <VendeuseNavbar />
-      <PointageWidget />
       <main>
         {children}
       </main>

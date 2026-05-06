@@ -8,7 +8,7 @@ export default function VendeusePage() {
   const router = useRouter()
   
   useEffect(() => {
-    router.replace('/vendeuse/commandes')
+    router.replace('/vendeuse/calendrier')
   }, [router])
 
   return null

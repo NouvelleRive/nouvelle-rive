@@ -30,7 +30,7 @@ export default function LoginPage() {
     if (userEmail === ADMIN_EMAIL) {
       router.push('/admin/nos-produits')
     } else if (userEmail === VENDEUSE_EMAIL) {
-      router.push('/vendeuse/commandes')
+      router.push('/vendeuse/calendrier')
     } else {
       router.push('/chineuse/formulaire')
     }
