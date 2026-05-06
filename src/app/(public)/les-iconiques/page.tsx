@@ -16,6 +16,7 @@
     tendancePrix: 'monte' | 'descend'
     pourquoiMust: string
     categorieRecherche: string
+    marque?: string
     images: string[]
     ordre: number
   }
@@ -55,6 +56,7 @@
               tendancePrix: docData.tendancePrix || 'monte',
               pourquoiMust: docData.pourquoiMust || '',
               categorieRecherche: docData.categorieRecherche || '',
+              marque: docData.marque || '',
               images: docData.images || [],
               ordre: docData.ordre || 0,
             })
@@ -80,25 +82,21 @@
 
           const produitsData: { [key: string]: Produit[] } = {}
           for (const item of data) {
-            const needle = (item.categorieRecherche || '').toLowerCase().trim()
-            if (!needle) {
+            const needleNom = (item.categorieRecherche || '').toLowerCase().trim()
+            const needleMarque = (item.marque || '').toLowerCase().trim()
+            if (!needleNom && !needleMarque) {
               produitsData[item.id] = []
               continue
             }
-            // Découpe en mots ("trench burberry" → ["trench", "burberry"])
-            // Chaque mot doit apparaître dans au moins un des champs cherchés.
-            const tokens = needle.split(/\s+/).filter(Boolean)
             const matched = allProduits.filter(p => {
-              const cat = typeof p.categorie === 'object'
-                ? (p.categorie?.label || '').toLowerCase()
-                : (p.categorie || '').toLowerCase()
               const nom = (p.nom || p.Nom || '').toLowerCase()
-              const desc = (p.description || '').toLowerCase()
               const marque = (p.marque || '').toLowerCase()
-              const haystack = `${cat} ${nom} ${desc} ${marque}`
-              return tokens.every(t => haystack.includes(t))
+              // Filtre par mot dans le NOM du produit (ex. "trench")
+              const matchNom = !needleNom || nom.includes(needleNom)
+              // Filtre par MARQUE du produit (ex. "burberry")
+              const matchMarque = !needleMarque || marque.includes(needleMarque)
+              return matchNom && matchMarque
             })
-            // Garde le shape complet pour ProductGrid (imageUrls, marque, taille, etc.)
             produitsData[item.id] = matched
           }
           setProduits(produitsData)
@@ -216,21 +214,21 @@
 
         {/* Slider Rick Owens Style */}
         <div className="relative" style={{ borderBottom: '1px solid #000' }}>
-          {/* Navigation buttons — positionnés au milieu de la photo (et non du slider entier) */}
+          {/* Navigation buttons — style d'origine, positionnés sur la photo */}
           <button
             onClick={() => scroll('left')}
-            className="absolute left-4 md:left-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70 bg-white/70 backdrop-blur-sm rounded-full"
+            className="absolute left-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70"
           >
-            <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
           <button
             onClick={() => scroll('right')}
-            className="absolute right-4 md:right-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70 bg-white/70 backdrop-blur-sm rounded-full"
+            className="absolute right-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70"
           >
-            <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
