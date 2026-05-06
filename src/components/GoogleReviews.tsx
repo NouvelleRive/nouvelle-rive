@@ -10,7 +10,6 @@ type Review = {
   rating: number
   text: string
   relativeTime: string
-  reply?: { text: string; relativeTime: string } | null
 }
 
 type Data = {
@@ -161,50 +160,13 @@ export default function GoogleReviews() {
                   lineHeight: '1.6',
                   color: '#222',
                   display: '-webkit-box',
-                  WebkitLineClamp: 6,
+                  WebkitLineClamp: 7,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                 }}
               >
                 {r.text}
               </p>
-
-              {r.reply && (
-                <div
-                  style={{
-                    marginTop: 'auto',
-                    paddingTop: 12,
-                    borderTop: '1px solid #eee',
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        letterSpacing: '0.15em',
-                        fontWeight: 700,
-                        color: bleuElectrique,
-                      }}
-                    >
-                      RÉPONSE NOUVELLE RIVE
-                    </span>
-                    <span style={{ fontSize: '10px', color: '#999' }}>· {r.reply.relativeTime}</span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: '12px',
-                      lineHeight: '1.5',
-                      color: '#444',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 4,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {r.reply.text}
-                  </p>
-                </div>
-              )}
             </article>
           ))}
         </div>
