@@ -61,8 +61,8 @@ export async function GET(req: NextRequest) {
     const ptg = await adminDb.collection('pointages').doc(`${dateStr}_${vid}`).get()
     if (!ptg.exists || !ptg.data()?.arrivee) {
       await sendPushToOwner('boutique', {
-        title: '⏰ Pense à pointer',
-        body: `Il manque l'arrivée ${slot.name}h`,
+        title: '👑 QUEEN es tu là ?',
+        body: `Pointe avant de faire péter le record 🧿🍀🧧 (créneau ${slot.name})`,
         url: '/vendeuse/calendrier',
         tag: `arrivee-${slot.name}-${dateStr}`,
       })
@@ -115,8 +115,8 @@ export async function GET(req: NextRequest) {
     const x = ptg.exists ? ptg.data() : null
     if (x?.arrivee && !x?.depart) {
       await sendPushToOwner('boutique', {
-        title: '⏰ Pense à pointer le départ',
-        body: `N'oublie pas de pointer le départ ${slot.name}h`,
+        title: 'MERCI pour la journée',
+        body: `N'oublie pas que t'es une 💣 (et aussi de depointer 💙)`,
         url: '/vendeuse/calendrier',
         tag: `depart-${slot.name}-${dateStr}`,
       })
