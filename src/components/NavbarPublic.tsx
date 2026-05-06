@@ -32,8 +32,7 @@ export default function NavbarPublic() {
 
   // Contenu de navigation
   const boutiqueLinks = [
-    { href: '/boutique', label: 'TOUT VOIR' },
-    { href: '/new-in', label: 'NEW IN' },
+    { href: '/boutique', label: 'NEW IN' },
     { href: '/hiver', label: 'HIVER' },
     { href: '/soiree', label: 'SOIRÉE' },
     { href: '/les-iconiques', label: 'LES ICONIQUES DU VINTAGE' },

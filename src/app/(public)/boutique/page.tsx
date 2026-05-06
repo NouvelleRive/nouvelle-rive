@@ -1,90 +1,50 @@
-    // app/boutique/page.tsx
-    'use client'
+// app/boutique/page.tsx
+'use client'
 
-    import { useEffect, useState, useMemo } from 'react'
-    import { useProduitsDisponibles, Produit } from '@/lib/hooks/useProduitsDisponibles'
-    import ProductGrid from '@/components/ProductGrid'
-    import CountdownPromo from '@/components/CountdownPromo'
+import { useEffect, useState } from 'react'
+import { useFilteredProducts } from '@/lib/siteConfig'
+import ProductGrid from '@/components/ProductGrid'
+import CountdownPromo from '@/components/CountdownPromo'
 
-    const MARQUES_LUXE = ['chanel', 'dior', 'hermès', 'hermes', 'louis vuitton', 'prada', 'gucci', 'yves saint laurent', 'ysl', 'saint laurent', 'balenciaga', 'celine', 'céline', 'fendi', 'givenchy', 'valentino', 'versace', 'burberry', 'loewe', 'bottega veneta', 'miu miu', 'dolce & gabbana', 'cartier', 'bvlgari', 'van cleef', 'tiffany']
+export default function BoutiquePage() {
+  const { produits, loading, loadingMore } = useFilteredProducts('new-in')
+  const [nombreAchats, setNombreAchats] = useState(0)
 
-  function smartSort(produits: Produit[]): Produit[] {
-    const scored = produits.map(p => {
-      let score = 0
-      const nom = (p.nom || '').toLowerCase()
-      const marque = (p.marque || '').toLowerCase()
-      const cat = (typeof p.categorie === 'object' ? (p.categorie as any)?.label : p.categorie || '').toLowerCase()
-      const desc = (p.description || '').toLowerCase()
+  useEffect(() => {
+    const achats = localStorage.getItem('nouvelle-rive-achats')
+    setNombreAchats(achats ? parseInt(achats) : 0)
+  }, [])
 
-      if (nom.includes('fourrure') || desc.includes('fourrure')) score += 50
-      if (nom.includes('cuir') || desc.includes('cuir')) score += 40
-      if (MARQUES_LUXE.some(m => marque.includes(m) || nom.includes(m))) score += 30
-      if (p.prix >= 200) score += 10
-      if (p.prix >= 400) score += 10
-
-      const isBijou = cat.includes('bague') || cat.includes('boucle') || cat.includes('collier') || cat.includes('bracelet') || cat.includes('broche') || cat.includes('bijou')
-      const isAccessoire = cat.includes('sac') || cat.includes('ceinture') || cat.includes('foulard') || cat.includes('lunettes')
-
-      return { ...p, _score: score, _isBijou: isBijou || isAccessoire }
-    })
-
-    const bijoux = scored.filter(p => p._isBijou).sort((a, b) => b._score - a._score)
-    const vetements = scored.filter(p => !p._isBijou).sort((a, b) => b._score - a._score)
-
-    const result: Produit[] = []
-    let bIdx = 0, vIdx = 0
-    while (vIdx < vetements.length || bIdx < bijoux.length) {
-      for (let i = 0; i < 5 && vIdx < vetements.length; i++) result.push(vetements[vIdx++])
-      if (bIdx < bijoux.length) result.push(bijoux[bIdx++])
-    }
-    return result
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Chargement...</p>
+      </div>
+    )
   }
 
-    export default function BoutiquePage() {
-    const { produits, loading, loadingMore } = useProduitsDisponibles()
-    const [nombreAchats, setNombreAchats] = useState(0)
+  return (
+    <div className="min-h-screen bg-white">
+      <ProductGrid produits={produits} columns={3} />
 
-      const produitsFiltres = useMemo(() => smartSort(produits), [produits])
-
-      useEffect(() => {
-        // Récupérer le nombre d'achats du jour
-        const achats = localStorage.getItem('nouvelle-rive-achats')
-        setNombreAchats(achats ? parseInt(achats) : 0)
-        }, [])
-
-      if (loading) {
-        return (
-          <div className="min-h-screen flex items-center justify-center">
-            <p className="text-gray-600">Chargement...</p>
-          </div>
-        )
-      }
-
-      return (
-        <div className="min-h-screen bg-white">
-          {/* Grille produits */}
-          <ProductGrid produits={produitsFiltres} columns={3} />
-
-          {loadingMore && (
-            <div className="py-8 text-center">
-              <p className="text-gray-500 text-sm">Chargement...</p>
-            </div>
-          )}
-
-          {/* Countdown promo (flottant en bas) */}
-          <CountdownPromo nombreAchats={nombreAchats} />
-
-          {/* Footer */}
-          <footer className="border-t py-8 mt-12">
-            <div className="text-center text-gray-600 text-sm space-y-2">
-              <p>© 2026 Nouvelle Rive • 8 rue des Écouffes, Paris</p>
-              <div className="flex justify-center gap-4 text-xs text-gray-400">
-                <a href="/legal/mentions-cgv" className="hover:text-black transition-colors">Mentions légales & CGV</a>
-                <a href="/legal/retours" className="hover:text-black transition-colors">Retours</a>
-                <a href="/legal/confidentialite" className="hover:text-black transition-colors">Confidentialité</a>
-              </div>
-            </div>
-          </footer>
+      {loadingMore && (
+        <div className="py-8 text-center">
+          <p className="text-gray-500 text-sm">Chargement...</p>
         </div>
-      )
-    }
+      )}
+
+      <CountdownPromo nombreAchats={nombreAchats} />
+
+      <footer className="border-t py-8 mt-12">
+        <div className="text-center text-gray-600 text-sm space-y-2">
+          <p>© 2026 Nouvelle Rive • 8 rue des Écouffes, Paris</p>
+          <div className="flex justify-center gap-4 text-xs text-gray-400">
+            <a href="/legal/mentions-cgv" className="hover:text-black transition-colors">Mentions légales & CGV</a>
+            <a href="/legal/retours" className="hover:text-black transition-colors">Retours</a>
+            <a href="/legal/confidentialite" className="hover:text-black transition-colors">Confidentialité</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
