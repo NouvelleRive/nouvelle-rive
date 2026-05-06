@@ -44,7 +44,7 @@ async function main() {
     {
       id: 'trench-burberry',
       data: {
-        nom: 'Le Trench Burberry',
+        nom: 'Trenchs Burberry',
         dateCreation: '1879',
         histoire: "Inventé par Thomas Burberry en 1879, le trench-coat naît pour habiller les officiers britanniques pendant la Première Guerre mondiale. Sa gabardine waterproof, brevetée en 1888, en fait l'arme secrète des tranchées — d'où son nom. Devenu icône civile dès les années 30, il habille Audrey Hepburn dans Diamants sur Canapé et Humphrey Bogart dans Casablanca.",
         valeurNeuf: 1990,
@@ -60,7 +60,7 @@ async function main() {
     {
       id: 'timeless-chanel',
       data: {
-        nom: 'Le Sac Chanel',
+        nom: 'Sacs Chanel',
         dateCreation: '1955',
         histoire: "Le 2.55, créé par Coco Chanel en février 1955 (d'où son nom), est le premier sac à bandoulière de luxe — révolution à une époque où les femmes portaient encore leurs sacs à la main. Son matelassage évoque les vestes des jockeys de Longchamp ; sa chaîne, les ceintures des gardiennes d'orphelinat de Coco. Le 11.12, plus tard popularisé par Karl Lagerfeld avec le double C, devient l'autre pilier de la maison.",
         valeurNeuf: 9800,
@@ -76,7 +76,7 @@ async function main() {
     {
       id: 'levis-501',
       data: {
-        nom: "Le Jean Levi's",
+        nom: "Jeans Levi's",
         dateCreation: '1873',
         histoire: "Levi Strauss et Jacob Davis brevettent en 1873 un pantalon en denim renforcé par des rivets de cuivre, pensé pour les chercheurs d'or de Californie. Le 501, son modèle phare à coupe droite et bouton-fly, traverse les décennies sans rides : porté par James Dean, Marilyn Monroe, Bruce Springsteen. Aujourd'hui, un 501 vintage des années 50-60 (Big E, redline selvedge) peut atteindre plusieurs milliers d'euros chez les collectionneurs japonais.",
         valeurNeuf: 110,
@@ -92,7 +92,7 @@ async function main() {
     {
       id: 'blazer-luxe-80s',
       data: {
-        nom: 'Le Blazer Power 80s',
+        nom: 'Blazers de Luxe 80s',
         dateCreation: '1980',
         histoire: "Les années 80 transforment le blazer en arme de pouvoir. Yves Saint Laurent avec son smoking, Giorgio Armani avec ses épaules sculptées et ses tissus fluides, Thierry Mugler avec ses tailles cintrées — tous redessinent la silhouette féminine pour les conseils d'administration. Le power suit devient le manifeste de toute une génération de working girls. Quarante ans plus tard, ces pièces vintage signées YSL, Mugler ou Versace sont les plus convoitées des friperies.",
         valeurNeuf: 1500,
@@ -108,7 +108,7 @@ async function main() {
     {
       id: 'boucles-80s-dorees',
       data: {
-        nom: "Les Boucles d'Oreilles Statement",
+        nom: "Boucles d'Oreilles Statement",
         dateCreation: '1985',
         histoire: "Les années 80 sont l'âge d'or des boucles d'oreilles XXL : créoles surdimensionnées, clips géométriques, perles surmoulées. Une pièce qui transforme un look en un instant, et que les designeuses parisiennes comme Gigi Paris et Chineuse de Bling réinterprètent aujourd'hui avec leur regard upcyclé.",
         valeurNeuf: 220,
@@ -124,7 +124,7 @@ async function main() {
     {
       id: 'fourrure-vintage',
       data: {
-        nom: 'La Fourrure Vintage',
+        nom: 'Fourrures Vintage',
         dateCreation: '1950',
         histoire: "Avant les années 90 et la prise de conscience animale, la fourrure était le symbole ultime du luxe et du glamour : Grace Kelly, Liz Taylor, Ava Gardner — toutes l'ont portée. Aujourd'hui, le seul moyen éthique de se l'offrir est en seconde main : ces pièces vintage, déjà existantes, ne génèrent plus aucun nouvel impact animal. Recycler ce qui existe, c'est l'essence même de la mode circulaire.",
         valeurNeuf: 5500,
