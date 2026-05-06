@@ -32,7 +32,7 @@ export default function Page() {
             textTransform: 'uppercase'
           }}
         >
-          {t('(PLUTÔT) HOMME', '(RATHER) MEN', lang)}
+          {t('(PLUTÔT) HOMME', '(SO-CALLED) MEN', lang)}
         </h1>
       </div>
       <div className="w-full border-t border-black" />
