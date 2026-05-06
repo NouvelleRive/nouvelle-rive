@@ -28,7 +28,7 @@ export default function LoginPage() {
   // Redirection selon le rôle
   const redirectByRole = (userEmail: string | null) => {
     if (userEmail === ADMIN_EMAIL) {
-      router.push('/admin/nos-produits')
+      router.push('/admin/performance')
     } else if (userEmail === VENDEUSE_EMAIL) {
       router.push('/vendeuse/calendrier')
     } else {
