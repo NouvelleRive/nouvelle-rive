@@ -32,11 +32,7 @@ function setGoogtrans(target: 'fr' | 'en') {
 
 let googleScriptInjected = false
 
-export default function LanguageSwitcher({
-  variant = 'light',
-}: {
-  variant?: 'light' | 'dark'
-}) {
+export default function LanguageSwitcher() {
   const [lang, setLang] = useState<'fr' | 'en'>('fr')
 
   useEffect(() => {
@@ -82,8 +78,6 @@ export default function LanguageSwitcher({
     window.location.reload()
   }
 
-  const color = variant === 'dark' ? '#fff' : '#000'
-
   return (
     <div
       className="flex items-center gap-1 select-none"
@@ -92,7 +86,7 @@ export default function LanguageSwitcher({
         fontSize: '9px',
         letterSpacing: '0.1em',
         fontWeight: 600,
-        color,
+        color: '#000',
       }}
     >
       <button
@@ -101,21 +95,21 @@ export default function LanguageSwitcher({
         aria-pressed={lang === 'fr'}
         className="px-1 transition-opacity"
         style={{
-          color,
+          color: '#000',
           opacity: lang === 'fr' ? 1 : 0.45,
           textDecoration: lang === 'fr' ? 'underline' : 'none',
         }}
       >
         FR
       </button>
-      <span style={{ opacity: 0.45 }}>/</span>
+      <span style={{ color: '#000', opacity: 0.45 }}>/</span>
       <button
         type="button"
         onClick={() => choose('en')}
         aria-pressed={lang === 'en'}
         className="px-1 transition-opacity"
         style={{
-          color,
+          color: '#000',
           opacity: lang === 'en' ? 1 : 0.45,
           textDecoration: lang === 'en' ? 'underline' : 'none',
         }}
