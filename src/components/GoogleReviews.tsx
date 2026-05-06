@@ -18,6 +18,7 @@ type Data = {
   total: number
   mapsUri: string | null
   reviews: Review[]
+  preview?: boolean
 }
 
 function Stars({ rating }: { rating: number }) {
@@ -69,6 +70,11 @@ export default function GoogleReviews() {
           }}
         >
           Avis Google
+          {data.preview && (
+            <span style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#999', fontWeight: '400', marginLeft: '12px' }}>
+              (PREVIEW — clé API manquante)
+            </span>
+          )}
         </h2>
         <div className="flex items-center gap-3" style={{ fontSize: '14px' }}>
           <Stars rating={data.rating} />
