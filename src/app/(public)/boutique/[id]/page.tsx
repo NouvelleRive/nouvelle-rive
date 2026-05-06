@@ -433,25 +433,53 @@ export default function ProduitPage() {
   </div>
 </AccordionSection>
 
-          {/* TAILLE ET CARACTERISTIQUES - seulement si pertinent */}
-          {(produit.taille || produit.material || produit.color || produit.madeIn) && (
-            <AccordionSection title="Taille et caractéristiques" defaultOpen={true}>
-              <div style={{ fontSize: '13px', lineHeight: '2', color: '#666', fontWeight: '300' }}>
-                {afficherTaille(produit.categorie) && produit.taille && (
-                  <p><span style={{ color: '#999' }}>Taille :</span> {produit.taille}</p>
-                )}
-                {produit.material && (
-                  <p><span style={{ color: '#999' }}>Matière :</span> {produit.material}</p>
-                )}
-                {produit.color && (
-                  <p><span style={{ color: '#999' }}>Couleur :</span> {produit.color}</p>
-                )}
-                {produit.madeIn && (
-                  <p><span style={{ color: '#999' }}>Origine :</span> {produit.madeIn}</p>
-                )}
-              </div>
-            </AccordionSection>
-          )}
+          {/* TAILLE ET CARACTERISTIQUES */}
+          {(produit.marque || produit.categorie || produit.taille || produit.material || produit.color || produit.madeIn || produit.composition || produit.etat) && (() => {
+            const catRaw = typeof produit.categorie === 'string' ? produit.categorie : (produit.categorie as any)?.label || ''
+            const catClean = catRaw.replace(/^[A-Z]{2,5}\s*[-–]\s*/, '').trim()
+            return (
+              <AccordionSection title="Taille et caractéristiques" defaultOpen={true}>
+                <div style={{ fontSize: '14px', lineHeight: '2', color: '#1a1a1a', fontWeight: '400' }}>
+                  {produit.marque && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Marque</span>{produit.marque}</p>
+                  )}
+                  {catClean && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Catégorie</span>{catClean}</p>
+                  )}
+                  {produit.material && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Matière</span>{produit.material}</p>
+                  )}
+                  {produit.composition && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Composition</span>{produit.composition}</p>
+                  )}
+                  {produit.color && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Couleur</span>{produit.color}</p>
+                  )}
+                  {afficherTaille(produit.categorie) && produit.taille && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Taille</span>{produit.taille}</p>
+                  )}
+                  {produit.madeIn && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Origine</span>{produit.madeIn.replace(/^Made in\s+/i, '').trim()}</p>
+                  )}
+                  {produit.etat && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>État</span>{produit.etat}</p>
+                  )}
+                </div>
+              </AccordionSection>
+            )
+          })()}
+
+          {/* À PROPOS DE NOUVELLE RIVE */}
+          <AccordionSection title="À propos de Nouvelle Rive">
+            <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#1a1a1a', fontWeight: '400' }}>
+              <p style={{ marginBottom: '12px' }}>
+                Nouvelle Rive réunit des chineuses indépendantes qui sélectionnent les plus belles pièces vintage de Paris. Chaque pièce passe par notre boutique du Marais pour une vérification en main propre.
+              </p>
+              <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>
+                Nouvelle Rive brings together independent vintage hunters who curate the finest vintage pieces in Paris. Every item is checked in person at our Le Marais boutique.
+              </p>
+            </div>
+          </AccordionSection>
 
           {/* ENTRETIEN */}
           <AccordionSection title="Entretien">

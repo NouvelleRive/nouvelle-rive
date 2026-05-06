@@ -26,10 +26,6 @@ const WRITE = args.includes('--write')
 const sampleArg = args.find(a => a.startsWith('--sample='))
 const SAMPLE = sampleArg ? parseInt(sampleArg.split('=')[1], 10) : (WRITE ? Infinity : 5)
 
-// Bloc fixe Nouvelle Rive (apparaît sur chaque description)
-const NR_BLOC = `À propos de Nouvelle Rive
-Nouvelle Rive réunit des chineuses indépendantes qui sélectionnent les plus belles pièces vintage de Paris. Chaque pièce passe par notre boutique du Marais pour une vérification en main propre.`
-
 // Notes narratives variées par typologie (sacs, vêtements, bijoux)
 const NOTES_SAC = [
   'Une pièce d\'allure intemporelle, à porter à l\'épaule comme à la main.',
@@ -181,29 +177,9 @@ function generate(p) {
   const notes = type === 'sac' ? NOTES_SAC : type === 'bijou' ? NOTES_BIJOU : NOTES_VETEMENT
   const phrase3 = pick(notes, seed)
 
-  const blocNarratif = [phrase1, phrase2, phrase3].filter(Boolean).join(' ')
-
-  // ====== BLOC 2 : caractéristiques (liste structurée) ======
-  const caracs = [
-    formatField('Marque', marque || null),
-    formatField('Catégorie', cat || null),
-    formatField('Matière', matiere || null),
-    formatField('Couleur', couleur || null),
-    formatField('Taille', taille ? (
-      ['unique', 'taille unique'].includes(taille.toLowerCase()) || /^one\s*size$/i.test(taille)
-        ? 'Taille unique'
-        : taille
-    ) : null),
-    formatField('Époque', epoque ? epoque.charAt(0).toUpperCase() + epoque.slice(1) : null),
-    formatField('Origine', madeIn ? madeIn.replace(/^Made in\s+/i, '').trim() : null),
-  ].filter(Boolean)
-
-  const blocCaracs = caracs.length > 0
-    ? `Caractéristiques\n${caracs.join('\n')}`
-    : ''
-
-  // ====== Assemblage final ======
-  return [blocNarratif, blocCaracs, NR_BLOC].filter(Boolean).join('\n\n')
+  // La description Firestore = uniquement le bloc narratif (3 phrases max).
+  // Les caractéristiques et le bloc Nouvelle Rive sont rendus par ProduitClient.tsx.
+  return [phrase1, phrase2, phrase3].filter(Boolean).join(' ')
 }
 
 const snap = await db.collection('produits').get()
