@@ -241,17 +241,22 @@
     }
 
     return (
-      <main className="min-h-screen bg-white">
-        {/* Header */}
-        <div className="py-4 px-6 text-center" style={{ borderBottom: '1px solid #000' }}>
-          <Link 
-            href="/"
-            className="uppercase text-xs tracking-widest hover:opacity-50"
-            style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
+      <main className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+        {/* Hero titre */}
+        <div className="px-6 py-20">
+          <h1
+            style={{
+              fontSize: 'clamp(40px, 8vw, 120px)',
+              fontWeight: '700',
+              letterSpacing: '-0.03em',
+              lineHeight: '0.9',
+              textTransform: 'uppercase'
+            }}
           >
-            Les Iconiques du Vintage
-          </Link>
+            LES ICONIQUES<br />DU VINTAGE
+          </h1>
         </div>
+        <div className="w-full border-t border-black" />
 
         {/* Slider Rick Owens Style */}
         <div className="relative" style={{ borderBottom: '1px solid #000' }}>

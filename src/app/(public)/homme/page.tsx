@@ -19,7 +19,21 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+      <div className="px-6 py-20">
+        <h1
+          style={{
+            fontSize: 'clamp(40px, 8vw, 120px)',
+            fontWeight: '700',
+            letterSpacing: '-0.03em',
+            lineHeight: '0.9',
+            textTransform: 'uppercase'
+          }}
+        >
+          (PLUTÔT) HOMME
+        </h1>
+      </div>
+      <div className="w-full border-t border-black" />
       <ProductGrid produits={produits} columns={3} />
       {loadingMore && (
         <div className="py-8 text-center">
