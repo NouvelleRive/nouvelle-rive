@@ -400,7 +400,7 @@ export default function SalesFilters({
               {moisDisponibles.map(({ value, label }) => <option key={value} value={value}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>)}
             </select>
           )}
-          <p className="text-xs text-gray-500">{isDeposante ? "L'attestation est à retourner signée par mail à nouvelleriveparis@gmail.com" : 'La facture est à retourner par mail à nouvelleriveparis@gmail.com'}</p>
+          <p className="text-xs text-gray-500">{isDeposante ? "L'attestation est à retourner signée par mail à nouvelleriveparis@gmail.com avant le 9 du mois" : 'La facture est à retourner par mail à nouvelleriveparis@gmail.com avant le 9 du mois'}</p>
         </div>
       </div>
     </div>
