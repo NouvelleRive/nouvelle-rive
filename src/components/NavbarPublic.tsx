@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import { useCart } from '@/lib/cart'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function NavbarPublic() {
   const pathname = usePathname()
@@ -50,6 +51,9 @@ export default function NavbarPublic() {
 
   return (
     <>
+      {/* Sélecteur de langue FR / EN (toujours en haut) */}
+      <LanguageSwitcher />
+
       {/* Vidéo bannière (boutique uniquement) */}
       {showVideo && (
         <div className="relative w-full overflow-hidden bg-black">
