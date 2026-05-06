@@ -50,11 +50,11 @@ export default function NousRencontrerPage() {
     <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       
       <main className="min-h-screen bg-white">
-        
+
         {/* Hero */}
         <div className="px-6 py-20">
-          <h1 
-            style={{ 
+          <h1
+            style={{
               fontSize: 'clamp(40px, 8vw, 120px)',
               fontWeight: '700',
               letterSpacing: '-0.03em',
@@ -69,43 +69,72 @@ export default function NousRencontrerPage() {
         {/* Trait */}
         <div className="w-full border-t border-black" />
 
-        {/* Contenu principal */}
+        {/* 1. Photo façade plein écran */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/facade%20paysage.jpg"
+          alt="Devanture Nouvelle Rive, 8 rue des Écouffes, Paris"
+          className="w-full block"
+          style={{ maxHeight: '80vh', objectFit: 'cover' }}
+        />
+
+        {/* Trait */}
+        <div className="w-full border-t border-black" />
+
+        {/* 2. Avis Google */}
+        <GoogleReviews />
+
+        {/* Trait */}
+        <div className="w-full border-t border-black" />
+
+        {/* 3. Texte + Map à droite */}
         <div className="grid grid-cols-1 lg:grid-cols-2">
-          
-          {/* Gauche - Infos */}
+          <div className="p-6 lg:p-12 lg:border-r border-black flex flex-col justify-center">
+            <p
+              className="uppercase font-semibold"
+              style={{
+                fontSize: 'clamp(11px, 1.2vw, 13px)',
+                letterSpacing: '0.04em',
+                lineHeight: '1.8',
+                color: bleuElectrique,
+                minHeight: '150px',
+              }}
+            >
+              {displayedText}
+              {displayedText.length < introText.length && (
+                <span className="animate-pulse">|</span>
+              )}
+            </p>
+            <p className="mt-6" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
+              Le Marais, 75004 Paris
+            </p>
+            <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
+              Métro Saint-Paul (ligne 1)
+            </p>
+          </div>
+
+          <div className="h-[400px] lg:h-auto lg:min-h-[500px]">
+            <iframe
+              src="https://maps.google.com/maps?q=Nouvelle+Rive,+8+rue+des+%C3%89couffes,+75004+Paris&z=17&output=embed"
+              width="100%"
+              height="100%"
+              style={{ border: 0, filter: 'grayscale(100%)' }}
+              allowFullScreen
+              loading="lazy"
+              title="Plan Nouvelle Rive"
+            />
+          </div>
+        </div>
+
+        {/* Trait */}
+        <div className="w-full border-t border-black" />
+
+        {/* 4. Horaires/Contact + Vidéo à droite */}
+        <div className="grid grid-cols-1 lg:grid-cols-2">
           <div className="p-6 lg:p-12 lg:border-r border-black">
-            
-            {/* Texte intro avec typewriter */}
-            <div className="mb-12">
-              <p 
-                className="uppercase font-semibold"
-                style={{ 
-                  fontSize: 'clamp(11px, 1.2vw, 13px)',
-                  letterSpacing: '0.04em',
-                  lineHeight: '1.8',
-                  color: bleuElectrique,
-                  minHeight: '150px',
-                }}
-              >
-                {displayedText}
-                {displayedText.length < introText.length && (
-                  <span className="animate-pulse">|</span>
-                )}
-              </p>
-              <p className="mt-6" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
-                Le Marais, 75004 Paris
-              </p>
-              <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
-                Métro Saint-Paul (ligne 1)
-              </p>
-            </div>
-
-            {/* Trait */}
-            <div className="w-full border-t border-black mb-12" />
-
             {/* Horaires */}
             <div className="mb-12">
-              <p 
+              <p
                 className="mb-4"
                 style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
               >
@@ -128,20 +157,19 @@ export default function NousRencontrerPage() {
               </div>
             </div>
 
-            {/* Trait */}
             <div className="w-full border-t border-black mb-12" />
 
             {/* Contact */}
             <div className="mb-12">
-              <p 
+              <p
                 className="mb-4"
                 style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
               >
                 CONTACT
               </p>
-              <a 
-                href="https://www.instagram.com/nouvellerive" 
-                target="_blank" 
+              <a
+                href="https://www.instagram.com/nouvellerive"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block mt-2 hover:opacity-60 transition-opacity"
                 style={{ fontSize: '16px', color: bleuElectrique }}
@@ -150,13 +178,13 @@ export default function NousRencontrerPage() {
               </a>
             </div>
 
-            {/* Bouton */}
-            <a 
+            {/* Bouton itinéraire */}
+            <a
               href="https://www.google.com/maps/place/NOUVELLE+RIVE/@48.8565713,2.3585257,17z/data=!4m6!3m5!1s0x47e66f1afea642dd:0xbaab4baf5127a88e!8m2!3d48.8565713!4d2.3585257!16s%2Fg%2F11x8cxw8q0"
-              target="_blank" 
-              rel="noopener noreferrer" 
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-block py-4 px-8 text-white transition-opacity hover:opacity-80"
-              style={{ 
+              style={{
                 backgroundColor: bleuElectrique,
                 fontSize: '11px',
                 letterSpacing: '0.2em',
@@ -167,24 +195,19 @@ export default function NousRencontrerPage() {
             </a>
           </div>
 
-          {/* Droite - Map */}
-          <div className="h-[400px] lg:h-auto lg:min-h-[600px]">
-            <iframe
-              src="https://maps.google.com/maps?q=Nouvelle+Rive,+8+rue+des+%C3%89couffes,+75004+Paris&z=17&output=embed"
-              width="100%"
-              height="100%"
-              style={{ border: 0, filter: 'grayscale(100%)' }}
-              allowFullScreen
-              loading="lazy"
+          <div className="bg-black flex items-stretch">
+            <video
+              src="/Entr%C3%A9e.mov"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="w-full h-full"
+              style={{ objectFit: 'cover', minHeight: '500px' }}
             />
           </div>
         </div>
-
-        {/* Trait */}
-        <div className="w-full border-t border-black" />
-
-        {/* Avis Google */}
-        <GoogleReviews />
 
         {/* Trait */}
         <div className="w-full border-t border-black" />
