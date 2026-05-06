@@ -24,6 +24,7 @@ const db = getFirestore()
 const args = process.argv.slice(2)
 const WRITE = args.includes('--write')
 const SHORT_MODE = args.includes('--short') // Mode concaténation : ne touche que les desc 1-49 char
+const TRANSLATE_MODE = args.includes('--translate') // Mode trad : ajoute la version EN aux produits déjà auto-générés
 const sampleArg = args.find(a => a.startsWith('--sample='))
 const SAMPLE = sampleArg ? parseInt(sampleArg.split('=')[1], 10) : (WRITE ? Infinity : 5)
 
@@ -47,6 +48,104 @@ const NOTES_BIJOU = [
   'À porter seule pour son raffinement, ou superposée à d\'autres bijoux.',
   'Un détail qui fait toute la différence sur une silhouette épurée.',
 ]
+
+// Versions anglaises des pools (même ordre que les pools FR pour conserver le seed)
+const NOTES_SAC_EN = [
+  'A timeless piece, to carry over the shoulder or by hand.',
+  'Beautiful structure and refined finishes, designed to last.',
+  'A versatile shape that adapts as well to workdays as to evenings out.',
+  'A statement accessory, perfect for elevating a pared-down outfit.',
+  'An assertive presence that complements both a minimalist look and a more dressed-up one.',
+]
+const NOTES_VETEMENT_EN = [
+  'A timeless piece, easy to integrate into a contemporary wardrobe.',
+  'Beautiful cut, to pair with basics and let the piece speak for itself.',
+  'A silhouette that crosses the seasons without going out of style.',
+  'Wear it on its own to highlight the piece, or layered.',
+  'A find to mix with current pieces for a more personal wardrobe.',
+]
+const NOTES_BIJOU_EN = [
+  'A delicate piece for everyday and special occasions alike.',
+  'Wear it alone for its refinement, or stacked with other jewelry.',
+  'A detail that makes all the difference on a pared-down silhouette.',
+]
+
+// Dictionnaires de traduction
+const CATEGORY_EN = {
+  'chemise': 'shirt', 'robe': 'dress', 'sac': 'bag', 'veste': 'jacket',
+  'manteau': 'coat', 'jupe': 'skirt', 'pantalon': 'pants', 'short': 'shorts',
+  'top': 'top', 'haut': 'top', 'pull': 'sweater', 'sweat': 'sweatshirt',
+  'hoodie': 'hoodie', 't-shirt': 't-shirt', 'tshirt': 't-shirt',
+  'débardeur': 'tank top', 'ensemble': 'set', 'cardigan': 'cardigan',
+  'gilet': 'vest', 'blazer': 'blazer', 'trench': 'trench coat',
+  'parka': 'parka', 'doudoune': 'puffer jacket', 'cuir': 'leather jacket',
+  'boléro': 'bolero', 'bague': 'ring', 'bagues': 'rings',
+  'collier': 'necklace', 'colliers': 'necklaces', 'bracelet': 'bracelet',
+  'bracelets': 'bracelets', 'boucles': 'earrings', 'créoles': 'hoops',
+  'broche': 'brooch', 'gourmette': 'curb chain', 'piercing': 'piercing',
+  'pendentif': 'pendant', 'pochette': 'clutch', 'cabas': 'tote',
+  'besace': 'crossbody bag', 'chaussures': 'shoes', 'escarpins': 'heels',
+  'sandales': 'sandals', 'bottes': 'boots', 'bottines': 'ankle boots',
+  'baskets': 'sneakers', 'mocassins': 'loafers', 'ballerines': 'flats',
+  'ceinture': 'belt', 'écharpe': 'scarf', 'foulard': 'silk scarf',
+  'chapeau': 'hat', 'casquette': 'cap', 'bob': 'bucket hat',
+  'lunettes': 'sunglasses', 'montre': 'watch', 'porte-monnaie': 'coin purse',
+  'porte-clés': 'keychain', 'porte': 'holder', 'pièce': 'piece',
+}
+
+const COLOR_EN = {
+  'écru': 'ecru', 'blanc': 'white', 'noir': 'black', 'beige': 'beige',
+  'marron': 'brown', 'rouge': 'red', 'bleu': 'blue', 'vert': 'green',
+  'jaune': 'yellow', 'violet': 'purple', 'rose': 'pink',
+  'turquoise': 'turquoise', 'gris': 'grey', 'argent': 'silver',
+  'argenté': 'silver', 'or': 'gold', 'doré': 'golden',
+  'multicolore': 'multicolor', 'saumon': 'salmon', 'sauge': 'sage',
+  'chocolat': 'chocolate', 'anis': 'anise', 'lila': 'lilac',
+  'bordeaux': 'burgundy', 'écarlate': 'scarlet', 'caramel': 'caramel',
+  'nude': 'nude', 'ocre': 'ochre', 'crème': 'cream', 'ivoire': 'ivory',
+  'corail': 'coral', 'kaki': 'khaki', 'bronze': 'bronze',
+}
+
+const MATERIAL_EN = {
+  'coton': 'cotton', 'soie': 'silk', 'laine': 'wool', 'lin': 'linen',
+  'cuir': 'leather', 'daim': 'suede', 'nubuck': 'nubuck', 'mesh': 'mesh',
+  'denim': 'denim', 'velours': 'velvet', 'satin': 'satin',
+  'mousseline': 'chiffon', 'tweed': 'tweed', 'cachemire': 'cashmere',
+  'nylon': 'nylon', 'polyester': 'polyester', 'viscose': 'viscose',
+  'synthétique': 'synthetic', 'fourrure': 'fur',
+  'acier inoxydable': 'stainless steel', 'acier': 'steel',
+  'résine': 'resin', 'plastique': 'plastic',
+  'plastique recyclé': 'recycled plastic', 'plaqué or': 'gold-plated',
+  'plaqué or 14k': '14K gold-plated', 'or 14k': '14K gold',
+  'argent et plaqué or 14k': 'silver and 14K gold-plated',
+  'acier inox et plaqué or': 'stainless steel and gold-plated',
+}
+
+const COUNTRY_EN = {
+  'France': 'France', 'Italie': 'Italy', 'Italy': 'Italy',
+  'Espagne': 'Spain', 'Spain': 'Spain', 'Allemagne': 'Germany',
+  'Germany': 'Germany', 'Royaume-Uni': 'United Kingdom',
+  'Angleterre': 'England', 'England': 'England', 'USA': 'USA',
+  'États-Unis': 'USA', 'Belgique': 'Belgium', 'Belgium': 'Belgium',
+  'Portugal': 'Portugal', 'Chine': 'China', 'China': 'China',
+  'Inde': 'India', 'India': 'India', 'Maroc': 'Morocco',
+  'Tunisie': 'Tunisia', 'Turquie': 'Turkey', 'Turkey': 'Turkey',
+  'Japon': 'Japan', 'Japan': 'Japan',
+}
+
+const EPOQUE_EN = {
+  'années 60': 'the 60s',
+  'années 70': 'the 70s',
+  'années 80': 'the 80s',
+  'années 90': 'the 90s',
+  'années 2000 (esthétique Y2K)': 'the 2000s (Y2K aesthetic)',
+}
+
+function translate(dict, key, fallback) {
+  if (!key) return fallback ?? key
+  const k = key.trim().toLowerCase()
+  return dict[k] || dict[key] || (fallback ?? key)
+}
 
 function pick(arr, seed) {
   let h = 0
@@ -183,19 +282,95 @@ function generate(p) {
   return [phrase1, phrase2, phrase3].filter(Boolean).join(' ')
 }
 
+function generateEN(p) {
+  const seed = p.id || p.sku || 'x'
+  const catRawLabel = clean(typeof p.categorie === 'object' ? p.categorie?.label : p.categorie)
+  const catFR = catRawLabel.replace(/^[A-Z]{2,5}\s*-\s*/, '').trim().toLowerCase() || 'pièce'
+  const catFirstFR = catFR.split(/[\s/]/).filter(Boolean)[0] || 'pièce'
+  const catFirstEN = translate(CATEGORY_EN, catFirstFR, catFirstFR)
+  const marqueRaw = clean(p.marque)
+  const marque = isValidBrand(marqueRaw) ? marqueRaw : ''
+  const taille = clean(p.taille).replace(/^taille\s+/i, '').trim()
+  const couleur = clean(p.color)
+  const matiere = clean(p.material)
+  const madeIn = clean(p.madeIn)
+  const nom = cleanNom(p.nom, p.sku)
+  const nomLower = nom.toLowerCase()
+  const type = detectType(catFirstFR, nomLower)
+  const epoqueFR = detectEpoque(nomLower)
+  const epoqueEN = epoqueFR ? translate(EPOQUE_EN, epoqueFR, epoqueFR) : ''
+
+  // Phrase 1 EN — la pièce
+  let phrase1
+  if (nom) {
+    const nomHasBrand = marque && nomLower.includes(marque.toLowerCase())
+    const nomHasCat = catFirstEN !== 'piece' && (nomLower.includes(catFirstEN.toLowerCase()) || nomLower.includes(catFirstFR))
+    const prefix = nomHasCat ? '' : (catFirstEN.charAt(0).toUpperCase() + catFirstEN.slice(1) + ' ')
+    const brandPart = (marque && !nomHasBrand) ? `${marque} — ` : ''
+    phrase1 = `${prefix}${brandPart}${nom}`.replace(/\s+/g, ' ').trim()
+  } else {
+    const parts = [catFirstEN.charAt(0).toUpperCase() + catFirstEN.slice(1)]
+    if (marque) parts.push(marque)
+    phrase1 = parts.join(' ')
+  }
+  if (!/[.!?]$/.test(phrase1)) phrase1 += '.'
+
+  // Phrase 2 EN — détails
+  let phrase2 = ''
+  const phraseParts = []
+  const matiereInNom = matiere && nomLower.includes(matiere.toLowerCase())
+  const couleurInNom = couleur && nomLower.includes(couleur.toLowerCase())
+  if (matiere && !matiereInNom) {
+    const m = translate(MATERIAL_EN, matiere.toLowerCase(), matiere.toLowerCase())
+    phraseParts.push(`Made of ${m}`)
+  }
+  if (couleur && !couleurInNom) {
+    const c = translate(COLOR_EN, couleur.toLowerCase(), couleur.toLowerCase())
+    if (phraseParts.length > 0) phraseParts.push(`${c} hue`)
+    else phraseParts.push(`${c.charAt(0).toUpperCase() + c.slice(1)} hue`)
+  }
+  if (epoqueEN) {
+    phraseParts.push(`piece from ${epoqueEN}`)
+  }
+  if (madeIn) {
+    const country = madeIn.replace(/^Made in\s+/i, '').trim()
+    const countryEN = translate(COUNTRY_EN, country, country)
+    if (countryEN) phraseParts.push(`crafted in ${countryEN}`)
+  }
+  phrase2 = phraseParts.join(', ')
+  if (phrase2) {
+    phrase2 = phrase2.charAt(0).toUpperCase() + phrase2.slice(1)
+    if (!/[.!?]$/.test(phrase2)) phrase2 += '.'
+  }
+
+  // Phrase 3 EN — note de style
+  const notesEN = type === 'sac' ? NOTES_SAC_EN : type === 'bijou' ? NOTES_BIJOU_EN : NOTES_VETEMENT_EN
+  const phrase3 = pick(notesEN, seed)
+
+  return [phrase1, phrase2, phrase3].filter(Boolean).join(' ')
+}
+
 const snap = await db.collection('produits').get()
 const eligibles = snap.docs
   .map(d => ({ id: d.id, ...d.data() }))
   .filter(p => {
     if (p.statut === 'supprime' || p.statut === 'retour' || p.vendu === true) return false
+    if (TRANSLATE_MODE) {
+      // On ajoute la trad EN aux produits auto-générés qui n'ont pas encore de drapeau EN
+      if (!p.descriptionAutoGenerated) return false
+      const desc = (p.description || '')
+      return !desc.includes('🇬🇧')
+    }
     const len = (p.description || '').trim().length
-    if (SHORT_MODE) return len > 0 && len < 50  // descriptions courtes seulement
-    return len === 0  // sans description
+    if (SHORT_MODE) return len > 0 && len < 50
+    return len === 0
   })
 
-const labelMode = SHORT_MODE
-  ? 'avec description courte (1-49 char) à enrichir par concaténation'
-  : 'sans description (existantes préservées)'
+const labelMode = TRANSLATE_MODE
+  ? 'auto-générés sans trad EN — à enrichir avec drapeau 🇬🇧'
+  : SHORT_MODE
+    ? 'avec description courte (1-49 char) à enrichir par concaténation'
+    : 'sans description (existantes préservées)'
 console.log(`📋 ${snap.size} produits, ${eligibles.length} ${labelMode}`)
 
 const target = eligibles.slice(0, SAMPLE === Infinity ? eligibles.length : SAMPLE)
@@ -204,12 +379,17 @@ console.log(`${WRITE ? '✏️  Écriture' : '🔍 Dry-run'} sur ${target.length
 const results = []
 let done = 0
 for (const p of target) {
-  const narratif = generate(p)
-  // Mode SHORT : on concatène l'ancienne description (préservée) + le narratif
-  const ancienne = (p.description || '').trim()
-  const description = SHORT_MODE && ancienne
-    ? `${ancienne}\n\n${narratif}`
-    : narratif
+  let description
+  if (TRANSLATE_MODE) {
+    // Mode trad : on garde la description actuelle et on ajoute le bloc EN à la fin
+    const actuel = (p.description || '').trim()
+    const narratifEN = generateEN(p)
+    description = `${actuel}\n\n🇬🇧 ${narratifEN}`
+  } else {
+    const narratif = generate(p)
+    const ancienne = (p.description || '').trim()
+    description = SHORT_MODE && ancienne ? `${ancienne}\n\n${narratif}` : narratif
+  }
   if (WRITE) {
     await db.collection('produits').doc(p.id).update({
       description,
