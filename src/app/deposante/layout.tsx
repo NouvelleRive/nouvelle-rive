@@ -53,17 +53,18 @@ function ProgressBar({ etapes }: { etapes: Etapes }) {
 function DeposanteNavbar() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const etapes = useEtapes()
 
   useEffect(() => {
     setMenuOpen(false)
   }, [pathname])
 
   const links = [
-    { href: '/deposante/formulaire', label: 'Ajouter une pièce' },
-    { href: '/deposante/mes-produits', label: 'Mes pièces' },
-    { href: '/deposante/mes-ventes', label: 'Mes ventes' },
-    { href: '/deposante/profil', label: 'Mon profil' },
-    { href: '/deposante/calendrier', label: 'Calendrier' },
+    { href: '/deposante/formulaire', label: 'Ajouter une pièce', locked: false },
+    { href: '/deposante/mes-produits', label: 'Mes pièces', locked: false },
+    { href: '/deposante/mes-ventes', label: 'Mes ventes', locked: false },
+    { href: '/deposante/profil', label: 'Mon profil', locked: false },
+    { href: '/deposante/calendrier', label: 'Calendrier', locked: !etapes.pieces },
   ]
 
   const isActive = (href: string) => pathname === href
@@ -79,14 +80,19 @@ function DeposanteNavbar() {
           {links.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={link.locked ? '#' : link.href}
+              onClick={link.locked ? (e) => e.preventDefault() : undefined}
+              aria-disabled={link.locked || undefined}
+              title={link.locked ? 'Ajoutez d\'abord une pièce pour débloquer cet onglet' : undefined}
               className={`text-sm font-medium transition-colors ${
-                isActive(link.href)
-                  ? 'text-[#22209C] underline'
-                  : 'text-gray-600 hover:text-[#22209C]'
+                link.locked
+                  ? 'text-gray-300 cursor-not-allowed pointer-events-none'
+                  : isActive(link.href)
+                    ? 'text-[#22209C] underline'
+                    : 'text-gray-600 hover:text-[#22209C]'
               }`}
             >
-              {link.label}
+              {link.locked && '🔒 '}{link.label}
             </Link>
           ))}
         </div>
@@ -110,10 +116,18 @@ function DeposanteNavbar() {
           {links.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
-              className={`text-sm font-medium py-2 transition-colors ${isActive(link.href) ? 'text-[#22209C] font-semibold' : 'text-gray-600'}`}
+              href={link.locked ? '#' : link.href}
+              onClick={link.locked ? (e) => e.preventDefault() : undefined}
+              aria-disabled={link.locked || undefined}
+              className={`text-sm font-medium py-2 transition-colors ${
+                link.locked
+                  ? 'text-gray-300 cursor-not-allowed pointer-events-none'
+                  : isActive(link.href)
+                    ? 'text-[#22209C] font-semibold'
+                    : 'text-gray-600'
+              }`}
             >
-              {link.label}
+              {link.locked && '🔒 '}{link.label}
             </Link>
           ))}
         </div>
