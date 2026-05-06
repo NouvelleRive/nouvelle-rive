@@ -215,7 +215,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
             <ol className="space-y-3 text-sm text-gray-800 mb-8">
               <li>1. Complétez votre profil et signez votre contrat</li>
               <li>2. Ajoutez vos pièces</li>
-              <li>3. Prenez RDV</li>
+              <li>3. Prenez rendez-vous pour les déposer en boutique</li>
             </ol>
             <button onClick={dismissWelcome} className="w-full py-3 text-white text-xs font-semibold uppercase tracking-widest" style={{ backgroundColor: '#22209C' }}>
               Commencer →
