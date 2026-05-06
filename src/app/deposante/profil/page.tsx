@@ -250,9 +250,8 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
       }
 
       const pdfBlob = doc.output('blob')
-      const fileName = `contrat_NR_${nom}_${format(new Date(), 'ddMMyy')}.pdf`
 
-      // 1) Upload côté serveur (Firebase Storage + maj doc deposante)
+      // Upload côté serveur (Firebase Storage + maj doc deposante)
       const token = await auth.currentUser?.getIdToken()
       if (!token) throw new Error('Non authentifiée')
       const upRes = await fetch('/api/upload-contrat', {
@@ -263,16 +262,13 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
       const upData = await upRes.json()
       if (!upRes.ok || !upData.url) throw new Error(upData.error || 'Erreur upload')
 
-      // 2) Téléchargement local pour la déposante
-      doc.save(fileName)
-
-      // 3) Maj UI immédiate
+      // Maj UI immédiate (téléchargement local optionnel via le lien "Voir le contrat" sur la page profil)
       setContratSigne(true)
       setContratUrl(upData.url)
       setEtape('contrat', true)
       refreshEtapes()
       setShowContratModal(false)
-      setMsg('✅ Contrat signé et enregistré')
+      setMsg('✅ Contrat signé')
     } catch (e: any) {
       alert('Erreur sauvegarde contrat — ' + (e?.message || 'réessayez'))
     } finally {
@@ -574,9 +570,9 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
               <button
                 onClick={generateContratPDF}
                 disabled={!signed || submittingContrat}
-                style={{ padding: '12px 24px', backgroundColor: !signed || submittingContrat ? '#888' : '#000', color: '#fff', border: 'none', cursor: !signed || submittingContrat ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
+                style={{ padding: '12px 32px', backgroundColor: !signed || submittingContrat ? '#888' : '#000', color: '#fff', border: 'none', cursor: !signed || submittingContrat ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
               >
-                {submittingContrat ? 'ENREGISTREMENT...' : 'TÉLÉCHARGER LE CONTRAT SIGNÉ'}
+                {submittingContrat ? 'SIGNATURE EN COURS...' : 'SIGNER'}
               </button>
             </div>
           </div>
