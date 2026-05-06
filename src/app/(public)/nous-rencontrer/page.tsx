@@ -87,38 +87,51 @@ export default function NousRencontrerPage() {
         {/* Trait */}
         <div className="w-full border-t border-black" />
 
-        {/* 3. Tout à gauche (texte + plan + horaires + contact + itinéraire) | Vidéo à droite */}
+        {/* 3. Tout à gauche (texte + plan + horaires + contact + itinéraire) | Vidéo à droite
+            Sur mobile: ordre = texte → vidéo → plan → bouton → horaires/contact */}
         <div className="grid grid-cols-1 lg:grid-cols-2">
 
-          {/* Colonne gauche */}
-          <div className="lg:border-r border-black flex flex-col">
-            {/* Texte intro */}
-            <div className="p-6 lg:p-12">
-              <p
-                className="uppercase font-semibold"
-                style={{
-                  fontSize: 'clamp(11px, 1.2vw, 13px)',
-                  letterSpacing: '0.04em',
-                  lineHeight: '1.8',
-                  color: bleuElectrique,
-                  minHeight: '150px',
-                }}
-              >
-                {displayedText}
-                {displayedText.length < introText.length && (
-                  <span className="animate-pulse">|</span>
-                )}
-              </p>
-              <p className="mt-6" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
-                Le Marais, 75004 Paris
-              </p>
-              <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
-                Métro Saint-Paul (ligne 1)
-              </p>
-            </div>
+          {/* Texte intro (haut-gauche en desktop, 1er en mobile) */}
+          <div className="order-1 lg:col-start-1 lg:row-start-1 lg:border-r border-black p-6 lg:p-12">
+            <p
+              className="uppercase font-semibold"
+              style={{
+                fontSize: 'clamp(11px, 1.2vw, 13px)',
+                letterSpacing: '0.04em',
+                lineHeight: '1.8',
+                color: bleuElectrique,
+                minHeight: '150px',
+              }}
+            >
+              {displayedText}
+              {displayedText.length < introText.length && (
+                <span className="animate-pulse">|</span>
+              )}
+            </p>
+            <p className="mt-6" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
+              Le Marais, 75004 Paris
+            </p>
+            <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
+              Métro Saint-Paul (ligne 1)
+            </p>
+          </div>
 
-            <div className="w-full border-t border-black" />
+          {/* Vidéo (colonne droite plein hauteur en desktop, 2e en mobile, juste avant le plan) */}
+          <div className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 bg-black flex items-stretch min-h-[400px] border-t lg:border-t-0 border-black">
+            <video
+              src="/Entr%C3%A9e.mov"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="w-full"
+              style={{ objectFit: 'cover', height: '100%', filter: 'saturate(1.25) contrast(1.03)' }}
+            />
+          </div>
 
+          {/* Plan + bouton + horaires/contact (bas-gauche en desktop, 3e en mobile) */}
+          <div className="order-3 lg:col-start-1 lg:row-start-2 lg:border-r border-black flex flex-col border-t lg:border-t border-black">
             {/* Plan */}
             <div className="h-[350px]">
               <iframe
@@ -211,20 +224,6 @@ export default function NousRencontrerPage() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Colonne droite : vidéo plein hauteur */}
-          <div className="bg-black flex items-stretch min-h-[400px]">
-            <video
-              src="/Entr%C3%A9e.mov"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className="w-full"
-              style={{ objectFit: 'cover', height: '100%', filter: 'saturate(1.25) contrast(1.03)' }}
-            />
           </div>
         </div>
 
