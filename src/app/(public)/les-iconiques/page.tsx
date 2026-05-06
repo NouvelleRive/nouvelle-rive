@@ -90,47 +90,49 @@
             })
 
           const produitsData: { [key: string]: Produit[] } = {}
-          for (const item of data) {
-            const needleNom = (item.categorieRecherche || '').toLowerCase().trim()
-            const needleMarque = (item.marque || '').toLowerCase().trim()
-            const needleMaterial = (item.materialContient || '').toLowerCase().trim()
-            const trigs = (item.chineuseTrigrammes || []).map(t => t.toUpperCase())
-            const catsIn = (item.categoriesIn || []).map(c => c.toLowerCase())
+          // Normalise pour matcher malgré apostrophes/accents/espaces variables
+          // ex: "Levi's" → "levis", "L'écaille" → "lecaille", "Saint-Laurent" → "saintlaurent"
+          const norm = (s: string) =>
+            s.toLowerCase()
+              .normalize('NFD').replace(/[̀-ͯ]/g, '')
+              .replace(/['’\-_.\s]+/g, '')
 
-            // Si aucun filtre défini → liste vide (évite d'afficher tous les produits)
+          for (const item of data) {
+            const needleNom = norm(item.categorieRecherche || '')
+            const needleMarque = norm(item.marque || '')
+            const needleMarqueRaw = (item.marque || '').toLowerCase().trim()
+            const needleMaterial = norm(item.materialContient || '')
+            const trigs = (item.chineuseTrigrammes || []).map(t => t.toUpperCase())
+            const catsIn = (item.categoriesIn || []).map(c => norm(c))
+
             if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0) {
               produitsData[item.id] = []
               continue
             }
 
             const matched = allProduits.filter(p => {
-              const nom = (p.nom || p.Nom || '').toLowerCase()
-              const marque = (p.marque || '').toLowerCase()
+              const nom = norm(p.nom || p.Nom || '')
+              const marque = norm(p.marque || '')
               const cat = typeof p.categorie === 'object'
-                ? (p.categorie?.label || '').toLowerCase()
-                : (p.categorie || '').toLowerCase()
-              const material = (p.material || '').toLowerCase()
+                ? norm(p.categorie?.label || '')
+                : norm(p.categorie || '')
+              const material = norm(p.material || '')
               const trigramme = (p.trigramme || '').toUpperCase()
 
-              // Filtre 1 : mot dans le NOM ou la CATÉGORIE
               if (needleNom && !nom.includes(needleNom) && !cat.includes(needleNom)) return false
 
-              // Filtre 2 : MARQUE (mot exact, ou 'luxe' = LUXURY_BRANDS)
               if (needleMarque) {
-                if (needleMarque === 'luxe') {
-                  if (!LUXURY_BRANDS.some(b => marque.includes(b))) return false
+                if (needleMarqueRaw === 'luxe') {
+                  if (!LUXURY_BRANDS.some(b => marque.includes(norm(b)))) return false
                 } else {
                   if (!marque.includes(needleMarque)) return false
                 }
               }
 
-              // Filtre 3 : CHINEUSE par trigramme
               if (trigs.length > 0 && !trigs.includes(trigramme)) return false
 
-              // Filtre 4 : CATÉGORIE doit contenir un des labels listés
               if (catsIn.length > 0 && !catsIn.some(c => cat.includes(c))) return false
 
-              // Filtre 5 : MATÉRIAU contient
               if (needleMaterial && !material.includes(needleMaterial)) return false
 
               return true
