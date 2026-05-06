@@ -6,7 +6,7 @@ import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { db } from '@/lib/firebaseConfig'
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore'
+import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore'
 
 type Etapes = { profil: boolean; contrat: boolean; pieces: boolean; rdv: boolean }
 type EtapesContextType = Etapes & { refreshEtapes: () => void; setEtape: (key: keyof Etapes, value: boolean) => void }
@@ -128,9 +128,16 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
 
   const loadEtapes = async (u: User) => {
     try {
-      const snap = await getDocs(query(collection(db, 'deposante'), where('authUid', '==', u.uid)))
-      if (!snap.empty) {
-        const d = snap.docs[0].data()
+      // Read direct par doc(uid) — plus fiable que la where(authUid)
+      let d: any = null
+      const directSnap = await getDoc(doc(db, 'deposante', u.uid))
+      if (directSnap.exists()) {
+        d = directSnap.data()
+      } else {
+        const fallback = await getDocs(query(collection(db, 'deposante'), where('authUid', '==', u.uid)))
+        if (!fallback.empty) d = fallback.docs[0].data()
+      }
+      if (d) {
         const profilOk = !!(d.prenom && d.nom && d.adresse1 && d.telephone && d.iban && d.pieceIdentiteUrl)
         const contratOk = !!d.contratSigne
         const prodSnap = await getDocs(query(collection(db, 'produits'), where('chineur', '==', u.email)))
@@ -174,10 +181,9 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   // Listener temps réel sur le doc deposante pour détecter contratSigne automatiquement
   useEffect(() => {
     if (!user) return
-    const q = query(collection(db, 'deposante'), where('authUid', '==', user.uid))
-    const unsub = onSnapshot(q, (snap) => {
-      if (snap.empty) return
-      const d = snap.docs[0].data()
+    const unsub = onSnapshot(doc(db, 'deposante', user.uid), (snap) => {
+      if (!snap.exists()) return
+      const d = snap.data() as any
       const profilOk = !!(d.prenom && d.nom && d.adresse1 && d.telephone && d.iban && d.pieceIdentiteUrl)
       const contratOk = !!d.contratSigne
       setEtapes(prev => ({ ...prev, profil: profilOk, contrat: contratOk }))
