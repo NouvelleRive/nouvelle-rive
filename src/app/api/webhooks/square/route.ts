@@ -435,6 +435,16 @@ export async function POST(request: Request) {
           }
           await adminDb.collection('produits').doc(produitDoc.id).update(updateData)
           console.log(`✅ Produit mis à jour: ${sku} → quantité ${newQty}`)
+
+          // Vente caisse → produit épuisé : retirer aussi d'eBay s'il y était listé
+          if (newQty === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
+            await removeFromAllChannels({
+              id: produitDoc.id,
+              sku: produitData.sku,
+              ebayOfferId: produitData.ebayOfferId,
+              ebayListingId: produitData.ebayListingId,
+            }, 'site').catch(e => console.error('⚠️ Retrait eBay (vente caisse) KO:', e?.message))
+          }
         }
       }
       return NextResponse.json({ received: true })
@@ -528,7 +538,7 @@ export async function POST(request: Request) {
 
       try {
         const emailData = await resend.emails.send({
-          from: 'Nouvelle Rive <onboarding@resend.dev>',
+          from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
           to: 'nouvelleriveparis@gmail.com',
           subject: totalArticles > 1
             ? `🛒 Vente en ligne (${totalArticles} articles) - ${clientInfo.prenom} ${clientInfo.nom}`

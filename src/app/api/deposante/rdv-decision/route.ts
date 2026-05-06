@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         if (decision === 'accepter' && dep.email) {
           try {
             await resend.emails.send({
-              from: 'Nouvelle Rive <onboarding@resend.dev>',
+              from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
               to: dep.email,
               bcc: 'nouvelleriveparis@gmail.com',
               subject: `✅ Rendez-vous confirmé — ${jour} à ${creneau}`,
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         } else if (decision === 'refuser' && dep.email) {
           try {
             await resend.emails.send({
-              from: 'Nouvelle Rive <onboarding@resend.dev>',
+              from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
               to: dep.email,
               bcc: 'nouvelleriveparis@gmail.com',
               subject: `Rendez-vous non retenu`,

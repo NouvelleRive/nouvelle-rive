@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
 
       if (!dryRun) {
         await resend.emails.send({
-          from: 'Nouvelle Rive <onboarding@resend.dev>',
+          from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
           to: email,
           bcc: 'nouvelleriveparis@gmail.com',
           subject: 'Vos articles ont 30 jours en boutique',

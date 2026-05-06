@@ -240,7 +240,7 @@ async function syncEbayOrders(daysBack: number = 14) {
         // Email récap
         try {
           await resend.emails.send({
-            from: 'Nouvelle Rive <onboarding@resend.dev>',
+            from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: 'nouvelleriveparis@gmail.com',
             subject: `🇺🇸 Vente eBay : ${produitData.nom || sku}`,
             html: `
@@ -272,7 +272,7 @@ async function syncEbayOrders(daysBack: number = 14) {
         erreurs.push(`Produit non trouvé pour SKU eBay: ${sku || lineItemId}`)
         try {
           await resend.emails.send({
-            from: 'Nouvelle Rive <onboarding@resend.dev>',
+            from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: 'nouvelleriveparis@gmail.com',
             subject: `⚠️ Vente eBay non attribuée : ${sku || lineItemId}`,
             html: `<p>Une vente eBay (${totalValue} ${currency}) n'a pas pu être attribuée à un produit Firestore.</p>
