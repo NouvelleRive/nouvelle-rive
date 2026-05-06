@@ -131,7 +131,7 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
             )}
             <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>{produit.prix.toLocaleString('fr-FR')} €</p>
             {produit.description && (
-              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300' }}>{produit.description}</p>
+              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>{produit.description}</p>
             )}
             <p style={{ fontSize: '11px', lineHeight: '1.6', color: '#999', fontWeight: '300', marginTop: '16px' }}>
               Pièce vintage ou upcyclée — peut présenter quelques défauts ou traces d'usure. Vendu en l'état.<br />
