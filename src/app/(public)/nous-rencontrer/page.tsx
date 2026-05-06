@@ -69,13 +69,13 @@ export default function NousRencontrerPage() {
         {/* Trait */}
         <div className="w-full border-t border-black" />
 
-        {/* 1. Photo façade plein écran */}
+        {/* 1. Photo façade plein écran (ratio naturel pour ne pas couper le nom) */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/facade%20paysage.jpg"
           alt="Devanture Nouvelle Rive, 8 rue des Écouffes, Paris"
           className="w-full block"
-          style={{ maxHeight: '80vh', objectFit: 'cover' }}
+          style={{ height: 'auto', display: 'block' }}
         />
 
         {/* Trait */}
@@ -87,115 +87,118 @@ export default function NousRencontrerPage() {
         {/* Trait */}
         <div className="w-full border-t border-black" />
 
-        {/* 3. Texte + Map à droite */}
+        {/* 3. Tout à gauche (texte + plan + horaires + contact + itinéraire) | Vidéo à droite */}
         <div className="grid grid-cols-1 lg:grid-cols-2">
-          <div className="p-6 lg:p-12 lg:border-r border-black flex flex-col justify-center">
-            <p
-              className="uppercase font-semibold"
-              style={{
-                fontSize: 'clamp(11px, 1.2vw, 13px)',
-                letterSpacing: '0.04em',
-                lineHeight: '1.8',
-                color: bleuElectrique,
-                minHeight: '150px',
-              }}
-            >
-              {displayedText}
-              {displayedText.length < introText.length && (
-                <span className="animate-pulse">|</span>
-              )}
-            </p>
-            <p className="mt-6" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
-              Le Marais, 75004 Paris
-            </p>
-            <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
-              Métro Saint-Paul (ligne 1)
-            </p>
-          </div>
 
-          <div className="h-[400px] lg:h-auto lg:min-h-[500px]">
-            <iframe
-              src="https://maps.google.com/maps?q=Nouvelle+Rive,+8+rue+des+%C3%89couffes,+75004+Paris&z=17&output=embed"
-              width="100%"
-              height="100%"
-              style={{ border: 0, filter: 'grayscale(100%)' }}
-              allowFullScreen
-              loading="lazy"
-              title="Plan Nouvelle Rive"
-            />
-          </div>
-        </div>
-
-        {/* Trait */}
-        <div className="w-full border-t border-black" />
-
-        {/* 4. Horaires/Contact + Vidéo à droite */}
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          <div className="p-6 lg:p-12 lg:border-r border-black">
-            {/* Horaires */}
-            <div className="mb-12">
+          {/* Colonne gauche */}
+          <div className="lg:border-r border-black flex flex-col">
+            {/* Texte intro */}
+            <div className="p-6 lg:p-12">
               <p
-                className="mb-4"
-                style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
+                className="uppercase font-semibold"
+                style={{
+                  fontSize: 'clamp(11px, 1.2vw, 13px)',
+                  letterSpacing: '0.04em',
+                  lineHeight: '1.8',
+                  color: bleuElectrique,
+                  minHeight: '150px',
+                }}
               >
-                HORAIRES
+                {displayedText}
+                {displayedText.length < introText.length && (
+                  <span className="animate-pulse">|</span>
+                )}
               </p>
-              <div className="space-y-2" style={{ fontSize: '16px' }}>
-                {HORAIRES.map(({ jour, heures }) => {
-                  const isToday = jour === jourActuel
-                  return (
-                    <div
-                      key={jour}
-                      className="flex justify-between max-w-xs"
-                      style={{ fontWeight: isToday ? 700 : 400, color: isToday ? bleuElectrique : 'inherit' }}
-                    >
-                      <span>{jour}{isToday && ' · aujourd\'hui'}</span>
-                      <span style={{ fontWeight: isToday ? 700 : 500 }}>{heures}</span>
-                    </div>
-                  )
-                })}
-              </div>
+              <p className="mt-6" style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.3' }}>
+                Le Marais, 75004 Paris
+              </p>
+              <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
+                Métro Saint-Paul (ligne 1)
+              </p>
             </div>
 
-            <div className="w-full border-t border-black mb-12" />
+            <div className="w-full border-t border-black" />
 
-            {/* Contact */}
-            <div className="mb-12">
-              <p
-                className="mb-4"
-                style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
-              >
-                CONTACT
-              </p>
+            {/* Plan */}
+            <div className="h-[350px]">
+              <iframe
+                src="https://maps.google.com/maps?q=Nouvelle+Rive,+8+rue+des+%C3%89couffes,+75004+Paris&z=17&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0, filter: 'grayscale(100%)' }}
+                allowFullScreen
+                loading="lazy"
+                title="Plan Nouvelle Rive"
+              />
+            </div>
+
+            <div className="w-full border-t border-black" />
+
+            {/* Horaires + Contact + Itinéraire */}
+            <div className="p-6 lg:p-12">
+              <div className="mb-10">
+                <p
+                  className="mb-4"
+                  style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
+                >
+                  HORAIRES
+                </p>
+                <div className="space-y-2" style={{ fontSize: '16px' }}>
+                  {HORAIRES.map(({ jour, heures }) => {
+                    const isToday = jour === jourActuel
+                    return (
+                      <div
+                        key={jour}
+                        className="flex justify-between max-w-xs"
+                        style={{ fontWeight: isToday ? 700 : 400, color: isToday ? bleuElectrique : 'inherit' }}
+                      >
+                        <span>{jour}{isToday && ' · aujourd\'hui'}</span>
+                        <span style={{ fontWeight: isToday ? 700 : 500 }}>{heures}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="w-full border-t border-black mb-10" />
+
+              <div className="mb-10">
+                <p
+                  className="mb-4"
+                  style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
+                >
+                  CONTACT
+                </p>
+                <a
+                  href="https://www.instagram.com/nouvellerive"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 hover:opacity-60 transition-opacity"
+                  style={{ fontSize: '16px', color: bleuElectrique }}
+                >
+                  @nouvelleriveparis
+                </a>
+              </div>
+
               <a
-                href="https://www.instagram.com/nouvellerive"
+                href="https://www.google.com/maps/place/NOUVELLE+RIVE/@48.8565713,2.3585257,17z/data=!4m6!3m5!1s0x47e66f1afea642dd:0xbaab4baf5127a88e!8m2!3d48.8565713!4d2.3585257!16s%2Fg%2F11x8cxw8q0"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block mt-2 hover:opacity-60 transition-opacity"
-                style={{ fontSize: '16px', color: bleuElectrique }}
+                className="inline-block py-4 px-8 text-white transition-opacity hover:opacity-80"
+                style={{
+                  backgroundColor: bleuElectrique,
+                  fontSize: '11px',
+                  letterSpacing: '0.2em',
+                  fontWeight: '600'
+                }}
               >
-                @nouvelleriveparis
+                ITINÉRAIRE
               </a>
             </div>
-
-            {/* Bouton itinéraire */}
-            <a
-              href="https://www.google.com/maps/place/NOUVELLE+RIVE/@48.8565713,2.3585257,17z/data=!4m6!3m5!1s0x47e66f1afea642dd:0xbaab4baf5127a88e!8m2!3d48.8565713!4d2.3585257!16s%2Fg%2F11x8cxw8q0"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block py-4 px-8 text-white transition-opacity hover:opacity-80"
-              style={{
-                backgroundColor: bleuElectrique,
-                fontSize: '11px',
-                letterSpacing: '0.2em',
-                fontWeight: '600'
-              }}
-            >
-              ITINÉRAIRE
-            </a>
           </div>
 
-          <div className="bg-black flex items-stretch">
+          {/* Colonne droite : vidéo plein hauteur */}
+          <div className="bg-black flex items-stretch min-h-[400px]">
             <video
               src="/Entr%C3%A9e.mov"
               autoPlay
@@ -203,8 +206,8 @@ export default function NousRencontrerPage() {
               loop
               playsInline
               preload="metadata"
-              className="w-full h-full"
-              style={{ objectFit: 'cover', minHeight: '500px' }}
+              className="w-full"
+              style={{ objectFit: 'cover', height: '100%', filter: 'saturate(1.6) contrast(1.05)' }}
             />
           </div>
         </div>
