@@ -6,6 +6,7 @@ import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs, incr
 import { db, auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { useCart } from '@/lib/cart'
+import { useLang, t } from '@/lib/i18n'
 
 const bleuElectrique = '#0000FF'
 const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i, '')
@@ -46,6 +47,7 @@ const updateOrCreateClient = async (
 function ConfirmationContent() {
   const searchParams = useSearchParams()
   const { clearCart } = useCart()
+  const lang = useLang()
 
   const [loading, setLoading] = useState(true)
   const [produits, setProduits] = useState<any[]>([])
@@ -101,22 +103,29 @@ function ConfirmationContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <p style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '11px', letterSpacing: '0.2em' }}>CHARGEMENT...</p>
+        <p style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '11px', letterSpacing: '0.2em' }}>
+          {t('CHARGEMENT...', 'LOADING...', lang)}
+        </p>
       </div>
     )
   }
 
   const total = produits.reduce((s, p) => s + (Number(p.prix) || 0), 0)
+  const locale = lang === 'en' ? 'en-US' : 'fr-FR'
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       <main className="max-w-2xl mx-auto px-6 py-20">
         <div className="text-center mb-16">
           <h1 style={{ fontSize: 'clamp(32px, 6vw, 56px)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1', marginBottom: '16px' }}>
-            {isTest ? 'TEST RÉUSSI' : 'COMMANDE CONFIRMÉE'}
+            {isTest
+              ? t('TEST RÉUSSI', 'TEST PASSED', lang)
+              : t('COMMANDE CONFIRMÉE', 'ORDER CONFIRMED', lang)}
           </h1>
           <p style={{ fontSize: '13px', color: '#666' }}>
-            {isTest ? 'Le système fonctionne parfaitement.' : 'Votre paiement a été traité avec succès.'}
+            {isTest
+              ? t('Le système fonctionne parfaitement.', 'The system is working perfectly.', lang)
+              : t('Votre paiement a été traité avec succès.', 'Your payment was processed successfully.', lang)}
           </p>
         </div>
 
@@ -125,7 +134,9 @@ function ConfirmationContent() {
         {produits.length > 0 && (
           <div className="mb-12">
             <p className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
-              {produits.length > 1 ? `VOS ARTICLES (${produits.length})` : 'VOTRE ARTICLE'}
+              {produits.length > 1
+                ? `${t('VOS ARTICLES', 'YOUR ITEMS', lang)} (${produits.length})`
+                : t('VOTRE ARTICLE', 'YOUR ITEM', lang)}
             </p>
             <div className="space-y-6">
               {produits.map((produit) => (
@@ -140,33 +151,41 @@ function ConfirmationContent() {
                       </p>
                     )}
                     <p style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>{cleanProductName(produit.nom)}</p>
-                    <p style={{ fontSize: '20px', fontWeight: '600' }}>{Number(produit.prix).toFixed(2)} €</p>
+                    <p style={{ fontSize: '20px', fontWeight: '600' }}>{Number(produit.prix).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</p>
                   </div>
                 </div>
               ))}
             </div>
             {produits.length > 1 && (
               <div className="flex justify-between items-center pt-6 mt-6 border-t border-black">
-                <span style={{ fontSize: '11px', letterSpacing: '0.15em' }}>SOUS-TOTAL</span>
-                <span style={{ fontSize: '24px', fontWeight: '600' }}>{total.toFixed(2)} €</span>
+                <span style={{ fontSize: '11px', letterSpacing: '0.15em' }}>
+                  {t('SOUS-TOTAL', 'SUBTOTAL', lang)}
+                </span>
+                <span style={{ fontSize: '24px', fontWeight: '600' }}>
+                  {total.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                </span>
               </div>
             )}
-            {orderId && <p className="mt-6" style={{ fontSize: '11px', color: '#999' }}>N° {orderId}</p>}
+            {orderId && <p className="mt-6" style={{ fontSize: '11px', color: '#999' }}>{t('N°', 'No.', lang)} {orderId}</p>}
           </div>
         )}
 
         <div className="w-full border-t border-black mb-12" />
 
         <div className="mb-12">
-          <p className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>RÉCUPÉRATION</p>
+          <p className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
+            {t('RÉCUPÉRATION', 'PICKUP / DELIVERY', lang)}
+          </p>
           <div className="space-y-4">
             <div>
-              <p style={{ fontSize: '14px', fontWeight: '500' }}>Retrait en boutique</p>
+              <p style={{ fontSize: '14px', fontWeight: '500' }}>{t('Retrait en boutique', 'In-store pickup', lang)}</p>
               <p style={{ fontSize: '13px', color: '#666' }}>8 rue des Ecouffes, 75004 Paris</p>
             </div>
             <div>
-              <p style={{ fontSize: '14px', fontWeight: '500' }}>Livraison</p>
-              <p style={{ fontSize: '13px', color: '#666' }}>Nous vous contacterons sous 24h</p>
+              <p style={{ fontSize: '14px', fontWeight: '500' }}>{t('Livraison', 'Shipping', lang)}</p>
+              <p style={{ fontSize: '13px', color: '#666' }}>
+                {t('Nous vous contacterons sous 24h', 'We will contact you within 24 hours', lang)}
+              </p>
             </div>
           </div>
         </div>
@@ -177,14 +196,14 @@ function ConfirmationContent() {
             className="flex-1 py-4 text-white text-center transition-opacity hover:opacity-80"
             style={{ backgroundColor: bleuElectrique, fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
           >
-            CONTINUER MES ACHATS
+            {t('CONTINUER MES ACHATS', 'CONTINUE SHOPPING', lang)}
           </Link>
           <Link
             href="/"
             className="flex-1 py-4 text-center border border-black transition-colors hover:bg-black hover:text-white"
             style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
           >
-            RETOUR À L'ACCUEIL
+            {t("RETOUR À L'ACCUEIL", 'BACK TO HOME', lang)}
           </Link>
         </div>
       </main>

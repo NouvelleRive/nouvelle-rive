@@ -1,21 +1,26 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-const STORAGE_KEY = 'nr-lang'
+import { getStoredLang, setStoredLang, type Lang } from '@/lib/i18n'
 
 export default function LanguageSwitcher() {
-  const [lang, setLang] = useState<'fr' | 'en'>('fr')
+  const [lang, setLang] = useState<Lang>('fr')
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (saved === 'en' || saved === 'fr') setLang(saved)
+    setLang(getStoredLang())
+    const refresh = () => setLang(getStoredLang())
+    window.addEventListener('nr-lang-change', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('nr-lang-change', refresh)
+      window.removeEventListener('storage', refresh)
+    }
   }, [])
 
-  const choose = (target: 'fr' | 'en') => {
+  const choose = (target: Lang) => {
     if (target === lang) return
     setLang(target)
-    window.localStorage.setItem(STORAGE_KEY, target)
+    setStoredLang(target)
   }
 
   return (

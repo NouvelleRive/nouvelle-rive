@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCart, calculerLivraison, PAYS_LIVRAISON } from '@/lib/cart'
+import { useLang, t } from '@/lib/i18n'
 
 type ClientInfo = {
   prenom: string
@@ -16,8 +17,8 @@ type AdresseLivraison = {
   adresse: string
   codePostal: string
   ville: string
-  pays: string       // Nom affiché (ex: "France")
-  paysCode: string   // Code ISO 2 lettres (ex: "FR")
+  pays: string
+  paysCode: string
 }
 
 const bleuElectrique = '#0000FF'
@@ -26,6 +27,7 @@ const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i,
 function CheckoutContent() {
   const router = useRouter()
   const { items, hydrated, count, sousTotal, removeItem } = useCart()
+  const lang = useLang()
 
   const [processing, setProcessing] = useState(false)
   const [modeLivraison, setModeLivraison] = useState<'retrait' | 'livraison'>('retrait')
@@ -46,6 +48,7 @@ function CheckoutContent() {
   const fraisLivraison = calculerLivraison(sousTotal, modeLivraison, adresse.paysCode)
   const fraisLivraisonPreview = calculerLivraison(sousTotal, 'livraison', adresse.paysCode)
   const total = sousTotal + fraisLivraison
+  const locale = lang === 'en' ? 'en-US' : 'fr-FR'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,16 +73,19 @@ function CheckoutContent() {
       if (data.success && data.checkoutUrl) {
         window.location.href = data.checkoutUrl
       } else if (data?.soldOutId) {
-        // Article vendu entre-temps : on le retire et on renvoie l'utilisateur au panier
         removeItem(data.soldOutId)
-        alert("Un article de votre panier vient d'être vendu. Il a été retiré.")
+        alert(t(
+          "Un article de votre panier vient d'être vendu. Il a été retiré.",
+          'An item in your cart has just been sold. It has been removed.',
+          lang
+        ))
         router.push('/panier')
       } else {
-        alert('Erreur de paiement. Merci de réessayer.')
+        alert(t('Erreur de paiement. Merci de réessayer.', 'Payment error. Please try again.', lang))
       }
     } catch (error) {
       console.error('Erreur:', error)
-      alert('Erreur de paiement. Merci de réessayer.')
+      alert(t('Erreur de paiement. Merci de réessayer.', 'Payment error. Please try again.', lang))
     } finally {
       setProcessing(false)
     }
@@ -88,7 +94,9 @@ function CheckoutContent() {
   if (!hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <p style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '11px', letterSpacing: '0.2em' }}>CHARGEMENT...</p>
+        <p style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '11px', letterSpacing: '0.2em' }}>
+          {t('CHARGEMENT...', 'LOADING...', lang)}
+        </p>
       </div>
     )
   }
@@ -98,14 +106,18 @@ function CheckoutContent() {
   return (
     <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }} className="bg-white min-h-screen">
       <header className="px-6 py-4 flex justify-between items-center">
-        <Link href="/panier" className="hover:opacity-60 transition-opacity" style={{ fontSize: '11px', letterSpacing: '0.2em' }}>← RETOUR AU PANIER</Link>
+        <Link href="/panier" className="hover:opacity-60 transition-opacity" style={{ fontSize: '11px', letterSpacing: '0.2em' }}>
+          {t('← RETOUR AU PANIER', '← BACK TO CART', lang)}
+        </Link>
         {modeLivraison === 'livraison' && fraisLivraison === 0 && (
-          <p style={{ fontSize: '11px', letterSpacing: '0.02em', color: bleuElectrique }}>Livraison offerte ✓</p>
+          <p style={{ fontSize: '11px', letterSpacing: '0.02em', color: bleuElectrique }}>
+            {t('Livraison offerte ✓', 'Free shipping ✓', lang)}
+          </p>
         )}
       </header>
       <div className="px-6 pt-8 pb-0">
         <h1 className="pb-6" style={{ fontSize: 'clamp(28px, 4vw, 100px)', fontWeight: '700', letterSpacing: '-0.02em', lineHeight: '1' }}>
-          FINALISER LA COMMANDE
+          {t('FINALISER LA COMMANDE', 'COMPLETE YOUR ORDER', lang)}
         </h1>
       </div>
       <div className="w-full border-t border-black" />
@@ -114,7 +126,9 @@ function CheckoutContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-200px)]">
           {/* Récap panier */}
           <div className="p-6 lg:p-12 lg:border-r border-black">
-            <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>VOTRE COMMANDE</h2>
+            <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
+              {t('VOTRE COMMANDE', 'YOUR ORDER', lang)}
+            </h2>
 
             <div className="space-y-4 mb-8">
               {items.map((item) => (
@@ -131,66 +145,74 @@ function CheckoutContent() {
 
             <div className="space-y-2 mb-4" style={{ fontSize: '14px' }}>
               <div className="flex justify-between">
-                <span>Sous-total</span>
-                <span>{sousTotal.toFixed(2)} €</span>
+                <span>{t('Sous-total', 'Subtotal', lang)}</span>
+                <span>{sousTotal.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
               </div>
               {modeLivraison === 'livraison' && (
                 <div className="flex justify-between">
-                  <span>Livraison</span>
+                  <span>{t('Livraison', 'Shipping', lang)}</span>
                   {fraisLivraison === 0
-                    ? <span style={{ color: bleuElectrique }}>Offerte</span>
+                    ? <span style={{ color: bleuElectrique }}>{t('Offerte', 'Free', lang)}</span>
                     : <span>{fraisLivraison.toFixed(2)} €</span>}
                 </div>
               )}
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t border-black">
-              <span style={{ fontSize: '11px', letterSpacing: '0.15em' }}>TOTAL</span>
-              <span style={{ fontSize: '28px', fontWeight: '600' }}>{total.toFixed(2)} €</span>
+              <span style={{ fontSize: '11px', letterSpacing: '0.15em' }}>{t('TOTAL', 'TOTAL', lang)}</span>
+              <span style={{ fontSize: '28px', fontWeight: '600' }}>{total.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
             </div>
           </div>
 
           {/* Formulaire */}
           <div className="p-6 lg:p-12 space-y-10">
             <div>
-              <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>VOS INFORMATIONS</h2>
+              <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
+                {t('VOS INFORMATIONS', 'YOUR DETAILS', lang)}
+              </h2>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>PRÉNOM *</label>
+                  <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>
+                    {t('PRÉNOM *', 'FIRST NAME *', lang)}
+                  </label>
                   <input type="text" required value={clientInfo.prenom} onChange={(e) => setClientInfo({ ...clientInfo, prenom: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} />
                 </div>
                 <div>
-                  <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>NOM *</label>
+                  <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>
+                    {t('NOM *', 'LAST NAME *', lang)}
+                  </label>
                   <input type="text" required value={clientInfo.nom} onChange={(e) => setClientInfo({ ...clientInfo, nom: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} />
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>EMAIL *</label>
+                <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>{t('EMAIL *', 'EMAIL *', lang)}</label>
                 <input type="email" required value={clientInfo.email} onChange={(e) => setClientInfo({ ...clientInfo, email: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} />
               </div>
               <div>
-                <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>TÉLÉPHONE</label>
-                <input type="tel" value={clientInfo.telephone} onChange={(e) => setClientInfo({ ...clientInfo, telephone: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} placeholder="Optionnel" />
+                <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>{t('TÉLÉPHONE', 'PHONE', lang)}</label>
+                <input type="tel" value={clientInfo.telephone} onChange={(e) => setClientInfo({ ...clientInfo, telephone: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} placeholder={t('Optionnel', 'Optional', lang)} />
               </div>
             </div>
 
             <div>
-              <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>RÉCUPÉRATION</h2>
+              <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
+                {t('RÉCUPÉRATION', 'PICKUP / DELIVERY', lang)}
+              </h2>
               <div className="flex gap-8">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="radio" name="mode" value="retrait" checked={modeLivraison === 'retrait'} onChange={() => setModeLivraison('retrait')} className="w-4 h-4 accent-black" />
                   <div>
-                    <p style={{ fontSize: '13px' }}>Retrait en boutique</p>
-                    <p style={{ fontSize: '11px', color: '#666' }}>Gratuit</p>
+                    <p style={{ fontSize: '13px' }}>{t('Retrait en boutique', 'In-store pickup', lang)}</p>
+                    <p style={{ fontSize: '11px', color: '#666' }}>{t('Gratuit', 'Free', lang)}</p>
                   </div>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="radio" name="mode" value="livraison" checked={modeLivraison === 'livraison'} onChange={() => setModeLivraison('livraison')} className="w-4 h-4 accent-black" />
                   <div>
-                    <p style={{ fontSize: '13px' }}>Livraison à domicile</p>
+                    <p style={{ fontSize: '13px' }}>{t('Livraison à domicile', 'Home delivery', lang)}</p>
                     {fraisLivraisonPreview > 0 && (
                       <p style={{ fontSize: '11px', color: '#666' }}>
-                        À partir de {fraisLivraisonPreview}€
+                        {t('À partir de', 'From', lang)} {fraisLivraisonPreview}€
                       </p>
                     )}
                   </div>
@@ -201,24 +223,34 @@ function CheckoutContent() {
 
             {modeLivraison === 'livraison' && (
               <div>
-                <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>ADRESSE DE LIVRAISON</h2>
+                <h2 className="mb-6" style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
+                  {t('ADRESSE DE LIVRAISON', 'SHIPPING ADDRESS', lang)}
+                </h2>
                 <div className="space-y-4">
                   <div>
-                    <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>ADRESSE *</label>
+                    <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>
+                      {t('ADRESSE *', 'ADDRESS *', lang)}
+                    </label>
                     <input type="text" required value={adresse.adresse} onChange={(e) => setAdresse({ ...adresse, adresse: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>CODE POSTAL *</label>
+                      <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>
+                        {t('CODE POSTAL *', 'ZIP / POSTAL CODE *', lang)}
+                      </label>
                       <input type="text" required value={adresse.codePostal} onChange={(e) => setAdresse({ ...adresse, codePostal: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} />
                     </div>
                     <div>
-                      <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>VILLE *</label>
+                      <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>
+                        {t('VILLE *', 'CITY *', lang)}
+                      </label>
                       <input type="text" required value={adresse.ville} onChange={(e) => setAdresse({ ...adresse, ville: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} />
                     </div>
                   </div>
                   <div>
-                    <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>PAYS *</label>
+                    <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>
+                      {t('PAYS *', 'COUNTRY *', lang)}
+                    </label>
                     <select
                       required
                       value={adresse.paysCode}
@@ -241,9 +273,13 @@ function CheckoutContent() {
 
             <div className="pt-6">
               <button type="submit" disabled={processing} className="w-full py-4 text-white transition-opacity hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: bleuElectrique, fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
-                {processing ? 'TRAITEMENT...' : `PAYER ${total.toFixed(2)} €`}
+                {processing
+                  ? t('TRAITEMENT...', 'PROCESSING...', lang)
+                  : `${t('PAYER', 'PAY', lang)} ${total.toFixed(2)} €`}
               </button>
-              <p className="text-center mt-4" style={{ fontSize: '10px', color: '#999' }}>Paiement sécurisé via Square</p>
+              <p className="text-center mt-4" style={{ fontSize: '10px', color: '#999' }}>
+                {t('Paiement sécurisé via Square', 'Secure payment via Square', lang)}
+              </p>
             </div>
           </div>
         </div>

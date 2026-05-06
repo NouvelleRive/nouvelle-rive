@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
+import { useLang, t } from '@/lib/i18n'
 
 type Produit = {
   id: string
@@ -76,6 +77,7 @@ function AccordionSection({ title, children, defaultOpen = false }: { title: str
 
 export default function ProduitClient({ produit, chineuseInfo }: { produit: Produit; chineuseInfo: ChineuseInfo | null }) {
   const router = useRouter()
+  const lang = useLang()
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
   const afficherTaille = (categorie: any) => {
@@ -100,14 +102,17 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
             </div>
             {produit.photos?.faceOnModel && (
               <p style={{ fontSize: '10px', color: '#999', fontWeight: '300', padding: '8px 12px', textAlign: 'center', borderTop: '1px solid #000' }}>
-                Photo d'illustration générée par intelligence artificielle. Non contractuelle.<br />
-                <span style={{ fontStyle: 'italic' }}>AI-generated illustrative photo. For reference only.</span>
+                {t(
+                  "Photo d'illustration générée par intelligence artificielle. Non contractuelle.",
+                  'AI-generated illustrative photo. For reference only.',
+                  lang
+                )}
               </p>
             )}
           </>
         ) : (
           <div className="w-full h-screen flex items-center justify-center" style={{ backgroundColor: '#fafafa' }}>
-            <p className="uppercase text-xs tracking-widest" style={{ color: '#ccc' }}>Pas de photo</p>
+            <p className="uppercase text-xs tracking-widest" style={{ color: '#ccc' }}>{t('Pas de photo', 'No photo', lang)}</p>
           </div>
         )}
       </div>
@@ -129,13 +134,16 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
                 {produit.sku}
               </p>
             )}
-            <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>{produit.prix.toLocaleString('fr-FR')} €</p>
+            <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>{produit.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
             {produit.description && (
               <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>{produit.description}</p>
             )}
             <p style={{ fontSize: '11px', lineHeight: '1.6', color: '#999', fontWeight: '300', marginTop: '16px' }}>
-              Pièce vintage ou upcyclée — peut présenter quelques défauts ou traces d'usure. Vendu en l'état.<br />
-              <span style={{ fontStyle: 'italic' }}>Vintage or upcycled item — may show minor imperfections or signs of wear. Sold as is.</span>
+              {t(
+                "Pièce vintage ou upcyclée — peut présenter quelques défauts ou traces d'usure. Vendu en l'état.",
+                'Vintage or upcycled item — may show minor imperfections or signs of wear. Sold as is.',
+                lang
+              )}
             </p>
 
             <div className="mt-8 mb-6">
@@ -144,58 +152,71 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
                 className="w-full py-4 uppercase transition hover:opacity-80"
                 style={{ backgroundColor: '#000', color: '#fff', fontSize: '13px', letterSpacing: '0.15em', fontWeight: '400' }}
               >
-                Acheter
+                {t('Acheter', 'Buy now', lang)}
               </button>
             </div>
 
-            <AccordionSection title="Économie circulaire et engagement">
+            <AccordionSection title={t('Économie circulaire et engagement', 'Circular economy & commitment', lang)}>
               <div style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
                 {(() => {
                   const key = (chineuseInfo?.texteEcoCirculaire || 1) as TexteEcoKey
                   const texte = TEXTES_ECO_CIRCULAIRE[key]
-                  return (
-                    <>
-                      <p style={{ marginBottom: '16px' }}>{texte.fr}</p>
-                      <p style={{ marginBottom: '16px', color: '#999', fontStyle: 'italic' }}>{texte.en}</p>
-                    </>
-                  )
+                  return <p style={{ marginBottom: '16px' }}>{lang === 'en' ? texte.en : texte.fr}</p>
                 })()}
-                <p>Chaque marque présente chez NOUVELLE RIVE est engagée,{' '}<Link href="/creatrices" style={{ color: '#000', textDecoration: 'underline' }}>découvrez-les</Link>.</p>
-                <p style={{ color: '#999', fontStyle: 'italic', marginTop: '4px' }}>Every brand at NOUVELLE RIVE is committed,{' '}<Link href="/creatrices" style={{ color: '#999', textDecoration: 'underline' }}>discover them</Link>.</p>
+                {lang === 'en' ? (
+                  <p>Every brand at NOUVELLE RIVE is committed,{' '}<Link href="/nos-creatrices" style={{ color: '#000', textDecoration: 'underline' }}>discover them</Link>.</p>
+                ) : (
+                  <p>Chaque marque présente chez NOUVELLE RIVE est engagée,{' '}<Link href="/nos-creatrices" style={{ color: '#000', textDecoration: 'underline' }}>découvrez-les</Link>.</p>
+                )}
               </div>
             </AccordionSection>
 
             {(produit.taille || produit.material || produit.color || produit.madeIn) && (
-              <AccordionSection title="Taille et caractéristiques" defaultOpen={true}>
+              <AccordionSection title={t('Taille et caractéristiques', 'Size & details', lang)} defaultOpen={true}>
                 <div style={{ fontSize: '13px', lineHeight: '2', color: '#666', fontWeight: '300' }}>
-                  {afficherTaille(produit.categorie) && produit.taille && <p><span style={{ color: '#999' }}>Taille :</span> {produit.taille}</p>}
-                  {produit.material && <p><span style={{ color: '#999' }}>Matière :</span> {produit.material}</p>}
-                  {produit.color && <p><span style={{ color: '#999' }}>Couleur :</span> {produit.color}</p>}
-                  {produit.madeIn && <p><span style={{ color: '#999' }}>Origine :</span> {produit.madeIn}</p>}
+                  {afficherTaille(produit.categorie) && produit.taille && <p><span style={{ color: '#999' }}>{t('Taille :', 'Size:', lang)}</span> {produit.taille}</p>}
+                  {produit.material && <p><span style={{ color: '#999' }}>{t('Matière :', 'Material:', lang)}</span> {produit.material}</p>}
+                  {produit.color && <p><span style={{ color: '#999' }}>{t('Couleur :', 'Color:', lang)}</span> {produit.color}</p>}
+                  {produit.madeIn && <p><span style={{ color: '#999' }}>{t('Origine :', 'Origin:', lang)}</span> {produit.madeIn}</p>}
                 </div>
               </AccordionSection>
             )}
 
-            <AccordionSection title="Entretien">
+            <AccordionSection title={t('Entretien', 'Care', lang)}>
               <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
-                {produit.entretien || "Nous recommandons un nettoyage à sec pour préserver la qualité de cette pièce. Rangez-la à l'abri de la lumière directe et de l'humidité."}
+                {produit.entretien || t(
+                  "Nous recommandons un nettoyage à sec pour préserver la qualité de cette pièce. Rangez-la à l'abri de la lumière directe et de l'humidité.",
+                  'We recommend dry cleaning to preserve the quality of this piece. Store away from direct sunlight and humidity.',
+                  lang
+                )}
               </p>
             </AccordionSection>
 
             {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
-              <AccordionSection title="Histoire de la maison">
+              <AccordionSection title={t('Histoire de la maison', 'About the house', lang)}>
                 {chineuseInfo.nom && <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>{chineuseInfo.nom}</p>}
                 {chineuseInfo.accroche && <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>{chineuseInfo.accroche}</p>}
                 {chineuseInfo.description && <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>{chineuseInfo.description}</p>}
               </AccordionSection>
             )}
 
-            <AccordionSection title="Livraison & retrait">
+            <AccordionSection title={t('Livraison & retrait', 'Delivery & pickup', lang)}>
               <div style={{ fontSize: '13px', lineHeight: '2', color: '#666', fontWeight: '300' }}>
-                <p>• Retrait gratuit en boutique — 8 rue des Ecouffes, 75004 Paris</p>
-                <p>• Livraison Colissimo — 15€ (offerte dès le 2e achat de la journée)</p>
-                <p>• Expédition sous 48h ouvrées</p>
-                <p>• Paiement sécurisé par carte bancaire</p>
+                {lang === 'en' ? (
+                  <>
+                    <p>• Free in-store pickup — 8 rue des Ecouffes, 75004 Paris</p>
+                    <p>• Colissimo shipping — €15 (free from your 2nd item of the day)</p>
+                    <p>• Ships within 48 business hours</p>
+                    <p>• Secure payment by credit card</p>
+                  </>
+                ) : (
+                  <>
+                    <p>• Retrait gratuit en boutique — 8 rue des Ecouffes, 75004 Paris</p>
+                    <p>• Livraison Colissimo — 15€ (offerte dès le 2e achat de la journée)</p>
+                    <p>• Expédition sous 48h ouvrées</p>
+                    <p>• Paiement sécurisé par carte bancaire</p>
+                  </>
+                )}
               </div>
             </AccordionSection>
           </div>

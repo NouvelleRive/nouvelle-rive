@@ -8,9 +8,11 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import { useCart } from '@/lib/cart'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { useLang, t } from '@/lib/i18n'
 
 export default function NavbarPublic() {
   const pathname = usePathname()
+  const lang = useLang()
   const [compteHref, setCompteHref] = useState('/client/login')
   const { count, hydrated } = useCart()
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -22,7 +24,6 @@ export default function NavbarPublic() {
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
   const bleuElectrique = '#0000FF'
-  const bleuNR = '#22209C'
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -31,23 +32,29 @@ export default function NavbarPublic() {
     return () => unsubscribe()
   }, [])
 
-  // Contenu de navigation
   const boutiqueLinks = [
-    { href: '/boutique', label: 'NEW IN' },
-    { href: '/nous-rencontrer', label: 'IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES' },
-    { href: '/ete', label: 'ÉTÉ' },
-    { href: '/soiree', label: 'SOIRÉE' },
-    { href: '/les-iconiques', label: 'LES ICONIQUES DU VINTAGE' },
-    { href: '/luxe', label: 'LE LUXE' },
-    { href: '/coups-de-coeur', label: 'NOS PIÈCES PRÉFÉRÉES' },
-    { href: '/nos-creatrices', label: 'NOS CRÉATRICES/CURATEURICES' },
-    { href: '/femme', label: '(PLUTÔT) FEMME' },
-    { href: '/homme', label: '(PLUTÔT) HOMME' },
-    { href: '/enfant', label: 'ENFANT' },
-    { href: '/accessoires', label: 'ACCESSOIRES' },
-    { href: '/ateliers', label: 'ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE' },
+    { href: '/boutique', label: t('NEW IN', 'NEW IN', lang) },
+    { href: '/nous-rencontrer', label: t('IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES', 'IRL: OUR BOUTIQUE — 8 RUE DES ECOUFFES', lang) },
+    { href: '/ete', label: t('ÉTÉ', 'SUMMER', lang) },
+    { href: '/soiree', label: t('SOIRÉE', 'EVENING', lang) },
+    { href: '/les-iconiques', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONS', lang) },
+    { href: '/luxe', label: t('LE LUXE', 'LUXURY', lang) },
+    { href: '/coups-de-coeur', label: t('NOS PIÈCES PRÉFÉRÉES', 'OUR FAVOURITES', lang) },
+    { href: '/nos-creatrices', label: t('NOS CRÉATRICES/CURATEURICES', 'OUR DESIGNERS / CURATORS', lang) },
+    { href: '/femme', label: t('(PLUTÔT) FEMME', '(RATHER) WOMEN', lang) },
+    { href: '/homme', label: t('(PLUTÔT) HOMME', '(RATHER) MEN', lang) },
+    { href: '/enfant', label: t('ENFANT', 'KIDS', lang) },
+    { href: '/accessoires', label: t('ACCESSOIRES', 'ACCESSORIES', lang) },
+    { href: '/ateliers', label: t('ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE', 'UPCYCLED JEWELRY WORKSHOP WITH A DESIGNER', lang) },
   ]
 
+  const cartLabel = t('PANIER', 'CART', lang)
+  const accountLabel = t('MON COMPTE', 'MY ACCOUNT', lang)
+  const marqueeText = t(
+    "// Livraison offerte dès 150€ d'achat // Retrait gratuit en boutique - 8 rue des Ecouffes, 75004 Paris",
+    '// Free shipping over €150 // Free in-store pickup — 8 rue des Ecouffes, 75004 Paris',
+    lang
+  )
 
   return (
     <>
@@ -64,7 +71,6 @@ export default function NavbarPublic() {
             preload="metadata"
             className="w-full h-auto md:h-screen md:object-cover block"
           />
-          {/* Boutons Panier + Mon Compte en overlay */}
           <div
             className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10"
             style={{ fontFamily: fontHelvetica }}
@@ -80,7 +86,7 @@ export default function NavbarPublic() {
                 whiteSpace: 'nowrap'
               }}
             >
-              PANIER {hydrated && count > 0 ? `(${count})` : ''}
+              {cartLabel} {hydrated && count > 0 ? `(${count})` : ''}
             </Link>
             <Link
               href={compteHref}
@@ -92,7 +98,7 @@ export default function NavbarPublic() {
                 whiteSpace: 'nowrap'
               }}
             >
-              MON COMPTE
+              {accountLabel}
             </Link>
           </div>
         </div>
@@ -102,9 +108,7 @@ export default function NavbarPublic() {
         className="bg-transparent relative"
         style={{ fontFamily: fontHelvetica, zIndex: 10 }}
       >
-        {/* NOUVELLE RIVE + Bouton Mon Compte */}
         <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex justify-between items-start`}>
-          {/* Logo - masqué quand la vidéo est affichée (déjà dans la vidéo) */}
           {!showVideo && (
             <h1
               className="uppercase"
@@ -120,7 +124,6 @@ export default function NavbarPublic() {
             </h1>
           )}
 
-          {/* Boutons Panier + Mon Compte (cachés quand vidéo affichée) */}
           {!showVideo && (
             <div className="flex items-center gap-3 mt-1 md:mt-2">
               <LanguageSwitcher />
@@ -134,7 +137,7 @@ export default function NavbarPublic() {
                   whiteSpace: 'nowrap'
                 }}
               >
-                PANIER {hydrated && count > 0 ? `(${count})` : ''}
+                {cartLabel} {hydrated && count > 0 ? `(${count})` : ''}
               </Link>
               <Link
                 href={compteHref}
@@ -146,16 +149,14 @@ export default function NavbarPublic() {
                   whiteSpace: 'nowrap'
                 }}
               >
-                MON COMPTE
+                {accountLabel}
               </Link>
             </div>
           )}
         </div>
 
-        {/* Ligne */}
         <div style={{ borderBottom: '1px solid #000' }} />
 
-        {/* Liens en colonne - toujours visibles */}
         <div className="px-4 md:px-6 py-4 flex">
           <div className="flex flex-col gap-0.5">
             {boutiqueLinks.map((link) => {
@@ -178,13 +179,10 @@ export default function NavbarPublic() {
               )
             })}
           </div>
-
         </div>
 
-        {/* Ligne */}
         <div style={{ borderBottom: '1px solid #000' }} />
 
-        {/* Animation glissante (bannière bleue) */}
         <div className="overflow-hidden py-2">
           <div className="flex items-center animate-marquee whitespace-nowrap">
             {[...Array(10)].map((_, i) => (
@@ -199,17 +197,15 @@ export default function NavbarPublic() {
                   fontStyle: 'italic'
                 }}
               >
-                // Livraison offerte dès 150€ d'achat // Retrait gratuit en boutique - 8 rue des Ecouffes, 75004 Paris
+                {marqueeText}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Ligne */}
         <div style={{ borderBottom: '1px solid #000' }} />
       </nav>
 
-      {/* CSS pour l'animation et hover */}
       <style jsx>{`
         @keyframes marquee {
           0% {

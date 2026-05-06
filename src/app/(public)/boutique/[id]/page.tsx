@@ -8,6 +8,7 @@ import { db } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
 import { useCart } from '@/lib/cart'
+import { useLang, t } from '@/lib/i18n'
 
 type Produit = {
   id: string
@@ -122,6 +123,7 @@ export default function ProduitPage() {
   const [chineuseInfo, setChineuseInfo] = useState<{accroche?: string, description?: string, nom?: string, texteEcoCirculaire?: number, stockType?: string} | null>(null)
   const { addItem, hasItem, hydrated } = useCart()
   const [justAdded, setJustAdded] = useState(false)
+  const lang = useLang()
 
   useEffect(() => {
     async function fetchProduit() {
@@ -203,7 +205,7 @@ export default function ProduitPage() {
         style={{ fontFamily: fontHelvetica }}
       >
         <p className="uppercase text-xs tracking-widest" style={{ color: '#999' }}>
-          Chargement...
+          {t('Chargement...', 'Loading...', lang)}
         </p>
       </div>
     )
@@ -211,18 +213,18 @@ export default function ProduitPage() {
 
   if (!produit) {
     return (
-      <div 
+      <div
         className="h-screen flex flex-col items-center justify-center bg-white"
         style={{ fontFamily: fontHelvetica }}
       >
         <p className="uppercase text-xs tracking-widest mb-6" style={{ color: '#999' }}>
-          Produit introuvable
+          {t('Produit introuvable', 'Product not found', lang)}
         </p>
-        <Link 
-          href="/boutique" 
+        <Link
+          href="/boutique"
           className="uppercase text-xs tracking-widest hover:opacity-50 transition"
         >
-          ← Retour à la boutique
+          {t('← Retour à la boutique', '← Back to shop', lang)}
         </Link>
       </div>
     )
@@ -230,21 +232,21 @@ export default function ProduitPage() {
 
   if (produit.vendu) {
     return (
-      <div 
+      <div
         className="h-screen flex flex-col items-center justify-center bg-white"
         style={{ fontFamily: fontHelvetica }}
       >
         <p className="uppercase text-xs tracking-widest mb-2" style={{ color: '#999' }}>
-          Vendu
+          {t('Vendu', 'Sold', lang)}
         </p>
         <p className="text-xs mb-6" style={{ color: '#999' }}>
-          Cette pièce a trouvé preneur
+          {t('Cette pièce a trouvé preneur', 'This piece has found a new home', lang)}
         </p>
-        <Link 
-          href="/boutique" 
+        <Link
+          href="/boutique"
           className="uppercase text-xs tracking-widest hover:opacity-50 transition"
         >
-          ← Découvrir d'autres pièces
+          {t("← Découvrir d'autres pièces", '← Discover other pieces', lang)}
         </Link>
       </div>
     )
@@ -279,19 +281,21 @@ export default function ProduitPage() {
           </div>
           {produit.photos?.faceOnModel && (
             <p style={{ fontSize: '10px', color: '#999', fontWeight: '300', padding: '8px 12px', textAlign: 'center', borderTop: '1px solid #000' }}>
-              Photo d'illustration générée par intelligence artificielle. Non contractuelle.
-              <br />
-              <span style={{ fontStyle: 'italic' }}>AI-generated illustrative photo. For reference only.</span>
+              {t(
+                "Photo d'illustration générée par intelligence artificielle. Non contractuelle.",
+                'AI-generated illustrative photo. For reference only.',
+                lang
+              )}
             </p>
           )}
           </>
         ) : (
-          <div 
+          <div
             className="w-full h-screen flex items-center justify-center"
             style={{ backgroundColor: '#fafafa' }}
           >
             <p className="uppercase text-xs tracking-widest" style={{ color: '#ccc' }}>
-              Pas de photo
+              {t('Pas de photo', 'No photo', lang)}
             </p>
           </div>
         )}
@@ -346,11 +350,11 @@ export default function ProduitPage() {
             )}
 
             {/* Prix */}
-            <p 
+            <p
               className="mb-6"
               style={{ fontSize: '16px', letterSpacing: '0.02em' }}
             >
-              {produit.prix.toLocaleString('fr-FR')} €
+              {produit.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
             </p>
 
             {/* Description - minuscules */}
@@ -369,9 +373,11 @@ export default function ProduitPage() {
 
             {/* Disclaimer vintage */}
             <p style={{ fontSize: '11px', lineHeight: '1.6', color: '#999', fontWeight: '300', marginTop: '16px' }}>
-              Pièce vintage ou upcyclée — peut présenter quelques défauts ou traces d'usure. Vendu en l'état.
-              <br />
-              <span style={{ fontStyle: 'italic' }}>Vintage or upcycled item — may show minor imperfections or signs of wear. Sold as is.</span>
+              {t(
+                "Pièce vintage ou upcyclée — peut présenter quelques défauts ou traces d'usure. Vendu en l'état.",
+                'Vintage or upcycled item — may show minor imperfections or signs of wear. Sold as is.',
+                lang
+              )}
             </p>
 
             {/* === BOUTON AJOUTER AU PANIER === */}
@@ -388,7 +394,11 @@ export default function ProduitPage() {
                 fontWeight: '400'
               }}
             >
-              {justAdded ? 'AJOUTÉ AU PANIER ✓' : dansLePanier ? 'DÉJÀ DANS LE PANIER' : 'AJOUTER AU PANIER'}
+              {justAdded
+                ? t('AJOUTÉ AU PANIER ✓', 'ADDED TO CART ✓', lang)
+                : dansLePanier
+                  ? t('DÉJÀ DANS LE PANIER', 'ALREADY IN CART', lang)
+                  : t('AJOUTER AU PANIER', 'ADD TO CART', lang)}
             </button>
             {dansLePanier && (
               <button
@@ -402,7 +412,7 @@ export default function ProduitPage() {
                   fontWeight: '400'
                 }}
               >
-                VOIR LE PANIER
+                {t('VOIR LE PANIER', 'VIEW CART', lang)}
               </button>
             )}
           </div>
@@ -410,26 +420,24 @@ export default function ProduitPage() {
           {/* === SECTIONS DÉPLIABLES === */}
           
           {/* ÉCONOMIE CIRCULAIRE */}
-          <AccordionSection title="Économie circulaire et engagement">
+          <AccordionSection title={t('Économie circulaire et engagement', 'Circular economy & commitment', lang)}>
   <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#1a1a1a', fontWeight: '400' }}>
     {(() => {
       const key = (chineuseInfo?.texteEcoCirculaire || 1) as TexteEcoKey
       const texte = TEXTES_ECO_CIRCULAIRE[key]
-      return (
-        <>
-          <p style={{ marginBottom: '16px' }}>{texte.fr}</p>
-          <p style={{ marginBottom: '16px', color: '#666', fontStyle: 'italic', fontSize: '13px' }}>{texte.en}</p>
-        </>
-      )
+      return <p style={{ marginBottom: '16px' }}>{lang === 'en' ? texte.en : texte.fr}</p>
     })()}
-    <p>
-      Chaque marque présente chez NOUVELLE RIVE est engagée,{' '}
-      <Link href="/creatrices" style={{ color: '#000', textDecoration: 'underline' }}>découvrez-les</Link>.
-    </p>
-    <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px', marginTop: '4px' }}>
-      Every brand at NOUVELLE RIVE is committed,{' '}
-      <Link href="/creatrices" style={{ color: '#666', textDecoration: 'underline' }}>discover them</Link>.
-    </p>
+    {lang === 'en' ? (
+      <p>
+        Every brand at NOUVELLE RIVE is committed,{' '}
+        <Link href="/nos-creatrices" style={{ color: '#000', textDecoration: 'underline' }}>discover them</Link>.
+      </p>
+    ) : (
+      <p>
+        Chaque marque présente chez NOUVELLE RIVE est engagée,{' '}
+        <Link href="/nos-creatrices" style={{ color: '#000', textDecoration: 'underline' }}>découvrez-les</Link>.
+      </p>
+    )}
   </div>
 </AccordionSection>
 
@@ -438,31 +446,31 @@ export default function ProduitPage() {
             const catRaw = typeof produit.categorie === 'string' ? produit.categorie : (produit.categorie as any)?.label || ''
             const catClean = catRaw.replace(/^[A-Z]{2,5}\s*[-–]\s*/, '').trim()
             return (
-              <AccordionSection title="Taille et caractéristiques" defaultOpen={true}>
+              <AccordionSection title={t('Taille et caractéristiques', 'Size & details', lang)} defaultOpen={true}>
                 <div style={{ fontSize: '14px', lineHeight: '2', color: '#1a1a1a', fontWeight: '400' }}>
                   {produit.marque && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Marque</span>{produit.marque}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Marque', 'Brand', lang)}</span>{produit.marque}</p>
                   )}
                   {catClean && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Catégorie</span>{catClean}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Catégorie', 'Category', lang)}</span>{catClean}</p>
                   )}
                   {produit.material && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Matière</span>{produit.material}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Matière', 'Material', lang)}</span>{produit.material}</p>
                   )}
                   {produit.composition && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Composition</span>{produit.composition}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Composition', 'Composition', lang)}</span>{produit.composition}</p>
                   )}
                   {produit.color && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Couleur</span>{produit.color}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Couleur', 'Color', lang)}</span>{produit.color}</p>
                   )}
                   {afficherTaille(produit.categorie) && produit.taille && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Taille</span>{produit.taille}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Taille', 'Size', lang)}</span>{produit.taille}</p>
                   )}
                   {produit.madeIn && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>Origine</span>{produit.madeIn.replace(/^Made in\s+/i, '').trim()}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Origine', 'Origin', lang)}</span>{produit.madeIn.replace(/^Made in\s+/i, '').trim()}</p>
                   )}
                   {produit.etat && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>État</span>{produit.etat}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('État', 'Condition', lang)}</span>{produit.etat}</p>
                   )}
                 </div>
               </AccordionSection>
@@ -470,27 +478,32 @@ export default function ProduitPage() {
           })()}
 
           {/* À PROPOS DE NOUVELLE RIVE */}
-          <AccordionSection title="À propos de Nouvelle Rive">
+          <AccordionSection title={t('À propos de Nouvelle Rive', 'About Nouvelle Rive', lang)}>
             <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#1a1a1a', fontWeight: '400' }}>
               <p style={{ marginBottom: '12px' }}>
-                Nouvelle Rive réunit des chineuses indépendantes qui sélectionnent les plus belles pièces vintage de Paris. Chaque pièce passe par notre boutique du Marais pour une vérification en main propre.
-              </p>
-              <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px' }}>
-                Nouvelle Rive brings together independent vintage hunters who curate the finest vintage pieces in Paris. Every item is checked in person at our Le Marais boutique.
+                {t(
+                  'Nouvelle Rive réunit des chineuses indépendantes qui sélectionnent les plus belles pièces vintage de Paris. Chaque pièce passe par notre boutique du Marais pour une vérification en main propre.',
+                  'Nouvelle Rive brings together independent vintage hunters who curate the finest vintage pieces in Paris. Every item is checked in person at our Le Marais boutique.',
+                  lang
+                )}
               </p>
             </div>
           </AccordionSection>
 
           {/* ENTRETIEN */}
-          <AccordionSection title="Entretien">
+          <AccordionSection title={t('Entretien', 'Care', lang)}>
             <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
-              {produit.entretien || 'Nous recommandons un nettoyage à sec pour préserver la qualité de cette pièce. Rangez-la à l\'abri de la lumière directe et de l\'humidité.'}
+              {produit.entretien || t(
+                "Nous recommandons un nettoyage à sec pour préserver la qualité de cette pièce. Rangez-la à l'abri de la lumière directe et de l'humidité.",
+                'We recommend dry cleaning to preserve the quality of this piece. Store away from direct sunlight and humidity.',
+                lang
+              )}
             </p>
           </AccordionSection>
 
           {/* HISTOIRE DE LA MAISON / DÉCOUVRIR LA CHINEUSE selon stockType */}
           {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
-            <AccordionSection title={chineuseInfo.stockType === 'smallBatch' ? 'Histoire de la maison' : 'Découvrir la chineuse'}>
+            <AccordionSection title={chineuseInfo.stockType === 'smallBatch' ? t('Histoire de la maison', 'About the house', lang) : t('Découvrir la chineuse', 'Meet the curator', lang)}>
               {chineuseInfo.nom && (
                   <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
                     {chineuseInfo.nom}
@@ -510,12 +523,23 @@ export default function ProduitPage() {
           )}
 
           {/* LIVRAISON & RETRAIT */}
-          <AccordionSection title="Livraison & retrait">
+          <AccordionSection title={t('Livraison & retrait', 'Delivery & pickup', lang)}>
             <div style={{ fontSize: '13px', lineHeight: '2', color: '#666', fontWeight: '300' }}>
-              <p>• Retrait gratuit en boutique — 8 rue des Ecouffes, 75004 Paris</p>
-              <p>• Livraison Colissimo — 15€ (offerte dès le 2e achat de la journée)</p>
-              <p>• Expédition sous 48h ouvrées</p>
-              <p>• Paiement sécurisé par carte bancaire</p>
+              {lang === 'en' ? (
+                <>
+                  <p>• Free in-store pickup — 8 rue des Ecouffes, 75004 Paris</p>
+                  <p>• Colissimo shipping — €15 (free from your 2nd item of the day)</p>
+                  <p>• Ships within 48 business hours</p>
+                  <p>• Secure payment by credit card</p>
+                </>
+              ) : (
+                <>
+                  <p>• Retrait gratuit en boutique — 8 rue des Ecouffes, 75004 Paris</p>
+                  <p>• Livraison Colissimo — 15€ (offerte dès le 2e achat de la journée)</p>
+                  <p>• Expédition sous 48h ouvrées</p>
+                  <p>• Paiement sécurisé par carte bancaire</p>
+                </>
+              )}
             </div>
           </AccordionSection>
 

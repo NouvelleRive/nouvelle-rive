@@ -5,10 +5,12 @@ import { useEffect, useState } from 'react'
 import { useFilteredProducts } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
 import CountdownPromo from '@/components/CountdownPromo'
+import { useLang, t } from '@/lib/i18n'
 
 export default function BoutiquePage() {
   const { produits, loading, loadingMore } = useFilteredProducts('new-in')
   const [nombreAchats, setNombreAchats] = useState(0)
+  const lang = useLang()
 
   useEffect(() => {
     const achats = localStorage.getItem('nouvelle-rive-achats')
@@ -18,7 +20,7 @@ export default function BoutiquePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Chargement...</p>
+        <p className="text-gray-600">{t('Chargement...', 'Loading...', lang)}</p>
       </div>
     )
   }
@@ -29,7 +31,7 @@ export default function BoutiquePage() {
 
       {loadingMore && (
         <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm">Chargement...</p>
+          <p className="text-gray-500 text-sm">{t('Chargement...', 'Loading...', lang)}</p>
         </div>
       )}
 
@@ -39,9 +41,15 @@ export default function BoutiquePage() {
         <div className="text-center text-gray-600 text-sm space-y-2">
           <p>© 2026 Nouvelle Rive • 8 rue des Écouffes, Paris</p>
           <div className="flex justify-center gap-4 text-xs text-gray-400">
-            <a href="/legal/mentions-cgv" className="hover:text-black transition-colors">Mentions légales & CGV</a>
-            <a href="/legal/retours" className="hover:text-black transition-colors">Retours</a>
-            <a href="/legal/confidentialite" className="hover:text-black transition-colors">Confidentialité</a>
+            <a href="/legal/mentions-cgv" className="hover:text-black transition-colors">
+              {t('Mentions légales & CGV', 'Legal notice & Terms', lang)}
+            </a>
+            <a href="/legal/retours" className="hover:text-black transition-colors">
+              {t('Retours', 'Returns', lang)}
+            </a>
+            <a href="/legal/confidentialite" className="hover:text-black transition-colors">
+              {t('Confidentialité', 'Privacy', lang)}
+            </a>
           </div>
         </div>
       </footer>
