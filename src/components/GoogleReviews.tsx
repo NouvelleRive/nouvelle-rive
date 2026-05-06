@@ -204,26 +204,24 @@ export default function GoogleReviews() {
         </button>
       </div>
 
-      {/* Lien voir tous */}
-      {data.mapsUri && (
-        <div className="mt-8 text-center px-6 lg:px-12">
-          <a
-            href={data.mapsUri}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block py-3 px-6 transition-opacity hover:opacity-60"
-            style={{
-              fontSize: '11px',
-              letterSpacing: '0.2em',
-              fontWeight: '600',
-              color: bleuElectrique,
-              borderBottom: `1px solid ${bleuElectrique}`,
-            }}
-          >
-            VOIR TOUS LES AVIS SUR GOOGLE
-          </a>
-        </div>
-      )}
+      {/* Lien voir tous — pointe directement sur l'onglet avis Google */}
+      <div className="mt-8 text-center px-6 lg:px-12">
+        <a
+          href="https://www.google.com/maps?cid=13450927928425031822"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block py-3 px-6 transition-opacity hover:opacity-60"
+          style={{
+            fontSize: '11px',
+            letterSpacing: '0.2em',
+            fontWeight: '600',
+            color: bleuElectrique,
+            borderBottom: `1px solid ${bleuElectrique}`,
+          }}
+        >
+          VOIR TOUS LES AVIS SUR GOOGLE
+        </a>
+      </div>
     </section>
   )
 }
