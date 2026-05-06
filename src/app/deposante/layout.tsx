@@ -210,12 +210,12 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
       <ProgressBar etapes={etapes} />
       {showWelcome && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white max-w-sm w-full p-8 text-center" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+          <div className="bg-white max-w-sm w-full p-8" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
             <h2 className="text-xl font-bold mb-6">Bienvenue 👋</h2>
-            <ol className="space-y-2 text-sm text-gray-800 mb-8 text-left">
-              <li>1. Profil &amp; contrat</li>
-              <li>2. Vos pièces (5 max)</li>
-              <li>3. RDV en boutique</li>
+            <ol className="space-y-3 text-sm text-gray-800 mb-8">
+              <li>1. Complétez votre profil et signez votre contrat</li>
+              <li>2. Ajoutez vos pièces</li>
+              <li>3. Prenez RDV</li>
             </ol>
             <button onClick={dismissWelcome} className="w-full py-3 text-white text-xs font-semibold uppercase tracking-widest" style={{ backgroundColor: '#22209C' }}>
               Commencer →
