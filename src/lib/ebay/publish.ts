@@ -358,7 +358,12 @@ export function formatEbayDescription(description: string, produit: Partial<Ebay
   parts.push('<h2 style="color: #22209C;">Vintage from Paris</h2>')
   
   if (description) {
-    parts.push(`<p>${description}</p>`)
+    // Préserve les sauts de ligne (la description Firestore peut contenir
+    // un bloc FR + un bloc EN séparés par '\n\n🇬🇧 ...')
+    const paragraphs = description.split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
+    for (const para of paragraphs) {
+      parts.push(`<p>${para.replace(/\n/g, '<br>')}</p>`)
+    }
   }
   
   parts.push('<h3>Details</h3>')
@@ -806,6 +811,13 @@ export function wearTypeToGender(wearType?: string): EbayGender | null {
  * @param gender - Genre optionnel (si non fourni, sera déterminé par la chineuse)
  */
 export function prepareProductForEbay(firebaseProduct: any, gender?: EbayGender): EbayProduct {
+  // Le champ `gender` directement défini sur le produit prévaut sur celui passé en paramètre
+  // (utile pour les chineuses au stock mixte hommes/femmes : tag pièce par pièce).
+  const productGender: EbayGender | undefined =
+    firebaseProduct.gender === 'women' || firebaseProduct.gender === 'men'
+      ? firebaseProduct.gender
+      : undefined
+  const finalGender = productGender || gender
   // Extraire la catégorie principale
   const localCategory = typeof firebaseProduct.categorie === 'object'
     ? firebaseProduct.categorie?.label
@@ -845,7 +857,7 @@ conditionDescription: 'Excellent vintage condition. Carefully inspected and cura
     priceEUR: firebaseProduct.prix || 0,
     categoryId: localCategory || '',
     sousCat: sousCat || '',
-    gender,
+    gender: finalGender,
     imageUrls,
     brand: firebaseProduct.marque,
     material,
