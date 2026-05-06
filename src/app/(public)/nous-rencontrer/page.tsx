@@ -95,12 +95,32 @@ export default function NousRencontrerPage() {
               </p>
               <div className="space-y-2" style={{ fontSize: '16px' }}>
                 <div className="flex justify-between max-w-xs">
-                  <span>Vendredi — Lundi</span>
+                  <span>Lundi</span>
                   <span className="font-medium">11h – 20h</span>
                 </div>
                 <div className="flex justify-between max-w-xs">
-                  <span>Mardi — Jeudi</span>
+                  <span>Mardi</span>
                   <span className="font-medium">12h – 20h</span>
+                </div>
+                <div className="flex justify-between max-w-xs">
+                  <span>Mercredi</span>
+                  <span className="font-medium">12h – 20h</span>
+                </div>
+                <div className="flex justify-between max-w-xs">
+                  <span>Jeudi</span>
+                  <span className="font-medium">12h – 20h</span>
+                </div>
+                <div className="flex justify-between max-w-xs">
+                  <span>Vendredi</span>
+                  <span className="font-medium">11h – 20h</span>
+                </div>
+                <div className="flex justify-between max-w-xs">
+                  <span>Samedi</span>
+                  <span className="font-medium">11h – 20h</span>
+                </div>
+                <div className="flex justify-between max-w-xs">
+                  <span>Dimanche</span>
+                  <span className="font-medium">11h – 20h</span>
                 </div>
               </div>
             </div>
