@@ -1709,6 +1709,21 @@ async function compressImage(file: File): Promise<string> {
               </div>
             </div>
 
+            {/* Marque (obligatoire si requireBrand) */}
+            {requireBrand && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium mb-1">Marque *</label>
+                <input
+                  type="text"
+                  value={formData.marque}
+                  onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
+                  required
+                  className="w-full border rounded px-2 py-1.5 text-sm"
+                  placeholder="Chanel..."
+                />
+              </div>
+            )}
+
             {/* Dimensions sac (obligatoire) */}
             {formData.categorie.toLowerCase().includes('sac') && (
               <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t">
@@ -2200,17 +2215,18 @@ async function compressImage(file: File): Promise<string> {
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Marque{requireBrand ? ' *' : ''}</label>
-                <input
-                  type="text"
-                  value={formData.marque}
-                  onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
-                  required={mode === 'create' && requireBrand}
-                  className="w-full border rounded px-2 py-1.5 text-sm"
-                  placeholder="Chanel..."
-                />
-              </div>
+              {!requireBrand && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Marque</label>
+                  <input
+                    type="text"
+                    value={formData.marque}
+                    onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                    placeholder="Chanel..."
+                  />
+                </div>
+              )}
 
               <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Matière</label>
