@@ -38,9 +38,24 @@ export default function LanguageSwitcher() {
   useEffect(() => {
     setLang(readGoogtrans())
 
+    // Tueur de bannière Google Translate : élimine l'iframe dès qu'elle apparaît
+    const killBanner = () => {
+      document
+        .querySelectorAll<HTMLElement>('.goog-te-banner-frame, .skiptranslate iframe')
+        .forEach((el) => {
+          if (el.tagName === 'IFRAME') el.remove()
+        })
+      if (document.body.style.top) document.body.style.top = '0px'
+      if (document.body.style.position) document.body.style.position = 'static'
+      document.documentElement.style.marginTop = '0px'
+    }
+    killBanner()
+    const observer = new MutationObserver(killBanner)
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] })
+
     if (googleScriptInjected || document.getElementById('google-translate-script')) {
       googleScriptInjected = true
-      return
+      return () => observer.disconnect()
     }
     googleScriptInjected = true
 
@@ -69,6 +84,8 @@ export default function LanguageSwitcher() {
     s.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'
     s.async = true
     document.body.appendChild(s)
+
+    return () => observer.disconnect()
   }, [])
 
   const choose = (target: 'fr' | 'en') => {
