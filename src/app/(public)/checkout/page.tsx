@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useCart, calculerLivraison, SEUIL_LIVRAISON_OFFERTE, FRAIS_LIVRAISON } from '@/lib/cart'
+import { useCart, calculerLivraison, PAYS_LIVRAISON } from '@/lib/cart'
 
 type ClientInfo = {
   prenom: string
@@ -16,7 +16,8 @@ type AdresseLivraison = {
   adresse: string
   codePostal: string
   ville: string
-  pays: string
+  pays: string       // Nom affiché (ex: "France")
+  paysCode: string   // Code ISO 2 lettres (ex: "FR")
 }
 
 const bleuElectrique = '#0000FF'
@@ -29,7 +30,7 @@ function CheckoutContent() {
   const [processing, setProcessing] = useState(false)
   const [modeLivraison, setModeLivraison] = useState<'retrait' | 'livraison'>('retrait')
   const [clientInfo, setClientInfo] = useState<ClientInfo>({ prenom: '', nom: '', email: '', telephone: '' })
-  const [adresse, setAdresse] = useState<AdresseLivraison>({ adresse: '', codePostal: '', ville: '', pays: 'France' })
+  const [adresse, setAdresse] = useState<AdresseLivraison>({ adresse: '', codePostal: '', ville: '', pays: 'France', paysCode: 'FR' })
 
   useEffect(() => {
     const savedClientInfo = localStorage.getItem('nouvelle-rive-client')
@@ -42,7 +43,7 @@ function CheckoutContent() {
     if (hydrated && count === 0) router.push('/panier')
   }, [hydrated, count, router])
 
-  const fraisLivraison = calculerLivraison(sousTotal, modeLivraison)
+  const fraisLivraison = calculerLivraison(sousTotal, modeLivraison, adresse.paysCode)
   const total = sousTotal + fraisLivraison
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,6 +62,7 @@ function CheckoutContent() {
           clientInfo,
           adresse: modeLivraison === 'livraison' ? adresse : null,
           modeLivraison,
+          paysCode: modeLivraison === 'livraison' ? adresse.paysCode : 'FR',
         })
       })
       const data = await response.json()
@@ -96,7 +98,7 @@ function CheckoutContent() {
     <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }} className="bg-white min-h-screen">
       <header className="px-6 py-4 flex justify-between items-center">
         <Link href="/panier" className="hover:opacity-60 transition-opacity" style={{ fontSize: '11px', letterSpacing: '0.2em' }}>← RETOUR AU PANIER</Link>
-        {sousTotal >= SEUIL_LIVRAISON_OFFERTE && modeLivraison === 'livraison' && (
+        {modeLivraison === 'livraison' && fraisLivraison === 0 && (
           <p style={{ fontSize: '11px', letterSpacing: '0.02em', color: bleuElectrique }}>Livraison offerte ✓</p>
         )}
       </header>
@@ -185,8 +187,8 @@ function CheckoutContent() {
                   <input type="radio" name="mode" value="livraison" checked={modeLivraison === 'livraison'} onChange={() => setModeLivraison('livraison')} className="w-4 h-4 accent-black" />
                   <div>
                     <p style={{ fontSize: '13px' }}>Livraison à domicile</p>
-                    <p style={{ fontSize: '11px', color: sousTotal >= SEUIL_LIVRAISON_OFFERTE ? bleuElectrique : '#666' }}>
-                      {sousTotal >= SEUIL_LIVRAISON_OFFERTE ? 'Offerte' : `${FRAIS_LIVRAISON}€`}
+                    <p style={{ fontSize: '11px', color: fraisLivraison === 0 && modeLivraison === 'livraison' ? bleuElectrique : '#666' }}>
+                      {modeLivraison === 'livraison' && fraisLivraison === 0 ? 'Offerte' : `À partir de 15€`}
                     </p>
                   </div>
                 </label>
@@ -214,7 +216,21 @@ function CheckoutContent() {
                   </div>
                   <div>
                     <label className="block mb-2" style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#666' }}>PAYS *</label>
-                    <input type="text" required value={adresse.pays} onChange={(e) => setAdresse({ ...adresse, pays: e.target.value })} className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2" style={{ fontSize: '14px', background: 'transparent' }} />
+                    <select
+                      required
+                      value={adresse.paysCode}
+                      onChange={(e) => {
+                        const code = e.target.value
+                        const found = PAYS_LIVRAISON.find(p => p.code === code)
+                        setAdresse({ ...adresse, paysCode: code, pays: found?.nom || code })
+                      }}
+                      className="w-full px-0 py-3 border-0 border-b border-black focus:outline-none focus:border-b-2"
+                      style={{ fontSize: '14px', background: 'transparent' }}
+                    >
+                      {PAYS_LIVRAISON.map(p => (
+                        <option key={p.code} value={p.code}>{p.nom}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

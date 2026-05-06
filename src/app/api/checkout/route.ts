@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { Client, Environment } from 'square'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
+import { getFraisLivraison } from '@/lib/shipping'
 
 if (!getApps().length) {
   initializeApp({
@@ -23,9 +24,6 @@ const client = new Client({
     : Environment.Sandbox
 })
 
-const SEUIL_LIVRAISON_OFFERTE = 150
-const FRAIS_LIVRAISON = 15
-
 type ItemPanier = {
   id: string
   nom: string
@@ -42,13 +40,17 @@ export async function POST(request: Request) {
       items,
       clientInfo,
       adresse,
-      modeLivraison
+      modeLivraison,
+      paysCode
     }: {
       items: ItemPanier[]
       clientInfo: { prenom: string; nom: string; email: string; telephone?: string }
       adresse: any
       modeLivraison: 'retrait' | 'livraison'
+      paysCode?: string
     } = body
+
+    const codePays = (paysCode || adresse?.paysCode || 'FR').toUpperCase()
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ success: false, error: 'Panier vide' }, { status: 400 })
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
 
     let fraisLivraison = 0
     if (modeLivraison === 'livraison') {
-      fraisLivraison = sousTotal >= SEUIL_LIVRAISON_OFFERTE ? 0 : FRAIS_LIVRAISON
+      fraisLivraison = getFraisLivraison(codePays, sousTotal)
     }
 
     const totalFinal = sousTotal + fraisLivraison
@@ -170,7 +172,7 @@ export async function POST(request: Request) {
         addressLine1: adresse.adresse || adresse.rue,
         locality: adresse.ville,
         postalCode: adresse.codePostal,
-        country: 'FR'
+        country: codePays
       }
     }
 

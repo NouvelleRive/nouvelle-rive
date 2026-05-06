@@ -13,8 +13,22 @@ export type CartItem = {
 
 const STORAGE_KEY = 'nouvelle-rive-cart'
 const EVENT = 'nouvelle-rive-cart-update'
-export const SEUIL_LIVRAISON_OFFERTE = 150
-export const FRAIS_LIVRAISON = 15
+
+// Re-export depuis lib/shipping pour les anciens consommateurs
+export {
+  SEUIL_LIVRAISON_OFFERTE,
+  FRAIS_LIVRAISON_FR,
+  FRAIS_LIVRAISON_EU,
+  FRAIS_LIVRAISON_INTL,
+  PAYS_LIVRAISON,
+  getZonePays,
+  getFraisLivraison,
+} from './shipping'
+
+import { getFraisLivraison as _getFrais, FRAIS_LIVRAISON_FR as _FR } from './shipping'
+
+// Compat : ancien export utilisé par d'autres fichiers
+export const FRAIS_LIVRAISON = _FR
 
 function readCart(): CartItem[] {
   if (typeof window === 'undefined') return []
@@ -83,7 +97,11 @@ export function useCart() {
   }
 }
 
-export function calculerLivraison(sousTotal: number, modeLivraison: 'retrait' | 'livraison') {
+export function calculerLivraison(
+  sousTotal: number,
+  modeLivraison: 'retrait' | 'livraison',
+  codePays: string = 'FR'
+) {
   if (modeLivraison !== 'livraison') return 0
-  return sousTotal >= SEUIL_LIVRAISON_OFFERTE ? 0 : FRAIS_LIVRAISON
+  return _getFrais(codePays, sousTotal)
 }
