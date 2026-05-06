@@ -7,5 +7,11 @@
     "src/app/api/sync/ebay-orders/route.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/depot-expiry",
+      "schedule": "0 7 * * *"
+    }
+  ]
 }
