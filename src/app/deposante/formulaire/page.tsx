@@ -18,14 +18,14 @@ import ProductForm, { ProductFormData, Cat } from '@/components/ProductForm'
 import { checkSkuUnique } from '@/lib/admin/helpers'
 import { MARQUES_DEPOSANTE, getPrixRange } from '@/lib/marquesDeposante'
 
-// Catégories extraites du lib (triées alpha)
+// Catégories extraites du lib, préfixées "DEP -" pour cohérence Square, triées alpha
 const CATEGORIES_DEPOSANTE: Cat[] = Array.from(
   new Set(
     MARQUES_DEPOSANTE.flatMap(m => (m.prix || []).map(p => p.categorie))
   )
 )
   .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }))
-  .map(label => ({ label }))
+  .map(label => ({ label: `DEP - ${label}` }))
 
 // =====================
 // HELPERS (identiques chineuse)
