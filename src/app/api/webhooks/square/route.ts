@@ -240,11 +240,23 @@ export async function POST(request: Request) {
 
           // Push notif à la boutique + chineuse propriétaire (si attribuée)
           try {
-            const titre = `Vente boutique : ${sku || itemName}`
-            const corps = `${prix}€${produitData?.nom ? ` — ${produitData.nom}` : ''}`
-            await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId })
+            const photo = produitData?.imageUrls?.[0] || produitData?.imageUrl || produitData?.photos?.face || undefined
+            const corps = `${sku || itemName} — ${prix}€${produitData?.nom ? ` · ${produitData.nom}` : ''}`
+            await sendPushToOwner('boutique', {
+              title: `🤑 YOU RICH +${prix}€`,
+              body: corps,
+              url: '/admin/nos-ventes',
+              tag: venteDocId,
+              image: photo,
+            })
             if (chineurUid) {
-              await sendPushToOwner(chineurUid, { title: '🎉 Vente !', body: `${sku || itemName} vendu ${prix}€`, url: '/chineuse/mes-ventes', tag: venteDocId })
+              await sendPushToOwner(chineurUid, {
+                title: `🤑 YOU RICH +${prix}€`,
+                body: `${sku || itemName} vient de partir !`,
+                url: '/chineuse/mes-ventes',
+                tag: venteDocId,
+                image: photo,
+              })
             }
           } catch (e) { console.warn('Push notif failed:', e) }
 
@@ -510,11 +522,23 @@ export async function POST(request: Request) {
 
       // Push notif à la boutique (vente en ligne) + chineuse
       try {
-        const titre = `🛒 Vente en ligne : ${produitData.sku || productName}`
-        const corps = `${produitData.prix || productPrice}€ — ${clientInfo.prenom} ${clientInfo.nom}`
-        await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/commandes', tag: venteDocIdOnline })
+        const photo = produitData.imageUrls?.[0] || produitData.imageUrl || produitData.photos?.face || undefined
+        const prixVente = produitData.prix || productPrice
+        await sendPushToOwner('boutique', {
+          title: `🌐 YOU RICH +${prixVente}€`,
+          body: `${produitData.sku || productName} — ${clientInfo.prenom} ${clientInfo.nom}`,
+          url: '/admin/commandes',
+          tag: venteDocIdOnline,
+          image: photo,
+        })
         if (chineurUid) {
-          await sendPushToOwner(chineurUid, { title: '🎉 Vente en ligne !', body: `${produitData.sku || productName} vendu ${produitData.prix || productPrice}€`, url: '/chineuse/mes-ventes', tag: venteDocIdOnline })
+          await sendPushToOwner(chineurUid, {
+            title: `🤑 YOU RICH +${prixVente}€`,
+            body: `${produitData.sku || productName} vient de partir en ligne !`,
+            url: '/chineuse/mes-ventes',
+            tag: venteDocIdOnline,
+            image: photo,
+          })
         }
       } catch (e) { console.warn('Push notif failed:', e) }
 

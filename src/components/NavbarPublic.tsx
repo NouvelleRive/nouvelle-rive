@@ -6,10 +6,12 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
+import { useCart } from '@/lib/cart'
 
 export default function NavbarPublic() {
   const pathname = usePathname()
   const [compteHref, setCompteHref] = useState('/client/login')
+  const { count, hydrated } = useCart()
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
   const bleuElectrique = '#0000FF'
@@ -64,19 +66,33 @@ export default function NavbarPublic() {
             NOUVELLE RIVE
           </h1>
 
-          {/* Bouton Mon Compte */}
-          <Link
-            href={compteHref}
-            className="mt-1 md:mt-2 px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
-            style={{ 
-              fontSize: '9px',
-              letterSpacing: '0.1em',
-              fontWeight: '600',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            MON COMPTE
-          </Link>
+          {/* Boutons Panier + Mon Compte */}
+          <div className="flex items-center gap-2 mt-1 md:mt-2">
+            <Link
+              href="/panier"
+              className="relative px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+              style={{
+                fontSize: '9px',
+                letterSpacing: '0.1em',
+                fontWeight: '600',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              PANIER {hydrated && count > 0 ? `(${count})` : ''}
+            </Link>
+            <Link
+              href={compteHref}
+              className="px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+              style={{
+                fontSize: '9px',
+                letterSpacing: '0.1em',
+                fontWeight: '600',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              MON COMPTE
+            </Link>
+          </div>
         </div>
 
         {/* Ligne */}
@@ -97,7 +113,7 @@ export default function NavbarPublic() {
                   fontStyle: 'italic'
                 }}
               >
-                // Livraison offerte dès 2 articles // Retrait gratuit en boutique - 8 rue des Ecouffes, 75004 Paris // -15% sur le troisième article
+                // Livraison offerte dès 150€ d'achat // Retrait gratuit en boutique - 8 rue des Ecouffes, 75004 Paris
               </span>
             ))}
           </div>

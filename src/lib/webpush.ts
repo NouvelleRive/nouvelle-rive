@@ -21,6 +21,7 @@ export type PushPayload = {
   url?: string
   tag?: string
   icon?: string
+  image?: string // grande image (photo produit pour les ventes)
 }
 
 // Envoie une notif à toutes les subscriptions d'un user (= ownerId).

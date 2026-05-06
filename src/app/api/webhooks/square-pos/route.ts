@@ -276,19 +276,22 @@ export async function POST(request: Request) {
         // Push notif boutique + chineuse
         try {
           const sku = produitData.sku || itemName
-          const prixStr = prixVenteReel ? `${prixVenteReel}€` : ''
+          const photo = produitData.imageUrls?.[0] || produitData.imageUrl || produitData.photos?.face || undefined
+          const prixVal = prixVenteReel || produitData.prix || 0
           await sendPushToOwner('boutique', {
-            title: `Vente boutique : ${sku}`,
-            body: `${prixStr}${produitData.nom ? ` — ${produitData.nom}` : ''}`,
+            title: `🤑 YOU RICH +${prixVal}€`,
+            body: `${sku}${produitData.nom ? ` — ${produitData.nom}` : ''}`,
             url: '/admin/nos-ventes',
             tag: venteDocId,
+            image: photo,
           })
           if (produitData.chineurUid) {
             await sendPushToOwner(produitData.chineurUid, {
-              title: '🎉 Vente !',
-              body: `${sku} vendu ${prixStr}`,
+              title: `🤑 YOU RICH +${prixVal}€`,
+              body: `${sku} vient de partir !`,
               url: '/chineuse/mes-ventes',
               tag: venteDocId,
+              image: photo,
             })
           }
         } catch (e) { console.warn('Push notif failed:', e) }

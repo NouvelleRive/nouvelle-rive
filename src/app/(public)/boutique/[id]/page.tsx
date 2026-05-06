@@ -7,6 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
+import { useCart } from '@/lib/cart'
 
 type Produit = {
   id: string
@@ -119,6 +120,8 @@ export default function ProduitPage() {
   const [produit, setProduit] = useState<Produit | null>(null)
   const [loading, setLoading] = useState(true)
   const [chineuseInfo, setChineuseInfo] = useState<{accroche?: string, description?: string, nom?: string, texteEcoCirculaire?: number} | null>(null)
+  const { addItem, hasItem, hydrated } = useCart()
+  const [justAdded, setJustAdded] = useState(false)
 
   useEffect(() => {
     async function fetchProduit() {
@@ -167,11 +170,23 @@ export default function ProduitPage() {
             fetchProduit()
           }, [params.id])
 
-          const handleAcheter = () => {
-            if (produit) {
-              router.push(`/checkout?productId=${produit.id}`)
+          const handleAjouterPanier = () => {
+            if (!produit) return
+            const ok = addItem({
+              id: produit.id,
+              nom: produit.nom,
+              prix: produit.prix,
+              imageUrl: produit.imageUrls?.[0] || produit.photos?.face || null,
+              marque: produit.marque || null,
+              sku: (produit as any).sku || null,
+            })
+            if (ok) {
+              setJustAdded(true)
+              setTimeout(() => setJustAdded(false), 1500)
             }
           }
+
+          const dansLePanier = produit ? hasItem(produit.id) : false
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
@@ -359,21 +374,37 @@ export default function ProduitPage() {
               <span style={{ fontStyle: 'italic' }}>Vintage or upcycled item — may show minor imperfections or signs of wear. Sold as is.</span>
             </p>
 
-            {/* === BOUTON ACHETER === */}
-          <div className="mt-8 mb-6">
+            {/* === BOUTON AJOUTER AU PANIER === */}
+          <div className="mt-8 mb-6 space-y-3">
             <button
-              onClick={handleAcheter}
-              className="w-full py-4 uppercase transition hover:opacity-80"
-              style={{ 
-                backgroundColor: '#000',
+              onClick={handleAjouterPanier}
+              disabled={!hydrated || dansLePanier}
+              className="w-full py-4 uppercase transition hover:opacity-80 disabled:opacity-100 disabled:cursor-default"
+              style={{
+                backgroundColor: dansLePanier ? '#0000FF' : '#000',
                 color: '#fff',
                 fontSize: '13px',
                 letterSpacing: '0.15em',
                 fontWeight: '400'
               }}
             >
-              Acheter
+              {justAdded ? 'AJOUTÉ AU PANIER ✓' : dansLePanier ? 'DÉJÀ DANS LE PANIER' : 'AJOUTER AU PANIER'}
             </button>
+            {dansLePanier && (
+              <button
+                onClick={() => router.push('/panier')}
+                className="w-full py-4 uppercase transition hover:bg-black hover:text-white border border-black"
+                style={{
+                  backgroundColor: '#fff',
+                  color: '#000',
+                  fontSize: '13px',
+                  letterSpacing: '0.15em',
+                  fontWeight: '400'
+                }}
+              >
+                VOIR LE PANIER
+              </button>
+            )}
           </div>
 
           {/* === SECTIONS DÉPLIABLES === */}
