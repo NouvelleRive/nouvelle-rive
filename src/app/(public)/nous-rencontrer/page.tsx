@@ -2,6 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import GoogleReviews from '@/components/GoogleReviews'
 
 const bleuElectrique = '#0000FF'
 
@@ -94,7 +95,11 @@ export default function NousRencontrerPage() {
               </p>
               <div className="space-y-2" style={{ fontSize: '16px' }}>
                 <div className="flex justify-between max-w-xs">
-                  <span>Lundi — Dimanche</span>
+                  <span>Vendredi — Lundi</span>
+                  <span className="font-medium">11h – 20h</span>
+                </div>
+                <div className="flex justify-between max-w-xs">
+                  <span>Mardi — Jeudi</span>
                   <span className="font-medium">12h – 20h</span>
                 </div>
               </div>
@@ -154,8 +159,14 @@ export default function NousRencontrerPage() {
 
         {/* Trait */}
         <div className="w-full border-t border-black" />
-        
-      </main> 
+
+        {/* Avis Google */}
+        <GoogleReviews />
+
+        {/* Trait */}
+        <div className="w-full border-t border-black" />
+
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-black py-8 text-center">
