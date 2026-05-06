@@ -7,12 +7,14 @@ import { User, onAuthStateChanged } from 'firebase/auth'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import SalesList, { Vente, ChineuseMeta } from '@/components/SalesList'
+import EnableNotifsButton from '@/components/EnableNotifsButton'
 
 export default function MesVentesPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [ventes, setVentes] = useState<Vente[]>([])
   const [chineuse, setChineuse] = useState<ChineuseMeta | null>(null)
+  const [chineuseId, setChineuseId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [syncLoading, setSyncLoading] = useState(false)
 
@@ -39,6 +41,7 @@ export default function MesVentesPage() {
         if (!deposantsSnap.empty) {
           const depData = deposantsSnap.docs[0].data()
           trigramme = depData.trigramme || ''
+          setChineuseId(deposantsSnap.docs[0].id)
           
           // ✅ Toutes les infos sont maintenant à la racine
           setChineuse({
@@ -101,14 +104,21 @@ async function fetchVentes(trigramme: string, email: string) {
 }
 
   return (
-    <SalesList
-      titre="MES VENTES CHEZ NOUVELLE RIVE"
-      ventes={ventes}
-      chineuse={chineuse}
-      userEmail={user?.email || undefined}
-      isAdmin={false}
-      loading={loading}
-      onRefresh={handleRefresh}
-    />
+    <>
+      {chineuseId && (
+        <div className="max-w-6xl mx-auto px-4 pt-4 flex justify-end">
+          <EnableNotifsButton ownerId={chineuseId} label="Recevoir une notif quand je vends" />
+        </div>
+      )}
+      <SalesList
+        titre="MES VENTES CHEZ NOUVELLE RIVE"
+        ventes={ventes}
+        chineuse={chineuse}
+        userEmail={user?.email || undefined}
+        isAdmin={false}
+        loading={loading}
+        onRefresh={handleRefresh}
+      />
+    </>
   )
 }
