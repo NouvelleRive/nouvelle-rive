@@ -74,6 +74,39 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 12h30 — récap du jour : tâches + restocks
+  if (inWindow(h, m, 12, 30)) {
+    // Tâches
+    const tachesSnap = await adminDb.collection('taches').doc(dateStr).get()
+    const tasks: { texte: string }[] = tachesSnap.exists ? (tachesSnap.data()?.items || []) : []
+
+    // Restocks
+    const restockSnap = await adminDb.collection('restocks').doc(monthKey).get()
+    const restockSlots = restockSnap.exists ? (restockSnap.data()?.slots || {}) : {}
+    const restocksAujourdhui: { heure: string; nom: string }[] = []
+    for (const heure of ['13h', '16h', '18h']) {
+      const data = restockSlots[`${dateStr}_${heure}`]
+      if (data?.nom) restocksAujourdhui.push({ heure, nom: data.nom })
+    }
+
+    if (tasks.length > 0 || restocksAujourdhui.length > 0) {
+      const lignes: string[] = []
+      if (restocksAujourdhui.length > 0) {
+        lignes.push('📦 ' + restocksAujourdhui.map(r => `${r.nom} ${r.heure}`).join(', '))
+      }
+      if (tasks.length > 0) {
+        lignes.push('📋 ' + tasks.map(t => t.texte).join(' · '))
+      }
+      await sendPushToOwner('boutique', {
+        title: '☀️ Récap du jour',
+        body: lignes.join(' — '),
+        url: '/vendeuse/calendrier',
+        tag: `recap-${dateStr}`,
+      })
+      actions.push('recap-jour')
+    }
+  }
+
   // 19h55 — rappel pointage départ
   if (inWindow(h, m, 19, 55)) {
     const ptgSnap = await adminDb.collection('pointages').where('date', '==', dateStr).get()
