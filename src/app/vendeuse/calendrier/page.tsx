@@ -25,6 +25,8 @@ export default function VendeuseCalendrierPage() {
   const [planningSlots, setPlanningSlots] = useState<PlanningSlots>({})
   const [planningLoading, setPlanningLoading] = useState(false)
   const [ventesAll, setVentesAll] = useState<ProduitVente[]>([])
+  type Pointage = { id: string; vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
+  const [pointages, setPointages] = useState<Pointage[]>([])
   const [participants, setParticipants] = useState<{ nom: string; type: 'chineuse' | 'deposante' }[]>([])
   const [deposantes, setDeposantes] = useState<Deposante[]>([])
   const [produits, setProduits] = useState<Produit[]>([])
@@ -73,6 +75,16 @@ export default function VendeuseCalendrierPage() {
       setPlanningLoading(false)
     }
     fetchPlanning()
+  }, [monthKey])
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/pointage?mois=${monthKey}`)
+        const data = await res.json()
+        if (data.success) setPointages(data.items || [])
+      } catch {}
+    })()
   }, [monthKey])
 
   useEffect(() => {
@@ -207,10 +219,42 @@ export default function VendeuseCalendrierPage() {
       // CA jour : toutes les ventes, y compris après 20h
       caJour.set(dateStr, (caJour.get(dateStr) || 0) + montant)
     })
-    ca1220.forEach((ca, ds) => { if ((caJour.get(ds) || 0) < 1000) return; const vid = planningSlots[`${ds}_12-20`]; if (!vid) return; const cur = map.get(vid); if (cur) map.set(vid, { ...cur, bonus: cur.bonus + ca * 0.01 }) })
-    ca1117.forEach((ca, ds) => { if ((caJour.get(ds) || 0) < 1000) return; const vid = planningSlots[`${ds}_11-17`]; if (!vid) return; const cur = map.get(vid); if (cur) map.set(vid, { ...cur, bonus: cur.bonus + ca * 0.01 }) })
+    // Pointages du mois groupés par jour : utilisés en priorité s'ils existent ;
+    // sinon fallback sur la logique planning historique.
+    const pointagesByDay = new Map<string, Pointage[]>()
+    for (const p of pointages) {
+      if (!pointagesByDay.has(p.date)) pointagesByDay.set(p.date, [])
+      pointagesByDay.get(p.date)!.push(p)
+    }
+    const allDates = new Set<string>([...ca1220.keys(), ...ca1117.keys(), ...caJour.keys()])
+    for (const ds of allDates) {
+      if ((caJour.get(ds) || 0) < 1000) continue
+      const ptsToday = pointagesByDay.get(ds) || []
+      if (ptsToday.length > 0) {
+        const ventesDuJour = ventesAll.filter(v => {
+          if (!(v.dateVente instanceof Timestamp)) return false
+          return format(v.dateVente.toDate(), 'yyyy-MM-dd') === ds
+        })
+        for (const v of ventesDuJour) {
+          const t = (v.dateVente as Timestamp).toDate().getTime()
+          const m = v.prixVenteReel || 0
+          for (const p of ptsToday) {
+            if (!p.arrivee) continue
+            const arr = new Date(p.arrivee).getTime()
+            const dep = p.depart ? new Date(p.depart).getTime() : Infinity
+            if (t >= arr && t <= dep) {
+              const cur = map.get(p.vendeuseId)
+              if (cur) map.set(p.vendeuseId, { ...cur, bonus: cur.bonus + m * 0.01 })
+            }
+          }
+        }
+      } else {
+        const v1220 = planningSlots[`${ds}_12-20`]; if (v1220) { const ca = ca1220.get(ds) || 0; const cur = map.get(v1220); if (cur) map.set(v1220, { ...cur, bonus: cur.bonus + ca * 0.01 }) }
+        const v1117 = planningSlots[`${ds}_11-17`]; if (v1117) { const ca = ca1117.get(ds) || 0; const cur = map.get(v1117); if (cur) map.set(v1117, { ...cur, bonus: cur.bonus + ca * 0.01 }) }
+      }
+    }
     return map
-  }, [ventesAll, planningSlots, currentMonth])
+  }, [ventesAll, planningSlots, currentMonth, pointages])
 
   const restockStats = useMemo(() => {
     return [...deposantes].map(d => {

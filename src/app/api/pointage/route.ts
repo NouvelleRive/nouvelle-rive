@@ -2,9 +2,23 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebaseAdmin'
+import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { isAtBoutique, pointageDocId } from '@/lib/pointage'
+
+const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
+
+async function isAdmin(req: NextRequest): Promise<boolean> {
+  const authHeader = req.headers.get('authorization') || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) return false
+  try {
+    const decoded = await adminAuth.verifyIdToken(token)
+    return decoded?.email === ADMIN_EMAIL
+  } catch {
+    return false
+  }
+}
 
 // GET ?vendeuseId=...&date=YYYY-MM-DD → statut du jour pour une vendeuse
 // GET ?date=YYYY-MM-DD → statuts du jour pour TOUTES les vendeuses
@@ -121,6 +135,9 @@ export async function POST(req: NextRequest) {
 // PATCH (admin) — corriger un pointage
 export async function PATCH(req: NextRequest) {
   try {
+    if (!await isAdmin(req)) {
+      return NextResponse.json({ success: false, error: 'Accès admin requis' }, { status: 403 })
+    }
     const { id, arrivee, depart } = await req.json()
     if (!id) return NextResponse.json({ success: false, error: 'id requis' }, { status: 400 })
     const update: any = {}

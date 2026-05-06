@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { Pencil, X, Save } from 'lucide-react'
+import { auth } from '@/lib/firebaseConfig'
 
 type Vendeuse = { id: string; prenom?: string; nom?: string; couleur?: string; actif?: boolean }
 type Pointage = { id: string; vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
@@ -62,9 +63,13 @@ export default function PointagesSection({
   }
 
   const saveEdit = async (id: string) => {
+    const token = await auth.currentUser?.getIdToken()
     const res = await fetch('/api/pointage', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({
         id,
         arrivee: editArrivee ? new Date(editArrivee).toISOString() : null,

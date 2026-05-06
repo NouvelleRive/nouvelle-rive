@@ -77,6 +77,8 @@
     const [planningSlots, setPlanningSlots] = useState<PlanningSlots>({})
     const [planningLoading, setPlanningLoading] = useState(false)
     const [ventesAll, setVentesAll] = useState<ProduitVente[]>([])
+    type Pointage = { id: string; vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
+    const [pointages, setPointages] = useState<Pointage[]>([])
 
     // =====================
     // FETCH VENDEUSES
@@ -118,6 +120,17 @@
 
     useEffect(() => {
       fetchPlanning()
+    }, [monthKey])
+
+    // Charger les pointages du mois
+    useEffect(() => {
+      (async () => {
+        try {
+          const res = await fetch(`/api/pointage?mois=${monthKey}`)
+          const data = await res.json()
+          if (data.success) setPointages(data.items || [])
+        } catch {}
+      })()
     }, [monthKey])
 
     // Charger les ventes
@@ -361,24 +374,61 @@
         caJour.set(dateStr, (caJour.get(dateStr) || 0) + montant)
       })
 
-      ca1220.forEach((ca, dateStr) => {
-        if ((caJour.get(dateStr) || 0) < 1000) return
-        const vendeuseId = planningSlots[`${dateStr}_12-20`]
-        if (!vendeuseId) return
-        const cur = map.get(vendeuseId)
-        if (cur) map.set(vendeuseId, { ...cur, bonus: cur.bonus + ca * 0.01 })
-      })
+      // Pointages du mois groupés par jour
+      const pointagesByDay = new Map<string, Pointage[]>()
+      for (const p of pointages) {
+        if (!pointagesByDay.has(p.date)) pointagesByDay.set(p.date, [])
+        pointagesByDay.get(p.date)!.push(p)
+      }
 
-      ca1117.forEach((ca, dateStr) => {
-        if ((caJour.get(dateStr) || 0) < 1000) return
-        const vendeuseId = planningSlots[`${dateStr}_11-17`]
-        if (!vendeuseId) return
-        const cur = map.get(vendeuseId)
-        if (cur) map.set(vendeuseId, { ...cur, bonus: cur.bonus + ca * 0.01 })
-      })
+      // Pour chaque jour du mois : si pointages → on utilise les heures réelles ;
+      // sinon → on retombe sur la logique planning (créneaux 12-20 / 11-17).
+      const allDates = new Set<string>([
+        ...ca1220.keys(), ...ca1117.keys(), ...caJour.keys(),
+      ])
+      for (const dateStr of allDates) {
+        if ((caJour.get(dateStr) || 0) < 1000) continue
+        const ptsToday = pointagesByDay.get(dateStr) || []
+
+        if (ptsToday.length > 0) {
+          // Logique pointage : pour chaque vente du jour, attribuer aux vendeuses présentes
+          const ventesDuJour = ventesAll.filter(v => {
+            if (!(v.dateVente instanceof Timestamp)) return false
+            const d = v.dateVente.toDate()
+            return format(d, 'yyyy-MM-dd') === dateStr
+          })
+          for (const v of ventesDuJour) {
+            const venteTime = (v.dateVente as Timestamp).toDate().getTime()
+            const montant = v.prixVenteReel || 0
+            for (const p of ptsToday) {
+              if (!p.arrivee) continue
+              const arr = new Date(p.arrivee).getTime()
+              const dep = p.depart ? new Date(p.depart).getTime() : Infinity
+              if (venteTime >= arr && venteTime <= dep) {
+                const cur = map.get(p.vendeuseId)
+                if (cur) map.set(p.vendeuseId, { ...cur, bonus: cur.bonus + montant * 0.01 })
+              }
+            }
+          }
+        } else {
+          // Logique planning historique (fallback : pas de pointages ce jour-là)
+          const v1220 = planningSlots[`${dateStr}_12-20`]
+          const v1117 = planningSlots[`${dateStr}_11-17`]
+          if (v1220) {
+            const ca = ca1220.get(dateStr) || 0
+            const cur = map.get(v1220)
+            if (cur) map.set(v1220, { ...cur, bonus: cur.bonus + ca * 0.01 })
+          }
+          if (v1117) {
+            const ca = ca1117.get(dateStr) || 0
+            const cur = map.get(v1117)
+            if (cur) map.set(v1117, { ...cur, bonus: cur.bonus + ca * 0.01 })
+          }
+        }
+      }
 
       return map
-    }, [ventesAll, planningSlots, currentMonth])
+    }, [ventesAll, planningSlots, currentMonth, pointages])
 
     const dailyCA = useMemo(() => {
   const ca: Record<string, number> = {}
