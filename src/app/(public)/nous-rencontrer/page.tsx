@@ -132,9 +132,27 @@ export default function NousRencontrerPage() {
               />
             </div>
 
+            {/* Bouton itinéraire (juste sous le plan) */}
+            <div className="px-6 lg:px-12 py-6">
+              <a
+                href="https://www.google.com/maps/place/NOUVELLE+RIVE/@48.8565713,2.3585257,17z/data=!4m6!3m5!1s0x47e66f1afea642dd:0xbaab4baf5127a88e!8m2!3d48.8565713!4d2.3585257!16s%2Fg%2F11x8cxw8q0"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block py-4 px-8 text-white transition-opacity hover:opacity-80"
+                style={{
+                  backgroundColor: bleuElectrique,
+                  fontSize: '11px',
+                  letterSpacing: '0.2em',
+                  fontWeight: '600'
+                }}
+              >
+                ITINÉRAIRE
+              </a>
+            </div>
+
             <div className="w-full border-t border-black" />
 
-            {/* Horaires + Contact + Itinéraire */}
+            {/* Horaires + Contact */}
             <div className="p-6 lg:p-12">
               <div className="mb-10">
                 <p
@@ -192,21 +210,6 @@ export default function NousRencontrerPage() {
                   </a>
                 </div>
               </div>
-
-              <a
-                href="https://www.google.com/maps/place/NOUVELLE+RIVE/@48.8565713,2.3585257,17z/data=!4m6!3m5!1s0x47e66f1afea642dd:0xbaab4baf5127a88e!8m2!3d48.8565713!4d2.3585257!16s%2Fg%2F11x8cxw8q0"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block py-4 px-8 text-white transition-opacity hover:opacity-80"
-                style={{
-                  backgroundColor: bleuElectrique,
-                  fontSize: '11px',
-                  letterSpacing: '0.2em',
-                  fontWeight: '600'
-                }}
-              >
-                ITINÉRAIRE
-              </a>
             </div>
           </div>
 
