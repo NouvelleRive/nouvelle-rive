@@ -94,7 +94,7 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
             <div className="flex flex-col">
               {allImages.map((url, index) => (
                 <div key={index} className="w-full" style={{ borderBottom: index < allImages.length - 1 ? '1px solid #000' : 'none' }}>
-                  <img src={url} alt={`${produit.nom} - Photo ${index + 1}`} className="w-full h-auto object-cover" />
+                  <img src={url} alt={`${produit.nom} - Photo ${index + 1}`} className="w-full aspect-square object-cover" />
                 </div>
               ))}
             </div>
