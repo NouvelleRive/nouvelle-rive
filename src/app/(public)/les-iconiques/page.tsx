@@ -262,7 +262,7 @@
           {/* Navigation buttons — style d'origine, positionnés sur la photo */}
           <button
             onClick={() => scroll('left')}
-            className="absolute left-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70"
+            className="absolute left-8 top-[25vw] md:top-[280px] -translate-y-1/2 z-10 p-4 hover:opacity-70"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -271,7 +271,7 @@
 
           <button
             onClick={() => scroll('right')}
-            className="absolute right-8 top-[25vw] md:top-[350px] -translate-y-1/2 z-10 p-4 hover:opacity-70"
+            className="absolute right-8 top-[25vw] md:top-[280px] -translate-y-1/2 z-10 p-4 hover:opacity-70"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -299,7 +299,7 @@
                 <div className="grid grid-cols-1 md:grid-cols-2">
                   {/* Image avec effet Rick Owens */}
                   <div
-                    className="aspect-square md:aspect-auto md:min-h-[700px] bg-gray-50 overflow-hidden relative cursor-crosshair"
+                    className="aspect-square md:aspect-auto md:min-h-[560px] bg-gray-50 overflow-hidden relative cursor-crosshair"
                     onMouseMove={(e) => handleMouseMove(e, item.id, item.images.length)}
                     onMouseLeave={() => handleMouseLeave(item.id)}
                     style={{ borderRight: '1px solid #000' }}
