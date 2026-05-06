@@ -51,14 +51,37 @@ export async function GET() {
     const items = produits.map(p => {
       const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie || ''
       const imageUrl = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
-      const title = (p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')
-      const fullTitle = p.marque ? `${p.marque} - ${title}` : title
-      const description = p.description || `${cat} vintage ${p.marque || ''} ${p.taille || ''}`.trim()
-      const url = `https://www.nouvellerive.eu/boutique/${p.id}`
-      const prix = typeof p.prix === 'number' ? p.prix.toFixed(2) : '0.00'
+      const rawNom = (p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '').trim()
+      const marque = (p.marque || '').trim()
+
+      // Évite "Ralph Lauren - Ralph Lauren - …" : on n'ajoute la marque que si le nom ne commence pas déjà par
+      const nomStartsWithBrand = marque && rawNom.toLowerCase().startsWith(marque.toLowerCase())
+      let fullTitle = (marque && !nomStartsWithBrand) ? `${marque} - ${rawNom}` : rawNom
+      if (!fullTitle) fullTitle = `${marque || 'Vintage'} ${cat}`.trim()
+      // Google : titre max 150 caractères
+      if (fullTitle.length > 150) fullTitle = fullTitle.slice(0, 147) + '...'
+
       const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || ''
       const wearType = chineuseMap[tri] || 'womenswear'
       const gender = wearType === 'menswear' ? 'male' : wearType === 'unisex' ? 'unisex' : 'female'
+
+      // Description : Google demande au moins ~50 caractères, sinon les produits sont refusés.
+      let description = (p.description || '').trim()
+      if (description.length < 50) {
+        const parts = [
+          marque || 'Pièce',
+          cat || 'vintage',
+          p.taille ? `taille ${p.taille}` : '',
+          p.color || '',
+          p.material || '',
+          'sélection vintage Nouvelle Rive, Le Marais Paris.',
+        ].filter(Boolean)
+        description = parts.join(' ').replace(/\s+/g, ' ').trim()
+      }
+
+      const url = `https://www.nouvellerive.eu/boutique/${p.id}`
+      const prix = typeof p.prix === 'number' ? p.prix.toFixed(2) : '0.00'
+      const mpn = p.sku || p.id
 
       return `
     <item>
@@ -70,15 +93,16 @@ export async function GET() {
       <g:condition>used</g:condition>
       <g:availability>in_stock</g:availability>
       <g:price>${prix} EUR</g:price>
-      <g:brand>${escapeXml(p.marque || 'Nouvelle Rive')}</g:brand>
+      <g:brand>${escapeXml(marque || 'Nouvelle Rive')}</g:brand>
+      <g:mpn>${escapeXml(mpn)}</g:mpn>
+      <g:identifier_exists>no</g:identifier_exists>
       <g:google_product_category>Apparel &amp; Accessories</g:google_product_category>
       ${cat ? `<g:product_type>${escapeXml(cat)}</g:product_type>` : ''}
-      ${p.color ? `<g:color>${escapeXml(p.color)}</g:color>` : ''}
+      <g:color>${escapeXml(p.color || 'Multicolore')}</g:color>
       ${p.taille ? `<g:size>${escapeXml(p.taille)}</g:size>` : ''}
       ${p.material ? `<g:material>${escapeXml(p.material)}</g:material>` : ''}
       <g:gender>${gender}</g:gender>
       <g:age_group>adult</g:age_group>
-      ${!p.color ? `<g:color>Multicolore</g:color>` : ''}
     </item>`
     }).join('\n')
 
