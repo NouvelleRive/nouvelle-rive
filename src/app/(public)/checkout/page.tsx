@@ -188,9 +188,11 @@ function CheckoutContent() {
                   <input type="radio" name="mode" value="livraison" checked={modeLivraison === 'livraison'} onChange={() => setModeLivraison('livraison')} className="w-4 h-4 accent-black" />
                   <div>
                     <p style={{ fontSize: '13px' }}>Livraison à domicile</p>
-                    <p style={{ fontSize: '11px', color: fraisLivraisonPreview === 0 ? bleuElectrique : '#666' }}>
-                      {fraisLivraisonPreview === 0 ? 'Offerte en France' : `À partir de ${fraisLivraisonPreview}€`}
-                    </p>
+                    {fraisLivraisonPreview > 0 && (
+                      <p style={{ fontSize: '11px', color: '#666' }}>
+                        À partir de {fraisLivraisonPreview}€
+                      </p>
+                    )}
                   </div>
                 </label>
               </div>
