@@ -9,6 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import PlanningCalendar from '@/components/PlanningCalendar'
 import PointageWidget from '@/components/PointageWidget'
 import PointagesSection from '@/components/admin/PointagesSection'
+import EnableNotifsButton from '@/components/EnableNotifsButton'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -271,7 +272,10 @@ export default function VendeuseCalendrierPage() {
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
       <div className="mb-4">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Pointage arrivée / départ</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pointage arrivée / départ</h2>
+          <EnableNotifsButton ownerId="boutique" />
+        </div>
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <PointageWidget />
         </div>

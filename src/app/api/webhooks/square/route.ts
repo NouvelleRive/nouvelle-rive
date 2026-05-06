@@ -7,6 +7,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { Client, Environment } from 'square'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
+import { sendPushToOwner } from '@/lib/webpush'
 
 // Initialiser Firebase Admin
 if (!getApps().length) {
@@ -236,6 +237,16 @@ export async function POST(request: Request) {
 
           await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
           console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€) [${venteDocId}]`)
+
+          // Push notif à la boutique + chineuse propriétaire (si attribuée)
+          try {
+            const titre = `Vente boutique : ${sku || itemName}`
+            const corps = `${prix}€${produitData?.nom ? ` — ${produitData.nom}` : ''}`
+            await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId })
+            if (chineurUid) {
+              await sendPushToOwner(chineurUid, { title: '🎉 Vente !', body: `${sku || itemName} vendu ${prix}€`, url: '/chineuse/mes-ventes', tag: venteDocId })
+            }
+          } catch (e) { console.warn('Push notif failed:', e) }
 
           // Mettre à jour le produit (quantité, vendu/outOfStock selon stockType)
           if (produitDoc) {
@@ -496,6 +507,16 @@ export async function POST(request: Request) {
       const venteDocIdOnline = `${orderId}_${lineItems[0]?.uid || 'i0'}`
       await adminDb.collection('ventes').doc(venteDocIdOnline).set(venteData, { merge: true })
       console.log('✅ Vente créée automatiquement:', produitData.sku, `[${venteDocIdOnline}]`)
+
+      // Push notif à la boutique (vente en ligne) + chineuse
+      try {
+        const titre = `🛒 Vente en ligne : ${produitData.sku || productName}`
+        const corps = `${produitData.prix || productPrice}€ — ${clientInfo.prenom} ${clientInfo.nom}`
+        await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/commandes', tag: venteDocIdOnline })
+        if (chineurUid) {
+          await sendPushToOwner(chineurUid, { title: '🎉 Vente en ligne !', body: `${produitData.sku || productName} vendu ${produitData.prix || productPrice}€`, url: '/chineuse/mes-ventes', tag: venteDocIdOnline })
+        }
+      } catch (e) { console.warn('Push notif failed:', e) }
 
       // 3. Mettre à jour les autres commandes du groupe
       if (autresCommandesIds.length > 0) {

@@ -9,6 +9,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { Client, Environment } from 'square'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
+import { sendPushToOwner } from '@/lib/webpush'
 
 // Initialiser Firebase Admin
 if (!getApps().length) {
@@ -271,6 +272,26 @@ export async function POST(request: Request) {
           createdAt: saleTimestamp,
         }, { merge: true })
         console.log(`✅ [POS] Vente enregistrée (qté ${quantiteVendue}) [${venteDocId}]`)
+
+        // Push notif boutique + chineuse
+        try {
+          const sku = produitData.sku || itemName
+          const prixStr = prixVenteReel ? `${prixVenteReel}€` : ''
+          await sendPushToOwner('boutique', {
+            title: `Vente boutique : ${sku}`,
+            body: `${prixStr}${produitData.nom ? ` — ${produitData.nom}` : ''}`,
+            url: '/admin/nos-ventes',
+            tag: venteDocId,
+          })
+          if (produitData.chineurUid) {
+            await sendPushToOwner(produitData.chineurUid, {
+              title: '🎉 Vente !',
+              body: `${sku} vendu ${prixStr}`,
+              url: '/chineuse/mes-ventes',
+              tag: venteDocId,
+            })
+          }
+        } catch (e) { console.warn('Push notif failed:', e) }
 
         nbProduitsTraites++
 
