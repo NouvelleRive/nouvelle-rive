@@ -84,19 +84,6 @@
 
       return (
         <div className="min-h-screen bg-white">
-          {/* Vidéo bannière */}
-          <div className="w-full overflow-hidden bg-black">
-            <video
-              src="/banner.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              className="w-full h-[30vh] md:h-[50vh] object-cover"
-            />
-          </div>
-
           {/* Barre de recherche */}
           <div className="sticky top-0 z-40 bg-white border-b">
             <div className="max-w-7xl mx-auto px-4 py-3">

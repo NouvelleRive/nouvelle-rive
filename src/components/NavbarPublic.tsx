@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import { useCart } from '@/lib/cart'
@@ -12,6 +12,12 @@ export default function NavbarPublic() {
   const pathname = usePathname()
   const [compteHref, setCompteHref] = useState('/client/login')
   const { count, hydrated } = useCart()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const showVideo = pathname === '/boutique'
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.playbackRate = 0.25
+  }, [showVideo])
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
   const bleuElectrique = '#0000FF'
@@ -46,7 +52,23 @@ export default function NavbarPublic() {
 
   return (
     <>
-      <nav 
+      {/* Vidéo bannière (boutique uniquement) */}
+      {showVideo && (
+        <div className="w-full overflow-hidden bg-black">
+          <video
+            ref={videoRef}
+            src="/banner.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="w-full h-[70vh] md:h-screen object-cover"
+          />
+        </div>
+      )}
+
+      <nav
         className="bg-transparent relative"
         style={{ fontFamily: fontHelvetica, zIndex: 10 }}
       >
@@ -98,30 +120,6 @@ export default function NavbarPublic() {
         {/* Ligne */}
         <div style={{ borderBottom: '1px solid #000' }} />
 
-        {/* Animation glissante */}
-        <div className="overflow-hidden py-2">
-          <div className="flex items-center animate-marquee whitespace-nowrap">
-            {[...Array(10)].map((_, i) => (
-              <span 
-                key={i}
-                className="mx-6 md:mx-12"
-                style={{ 
-                  fontSize: '11px',
-                  letterSpacing: '0.15em',
-                  color: bleuElectrique,
-                  fontWeight: '400',
-                  fontStyle: 'italic'
-                }}
-              >
-                // Livraison offerte dès 150€ d'achat // Retrait gratuit en boutique - 8 rue des Ecouffes, 75004 Paris
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Ligne */}
-        <div style={{ borderBottom: '1px solid #000' }} />
-
         {/* Liens en colonne - toujours visibles */}
         <div className="px-4 md:px-6 py-4 flex">
           <div className="flex flex-col gap-0.5">
@@ -158,6 +156,30 @@ export default function NavbarPublic() {
               </object>
             </div>
           )}
+        </div>
+
+        {/* Ligne */}
+        <div style={{ borderBottom: '1px solid #000' }} />
+
+        {/* Animation glissante (bannière bleue) */}
+        <div className="overflow-hidden py-2">
+          <div className="flex items-center animate-marquee whitespace-nowrap">
+            {[...Array(10)].map((_, i) => (
+              <span
+                key={i}
+                className="mx-6 md:mx-12"
+                style={{
+                  fontSize: '11px',
+                  letterSpacing: '0.15em',
+                  color: bleuElectrique,
+                  fontWeight: '400',
+                  fontStyle: 'italic'
+                }}
+              >
+                // Livraison offerte dès 150€ d'achat // Retrait gratuit en boutique - 8 rue des Ecouffes, 75004 Paris
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Ligne */}
