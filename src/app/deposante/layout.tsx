@@ -57,7 +57,7 @@ function DeposanteNavbar() {
   }, [pathname])
 
   const links = [
-    { href: '/deposante/mes-produits', label: 'Mes produits' },
+    { href: '/deposante/mes-produits', label: 'Mes pièces' },
     { href: '/deposante/mes-ventes', label: 'Mes ventes' },
     { href: '/deposante/profil', label: 'Mon profil' },
     { href: '/deposante/calendrier', label: 'Calendrier' },
