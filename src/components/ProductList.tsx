@@ -81,6 +81,8 @@
       forceDisplay?: boolean
       prixBaisseLe?: Timestamp
       ancienPrix?: number
+      ebayListingId?: string | null
+      ebayOfferId?: string | null
     }
 
     export type Deposant = {
@@ -772,6 +774,15 @@
           else if (detailsUrls.length === 0) updateData['photos.details'] = deleteField()
           
           await updateDoc(doc(db, 'produits', productId), updateData)
+
+          // Si le produit est publié sur eBay, on re-pousse les modifs (description, etc.)
+          if (editingProduct.ebayListingId && editingProduct.ebayOfferId) {
+            fetch('/api/ebay/resync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productId }),
+            }).catch(err => console.warn('Resync eBay échoué (non bloquant):', err))
+          }
 
           // Mettre à jour le state local immédiatement pour refléter les changements
           if (onProductUpdated) {
