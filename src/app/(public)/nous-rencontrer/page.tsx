@@ -3,10 +3,11 @@
 
 import { useState, useEffect } from 'react'
 import GoogleReviews from '@/components/GoogleReviews'
+import { useLang, t } from '@/lib/i18n'
 
 const bleuElectrique = '#0000FF'
 
-const HORAIRES = [
+const HORAIRES_FR = [
   { jour: 'Lundi', heures: '11h – 20h' },
   { jour: 'Mardi', heures: '12h – 20h' },
   { jour: 'Mercredi', heures: '12h – 20h' },
@@ -15,19 +16,34 @@ const HORAIRES = [
   { jour: 'Samedi', heures: '11h – 20h' },
   { jour: 'Dimanche', heures: '11h – 20h' },
 ]
+const HORAIRES_EN = [
+  { jour: 'Monday', heures: '11am – 8pm' },
+  { jour: 'Tuesday', heures: '12pm – 8pm' },
+  { jour: 'Wednesday', heures: '12pm – 8pm' },
+  { jour: 'Thursday', heures: '12pm – 8pm' },
+  { jour: 'Friday', heures: '11am – 8pm' },
+  { jour: 'Saturday', heures: '11am – 8pm' },
+  { jour: 'Sunday', heures: '11am – 8pm' },
+]
 
-// JS getDay: 0=dimanche, 1=lundi, …, 6=samedi
-const JOUR_INDEX_TO_NAME = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+const JOUR_INDEX_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+const JOUR_INDEX_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export default function NousRencontrerPage() {
+  const lang = useLang()
   const [displayedText, setDisplayedText] = useState('')
   const [jourActuel, setJourActuel] = useState<string | null>(null)
 
   useEffect(() => {
-    setJourActuel(JOUR_INDEX_TO_NAME[new Date().getDay()])
-  }, [])
-  
-  const introText = "PLEIN CŒUR MARAIS, QUARTIER DES ARTS, DE LA MODE, DE LA TOLÉRANCE, LA BOUTIQUE NOUVELLE RIVE SE NICHE RUE DES ECOUFFES, LA RUE DE VÊTEMENTS, ET L'ANCIENNE RUE AUX FILLES. ELLE RÉHABILITE LA PREMIÈRE BOÎTE LESBIENNE DU MARAIS, LE 3W, WOMEN WITH WOMEN. LA CABINE DE LA DJ SE TRANSFORME EN CAISSE, LE FUMOIR EN ESPACE D'EXPOSITION PREMIUM. UNE NOUVELLE VIE TOUT AUSSI RÉSOLUMENT FÉMINISTE."
+    const idx = new Date().getDay()
+    setJourActuel(lang === 'en' ? JOUR_INDEX_EN[idx] : JOUR_INDEX_FR[idx])
+  }, [lang])
+
+  const introText = t(
+    "PLEIN CŒUR MARAIS, QUARTIER DES ARTS, DE LA MODE, DE LA TOLÉRANCE, LA BOUTIQUE NOUVELLE RIVE SE NICHE RUE DES ECOUFFES, LA RUE DE VÊTEMENTS, ET L'ANCIENNE RUE AUX FILLES. ELLE RÉHABILITE LA PREMIÈRE BOÎTE LESBIENNE DU MARAIS, LE 3W, WOMEN WITH WOMEN. LA CABINE DE LA DJ SE TRANSFORME EN CAISSE, LE FUMOIR EN ESPACE D'EXPOSITION PREMIUM. UNE NOUVELLE VIE TOUT AUSSI RÉSOLUMENT FÉMINISTE.",
+    'AT THE HEART OF LE MARAIS — DISTRICT OF ARTS, FASHION AND TOLERANCE — THE NOUVELLE RIVE BOUTIQUE NESTLES ON RUE DES ECOUFFES, THE STREET OF CLOTHING, FORMERLY KNOWN AS THE STREET OF GIRLS. IT REVIVES THE FIRST LESBIAN CLUB OF LE MARAIS, LE 3W (WOMEN WITH WOMEN). THE DJ BOOTH BECOMES THE CHECKOUT, THE SMOKING ROOM A PREMIUM EXHIBITION SPACE. A NEW LIFE — JUST AS RESOLUTELY FEMINIST.',
+    lang
+  )
 
   // Typewriter effect
   useEffect(() => {
@@ -112,7 +128,7 @@ export default function NousRencontrerPage() {
               Le Marais, 75004 Paris
             </p>
             <p className="mt-2" style={{ fontSize: '14px', color: '#666' }}>
-              Métro Saint-Paul (ligne 1)
+              {t('Métro Saint-Paul (ligne 1)', 'Saint-Paul metro (line 1)', lang)}
             </p>
           </div>
 
@@ -159,7 +175,7 @@ export default function NousRencontrerPage() {
                   fontWeight: '600'
                 }}
               >
-                ITINÉRAIRE
+                {t('ITINÉRAIRE', 'GET DIRECTIONS', lang)}
               </a>
             </div>
 
@@ -172,10 +188,10 @@ export default function NousRencontrerPage() {
                   className="mb-4"
                   style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}
                 >
-                  HORAIRES
+                  {t('HORAIRES', 'OPENING HOURS', lang)}
                 </p>
                 <div className="space-y-2" style={{ fontSize: '16px' }}>
-                  {HORAIRES.map(({ jour, heures }) => {
+                  {(lang === 'en' ? HORAIRES_EN : HORAIRES_FR).map(({ jour, heures }) => {
                     const isToday = jour === jourActuel
                     return (
                       <div
@@ -183,7 +199,7 @@ export default function NousRencontrerPage() {
                         className="flex justify-between max-w-xs"
                         style={{ fontWeight: isToday ? 700 : 400, color: isToday ? bleuElectrique : 'inherit' }}
                       >
-                        <span>{jour}{isToday && ' · aujourd\'hui'}</span>
+                        <span>{jour}{isToday && ` · ${t("aujourd'hui", 'today', lang)}`}</span>
                         <span style={{ fontWeight: isToday ? 700 : 500 }}>{heures}</span>
                       </div>
                     )

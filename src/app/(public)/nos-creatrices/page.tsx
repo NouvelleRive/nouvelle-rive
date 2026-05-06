@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { useLang, t } from '@/lib/i18n'
 
 type Creatrice = {
   id: string
@@ -17,6 +18,7 @@ type Creatrice = {
 }
 
 export default function NosCreateursPage() {
+  const lang = useLang()
   const [creatrices, setCreatrices] = useState<Creatrice[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -67,7 +69,7 @@ export default function NosCreateursPage() {
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="uppercase tracking-widest" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '11px' }}>
-            Chargement...
+            {t('Chargement...', 'Loading...', lang)}
           </p>
         </div>
       </main>
@@ -77,17 +79,15 @@ export default function NosCreateursPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header */}
-      <div className="py-12 text-center" style={{ borderBottom: '1px solid #000' }}>
-        <h1 
-          className="uppercase tracking-widest"
-          style={{ 
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-            fontSize: '12px',
-            letterSpacing: '0.2em'
-          }}
-        >
-          Nos Créatrices/Curateurices
-        </h1>
+      <div className="border-b border-black">
+        <div className="max-w-4xl mx-auto px-6 py-16">
+          <h1
+            className="text-4xl md:text-6xl font-bold tracking-tight uppercase"
+            style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+          >
+            {t('Nos Créatrices/Curateurices', 'Our Designers / Curators', lang)}
+          </h1>
+        </div>
       </div>
 
       {/* Recherche */}
@@ -95,7 +95,7 @@ export default function NosCreateursPage() {
         <div className="max-w-md mx-auto relative">
           <input
             type="text"
-            placeholder="Rechercher..."
+            placeholder={t('Rechercher...', 'Search...', lang)}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full py-3 px-4 pr-12 text-xs tracking-widest bg-transparent outline-none"
@@ -121,7 +121,9 @@ export default function NosCreateursPage() {
             color: '#666'
           }}
         >
-          {filtered.length} créatrice{filtered.length > 1 ? 's' : ''}
+          {lang === 'en'
+            ? `${filtered.length} designer${filtered.length > 1 ? 's' : ''}`
+            : `${filtered.length} créatrice${filtered.length > 1 ? 's' : ''}`}
         </p>
       </div>
 
@@ -149,7 +151,7 @@ export default function NosCreateursPage() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                  <p className="text-gray-400 text-xs uppercase tracking-wider">Image à venir</p>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider">{t('Image à venir', 'Image coming soon', lang)}</p>
                 </div>
               )}
             </div>
@@ -181,7 +183,7 @@ export default function NosCreateursPage() {
       {filtered.length === 0 && !loading && (
         <div className="py-20 text-center">
           <p className="uppercase tracking-widest text-gray-400" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '11px' }}>
-            Aucun résultat
+            {t('Aucun résultat', 'No results', lang)}
           </p>
         </div>
       )}

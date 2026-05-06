@@ -3,17 +3,19 @@
 import { usePathname } from 'next/navigation'
 import { useFilteredProducts } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
+import { useLang, t } from '@/lib/i18n'
 
 export default function Page() {
   const pathname = usePathname()
   const pageId = pathname.split('/').pop() || ''
-  
+  const lang = useLang()
+
   const { produits, loading, loadingMore } = useFilteredProducts(pageId)
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Chargement...</p>
+        <p className="text-gray-600">{t('Chargement...', 'Loading...', lang)}</p>
       </div>
     )
   }
@@ -30,14 +32,14 @@ export default function Page() {
             textTransform: 'uppercase'
           }}
         >
-          (PLUTÔT) FEMME
+          {t('(PLUTÔT) FEMME', '(RATHER) WOMEN', lang)}
         </h1>
       </div>
       <div className="w-full border-t border-black" />
       <ProductGrid produits={produits} columns={3} />
       {loadingMore && (
         <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm">Chargement...</p>
+          <p className="text-gray-500 text-sm">{t('Chargement...', 'Loading...', lang)}</p>
         </div>
       )}
     </div>

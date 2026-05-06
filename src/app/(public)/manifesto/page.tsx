@@ -1,17 +1,22 @@
 // src/app/(public)/manifesto/page.tsx
+'use client'
+
+import { useLang, t } from '@/lib/i18n'
 
 export default function ManifestoPage() {
+  const lang = useLang()
+
   return (
     <div>
-      <main 
+      <main
         className="min-h-screen bg-white"
         style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}
       >
         <div className="bg-gradient-to-b from-gray-50 to-white py-20">
           <div className="max-w-4xl mx-auto px-4 text-center">
-            <h1 
+            <h1
               className="text-6xl mb-6 font-bold"
-              style={{ 
+              style={{
                 fontFamily: 'Didot, serif',
                 color: '#22209C'
               }}
@@ -19,7 +24,11 @@ export default function ManifestoPage() {
               NO MORE FAST FASHION
             </h1>
             <p className="text-xl text-gray-700">
-              La seule règle dans la mode est la responsabilité
+              {t(
+                'La seule règle dans la mode est la responsabilité',
+                'The only rule in fashion is responsibility',
+                lang
+              )}
             </p>
           </div>
         </div>
@@ -31,7 +40,11 @@ export default function ManifestoPage() {
                 Nouvelle Rive
               </h2>
               <p className="text-lg text-gray-700 mb-4">
-                Magasin responsable au cœur du Marais.
+                {t(
+                  'Magasin responsable au cœur du Marais.',
+                  'Responsible boutique in the heart of Le Marais.',
+                  lang
+                )}
               </p>
             </div>
             <div className="bg-gray-100 aspect-square flex items-center justify-center">
@@ -42,10 +55,10 @@ export default function ManifestoPage() {
 
         <section className="py-20 text-center">
           <h2 className="text-5xl mb-8 font-bold" style={{ fontFamily: 'Didot, serif', color: '#22209C' }}>
-            Le futur sera vintage
+            {t('Le futur sera vintage', 'The future is vintage', lang)}
           </h2>
           <a href="/boutique" className="inline-block px-8 py-4 text-white font-semibold" style={{ backgroundColor: '#22209C' }}>
-            Découvrir la boutique
+            {t('Découvrir la boutique', 'Discover the shop', lang)}
           </a>
         </section>
       </main>

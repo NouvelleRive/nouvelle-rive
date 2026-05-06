@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLang, t } from '@/lib/i18n'
 
 type Lieu = 'printemps' | 'ecouffes'
 
@@ -29,6 +30,7 @@ const LIEUX = {
 }
 
 export default function AteliersPage() {
+  const lang = useLang()
   const [selectedLieu, setSelectedLieu] = useState<Lieu>('printemps')
   const [creneaux, setCreneaux] = useState<Creneau[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,7 +104,7 @@ export default function AteliersPage() {
 
   // Formater date
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+    return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
   }
 
   const formatDateISO = (date: Date) => {
@@ -129,10 +131,10 @@ export default function AteliersPage() {
       if (data.success && data.checkoutUrl) {
         window.location.href = data.checkoutUrl
       } else {
-        alert(data.error || 'Erreur lors de la réservation')
+        alert(data.error || t('Erreur lors de la réservation', 'Booking error', lang))
       }
-    } catch (err) {
-      alert('Erreur : ERR')
+    } catch {
+      alert(t('Erreur : ERR', 'Error: ERR', lang))
     } finally {
       setSubmitting(false)
     }
@@ -147,56 +149,71 @@ export default function AteliersPage() {
       {/* Hero */}
       <div className="border-b border-black">
         <div className="max-w-4xl mx-auto px-6 py-16">
-          <h1 
+          <h1
             className="text-4xl md:text-6xl font-bold tracking-tight mb-8"
             style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
           >
-            ATELIER BIJOU UPCYCLÉ
+            {t('ATELIER BIJOU UPCYCLÉ', 'UPCYCLED JEWELRY WORKSHOP', lang)}
           </h1>
-          
+
           <div className="grid md:grid-cols-2 gap-12">
             <div className="space-y-6 text-sm leading-relaxed" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-              <p>
-                Au 7ᵉ étage du Printemps Haussmann, sous l'historique coupole Binet, des Créatrices Bijoux vous accompagnent pour imaginer et assembler votre propre pièce unique, un bijou personnalisé à partir de breloques et autres pièces chinées, perles anciennes, pièces vintage, boutons de luxe et autres trésors.
-              </p>
-              <p>
-                Pendant 45 minutes, vous explorez notre sélection et sélectionnez celles qui vous correspondent pour confectionner un collier, un bracelet ou des boucles d'oreilles uniques. Les créatrices vous apprennent à jouer avec les formes puis à manipuler les pinces de base de la bijouterie.
-              </p>
-              <p>
-                Vous repartez avec de nouvelles compétences et un bijou parfaitement fait pour vous qui raconte une histoire. L'atelier accueille jusqu'à 4 personnes, le cadeau idéal ?
-              </p>
+              {lang === 'en' ? (
+                <>
+                  <p>On the 7th floor of Printemps Haussmann, beneath the historic Binet dome, our jewelry designers help you imagine and assemble your own unique piece — a personalized jewel made from charms and one-of-a-kind finds, antique pearls, vintage pieces, luxury buttons and other treasures.</p>
+                  <p>For 45 minutes, you browse our selection and pick the pieces that speak to you, to craft a necklace, bracelet or pair of earrings entirely your own. The designers teach you how to play with shapes and handle the basic jewelry-making tools.</p>
+                  <p>You walk away with new skills and a piece of jewelry that fits you perfectly and tells a story. The workshop hosts up to 4 people — the perfect gift?</p>
+                </>
+              ) : (
+                <>
+                  <p>Au 7ᵉ étage du Printemps Haussmann, sous l&apos;historique coupole Binet, des Créatrices Bijoux vous accompagnent pour imaginer et assembler votre propre pièce unique, un bijou personnalisé à partir de breloques et autres pièces chinées, perles anciennes, pièces vintage, boutons de luxe et autres trésors.</p>
+                  <p>Pendant 45 minutes, vous explorez notre sélection et sélectionnez celles qui vous correspondent pour confectionner un collier, un bracelet ou des boucles d&apos;oreilles uniques. Les créatrices vous apprennent à jouer avec les formes puis à manipuler les pinces de base de la bijouterie.</p>
+                  <p>Vous repartez avec de nouvelles compétences et un bijou parfaitement fait pour vous qui raconte une histoire. L&apos;atelier accueille jusqu&apos;à 4 personnes, le cadeau idéal ?</p>
+                </>
+              )}
             </div>
-            
+
             <div className="space-y-6">
               <div className="border border-black p-6">
-                <p className="text-xs tracking-widest mb-4">DÉROULÉ</p>
+                <p className="text-xs tracking-widest mb-4">{t('DÉROULÉ', 'HOW IT WORKS', lang)}</p>
                 <div className="space-y-3 text-sm">
                   <div className="flex gap-4">
                     <span className="text-xs text-gray-500">#1</span>
-                    <span>Choisissez votre starter pack</span>
+                    <span>{t('Choisissez votre starter pack', 'Choose your starter pack', lang)}</span>
                   </div>
                   <div className="flex gap-4">
                     <span className="text-xs text-gray-500">#2</span>
-                    <span>Explorez les breloques et pendants</span>
+                    <span>{t('Explorez les breloques et pendants', 'Browse charms and pendants', lang)}</span>
                   </div>
                   <div className="flex gap-4">
                     <span className="text-xs text-gray-500">#3</span>
-                    <span>Assemblez votre bijou unique</span>
+                    <span>{t('Assemblez votre bijou unique', 'Assemble your unique piece', lang)}</span>
                   </div>
                   <div className="flex gap-4">
                     <span className="text-xs text-gray-500">#4</span>
-                    <span>Repartez avec votre création</span>
+                    <span>{t('Repartez avec votre création', 'Take your creation home', lang)}</span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="border border-black p-6">
-                <p className="text-xs tracking-widest mb-4">TARIFS</p>
+                <p className="text-xs tracking-widest mb-4">{t('TARIFS', 'PRICING', lang)}</p>
                 <div className="space-y-2 text-sm">
-                  <p>Starter pack : <strong>5 à 20 €</strong></p>
-                  <p>Breloques : <strong>1 à 40 €</strong> (hors pièces de luxe)</p>
-                  <p>Acompte réservation : <strong>20 €</strong> /pers.</p>
-                  <p className="text-gray-400 italic text-xs mt-2">Tarif minimum, déduit du prix final de votre bijou upcyclé</p>
+                  {lang === 'en' ? (
+                    <>
+                      <p>Starter pack: <strong>€5 to €20</strong></p>
+                      <p>Charms: <strong>€1 to €40</strong> (luxury pieces excluded)</p>
+                      <p>Booking deposit: <strong>€20</strong> /person</p>
+                      <p className="text-gray-400 italic text-xs mt-2">Minimum amount — deducted from your final upcycled piece</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>Starter pack : <strong>5 à 20 €</strong></p>
+                      <p>Breloques : <strong>1 à 40 €</strong> (hors pièces de luxe)</p>
+                      <p>Acompte réservation : <strong>20 €</strong> /pers.</p>
+                      <p className="text-gray-400 italic text-xs mt-2">Tarif minimum, déduit du prix final de votre bijou upcyclé</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -207,7 +224,7 @@ export default function AteliersPage() {
       {/* Sélection lieu */}
       <div className="border-b border-black">
         <div className="max-w-4xl mx-auto px-6 py-8">
-          <p className="text-xs tracking-widest mb-6">CHOISIR UN LIEU</p>
+          <p className="text-xs tracking-widest mb-6">{t('CHOISIR UN LIEU', 'CHOOSE A LOCATION', lang)}</p>
           
           <div className="grid md:grid-cols-2 gap-4">
             {(Object.keys(LIEUX) as Lieu[]).map((lieu) => (
@@ -232,7 +249,7 @@ export default function AteliersPage() {
       {/* Calendrier */}
       <div ref={calendrierRef} className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
-          <p className="text-xs tracking-widest">CRÉNEAUX DISPONIBLES</p>
+          <p className="text-xs tracking-widest">{t('CRÉNEAUX DISPONIBLES', 'AVAILABLE SLOTS', lang)}</p>
           
           <div className="flex items-center gap-2">
             <button
@@ -288,8 +305,12 @@ export default function AteliersPage() {
                           }`}
                         >
                           <span>{c.heure}</span>
-                          {!complet && <span className="block text-[10px] opacity-60">{places} place{places > 1 ? 's' : ''}</span>}
-                          {complet && <span className="block text-[10px]">complet</span>}
+                          {!complet && <span className="block text-[10px] opacity-60">
+                            {lang === 'en'
+                              ? `${places} spot${places > 1 ? 's' : ''}`
+                              : `${places} place${places > 1 ? 's' : ''}`}
+                          </span>}
+                          {complet && <span className="block text-[10px]">{t('complet', 'full', lang)}</span>}
                         </button>
                       )
                     })}
@@ -302,7 +323,7 @@ export default function AteliersPage() {
         
         {creneaux.length === 0 && !loading && (
           <p className="text-center text-sm text-gray-500 py-8">
-            Aucun créneau disponible cette semaine
+            {t('Aucun créneau disponible cette semaine', 'No slots available this week', lang)}
           </p>
         )}
       </div>
@@ -312,7 +333,7 @@ export default function AteliersPage() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md border border-black max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-black sticky top-0 bg-white">
-              <h3 className="text-sm tracking-widest">RÉSERVER</h3>
+              <h3 className="text-sm tracking-widest">{t('RÉSERVER', 'BOOK', lang)}</h3>
               <button 
                 onClick={() => setSelectedCreneau(null)}
                 className="text-2xl leading-none hover:opacity-50"
@@ -324,18 +345,22 @@ export default function AteliersPage() {
             <div className="p-6 border-b border-black">
               <p className="font-medium">{LIEUX[selectedCreneau.lieu].nom}</p>
               <p className="text-sm text-gray-600">
-                {new Date(selectedCreneau.date).toLocaleDateString('fr-FR', { 
-                  weekday: 'long', 
-                  day: 'numeric', 
-                  month: 'long' 
-                })} à {selectedCreneau.heure}
+                {new Date(selectedCreneau.date).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long'
+                })} {t('à', 'at', lang)} {selectedCreneau.heure}
               </p>
-              <p className="text-xs text-gray-500 mt-1">{placesRestantes} place{placesRestantes > 1 ? 's' : ''} disponible{placesRestantes > 1 ? 's' : ''}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {lang === 'en'
+                  ? `${placesRestantes} spot${placesRestantes > 1 ? 's' : ''} available`
+                  : `${placesRestantes} place${placesRestantes > 1 ? 's' : ''} disponible${placesRestantes > 1 ? 's' : ''}`}
+              </p>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs tracking-widest mb-2">NOM</label>
+                <label className="block text-xs tracking-widest mb-2">{t('NOM', 'NAME', lang)}</label>
                 <input
                   type="text"
                   value={formData.nom}
@@ -343,7 +368,7 @@ export default function AteliersPage() {
                   className="w-full border border-black p-3 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-xs tracking-widest mb-2">EMAIL</label>
                 <input
@@ -353,9 +378,9 @@ export default function AteliersPage() {
                   className="w-full border border-black p-3 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-xs tracking-widest mb-2">TÉLÉPHONE</label>
+                <label className="block text-xs tracking-widest mb-2">{t('TÉLÉPHONE', 'PHONE', lang)}</label>
                 <input
                   type="tel"
                   value={formData.telephone}
@@ -363,34 +388,36 @@ export default function AteliersPage() {
                   className="w-full border border-black p-3 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                 />
               </div>
-              
+
               <div>
-                <label className="block text-xs tracking-widest mb-2">PARTICIPANTS</label>
+                <label className="block text-xs tracking-widest mb-2">{t('PARTICIPANTS', 'PARTICIPANTS', lang)}</label>
                 <select
                   value={formData.participants}
                   onChange={(e) => setFormData({ ...formData, participants: parseInt(e.target.value) })}
                   className="w-full border border-black p-3 text-sm focus:outline-none focus:ring-1 focus:ring-black bg-white"
                 >
                   {Array.from({ length: Math.min(4, placesRestantes) }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>{n} personne{n > 1 ? 's' : ''}</option>
+                    <option key={n} value={n}>
+                      {lang === 'en' ? `${n} person${n > 1 ? 's' : ''}` : `${n} personne${n > 1 ? 's' : ''}`}
+                    </option>
                   ))}
                 </select>
               </div>
-              
+
               <div className="border border-black p-4 bg-gray-50">
                 <div className="flex justify-between text-sm">
-                  <span>Acompte ({formData.participants} × 20€)</span>
+                  <span>{t('Acompte', 'Deposit', lang)} ({formData.participants} × 20€)</span>
                   <span className="font-medium">{formData.participants * 20}€</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Déduit du prix de votre bijou</p>
+                <p className="text-xs text-gray-500 mt-1">{t('Déduit du prix de votre bijou', 'Deducted from your jewelry price', lang)}</p>
               </div>
-              
+
               <button
                 onClick={handleSubmit}
                 disabled={!formData.nom || !formData.email || !formData.telephone || submitting}
                 className="w-full py-4 bg-black text-white text-sm tracking-widest hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {submitting ? '...' : 'PAYER L\'ACOMPTE'}
+                {submitting ? '...' : t("PAYER L'ACOMPTE", 'PAY THE DEPOSIT', lang)}
               </button>
             </div>
           </div>
