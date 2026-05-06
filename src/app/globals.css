@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Masque la barre Google Translate (sélecteur FR/EN custom à la place) */
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+.goog-te-gadget,
+.VIpgJd-ZVi9od-l4eHX-hSRGPd { display: none !important; }
+body { top: 0 !important; position: static !important; }
+html { margin-top: 0 !important; }
+.goog-tooltip,
+.goog-tooltip:hover { display: none !important; }
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
