@@ -1,6 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { db } from '@/lib/firebaseConfig'
 import { useCart, SEUIL_LIVRAISON_OFFERTE } from '@/lib/cart'
 
 const bleuElectrique = '#0000FF'
@@ -8,6 +11,28 @@ const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i,
 
 export default function PanierPage() {
   const { items, hydrated, count, sousTotal, removeItem } = useCart()
+  const [retires, setRetires] = useState<string[]>([])
+
+  // Synchro temps réel : si un article devient vendu (caisse boutique p.ex.), on le retire du panier
+  useEffect(() => {
+    if (!hydrated || items.length === 0) return
+    const unsubs = items.map(item =>
+      onSnapshot(doc(db, 'produits', item.id), (snap) => {
+        if (!snap.exists()) {
+          removeItem(item.id)
+          setRetires(prev => prev.includes(item.nom) ? prev : [...prev, item.nom])
+          return
+        }
+        const data = snap.data() as any
+        if (data.vendu === true || data.statut === 'outOfStock' || (typeof data.quantite === 'number' && data.quantite <= 0)) {
+          removeItem(item.id)
+          setRetires(prev => prev.includes(item.nom) ? prev : [...prev, item.nom])
+        }
+      })
+    )
+    return () => { unsubs.forEach(u => u()) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, items.map(i => i.id).join(',')])
 
   if (!hydrated) {
     return (
@@ -21,6 +46,15 @@ export default function PanierPage() {
     return (
       <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }} className="min-h-screen bg-white">
         <main className="max-w-2xl mx-auto px-6 py-20 text-center">
+          {retires.length > 0 && (
+            <div className="mb-8 p-4 border border-black text-left" style={{ fontSize: '12px', lineHeight: '1.5' }}>
+              <strong>Article{retires.length > 1 ? 's' : ''} retiré{retires.length > 1 ? 's' : ''} du panier :</strong>
+              <ul className="mt-2 list-disc pl-5">
+                {retires.map((n, i) => <li key={i}>{cleanProductName(n)}</li>)}
+              </ul>
+              <p className="mt-2" style={{ color: '#666' }}>Vendu{retires.length > 1 ? 's' : ''} entre-temps en boutique ou en ligne.</p>
+            </div>
+          )}
           <h1 style={{ fontSize: 'clamp(32px, 6vw, 56px)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1', marginBottom: '16px' }}>VOTRE PANIER EST VIDE</h1>
           <p style={{ fontSize: '13px', color: '#666', marginBottom: '32px' }}>Découvrez nos pièces uniques.</p>
           <Link href="/boutique" className="inline-block py-4 px-8 text-white transition-opacity hover:opacity-80" style={{ backgroundColor: bleuElectrique, fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
@@ -43,6 +77,14 @@ export default function PanierPage() {
           VOTRE PANIER ({count})
         </h1>
       </div>
+      {retires.length > 0 && (
+        <div className="px-6 pb-4">
+          <div className="p-4 border border-black" style={{ fontSize: '12px', lineHeight: '1.5' }}>
+            <strong>Article{retires.length > 1 ? 's' : ''} retiré{retires.length > 1 ? 's' : ''} :</strong>{' '}
+            {retires.map(cleanProductName).join(', ')} — vendu{retires.length > 1 ? 's' : ''} entre-temps.
+          </div>
+        </div>
+      )}
       <div className="w-full border-t border-black" />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px]">

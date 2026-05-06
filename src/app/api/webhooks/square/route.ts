@@ -9,7 +9,6 @@ import { Client, Environment } from 'square'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { sendPushToOwner } from '@/lib/webpush'
 
-// Initialiser Firebase Admin
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -24,36 +23,242 @@ const adminDb = getFirestore()
 const resend = new Resend(process.env.RESEND_API_KEY)
 const webhookSignatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY_SITE
 
-// Initialiser Square Client (réutilisé pour suppression)
 const squareClient = new Client({
   accessToken: process.env.SQUARE_ACCESS_TOKEN!,
-  environment: process.env.SQUARE_ENV === 'production' 
-    ? Environment.Production 
+  environment: process.env.SQUARE_ENV === 'production'
+    ? Environment.Production
     : Environment.Sandbox
 })
 
-// Générer un numéro de groupe unique pour regrouper les commandes
 function genererNumeroGroupe(email: string, date: Date): string {
   const dateStr = date.toISOString().split('T')[0].replace(/-/g, '')
   const emailHash = email.split('@')[0].substring(0, 4).toUpperCase()
   return `GRP-${dateStr}-${emailHash}`
 }
 
+// Traite UN produit du panier : maj produit + création commande + création vente + retrait des canaux
+async function traiterProduit(opts: {
+  productId: string
+  paymentId: string
+  orderId: string
+  saleTimestamp: Timestamp
+  clientInfo: { prenom: string; nom: string; email: string; telephone?: string }
+  modeLivraison: string | null
+  adresse: any
+  numeroGroupe: string
+  lineItem: any
+  lineItemPrice: number
+  productNameFallback: string
+}) {
+  const { productId, paymentId, orderId, saleTimestamp, clientInfo, modeLivraison, adresse, numeroGroupe, lineItem, lineItemPrice, productNameFallback } = opts
+
+  const produitRef = adminDb.collection('produits').doc(productId)
+  const produitSnap = await produitRef.get()
+
+  if (!produitSnap.exists) {
+    console.error('❌ Produit non trouvé:', productId)
+    return null
+  }
+
+  const produitData = produitSnap.data()!
+  const quantiteActuelle = produitData.quantite || 1
+  const nouvelleQuantite = Math.max(0, quantiteActuelle - 1)
+
+  const tri = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+  let isSmallBatch = false
+  if (tri && nouvelleQuantite === 0) {
+    const chineuseSnap = await adminDb.collection('chineuse')
+      .where('trigramme', '==', tri)
+      .limit(1)
+      .get()
+    if (!chineuseSnap.empty) {
+      isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
+    }
+  }
+
+  const updateData: any = { quantite: nouvelleQuantite }
+  if (nouvelleQuantite === 0) {
+    if (isSmallBatch) {
+      updateData.statut = 'outOfStock'
+      updateData.dateRupture = saleTimestamp
+      updateData.squareOrderId = orderId
+    } else {
+      updateData.vendu = true
+      updateData.dateVente = saleTimestamp
+      updateData.squareOrderId = orderId
+    }
+  }
+  await produitRef.update(updateData)
+  console.log('✅ Produit mis à jour:', productId, '- Nouvelle quantité:', nouvelleQuantite)
+
+  // Suppression Square (pièce unique épuisée)
+  if (nouvelleQuantite === 0 && !isSmallBatch && (produitData.catalogObjectId || produitData.variationId || produitData.itemId)) {
+    try {
+      const variationId = produitData.variationId || produitData.catalogObjectId
+      if (variationId) {
+        try {
+          await squareClient.catalogApi.deleteCatalogObject(variationId)
+          console.log('✅ Variation supprimée de Square:', variationId)
+        } catch (delError: any) {
+          console.warn('⚠️ Suppression variation échouée:', delError?.message)
+        }
+      }
+      const itemId = produitData.itemId
+      if (itemId) {
+        try {
+          await squareClient.catalogApi.deleteCatalogObject(itemId)
+          console.log('✅ Item supprimé de Square:', itemId)
+        } catch (delItemError: any) {
+          console.warn('⚠️ Suppression item échouée, tentative d\'archivage...', delItemError?.message)
+          try {
+            const { result } = await squareClient.catalogApi.retrieveCatalogObject(itemId)
+            const item = result.object
+            if (item && item.itemData) {
+              await squareClient.catalogApi.upsertCatalogObject({
+                idempotencyKey: `archive-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                object: {
+                  id: itemId,
+                  type: 'ITEM',
+                  version: item.version,
+                  presentAtAllLocations: false,
+                  itemData: {
+                    name: item.itemData.name || 'Archived',
+                    description: item.itemData.description,
+                    categoryId: item.itemData.categoryId,
+                    variations: item.itemData.variations,
+                    productType: item.itemData.productType,
+                    isArchived: true,
+                  }
+                }
+              })
+              console.log('✅ Produit archivé dans Square:', itemId)
+            }
+          } catch (archiveError: any) {
+            console.error('❌ Archivage Square échoué:', archiveError?.message)
+          }
+        }
+      }
+    } catch (squareError: any) {
+      console.error('❌ Erreur globale suppression Square:', squareError?.message)
+    }
+  }
+
+  // eBay
+  if (nouvelleQuantite === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
+    try {
+      await removeFromAllChannels(
+        {
+          id: productId,
+          sku: produitData.sku,
+          ebayOfferId: produitData.ebayOfferId,
+          ebayListingId: produitData.ebayListingId,
+        },
+        'site'
+      )
+      console.log('✅ Produit retiré d\'eBay')
+    } catch (ebayError: any) {
+      console.error('⚠️ Erreur retrait eBay (non bloquant):', ebayError?.message)
+    }
+  }
+
+  // Création de la commande
+  const nouvelleCommande = {
+    orderId,
+    productId,
+    productName: produitData.nom || productNameFallback,
+    productSku: produitData.sku || null,
+    productMarque: produitData.marque || null,
+    productImage: produitData.images?.[0] || produitData.imageUrl || produitData.photos?.face || produitData.imageUrls?.[0] || null,
+    prix: produitData.prix || lineItemPrice,
+
+    client: clientInfo,
+    modeLivraison,
+    adresse: modeLivraison === 'livraison' ? adresse : null,
+
+    statut: 'en_attente',
+
+    dateCommande: Timestamp.now(),
+    datePaiement: Timestamp.now(),
+
+    numeroGroupe,
+    regroupeAvec: [] as string[],
+
+    createdAt: Timestamp.now(),
+  }
+  const commandeRef = await adminDb.collection('commandes').add(nouvelleCommande)
+  const commandeId = commandeRef.id
+  console.log('✅ Commande créée:', commandeId)
+
+  // Création de la vente
+  const trigramme = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
+  let chineurEmail = produitData.chineur || null
+  let chineurUid = produitData.chineurUid || null
+
+  if (!chineurEmail && trigramme) {
+    const chineuseSnap = await adminDb.collection('chineuse')
+      .where('trigramme', '==', trigramme)
+      .limit(1)
+      .get()
+    if (!chineuseSnap.empty) {
+      chineurEmail = chineuseSnap.docs[0].data().email || null
+      chineurUid = chineuseSnap.docs[0].id
+    }
+  }
+
+  const venteData = {
+    paymentId,
+    orderId,
+    lineItemUid: lineItem?.uid || null,
+    dateVente: saleTimestamp,
+    prixVenteReel: produitData.prix || lineItemPrice,
+    quantite: 1,
+    nomSquare: lineItem?.name || productNameFallback,
+    produitId: productId,
+    nom: produitData.nom || lineItem?.name || productNameFallback,
+    sku: produitData.sku || null,
+    skuSquare: produitData.sku || null,
+    chineur: chineurEmail,
+    chineurUid,
+    trigramme,
+    prixInitial: produitData.prix || null,
+    attribue: true,
+    source: 'square',
+    skuSource: 'webhook',
+    createdAt: saleTimestamp,
+  }
+  const venteDocId = `${orderId}_${lineItem?.uid || productId}`
+  await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
+  console.log('✅ Vente créée:', produitData.sku, `[${venteDocId}]`)
+
+  // Push notif
+  try {
+    const titre = `🛒 Vente en ligne : ${produitData.sku || produitData.nom || lineItem?.name}`
+    const corps = `${produitData.prix || lineItemPrice}€ — ${clientInfo.prenom} ${clientInfo.nom}`
+    await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/commandes', tag: venteDocId })
+    if (chineurUid) {
+      await sendPushToOwner(chineurUid, { title: '🎉 Vente en ligne !', body: `${produitData.sku || produitData.nom} vendu ${produitData.prix || lineItemPrice}€`, url: '/chineuse/mes-ventes', tag: venteDocId })
+    }
+  } catch (e) { console.warn('Push notif failed:', e) }
+
+  return {
+    commandeId,
+    produitData,
+    nouvelleQuantite,
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.text()
     const headersList = await headers()
-    
-    // Vérifier la signature Square (sécurité)
+
     const signature = headersList.get('x-square-hmacsha256-signature')
-    
     if (webhookSignatureKey && signature) {
       const notificationUrl = 'https://www.nouvellerive.eu/api/webhooks/square'
       const hash = crypto
         .createHmac('sha256', webhookSignatureKey)
         .update(notificationUrl + body)
         .digest('base64')
-      
       if (hash !== signature) {
         console.error('❌ Signature webhook invalide')
         return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
@@ -61,17 +266,13 @@ export async function POST(request: Request) {
     }
 
     const event = JSON.parse(body)
-    
     console.log('🔔 Webhook Square reçu:', event.type)
 
-    // On ne traite que la création initiale d'un paiement (jamais ses mises à jour
-    // ultérieures, qui ré-écraseraient la date de vente lors d'un re-fire de Square)
     if (event.type !== 'payment.created') {
       return NextResponse.json({ received: true })
     }
 
     const payment = event.data?.object?.payment
-
     if (!payment || payment.status !== 'COMPLETED') {
       console.log('⏭️ Paiement non complété, ignoré')
       return NextResponse.json({ received: true })
@@ -79,571 +280,310 @@ export async function POST(request: Request) {
 
     const paymentId = payment.id
     const orderId = payment.order_id
-
     if (!orderId) {
       console.log('⚠️ Pas d\'order_id dans le paiement')
       return NextResponse.json({ received: true })
     }
-
     console.log('✅ Paiement complété pour order:', orderId)
 
-    // Récupérer les metadata depuis Square
-    let productId: string | null = null
-    let clientInfo: { prenom: string; nom: string; email: string; telephone?: string } | null = null
-    let modeLivraison: string | null = null
-    let adresse: any = null
-    let nombreAchats = 1
+    const { result } = await squareClient.ordersApi.retrieveOrder(orderId)
+    const order = result.order
 
-    try {
-      const { result } = await squareClient.ordersApi.retrieveOrder(orderId)
-      const order = result.order
+    const saleDate = order?.closedAt
+      ? new Date(order.closedAt)
+      : order?.createdAt
+        ? new Date(order.createdAt)
+        : new Date()
+    const saleTimestamp = Timestamp.fromDate(saleDate)
 
-      // Date stable côté Square pour rester correcte même si le webhook re-fire plus tard
-      const saleDate = order?.closedAt
-        ? new Date(order.closedAt)
-        : order?.createdAt
-          ? new Date(order.createdAt)
-          : new Date()
-      const saleTimestamp = Timestamp.fromDate(saleDate)
+    const metadata = order?.metadata || {}
 
-      if (order?.metadata) {
-        productId = order.metadata.productId
-        
-        // Extraire nom et prénom
-        const nomComplet = order.metadata.clientNom || ''
-        const parts = nomComplet.trim().split(' ')
-        const prenom = parts[0] || ''
-        const nom = parts.slice(1).join(' ') || parts[0] || ''
-        
-        clientInfo = {
-          prenom,
-          nom,
-          email: order.metadata.clientEmail || '',
-          telephone: order.metadata.clientTelephone || undefined
-        }
-        
-        modeLivraison = order.metadata.modeLivraison
-        nombreAchats = parseInt(order.metadata.nombreAchats || '1')
-        
-        // Parser l'adresse si livraison
-        if (order.metadata.adresseLivraison) {
-          try {
-            adresse = JSON.parse(order.metadata.adresseLivraison)
-          } catch (e) {
-            console.error('Erreur parsing adresse:', e)
-          }
-        }
-        
-        console.log('📦 Produit ID:', productId)
-        console.log('👤 Client:', clientInfo.email)
-        console.log('🛵 Mode:', modeLivraison)
-      }
-      
-      // Récupérer les line items pour avoir le nom du produit
+    // Multi-articles (panier) ou legacy mono-produit ?
+    const productIdsCsv: string = metadata.productIds || metadata.productId || ''
+    const productIds = productIdsCsv.split(',').map(s => s.trim()).filter(Boolean)
+
+    // Vente caisse (pas de productId du tout) → garder le comportement existant
+    if (productIds.length === 0) {
       const lineItems = order?.lineItems || []
-      const productName = lineItems[0]?.name || 'Produit'
-      const productPrice = lineItems[0]?.basePriceMoney?.amount 
-        ? Number(lineItems[0].basePriceMoney.amount) / 100 
-        : 0
-      
-      // Vente caisse (pas de productId) → créer la vente par SKU et sortir
-      if (!productId) {
-        console.log('🏪 Vente caisse détectée (pas de productId)')
+      console.log('🏪 Vente caisse détectée (pas de productId)')
 
-        for (let idx = 0; idx < lineItems.length; idx++) {
-          const item = lineItems[idx]
-          const itemName = item.name || ''
-          const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
-          // ID déterministe basé sur orderId+lineItemUid : partagé avec le webhook
-          // square-pos pour qu'un seul doc soit écrit même si les deux webhooks fire.
-          const venteDocId = `${orderId}_${item.uid || `i${idx}`}`
+      for (let idx = 0; idx < lineItems.length; idx++) {
+        const item = lineItems[idx]
+        const itemName = item.name || ''
+        const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
+        const venteDocId = `${orderId}_${item.uid || `i${idx}`}`
 
-          // Chercher le SKU dans le nom (ex: "TDO4 Collier..." ou "IP24_BO01 Bague...")
-          let sku: string | null = null
-          const skuMatch = itemName.match(/^([A-Za-z]{2,4}\d{1,4}(?:[_][A-Za-z0-9]+)*)/i)
-          if (skuMatch) sku = skuMatch[1].toUpperCase()
+        let sku: string | null = null
+        const skuMatch = itemName.match(/^([A-Za-z]{2,4}\d{1,4}(?:[_][A-Za-z0-9]+)*)/i)
+        if (skuMatch) sku = skuMatch[1].toUpperCase()
 
-          // Chercher le SKU dans le catalogue Square
-          if (!sku && item.catalogObjectId) {
-            try {
-              const { result } = await squareClient.catalogApi.retrieveCatalogObject(item.catalogObjectId)
-              const obj = result.object
-              if (obj?.type === 'ITEM_VARIATION' && obj.itemVariationData?.sku) {
-                sku = obj.itemVariationData.sku
-              }
-            } catch (e) {
-              console.warn('⚠️ Erreur catalogue:', e)
+        if (!sku && item.catalogObjectId) {
+          try {
+            const { result } = await squareClient.catalogApi.retrieveCatalogObject(item.catalogObjectId)
+            const obj = result.object
+            if (obj?.type === 'ITEM_VARIATION' && obj.itemVariationData?.sku) {
+              sku = obj.itemVariationData.sku
             }
+          } catch (e) {
+            console.warn('⚠️ Erreur catalogue:', e)
           }
+        }
 
-          // Chercher le produit Firestore par SKU
-          let produitDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null
-          let produitData: any = null
-          if (sku) {
-            const skuNorm = sku.toLowerCase().replace(/\s+/g, '')
-            const snap = await adminDb.collection('produits')
-              .where('sku', '==', sku)
+        let produitDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null
+        let produitData: any = null
+        if (sku) {
+          const skuNorm = sku.toLowerCase().replace(/\s+/g, '')
+          const snap = await adminDb.collection('produits')
+            .where('sku', '==', sku)
+            .limit(1)
+            .get()
+          if (snap.empty) {
+            const snap2 = await adminDb.collection('produits')
+              .where('sku', '==', skuNorm.toUpperCase())
               .limit(1)
               .get()
-            if (snap.empty) {
-              // Essayer en minuscule
-              const snap2 = await adminDb.collection('produits')
-                .where('sku', '==', skuNorm.toUpperCase())
+            if (!snap2.empty) produitDoc = snap2.docs[0] as any
+          } else {
+            produitDoc = snap.docs[0] as any
+          }
+          if (produitDoc) produitData = produitDoc.data()
+        }
+
+        const trigramme = sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
+        let chineurEmail = produitData?.chineur || null
+        let chineurUid = produitData?.chineurUid || null
+
+        if (!chineurEmail && trigramme) {
+          const chineuseSnap = await adminDb.collection('chineuse')
+            .where('trigramme', '==', trigramme)
+            .limit(1)
+            .get()
+          if (!chineuseSnap.empty) {
+            chineurEmail = chineuseSnap.docs[0].data().email || null
+            chineurUid = chineuseSnap.docs[0].id
+          }
+        }
+
+        const venteData = {
+          paymentId,
+          orderId,
+          lineItemUid: item.uid || null,
+          dateVente: saleTimestamp,
+          prixVenteReel: prix,
+          quantite: parseInt(item.quantity) || 1,
+          nomSquare: itemName,
+          produitId: produitDoc?.id || null,
+          nom: produitData?.nom || itemName,
+          sku: produitData?.sku || sku,
+          skuSquare: sku,
+          chineur: chineurEmail,
+          chineurUid,
+          trigramme,
+          prixInitial: produitData?.prix || null,
+          attribue: !!produitDoc,
+          source: 'square',
+          skuSource: 'webhook_caisse',
+          createdAt: saleTimestamp,
+        }
+
+        await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
+        console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€) [${venteDocId}]`)
+
+        try {
+          const titre = `Vente boutique : ${sku || itemName}`
+          const corps = `${prix}€${produitData?.nom ? ` — ${produitData.nom}` : ''}`
+          await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId })
+          if (chineurUid) {
+            await sendPushToOwner(chineurUid, { title: '🎉 Vente !', body: `${sku || itemName} vendu ${prix}€`, url: '/chineuse/mes-ventes', tag: venteDocId })
+          }
+        } catch (e) { console.warn('Push notif failed:', e) }
+
+        if (produitDoc) {
+          const qty = parseInt(item.quantity) || 1
+          const newQty = Math.max(0, (produitData.quantite || 1) - qty)
+          const updateData: any = { quantite: newQty }
+          if (newQty === 0) {
+            let isSmallBatch = false
+            if (trigramme) {
+              const chineuseSnap = await adminDb.collection('chineuse')
+                .where('trigramme', '==', trigramme)
                 .limit(1)
                 .get()
-              if (!snap2.empty) produitDoc = snap2.docs[0] as any
+              if (!chineuseSnap.empty) {
+                isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
+              }
+            }
+            if (isSmallBatch) {
+              updateData.statut = 'outOfStock'
+              updateData.dateRupture = saleTimestamp
+              updateData.prixVenteReel = prix
             } else {
-              produitDoc = snap.docs[0] as any
-            }
-            if (produitDoc) produitData = produitDoc.data()
-          }
-
-          const trigramme = sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
-          let chineurEmail = produitData?.chineur || null
-          let chineurUid = produitData?.chineurUid || null
-
-          if (!chineurEmail && trigramme) {
-            const chineuseSnap = await adminDb.collection('chineuse')
-              .where('trigramme', '==', trigramme)
-              .limit(1)
-              .get()
-            if (!chineuseSnap.empty) {
-              chineurEmail = chineuseSnap.docs[0].data().email || null
-              chineurUid = chineuseSnap.docs[0].id
+              updateData.vendu = true
+              updateData.dateVente = saleTimestamp
+              updateData.prixVenteReel = prix
             }
           }
-
-          const venteData = {
-            paymentId,
-            orderId,
-            lineItemUid: item.uid || null,
-            dateVente: saleTimestamp,
-            prixVenteReel: prix,
-            quantite: parseInt(item.quantity) || 1,
-            nomSquare: itemName,
-            produitId: produitDoc?.id || null,
-            nom: produitData?.nom || itemName,
-            sku: produitData?.sku || sku,
-            skuSquare: sku,
-            chineur: chineurEmail,
-            chineurUid,
-            trigramme,
-            prixInitial: produitData?.prix || null,
-            attribue: !!produitDoc,
-            source: 'square',
-            skuSource: 'webhook_caisse',
-            createdAt: saleTimestamp,
-          }
-
-          await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
-          console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€) [${venteDocId}]`)
-
-          // Push notif à la boutique + chineuse propriétaire (si attribuée)
-          try {
-            const photo = produitData?.imageUrls?.[0] || produitData?.imageUrl || produitData?.photos?.face || undefined
-            const corps = `${sku || itemName} — ${prix}€${produitData?.nom ? ` · ${produitData.nom}` : ''}`
-            await sendPushToOwner('boutique', {
-              title: `🤑 YOU RICH +${prix}€`,
-              body: corps,
-              url: '/admin/nos-ventes',
-              tag: venteDocId,
-              image: photo,
-            })
-            if (chineurUid) {
-              await sendPushToOwner(chineurUid, {
-                title: `🤑 YOU RICH +${prix}€`,
-                body: `${sku || itemName} vient de partir !`,
-                url: '/chineuse/mes-ventes',
-                tag: venteDocId,
-                image: photo,
-              })
-            }
-          } catch (e) { console.warn('Push notif failed:', e) }
-
-          // Mettre à jour le produit (quantité, vendu/outOfStock selon stockType)
-          if (produitDoc) {
-            const qty = parseInt(item.quantity) || 1
-            const newQty = Math.max(0, (produitData.quantite || 1) - qty)
-            const updateData: any = { quantite: newQty }
-            if (newQty === 0) {
-              // Vérifier si la chineuse est en petite série (smallBatch)
-              let isSmallBatch = false
-              if (trigramme) {
-                const chineuseSnap = await adminDb.collection('chineuse')
-                  .where('trigramme', '==', trigramme)
-                  .limit(1)
-                  .get()
-                if (!chineuseSnap.empty) {
-                  isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
-                }
-              }
-              if (isSmallBatch) {
-                // Petite série : garder le produit, juste marquer outOfStock
-                updateData.statut = 'outOfStock'
-                updateData.dateRupture = saleTimestamp
-                updateData.prixVenteReel = prix
-              } else {
-                updateData.vendu = true
-                updateData.dateVente = saleTimestamp
-                updateData.prixVenteReel = prix
-              }
-            }
-            await adminDb.collection('produits').doc(produitDoc.id).update(updateData)
-            console.log(`✅ Produit mis à jour: ${sku} → quantité ${newQty}`)
-          }
-        }
-
-        return NextResponse.json({ received: true })
-      }
-
-      if (!clientInfo || !clientInfo.email) {
-        console.log('⚠️ Pas d\'infos client')
-        return NextResponse.json({ received: true })
-      }
-
-      // Récupérer les infos produit depuis Firebase
-      const produitRef = adminDb.collection('produits').doc(productId)
-      const produitSnap = await produitRef.get()
-
-      if (!produitSnap.exists) {
-        console.error('❌ Produit non trouvé:', productId)
-        return NextResponse.json({ error: 'Product not found' }, { status: 404 })
-      }
-
-      const produitData = produitSnap.data()!
-      const quantiteActuelle = produitData.quantite || 1
-
-      // 1. Mettre à jour le produit dans Firebase
-      const nouvelleQuantite = Math.max(0, quantiteActuelle - 1)
-      
-      // Vérifier si la chineuse est en petite série
-      const tri = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
-      let isSmallBatch = false
-      if (tri && nouvelleQuantite === 0) {
-        const chineuseSnap = await adminDb.collection('chineuse')
-          .where('trigramme', '==', tri)
-          .limit(1)
-          .get()
-        if (!chineuseSnap.empty) {
-          isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
+          await adminDb.collection('produits').doc(produitDoc.id).update(updateData)
+          console.log(`✅ Produit mis à jour: ${sku} → quantité ${newQty}`)
         }
       }
+      return NextResponse.json({ received: true })
+    }
 
-      const updateData: any = {
-        quantite: nouvelleQuantite
-      }
+    // === Vente en ligne (panier) ===
+    const nomComplet = metadata.clientNom || ''
+    const parts = nomComplet.trim().split(' ')
+    const prenom = parts[0] || ''
+    const nom = parts.slice(1).join(' ') || parts[0] || ''
+    const clientInfo = {
+      prenom,
+      nom,
+      email: metadata.clientEmail || '',
+      telephone: metadata.clientTelephone || undefined
+    }
+    const modeLivraison = metadata.modeLivraison || null
+    let adresse: any = null
+    if (metadata.adresseLivraison) {
+      try { adresse = JSON.parse(metadata.adresseLivraison) } catch {}
+    }
 
-      if (nouvelleQuantite === 0) {
-        if (isSmallBatch) {
-          updateData.statut = 'outOfStock'
-          updateData.dateRupture = saleTimestamp
-          updateData.squareOrderId = orderId
-        } else {
-          updateData.vendu = true
-          updateData.dateVente = saleTimestamp
-          updateData.squareOrderId = orderId
-        }
-      }
+    if (!clientInfo.email) {
+      console.log('⚠️ Pas d\'infos client')
+      return NextResponse.json({ received: true })
+    }
 
-      await produitRef.update(updateData)
-      console.log('✅ Produit mis à jour:', productId, '- Nouvelle quantité:', nouvelleQuantite)
+    console.log('📦 Articles:', productIds.length, '— Client:', clientInfo.email)
 
-      // 🆕 Si quantité = 0 ET pièce unique, supprimer de Square
-      if (nouvelleQuantite === 0 && !isSmallBatch && (produitData.catalogObjectId || produitData.variationId || produitData.itemId)) {
-        try {
-          console.log('🗑️ Suppression du produit dans Square...')
-          
-          const variationId = produitData.variationId || produitData.catalogObjectId
-          
-          if (variationId) {
-            try {
-              await squareClient.catalogApi.deleteCatalogObject(variationId)
-              console.log('✅ Variation supprimée de Square:', variationId)
-            } catch (delError: any) {
-              console.warn('⚠️ Suppression variation échouée:', delError?.message)
-            }
-          }
-          
-          const itemId = produitData.itemId
-          if (itemId) {
-            try {
-              await squareClient.catalogApi.deleteCatalogObject(itemId)
-              console.log('✅ Item supprimé de Square:', itemId)
-            } catch (delItemError: any) {
-              console.warn('⚠️ Suppression item échouée, tentative d\'archivage...', delItemError?.message)
-              
-              try {
-                const { result } = await squareClient.catalogApi.retrieveCatalogObject(itemId)
-                const item = result.object
-                
-                if (item && item.itemData) {
-                  await squareClient.catalogApi.upsertCatalogObject({
-                    idempotencyKey: `archive-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-                    object: {
-                      id: itemId,
-                      type: 'ITEM',
-                      version: item.version,
-                      presentAtAllLocations: false,
-                      itemData: {
-                        name: item.itemData.name || 'Archived',
-                        description: item.itemData.description,
-                        categoryId: item.itemData.categoryId,
-                        variations: item.itemData.variations,
-                        productType: item.itemData.productType,
-                        isArchived: true,
-                      }
-                    }
-                  })
-                  console.log('✅ Produit archivé dans Square:', itemId)
-                }
-              } catch (archiveError: any) {
-                console.error('❌ Archivage Square échoué:', archiveError?.message)
-              }
-            }
-          }
-          
-        } catch (squareError: any) {
-          console.error('❌ Erreur globale suppression Square:', squareError?.message)
-        }
-      }
+    const numeroGroupe = genererNumeroGroupe(clientInfo.email, new Date())
+    const lineItems = order?.lineItems || []
 
-      // 🇺🇸 Retirer d'eBay si quantité = 0 (pièce unique OU petite série)
-      if (nouvelleQuantite === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
-        try {
-          console.log('🇺🇸 Retrait du produit d\'eBay...')
-          await removeFromAllChannels(
-            {
-              id: productId,
-              sku: produitData.sku,
-              ebayOfferId: produitData.ebayOfferId,
-              ebayListingId: produitData.ebayListingId,
-            },
-            'site'
-          )
-          console.log('✅ Produit retiré d\'eBay')
-        } catch (ebayError: any) {
-          console.error('⚠️ Erreur retrait eBay (non bloquant):', ebayError?.message)
-        }
-      }
+    const traitements: { commandeId: string; produitData: any; nouvelleQuantite: number }[] = []
+    for (let i = 0; i < productIds.length; i++) {
+      const productId = productIds[i]
+      const lineItem = lineItems[i] || null
+      const lineItemPrice = lineItem?.basePriceMoney?.amount
+        ? Number(lineItem.basePriceMoney.amount) / 100
+        : 0
+      const productNameFallback = lineItem?.name || 'Produit'
 
-      // 2. Créer la commande dans Firebase
-      const now = new Date()
-      const numeroGroupe = genererNumeroGroupe(clientInfo.email, now)
-      
-      const debutJournee = new Date(now)
-      debutJournee.setHours(0, 0, 0, 0)
-      const finJournee = new Date(now)
-      finJournee.setHours(16, 0, 0, 0)
-      
-      const commandesExistantes = await adminDb
-        .collection('commandes')
-        .where('client.email', '==', clientInfo.email)
-        .where('dateCommande', '>=', Timestamp.fromDate(debutJournee))
-        .where('dateCommande', '<=', Timestamp.fromDate(finJournee))
-        .where('statut', 'in', ['en_attente', 'preparee'])
-        .get()
-
-      const autresCommandesIds = commandesExistantes.docs.map(doc => doc.id)
-      
-      const nouvelleCommande = {
-        orderId,
-        productId,
-        productName: produitData.nom || productName,
-        productSku: produitData.sku || null,
-        productMarque: produitData.marque || null,
-        productImage: produitData.images?.[0] || produitData.imageUrl || produitData.photos?.face || null,
-        prix: produitData.prix || productPrice,
-        
-        client: clientInfo,
-        modeLivraison,
-        adresse: modeLivraison === 'livraison' ? adresse : null,
-        
-        statut: 'en_attente',
-        
-        dateCommande: Timestamp.fromDate(now),
-        datePaiement: Timestamp.fromDate(now),
-        
-        numeroGroupe,
-        regroupeAvec: autresCommandesIds,
-        nombreAchatsClient: nombreAchats,
-
-        createdAt: Timestamp.now(),
-      }
-
-      const commandeRef = await adminDb.collection('commandes').add(nouvelleCommande)
-      const commandeId = commandeRef.id
-
-      console.log('✅ Commande créée:', commandeId)
-
-      // 2b. Créer la vente dans la collection ventes (pour paiements/CA)
-      const trigramme = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
-      let chineurEmail = produitData.chineur || null
-      let chineurUid = produitData.chineurUid || null
-
-      // Chercher la chineuse par trigramme si pas de chineur sur le produit
-      if (!chineurEmail && trigramme) {
-        const chineuseSnap = await adminDb.collection('chineuse')
-          .where('trigramme', '==', trigramme)
-          .limit(1)
-          .get()
-        if (!chineuseSnap.empty) {
-          const chData = chineuseSnap.docs[0].data()
-          chineurEmail = chData.email || null
-          chineurUid = chineuseSnap.docs[0].id
-        }
-      }
-
-      const venteData = {
-        paymentId,
-        orderId,
-        lineItemUid: lineItems[0]?.uid || null,
-        dateVente: saleTimestamp,
-        prixVenteReel: produitData.prix || productPrice,
-        quantite: 1,
-        nomSquare: productName,
-        produitId: productId,
-        nom: produitData.nom || productName,
-        sku: produitData.sku || null,
-        skuSquare: produitData.sku || null,
-        chineur: chineurEmail,
-        chineurUid,
-        trigramme,
-        prixInitial: produitData.prix || null,
-        attribue: true,
-        source: 'square',
-        skuSource: 'webhook',
-        createdAt: saleTimestamp,
-      }
-
-      // ID déterministe partagé avec square-pos pour éviter les doublons cross-webhook
-      const venteDocIdOnline = `${orderId}_${lineItems[0]?.uid || 'i0'}`
-      await adminDb.collection('ventes').doc(venteDocIdOnline).set(venteData, { merge: true })
-      console.log('✅ Vente créée automatiquement:', produitData.sku, `[${venteDocIdOnline}]`)
-
-      // Push notif à la boutique (vente en ligne) + chineuse
       try {
-        const photo = produitData.imageUrls?.[0] || produitData.imageUrl || produitData.photos?.face || undefined
-        const prixVente = produitData.prix || productPrice
-        await sendPushToOwner('boutique', {
-          title: `🌐 YOU RICH +${prixVente}€`,
-          body: `${produitData.sku || productName} — ${clientInfo.prenom} ${clientInfo.nom}`,
-          url: '/admin/commandes',
-          tag: venteDocIdOnline,
-          image: photo,
+        const result = await traiterProduit({
+          productId,
+          paymentId,
+          orderId,
+          saleTimestamp,
+          clientInfo,
+          modeLivraison,
+          adresse,
+          numeroGroupe,
+          lineItem,
+          lineItemPrice,
+          productNameFallback,
         })
-        if (chineurUid) {
-          await sendPushToOwner(chineurUid, {
-            title: `🤑 YOU RICH +${prixVente}€`,
-            body: `${produitData.sku || productName} vient de partir en ligne !`,
-            url: '/chineuse/mes-ventes',
-            tag: venteDocIdOnline,
-            image: photo,
-          })
-        }
-      } catch (e) { console.warn('Push notif failed:', e) }
-
-      // 3. Mettre à jour les autres commandes du groupe
-      if (autresCommandesIds.length > 0) {
-        const batch = adminDb.batch()
-        
-        for (const autreCommandeId of autresCommandesIds) {
-          const autreRef = adminDb.collection('commandes').doc(autreCommandeId)
-          batch.update(autreRef, {
-            regroupeAvec: FieldValue.arrayUnion(commandeId),
-          })
-        }
-        
-        await batch.commit()
-        console.log('✅ Commandes du groupe mises à jour')
+        if (result) traitements.push(result)
+      } catch (e: any) {
+        console.error('❌ Erreur traitement produit', productId, e?.message)
       }
+    }
 
-      // 4. Envoyer l'email de notification
-      const estGroupe = autresCommandesIds.length > 0
-      const totalCommandes = autresCommandesIds.length + 1
-      
-      const emailData = await resend.emails.send({
-        from: 'Nouvelle Rive <onboarding@resend.dev>',
-        to: 'nouvelleriveparis@gmail.com',
-        subject: estGroupe 
-          ? `🎉 Vente en ligne #${totalCommandes} - ${clientInfo.prenom} ${clientInfo.nom}` 
-          : `🎉 Nouvelle vente en ligne - ${produitData.nom}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #22209C;">🎉 ${estGroupe ? `Nouvelle vente groupée (${totalCommandes} produits)` : 'Nouvelle vente en ligne'} !</h1>
-            
-            ${estGroupe ? `
-              <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                <p style="margin: 0; font-weight: bold; color: #856404;">
-                  ⚠️ ATTENTION : Ce client a déjà commandé ${autresCommandesIds.length} produit(s) aujourd'hui !
+    // Lier toutes les commandes du même panier entre elles
+    if (traitements.length > 1) {
+      const ids = traitements.map(t => t.commandeId)
+      const batch = adminDb.batch()
+      for (const id of ids) {
+        const others = ids.filter(x => x !== id)
+        batch.update(adminDb.collection('commandes').doc(id), {
+          regroupeAvec: FieldValue.arrayUnion(...others)
+        })
+      }
+      await batch.commit()
+      console.log('✅ Commandes du panier liées entre elles')
+    }
+
+    // Email récap unique pour tout le panier
+    if (traitements.length > 0) {
+      const totalArticles = traitements.length
+      const totalPrix = traitements.reduce((s, t) => s + (Number(t.produitData.prix) || 0), 0)
+      const fraisLivraison = Number(metadata.fraisLivraison || 0)
+
+      const articlesHtml = traitements.map(t => `
+        <div style="padding: 12px 0; border-bottom: 1px solid #eee;">
+          <p style="margin: 0;"><strong>${t.produitData.nom || 'Produit'}</strong></p>
+          ${t.produitData.sku ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">SKU: ${t.produitData.sku}</p>` : ''}
+          ${t.produitData.marque ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">${t.produitData.marque}</p>` : ''}
+          <p style="margin: 4px 0 0 0;">${(t.produitData.prix || 0).toFixed(2)} €</p>
+          ${t.nouvelleQuantite === 0 ? '<p style="color: #d32f2f; font-size: 12px; margin: 4px 0 0 0;">🗑️ Plus de stock</p>' : ''}
+        </div>
+      `).join('')
+
+      try {
+        const emailData = await resend.emails.send({
+          from: 'Nouvelle Rive <onboarding@resend.dev>',
+          to: 'nouvelleriveparis@gmail.com',
+          subject: totalArticles > 1
+            ? `🛒 Vente en ligne (${totalArticles} articles) - ${clientInfo.prenom} ${clientInfo.nom}`
+            : `🎉 Vente en ligne - ${traitements[0].produitData.nom}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #22209C;">🎉 Nouvelle vente en ligne — ${totalArticles} article${totalArticles > 1 ? 's' : ''}</h1>
+
+              <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h2 style="margin-top: 0;">Articles vendus</h2>
+                ${articlesHtml}
+                <div style="padding-top: 12px; margin-top: 12px; border-top: 2px solid #000;">
+                  <p style="margin: 0;">Sous-total : <strong>${totalPrix.toFixed(2)} €</strong></p>
+                  ${fraisLivraison > 0 ? `<p style="margin: 4px 0 0 0;">Livraison : <strong>${fraisLivraison.toFixed(2)} €</strong></p>` : (modeLivraison === 'livraison' ? '<p style="margin: 4px 0 0 0; color: #0000FF;">Livraison offerte</p>' : '')}
+                  <p style="margin: 8px 0 0 0; font-size: 18px;">Total : <strong>${(totalPrix + fraisLivraison).toFixed(2)} €</strong></p>
+                </div>
+              </div>
+
+              <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h2 style="margin-top: 0;">Informations client</h2>
+                <p><strong>Nom :</strong> ${clientInfo.prenom} ${clientInfo.nom}</p>
+                <p><strong>Email :</strong> ${clientInfo.email}</p>
+                ${clientInfo.telephone ? `<p><strong>Téléphone :</strong> ${clientInfo.telephone}</p>` : ''}
+                <p><strong>Mode :</strong> ${modeLivraison === 'livraison' ? '📦 Livraison' : '🏪 Retrait en boutique'}</p>
+                ${adresse ? `
+                  <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 4px;">
+                    <p style="margin: 0;"><strong>Adresse de livraison :</strong></p>
+                    <p style="margin: 5px 0 0 0;">
+                      ${adresse.adresse || adresse.rue || ''}<br>
+                      ${adresse.codePostal || ''} ${adresse.ville || ''}<br>
+                      ${adresse.pays || ''}
+                    </p>
+                  </div>
+                ` : ''}
+              </div>
+
+              <div style="background: #ffebee; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f44336;">
+                <h3 style="margin-top: 0; color: #c62828;">🚨 ACTION IMMÉDIATE REQUISE</h3>
+                <p style="font-size: 16px; font-weight: bold; color: #c62828;">
+                  1. RETIRER ${totalArticles > 1 ? 'LES ARTICLES' : "L'ARTICLE"} DE LA SURFACE DE VENTE
                 </p>
-                <p style="margin: 5px 0 0 0; color: #856404;">
-                  Groupe de commande : <strong>${numeroGroupe}</strong>
+                <p style="font-size: 16px; font-weight: bold; color: #c62828;">
+                  2. ${modeLivraison === 'livraison' ? "PRÉPARER L'EXPÉDITION" : 'PRÉPARER LE RETRAIT'}
                 </p>
               </div>
-            ` : ''}
-            
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h2 style="margin-top: 0;">Produit vendu</h2>
-              <p><strong>Nom :</strong> ${produitData.nom}</p>
-              ${produitData.sku ? `<p><strong>SKU :</strong> ${produitData.sku}</p>` : ''}
-              ${produitData.marque ? `<p><strong>Marque :</strong> ${produitData.marque}</p>` : ''}
-              <p><strong>Prix :</strong> ${produitData.prix?.toFixed(2) || '0.00'} €</p>
-              <p><strong>Quantité restante :</strong> ${nouvelleQuantite}</p>
-              ${nouvelleQuantite === 0 ? '<p style="color: #d32f2f; font-weight: bold;">🗑️ Produit retiré automatiquement</p>' : ''}
-            </div>
 
-            <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h2 style="margin-top: 0;">Informations client</h2>
-              <p><strong>Nom :</strong> ${clientInfo.prenom} ${clientInfo.nom}</p>
-              <p><strong>Email :</strong> ${clientInfo.email}</p>
-              ${clientInfo.telephone ? `<p><strong>Téléphone :</strong> ${clientInfo.telephone}</p>` : ''}
-              <p><strong>Mode :</strong> ${modeLivraison === 'livraison' ? '📦 Livraison' : '🏪 Retrait en boutique'}</p>
-              ${adresse ? `
-                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 4px;">
-                  <p style="margin: 0;"><strong>Adresse de livraison :</strong></p>
-                  <p style="margin: 5px 0 0 0;">
-                    ${adresse.rue}<br>
-                    ${adresse.complementAdresse ? adresse.complementAdresse + '<br>' : ''}
-                    ${adresse.codePostal} ${adresse.ville}<br>
-                    ${adresse.pays}
-                  </p>
-                </div>
-              ` : ''}
-            </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL}/admin/commandes"
+                   style="background: #22209C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                  📋 Voir toutes les commandes
+                </a>
+              </div>
 
-            <div style="background: #ffebee; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f44336;">
-              <h3 style="margin-top: 0; color: #c62828;">🚨 ACTION IMMÉDIATE REQUISE</h3>
-              <p style="font-size: 16px; font-weight: bold; color: #c62828;">
-                1. RETIRER LE PRODUIT DE LA SURFACE DE VENTE MAINTENANT
+              <p style="color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px;">
+                Commande Square : ${orderId}<br>
+                Groupe : ${numeroGroupe}<br>
+                ${new Date().toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}
               </p>
-              <p style="font-size: 16px; font-weight: bold; color: #c62828;">
-                2. ${modeLivraison === 'livraison' ? 'PRÉPARER L\'EXPÉDITION' : 'PRÉPARER LE RETRAIT'}
-              </p>
-              ${nouvelleQuantite === 0 ? '<p style="color: #d32f2f; font-weight: bold;">⚠️ PLUS DE STOCK DISPONIBLE !</p>' : ''}
-              ${estGroupe ? '<p style="color: #f57c00; font-weight: bold;">📦 À REGROUPER AVEC LES AUTRES COMMANDES DU CLIENT</p>' : ''}
             </div>
-
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/admin/commandes" 
-                 style="background: #22209C; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                📋 Voir toutes les commandes
-              </a>
-            </div>
-
-            <p style="color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px;">
-              Commande ID : ${commandeId}<br>
-              Commande Square : ${orderId}<br>
-              ${now.toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}
-            </p>
-          </div>
-        `
-      })
-
-      console.log('✅ Email envoyé:', emailData.data?.id)
-
-    } catch (error) {
-      console.error('❌ Erreur traitement webhook:', error)
-      return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
+          `
+        })
+        console.log('✅ Email envoyé:', emailData.data?.id)
+      } catch (e: any) {
+        console.error('❌ Erreur envoi email:', e?.message)
+      }
     }
 
     return NextResponse.json({ received: true })

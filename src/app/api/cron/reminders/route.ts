@@ -50,27 +50,23 @@ export async function GET(req: NextRequest) {
   const monthKey = dateStr.slice(0, 7)
   const actions: string[] = []
 
-  // 12h10 — rappel pointage arrivée
-  if (inWindow(h, m, 12, 10)) {
+  // Rappels pointage arrivée — déclenchés 10 min après le début de chaque créneau
+  // 11h10 pour slot 11-17, 12h10 pour slot 12-20.
+  for (const slot of [{ name: '11-17', trigH: 11, trigM: 10 }, { name: '12-20', trigH: 12, trigM: 10 }]) {
+    if (!inWindow(h, m, slot.trigH, slot.trigM)) continue
     const planningSnap = await adminDb.collection('planning').doc(monthKey).get()
     const slots = planningSnap.exists ? (planningSnap.data()?.slots || {}) : {}
-    const slotsToday = [
-      slots[`${dateStr}_11-17`],
-      slots[`${dateStr}_12-20`],
-    ].filter(Boolean) as string[]
-    let need = false
-    for (const vid of slotsToday) {
-      const ptg = await adminDb.collection('pointages').doc(`${dateStr}_${vid}`).get()
-      if (!ptg.exists || !ptg.data()?.arrivee) { need = true; break }
-    }
-    if (need) {
+    const vid = slots[`${dateStr}_${slot.name}`]
+    if (!vid) continue
+    const ptg = await adminDb.collection('pointages').doc(`${dateStr}_${vid}`).get()
+    if (!ptg.exists || !ptg.data()?.arrivee) {
       await sendPushToOwner('boutique', {
         title: '⏰ Pense à pointer',
-        body: 'L\'une de vous n\'a pas encore pointé son arrivée',
+        body: `Il manque l'arrivée ${slot.name}h`,
         url: '/vendeuse/calendrier',
-        tag: `arrivee-${dateStr}`,
+        tag: `arrivee-${slot.name}-${dateStr}`,
       })
-      actions.push('rappel-arrivee')
+      actions.push(`rappel-arrivee-${slot.name}`)
     }
   }
 
