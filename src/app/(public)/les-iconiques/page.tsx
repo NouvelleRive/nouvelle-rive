@@ -86,6 +86,11 @@
           const allProduits = allProduitsSnapshot.docs
             .map(d => ({ id: d.id, ...d.data() } as any))
             .filter(p => (p.quantite ?? 1) > 0 && p.statut !== 'retour' && p.statut !== 'supprime')
+            // On masque les articles sans aucune photo
+            .filter(p => {
+              const firstImg = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
+              return !!firstImg
+            })
 
           const produitsData: { [key: string]: Produit[] } = {}
           for (const item of data) {
