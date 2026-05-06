@@ -81,6 +81,7 @@ function getCloudinaryUrl(url: string, size: number = 800): string {
 export default function ProductGrid({ produits, columns = 3, showFilters = true }: ProductGridProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const triRef = useRef<HTMLDivElement>(null)
 
   // Restaurer la position de scroll au retour d'une page produit
@@ -248,6 +249,18 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
     filteredProduits = filteredProduits.filter(p => p.motif === filters.motif)
   }
 
+  // Filtrage par recherche (texte libre, multi-mots)
+  if (searchQuery.trim()) {
+    const stripAccents = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    const searchTerms = stripAccents(searchQuery).split(/\s+/).filter(t => t.length > 0)
+
+    filteredProduits = filteredProduits.filter(p => {
+      const cat = typeof p.categorie === 'object' ? (p.categorie as any)?.label : p.categorie
+      const text = stripAccents([p.nom, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif].filter(Boolean).join(' '))
+      return searchTerms.every(t => text.includes(t))
+    })
+  }
+
   if (tri === 'prix-asc') {
     filteredProduits.sort((a, b) => a.prix - b.prix)
   } else if (tri === 'prix-desc') {
@@ -285,21 +298,46 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
 
   return (
     <div>
-      {/* Barre filtres/tri */}
+      {/* Barre filtres/recherche/tri */}
       {showFilters && (
-        <div 
-          className="flex justify-between items-center py-4 px-4 md:px-6"
+        <div
+          className="flex items-center gap-3 md:gap-6 py-4 px-4 md:px-6"
           style={{ borderBottom: '1px solid #000' }}
         >
           <button
             onClick={() => setIsFilterOpen(true)}
-            className="uppercase text-xs tracking-widest hover:opacity-50 transition"
+            className="uppercase text-xs tracking-widest hover:opacity-50 transition whitespace-nowrap"
             style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
           >
             Filtrer +
           </button>
-          
-          <div className="relative" ref={triRef}>
+
+          {/* Barre de recherche */}
+          <div className="relative flex-1 max-w-md mx-auto w-full">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher"
+              className="w-full px-4 py-2 pl-9 bg-gray-50 border border-gray-200 rounded-full text-xs focus:outline-none focus:border-black focus:bg-white transition-colors"
+              style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+            />
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <div className="relative whitespace-nowrap" ref={triRef}>
             <button
               onClick={() => setIsTriOpen(!isTriOpen)}
               className="uppercase text-xs tracking-widest hover:opacity-50 transition flex items-center gap-2"
