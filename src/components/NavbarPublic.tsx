@@ -107,7 +107,8 @@ export default function NavbarPublic() {
           {/* Logo - masqué quand la vidéo est affichée (déjà dans la vidéo) */}
           {!showVideo && (
             <h1
-              className="uppercase"
+              className="uppercase notranslate"
+              translate="no"
               style={{
                 fontSize: 'clamp(32px, 10vw, 72px)',
                 fontWeight: '700',

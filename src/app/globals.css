@@ -2,14 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Masque la barre Google Translate (sélecteur FR/EN custom à la place) */
+/* Masque agressivement TOUTES les variantes de bannière Google Translate */
 .goog-te-banner-frame,
 iframe.goog-te-banner-frame,
 .goog-te-banner-frame.skiptranslate,
+.goog-te-banner,
 .goog-te-gadget,
-.VIpgJd-ZVi9od-l4eHX-hSRGPd { display: none !important; }
-body { top: 0 !important; position: static !important; }
-html { margin-top: 0 !important; }
+.goog-te-spinner-pos,
+.VIpgJd-ZVi9od-l4eHX-hSRGPd,
+.VIpgJd-ZVi9od-aZ2wEe-OiiCO,
+.VIpgJd-yAWNEb-L7lbkb,
+[id^="goog-gt-"],
+[class^="VIpgJd-ZVi9od"]:not(#google_translate_element) {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+html, body {
+  top: 0 !important;
+  margin-top: 0 !important;
+}
+body {
+  position: static !important;
+}
+
 .goog-tooltip,
 .goog-tooltip:hover { display: none !important; }
 .goog-text-highlight {
