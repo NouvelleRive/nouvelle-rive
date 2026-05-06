@@ -119,7 +119,7 @@ export default function ProduitPage() {
   const router = useRouter()
   const [produit, setProduit] = useState<Produit | null>(null)
   const [loading, setLoading] = useState(true)
-  const [chineuseInfo, setChineuseInfo] = useState<{accroche?: string, description?: string, nom?: string, texteEcoCirculaire?: number} | null>(null)
+  const [chineuseInfo, setChineuseInfo] = useState<{accroche?: string, description?: string, nom?: string, texteEcoCirculaire?: number, stockType?: string} | null>(null)
   const { addItem, hasItem, hydrated } = useCart()
   const [justAdded, setJustAdded] = useState(false)
 
@@ -157,7 +157,7 @@ export default function ProduitPage() {
 
         if (chSnap) {
           const ch = chSnap.data()
-          setChineuseInfo({ accroche: ch.accroche, description: ch.description, nom: ch.nom, texteEcoCirculaire: ch.texteEcoCirculaire || 1 })
+          setChineuseInfo({ accroche: ch.accroche, description: ch.description, nom: ch.nom, texteEcoCirculaire: ch.texteEcoCirculaire || 1, stockType: ch.stockType })
         }
                 }
               } catch (error) {
@@ -411,14 +411,14 @@ export default function ProduitPage() {
           
           {/* ÉCONOMIE CIRCULAIRE */}
           <AccordionSection title="Économie circulaire et engagement">
-  <div style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
+  <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#1a1a1a', fontWeight: '400' }}>
     {(() => {
       const key = (chineuseInfo?.texteEcoCirculaire || 1) as TexteEcoKey
       const texte = TEXTES_ECO_CIRCULAIRE[key]
       return (
         <>
           <p style={{ marginBottom: '16px' }}>{texte.fr}</p>
-          <p style={{ marginBottom: '16px', color: '#999', fontStyle: 'italic' }}>{texte.en}</p>
+          <p style={{ marginBottom: '16px', color: '#666', fontStyle: 'italic', fontSize: '13px' }}>{texte.en}</p>
         </>
       )
     })()}
@@ -426,9 +426,9 @@ export default function ProduitPage() {
       Chaque marque présente chez NOUVELLE RIVE est engagée,{' '}
       <Link href="/creatrices" style={{ color: '#000', textDecoration: 'underline' }}>découvrez-les</Link>.
     </p>
-    <p style={{ color: '#999', fontStyle: 'italic', marginTop: '4px' }}>
+    <p style={{ color: '#666', fontStyle: 'italic', fontSize: '13px', marginTop: '4px' }}>
       Every brand at NOUVELLE RIVE is committed,{' '}
-      <Link href="/creatrices" style={{ color: '#999', textDecoration: 'underline' }}>discover them</Link>.
+      <Link href="/creatrices" style={{ color: '#666', textDecoration: 'underline' }}>discover them</Link>.
     </p>
   </div>
 </AccordionSection>
@@ -460,9 +460,9 @@ export default function ProduitPage() {
             </p>
           </AccordionSection>
 
-          {/* HISTOIRE DE LA MAISON */}
+          {/* HISTOIRE DE LA MAISON / DÉCOUVRIR LA CHINEUSE selon stockType */}
           {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
-            <AccordionSection title="Histoire de la maison">
+            <AccordionSection title={chineuseInfo.stockType === 'smallBatch' ? 'Histoire de la maison' : 'Découvrir la chineuse'}>
               {chineuseInfo.nom && (
                   <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
                     {chineuseInfo.nom}
