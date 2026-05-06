@@ -21,6 +21,8 @@
         modePaiement,
         pieceIdentiteUrl,
         contratSigne,
+        contratUrl,
+        contratPath,
         hasSeenWelcome,
       } = body
 
@@ -62,7 +64,12 @@
       if (banqueAdresse !== undefined) updateData.banqueAdresse = banqueAdresse?.trim() || ''
       if (modePaiement !== undefined) updateData.modePaiement = modePaiement || ''
       if (pieceIdentiteUrl !== undefined) updateData.pieceIdentiteUrl = pieceIdentiteUrl?.trim() || ''
-      if (contratSigne !== undefined) updateData.contratSigne = contratSigne
+      if (contratSigne !== undefined) {
+        updateData.contratSigne = contratSigne
+        if (contratSigne) updateData.contratSigneAt = FieldValue.serverTimestamp()
+      }
+      if (contratUrl !== undefined) updateData.contratUrl = contratUrl
+      if (contratPath !== undefined) updateData.contratPath = contratPath
       if (hasSeenWelcome !== undefined) updateData.hasSeenWelcome = hasSeenWelcome
 
       if (snapshot.empty) {

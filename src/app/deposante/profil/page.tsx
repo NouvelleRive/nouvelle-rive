@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { auth, db } from '@/lib/firebaseConfig'
+import { auth, db, storage } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, getDocs } from 'firebase/firestore'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import jsPDF from 'jspdf'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -73,6 +74,7 @@ export default function ProfilDeposantePage() {
   const [contratSigne, setContratSigne] = useState(false)
   const [contratUrl, setContratUrl] = useState('')
   const [submittingContrat, setSubmittingContrat] = useState(false)
+  const [showVerifiedPopup, setShowVerifiedPopup] = useState(false)
   const router = useRouter()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -251,23 +253,33 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
 
       const pdfBlob = doc.output('blob')
 
-      // Upload côté serveur (Firebase Storage + maj doc deposante)
+      // Upload direct vers Firebase Storage (contourne la limite body Vercel)
+      const uid = auth.currentUser?.uid
+      if (!uid) throw new Error('Non authentifiée')
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const path = `contrats-deposante/${uid}_${stamp}.pdf`
+      const fileRef = storageRef(storage, path)
+      await uploadBytes(fileRef, pdfBlob, { contentType: 'application/pdf' })
+      const downloadUrl = await getDownloadURL(fileRef)
+
+      // Maj du doc deposante via API (auth Bearer)
       const token = await auth.currentUser?.getIdToken()
       if (!token) throw new Error('Non authentifiée')
-      const upRes = await fetch('/api/upload-contrat', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/pdf' },
-        body: pdfBlob,
+      const res = await fetch('/api/deposante', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ contratSigne: true, contratUrl: downloadUrl, contratPath: path }),
       })
-      const upData = await upRes.json()
-      if (!upRes.ok || !upData.url) throw new Error(upData.error || 'Erreur upload')
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erreur sauvegarde')
 
-      // Maj UI immédiate (téléchargement local optionnel via le lien "Voir le contrat" sur la page profil)
+      // Maj UI immédiate
       setContratSigne(true)
-      setContratUrl(upData.url)
+      setContratUrl(downloadUrl)
       setEtape('contrat', true)
       refreshEtapes()
       setShowContratModal(false)
+      setShowVerifiedPopup(true)
       setMsg('✅ Contrat signé')
     } catch (e: any) {
       alert('Erreur sauvegarde contrat — ' + (e?.message || 'réessayez'))
@@ -575,6 +587,23 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
                 {submittingContrat ? 'SIGNATURE EN COURS...' : 'SIGNER'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP VÉRIFICATION POST-SIGNATURE */}
+      {showVerifiedPopup && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ backgroundColor: '#fff', maxWidth: 400, width: '100%', padding: 32, fontFamily: font }}>
+            <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              Vos informations vont être vérifiées par notre équipe. Si des éléments sont erronés ou manquants, nous ne pourrons pas prendre votre dépôt.
+            </p>
+            <button
+              onClick={() => { setShowVerifiedPopup(false); router.push('/deposante/formulaire') }}
+              style={{ width: '100%', padding: '14px 24px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+            >
+              CRÉER LES PIÈCES →
+            </button>
           </div>
         </div>
       )}
