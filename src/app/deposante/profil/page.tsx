@@ -496,31 +496,21 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
           )}
 
           {/* ACTIONS BAS DE PAGE */}
-          <div style={{ paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {!contratSigne ? (
-              <>
-                <button
-                  onClick={openContratModal}
-                  disabled={saving}
-                  style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
-                >
-                  LIRE LE CONTRAT ET SIGNER →
-                </button>
-                <button
-                  onClick={() => save()}
-                  disabled={saving}
-                  style={{ padding: '12px 24px', backgroundColor: 'transparent', color: '#000', border: '1px solid #000', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', alignSelf: 'flex-start' }}
-                >
-                  {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER MES INFOS'}
-                </button>
-              </>
-            ) : (
+          <div style={{ paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
+              onClick={() => save()}
+              disabled={saving}
+              style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
+            >
+              {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER'}
+            </button>
+            {!contratSigne && (
               <button
-                onClick={() => save()}
+                onClick={openContratModal}
                 disabled={saving}
-                style={{ padding: '14px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600', alignSelf: 'flex-start' }}
+                style={{ padding: '16px 32px', backgroundColor: bleu, color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '12px', letterSpacing: '0.2em', fontWeight: '600' }}
               >
-                {saving ? 'ENREGISTREMENT...' : 'ENREGISTRER MES INFOS'}
+                LIRE ET SIGNER LE CONTRAT →
               </button>
             )}
             {msg && <span style={{ fontSize: '13px', color: msg.includes('❌') ? 'red' : 'green' }}>{msg}</span>}
