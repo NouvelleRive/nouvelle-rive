@@ -85,13 +85,18 @@
               produitsData[item.id] = []
               continue
             }
+            // Découpe en mots ("trench burberry" → ["trench", "burberry"])
+            // Chaque mot doit apparaître dans au moins un des champs cherchés.
+            const tokens = needle.split(/\s+/).filter(Boolean)
             const matched = allProduits.filter(p => {
               const cat = typeof p.categorie === 'object'
                 ? (p.categorie?.label || '').toLowerCase()
                 : (p.categorie || '').toLowerCase()
               const nom = (p.nom || p.Nom || '').toLowerCase()
               const desc = (p.description || '').toLowerCase()
-              return cat.includes(needle) || nom.includes(needle) || desc.includes(needle)
+              const marque = (p.marque || '').toLowerCase()
+              const haystack = `${cat} ${nom} ${desc} ${marque}`
+              return tokens.every(t => haystack.includes(t))
             })
             // Garde le shape complet pour ProductGrid (imageUrls, marque, taille, etc.)
             produitsData[item.id] = matched
