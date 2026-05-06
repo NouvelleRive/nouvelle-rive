@@ -34,7 +34,7 @@ export default function NavbarPublic() {
   const boutiqueLinks = [
     { href: '/boutique', label: 'NEW IN' },
     { href: '/nous-rencontrer', label: 'NOTRE BOUTIQUE 8 RUE DES ECOUFFES' },
-    { href: '/hiver', label: 'HIVER' },
+    { href: '/ete', label: 'ÉTÉ' },
     { href: '/soiree', label: 'SOIRÉE' },
     { href: '/les-iconiques', label: 'LES ICONIQUES DU VINTAGE' },
     { href: '/luxe', label: 'LE LUXE' },
@@ -47,7 +47,6 @@ export default function NavbarPublic() {
     { href: '/ateliers', label: 'ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE' },
   ]
 
-  const isHiver = pathname === '/hiver'
 
   return (
     <>
@@ -177,18 +176,6 @@ export default function NavbarPublic() {
             })}
           </div>
 
-          {/* SVG delulu animé - seulement sur /hiver et desktop */}
-          {isHiver && (
-            <div className="ml-auto hidden md:block">
-              <object 
-                type="image/svg+xml"
-                data="/images/delulu-animated.svg"
-                className="w-72"
-              >
-                may all your delulu come trululu
-              </object>
-            </div>
-          )}
         </div>
 
         {/* Ligne */}

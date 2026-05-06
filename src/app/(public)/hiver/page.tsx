@@ -1,31 +1,5 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { usePathname } from 'next/navigation'
-import { useFilteredProducts } from '@/lib/siteConfig'
-import ProductGrid from '@/components/ProductGrid'
-
-export default function Page() {
-  const pathname = usePathname()
-  const pageId = pathname.split('/').pop() || ''
-  
-  const { produits, loading, loadingMore } = useFilteredProducts(pageId)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Chargement...</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-white">
-      <ProductGrid produits={produits} columns={3} />
-      {loadingMore && (
-        <div className="py-8 text-center">
-          <p className="text-gray-500 text-sm">Chargement...</p>
-        </div>
-      )}
-    </div>
-  )
+export default function HiverRedirect() {
+  redirect('/ete')
 }

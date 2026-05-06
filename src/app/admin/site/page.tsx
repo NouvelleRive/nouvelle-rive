@@ -47,7 +47,7 @@ type ProduitPreview = {
 
 const PAGES = [
   { id: 'new-in', label: 'New In' },
-  { id: 'hiver', label: 'Hiver' },
+  { id: 'ete', label: 'Été' },
   { id: 'soiree', label: 'Soirée' },
   { id: 'luxe', label: 'Le Luxe' },
   { id: 'femme', label: '(Plutôt) Femme' },
