@@ -157,16 +157,31 @@
       getDocs(collection(db, 'deposante')).then(snap => {
         setDeposantesParticulieres(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       })
-      getDocs(collection(db, 'config')).then(snap => {
-        const d = snap.docs.find(d => d.id === 'capacite')
-        if (d) { setMaxPap(d.data().maxPap || 0); setMaxMaro(d.data().maxMaro || 0) }
+      // Lecture capacité depuis siteConfig (rules autorisent admin write).
+      // Fallback sur l'ancien path 'config/capacite' au cas où des données y sont encore.
+      getDoc(doc(db, 'siteConfig', 'capacite')).then(async (snap) => {
+        if (snap.exists()) {
+          const d = snap.data() as any
+          setMaxPap(d.maxPap || 0); setMaxMaro(d.maxMaro || 0)
+          return
+        }
+        try {
+          const old = await getDoc(doc(db, 'config', 'capacite'))
+          if (old.exists()) {
+            const d = old.data() as any
+            setMaxPap(d.maxPap || 0); setMaxMaro(d.maxMaro || 0)
+          }
+        } catch {}
       })
     }, [])
 
     const saveCapacite = async () => {
       setSavingCapacite(true)
-      await setDoc(doc(db, 'config', 'capacite'), { maxPap, maxMaro }, { merge: true })
-      setSavingCapacite(false)
+      try {
+        await setDoc(doc(db, 'siteConfig', 'capacite'), { maxPap, maxMaro }, { merge: true })
+      } finally {
+        setSavingCapacite(false)
+      }
     }
 
     useEffect(() => {
