@@ -377,6 +377,10 @@ async function compressImage(file: File): Promise<string> {
     showExcelImport?: boolean
     requireSquareCategory?: boolean
     lockQuantity?: boolean
+    requireBrand?: boolean
+    requirePhoto?: boolean
+    showPhotoSuggestion?: boolean
+    limitTryonGeneration?: boolean
   }
 
   // =====================
@@ -438,6 +442,10 @@ async function compressImage(file: File): Promise<string> {
     showExcelImport = true,
     requireSquareCategory = true,
     lockQuantity = false,
+    requireBrand = false,
+    requirePhoto = false,
+    showPhotoSuggestion = false,
+    limitTryonGeneration = false,
   }: ProductFormProps) {
     
     // Refs pour les inputs caméra
@@ -1383,14 +1391,14 @@ async function compressImage(file: File): Promise<string> {
         }
       }
 
-      // Marque obligatoire en création
-      if (mode === 'create' && !formData.marque.trim()) {
+      // Marque obligatoire en création (si demandé par le flux)
+      if (mode === 'create' && requireBrand && !formData.marque.trim()) {
         alert('❌ La marque est obligatoire.')
         return
       }
 
-      // Au moins une photo en création
-      if (mode === 'create') {
+      // Au moins une photo en création (si demandé par le flux)
+      if (mode === 'create' && requirePhoto) {
         const hasExistingPhoto = !!(
           (formData.existingPhotos.face && !formData.deletedPhotos.face) ||
           (formData.existingPhotos.dos && !formData.deletedPhotos.dos) ||
@@ -1762,10 +1770,12 @@ async function compressImage(file: File): Promise<string> {
 
           {/* PHOTOS */}
           <div className="bg-white border rounded-lg p-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">📸 Photos *</h3>
-            <div className="bg-blue-50 border border-blue-200 text-blue-900 text-xs px-3 py-2 rounded mb-4">
-              💡 Nous vous suggérons de mettre <strong>minimum 4 photos</strong> (face, dos, détails) pour une meilleure mise en valeur de votre pièce.
-            </div>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">📸 Photos{requirePhoto ? ' *' : ''}</h3>
+            {showPhotoSuggestion && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-900 text-xs px-3 py-2 rounded mb-4">
+                💡 Nous vous suggérons de mettre <strong>minimum 4 photos</strong> (face, dos, détails) pour une meilleure mise en valeur de votre pièce.
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               
@@ -2100,21 +2110,34 @@ async function compressImage(file: File): Promise<string> {
             )}
             {/* Bouton générer portés */}
             <div className="mt-4 pt-4 border-t">
-              <button
-                type="button"
-                onClick={handleGenerateTryon}
-                disabled={generatingTryon || !formData.existingPhotos.face}
-                className="px-4 py-2 bg-[#22209C] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
-              >
-                {generatingTryon ? (
+              {(() => {
+                const alreadyGenerated = !!(formData.existingPhotos.faceOnModel || formData.existingPhotos.dosOnModel)
+                const lockOneShot = limitTryonGeneration && alreadyGenerated
+                return (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Génération en cours...
+                    <button
+                      type="button"
+                      onClick={handleGenerateTryon}
+                      disabled={generatingTryon || !formData.existingPhotos.face || lockOneShot}
+                      className="px-4 py-2 bg-[#22209C] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
+                    >
+                      {generatingTryon ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Génération en cours...
+                        </>
+                      ) : lockOneShot ? (
+                        <>✓ Portés générés</>
+                      ) : (
+                        <>✨ Générer les portés</>
+                      )}
+                    </button>
+                    {lockOneShot && (
+                      <p className="text-xs text-gray-500 mt-2">Les portés ne peuvent être générés qu'une seule fois.</p>
+                    )}
                   </>
-                ) : (
-                  <>✨ Générer les portés</>
-                )}
-              </button>
+                )
+              })()}
             </div>
             {/* Section réordonnancement */}
             <PhotoReorderSection
@@ -2178,12 +2201,12 @@ async function compressImage(file: File): Promise<string> {
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Marque *</label>
+                <label className="block text-xs text-gray-600 mb-1">Marque{requireBrand ? ' *' : ''}</label>
                 <input
                   type="text"
                   value={formData.marque}
                   onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
-                  required={mode === 'create'}
+                  required={mode === 'create' && requireBrand}
                   className="w-full border rounded px-2 py-1.5 text-sm"
                   placeholder="Chanel..."
                 />

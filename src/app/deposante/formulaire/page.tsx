@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import {
@@ -16,7 +17,9 @@ import {
 import { auth, db } from '@/lib/firebaseConfig'
 import ProductForm, { ProductFormData, Cat } from '@/components/ProductForm'
 import { checkSkuUnique } from '@/lib/admin/helpers'
-import { MARQUES_DEPOSANTE, getPrixRange } from '@/lib/marquesDeposante'
+import { MARQUES_DEPOSANTE, NOMS_MARQUES_DEPOSANTE, getPrixRange } from '@/lib/marquesDeposante'
+
+const NOMS_MARQUES_LOWER = NOMS_MARQUES_DEPOSANTE.map(n => n.toLowerCase().trim())
 
 // Catégories extraites du lib, préfixées "DEP -" pour cohérence Square, triées alpha
 const CATEGORIES_DEPOSANTE: Cat[] = Array.from(
@@ -72,6 +75,7 @@ export default function DeposanteFormulairePage() {
   const [trigramme, setTrigramme] = useState<string>('')
   const [sku, setSku] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [rejectedBrand, setRejectedBrand] = useState<string>('')
 
   async function refreshSku(tri: string, userEmail: string) {
     if (!tri?.trim() || !userEmail) { setSku(''); return }
@@ -106,6 +110,14 @@ export default function DeposanteFormulairePage() {
     if (!user || !trigramme) return
     setLoading(true)
     try {
+      // Marque dans la liste des marques acceptées ?
+      const marqueTrim = formData.marque.trim()
+      if (!NOMS_MARQUES_LOWER.includes(marqueTrim.toLowerCase())) {
+        setRejectedBrand(marqueTrim)
+        setLoading(false)
+        return
+      }
+
       const isUnique = await checkSkuUnique(sku)
       if (!isUnique) {
         alert(`❌ Le SKU "${sku}" est déjà utilisé.`)
@@ -183,9 +195,18 @@ export default function DeposanteFormulairePage() {
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-4">
-      <div className="mb-4">
-        <p className="text-sm text-gray-500">Hello {deposanteNom} 👋</p>
-        <h1 className="text-xl font-bold text-[#22209C]">DÉPOSER UNE PIÈCE</h1>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm text-gray-500">Hello {deposanteNom} 👋</p>
+          <h1 className="text-xl font-bold text-[#22209C]">DÉPOSER UNE PIÈCE</h1>
+        </div>
+        <Link
+          href="/client/deposant/produits-acceptes"
+          className="shrink-0 inline-flex items-center px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white whitespace-nowrap"
+          style={{ backgroundColor: '#0000FF' }}
+        >
+          Consulter la liste des marques acceptées
+        </Link>
       </div>
 
       <ProductForm
@@ -201,6 +222,10 @@ export default function DeposanteFormulairePage() {
         showExcelImport={false}
         requireSquareCategory={false}
         lockQuantity={true}
+        requireBrand={true}
+        requirePhoto={true}
+        showPhotoSuggestion={true}
+        limitTryonGeneration={true}
       />
 
       {!trigramme?.trim() && (
@@ -209,7 +234,29 @@ export default function DeposanteFormulairePage() {
         </p>
       )}
 
-      {/* TODO: restreindre le champ marque à NOMS_MARQUES_DEPOSANTE dans ProductForm */}
+      {/* POPUP MARQUE NON ACCEPTÉE */}
+      {rejectedBrand && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white max-w-sm w-full p-6" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+            <p className="text-sm mb-4 leading-relaxed">
+              <strong>{rejectedBrand}</strong> ne fait pas partie des marques acceptées.
+            </p>
+            <Link
+              href="/client/deposant/produits-acceptes"
+              className="block text-center w-full py-3 text-white text-xs font-semibold uppercase tracking-widest mb-2"
+              style={{ backgroundColor: '#0000FF' }}
+            >
+              Voir la liste des marques acceptées
+            </Link>
+            <button
+              onClick={() => setRejectedBrand('')}
+              className="block text-center w-full py-2 text-xs text-gray-500 hover:text-black"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
