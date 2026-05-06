@@ -39,17 +39,13 @@
     useEffect(() => {
       async function fetchIconiques() {
         try {
-          const q = query(
-            collection(db, 'iconiques'),
-            where('displayOnWebsite', '==', true),
-            orderBy('ordre', 'asc')
-          )
-          
-          const querySnapshot = await getDocs(q)
+          // Query sans where+orderBy combinés (évite l'index composite Firestore)
+          const querySnapshot = await getDocs(collection(db, 'iconiques'))
           const data: Iconique[] = []
-          
+
           querySnapshot.forEach((doc) => {
             const docData = doc.data()
+            if (docData.displayOnWebsite === false) return
             data.push({
               id: doc.id,
               nom: docData.nom || '',
@@ -68,7 +64,8 @@
               ordre: docData.ordre || 0,
             })
           })
-          
+
+          data.sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
           setIconiques(data)
           
           // Initialise les index d'images
