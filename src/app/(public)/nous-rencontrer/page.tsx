@@ -6,8 +6,26 @@ import GoogleReviews from '@/components/GoogleReviews'
 
 const bleuElectrique = '#0000FF'
 
+const HORAIRES = [
+  { jour: 'Lundi', heures: '11h – 20h' },
+  { jour: 'Mardi', heures: '12h – 20h' },
+  { jour: 'Mercredi', heures: '12h – 20h' },
+  { jour: 'Jeudi', heures: '12h – 20h' },
+  { jour: 'Vendredi', heures: '11h – 20h' },
+  { jour: 'Samedi', heures: '11h – 20h' },
+  { jour: 'Dimanche', heures: '11h – 20h' },
+]
+
+// JS getDay: 0=dimanche, 1=lundi, …, 6=samedi
+const JOUR_INDEX_TO_NAME = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
+
 export default function NousRencontrerPage() {
   const [displayedText, setDisplayedText] = useState('')
+  const [jourActuel, setJourActuel] = useState<string | null>(null)
+
+  useEffect(() => {
+    setJourActuel(JOUR_INDEX_TO_NAME[new Date().getDay()])
+  }, [])
   
   const introText = "PLEIN CŒUR MARAIS, QUARTIER DES ARTS, DE LA MODE, DE LA TOLÉRANCE, LA BOUTIQUE NOUVELLE RIVE SE NICHE RUE DES ECOUFFES, LA RUE DE VÊTEMENTS, ET L'ANCIENNE RUE AUX FILLES. ELLE RÉHABILITE LA PREMIÈRE BOÎTE LESBIENNE DU MARAIS, LE 3W, WOMEN WITH WOMEN. LA CABINE DE LA DJ SE TRANSFORME EN CAISSE, LE FUMOIR EN ESPACE D'EXPOSITION PREMIUM. UNE NOUVELLE VIE TOUT AUSSI RÉSOLUMENT FÉMINISTE."
 
@@ -94,34 +112,19 @@ export default function NousRencontrerPage() {
                 HORAIRES
               </p>
               <div className="space-y-2" style={{ fontSize: '16px' }}>
-                <div className="flex justify-between max-w-xs">
-                  <span>Lundi</span>
-                  <span className="font-medium">11h – 20h</span>
-                </div>
-                <div className="flex justify-between max-w-xs">
-                  <span>Mardi</span>
-                  <span className="font-medium">12h – 20h</span>
-                </div>
-                <div className="flex justify-between max-w-xs">
-                  <span>Mercredi</span>
-                  <span className="font-medium">12h – 20h</span>
-                </div>
-                <div className="flex justify-between max-w-xs">
-                  <span>Jeudi</span>
-                  <span className="font-medium">12h – 20h</span>
-                </div>
-                <div className="flex justify-between max-w-xs">
-                  <span>Vendredi</span>
-                  <span className="font-medium">11h – 20h</span>
-                </div>
-                <div className="flex justify-between max-w-xs">
-                  <span>Samedi</span>
-                  <span className="font-medium">11h – 20h</span>
-                </div>
-                <div className="flex justify-between max-w-xs">
-                  <span>Dimanche</span>
-                  <span className="font-medium">11h – 20h</span>
-                </div>
+                {HORAIRES.map(({ jour, heures }) => {
+                  const isToday = jour === jourActuel
+                  return (
+                    <div
+                      key={jour}
+                      className="flex justify-between max-w-xs"
+                      style={{ fontWeight: isToday ? 700 : 400, color: isToday ? bleuElectrique : 'inherit' }}
+                    >
+                      <span>{jour}{isToday && ' · aujourd\'hui'}</span>
+                      <span style={{ fontWeight: isToday ? 700 : 500 }}>{heures}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
 
