@@ -16,7 +16,7 @@ export default function NavbarPublic() {
   const showVideo = pathname === '/boutique'
 
   useEffect(() => {
-    if (videoRef.current) videoRef.current.playbackRate = 0.5
+    if (videoRef.current) videoRef.current.playbackRate = 0.25
   }, [showVideo])
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
