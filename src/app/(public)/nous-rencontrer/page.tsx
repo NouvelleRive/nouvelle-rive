@@ -169,15 +169,28 @@ export default function NousRencontrerPage() {
                 >
                   CONTACT
                 </p>
-                <a
-                  href="https://www.instagram.com/nouvellerive"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-2 hover:opacity-60 transition-opacity"
-                  style={{ fontSize: '16px', color: bleuElectrique }}
-                >
-                  @nouvelleriveparis
-                </a>
+                <div className="flex flex-col gap-2 mt-2">
+                  <a
+                    href="https://www.instagram.com/nouvellerive"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 hover:opacity-60 transition-opacity"
+                    style={{ fontSize: '16px', color: bleuElectrique }}
+                  >
+                    <span style={{ fontSize: '11px', letterSpacing: '0.15em', color: '#000', fontWeight: 600, minWidth: 70 }}>INSTAGRAM</span>
+                    @nouvelleriveparis
+                  </a>
+                  <a
+                    href="https://www.tiktok.com/@nouvelleriveparis"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 hover:opacity-60 transition-opacity"
+                    style={{ fontSize: '16px', color: bleuElectrique }}
+                  >
+                    <span style={{ fontSize: '11px', letterSpacing: '0.15em', color: '#000', fontWeight: 600, minWidth: 70 }}>TIKTOK</span>
+                    @nouvelleriveparis
+                  </a>
+                </div>
               </div>
 
               <a
