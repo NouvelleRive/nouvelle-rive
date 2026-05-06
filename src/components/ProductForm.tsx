@@ -375,6 +375,7 @@ async function compressImage(file: File): Promise<string> {
     
     // Options
     showExcelImport?: boolean
+    requireSquareCategory?: boolean
   }
 
   // =====================
@@ -434,6 +435,7 @@ async function compressImage(file: File): Promise<string> {
     loading = false,
     submitLabel,
     showExcelImport = true,
+    requireSquareCategory = true,
   }: ProductFormProps) {
     
     // Refs pour les inputs caméra
@@ -1370,8 +1372,8 @@ async function compressImage(file: File): Promise<string> {
     const handleFormSubmit = async (e: React.FormEvent) => {
       e.preventDefault()
       
-      // En mode création, vérifier que la catégorie a un idsquare
-      if (mode === 'create') {
+      // En mode création, vérifier que la catégorie a un idsquare (sauf pour les flux qui n'en exigent pas, ex: déposantes)
+      if (mode === 'create' && requireSquareCategory) {
         const match = displayCategories.find((c) => c?.label === formData.categorie)
         if (!match?.idsquare) {
           alert('❌ Catégorie non définie dans Square.\n\nContactez NOUVELLE RIVE pour configurer cette catégorie.')

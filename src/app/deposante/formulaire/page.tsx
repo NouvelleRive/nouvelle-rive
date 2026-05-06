@@ -199,6 +199,7 @@ export default function DeposanteFormulairePage() {
         onSubmit={handleSubmit}
         loading={loading}
         showExcelImport={false}
+        requireSquareCategory={false}
       />
 
       {!trigramme?.trim() && (
