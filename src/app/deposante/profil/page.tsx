@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { auth, db, storage } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import jsPDF from 'jspdf'
 import { format } from 'date-fns'
@@ -107,24 +107,33 @@ export default function ProfilDeposantePage() {
       setCurrentUid(u.uid)
 
       try {
-        const snap = await getDocs(
-          query(collection(db, 'deposante'), where('authUid', '==', u.uid))
-        )
-        if (!snap.empty) {
-          const d = snap.docs[0].data()
-          setPrenom(d?.prenom || '')
-          setNom(d?.nom || '')
-          setTelephone(d?.telephone || '')
-          setAdresse1(d?.adresse1 || '')
-          setAdresse2(d?.adresse2 || '')
-          setIban(d?.iban || '')
-          setBic(d?.bic || '')
-          setBanqueAdresse(d?.banqueAdresse || '')
-          setModePaiement(d?.modePaiement || '')
-          setPieceIdentiteUrl(d?.pieceIdentiteUrl || '')
-          setTrigramme(d?.trigramme || '')
-          setContratSigne(!!d?.contratSigne)
-          setContratUrl(d?.contratUrl || '')
+        // Read direct par doc ID (cohérent avec /api/deposante qui write doc(uid))
+        const ref = doc(db, 'deposante', u.uid)
+        const snap = await getDoc(ref)
+        let d: any = null
+        if (snap.exists()) {
+          d = snap.data()
+        } else {
+          // Fallback : ancien doc créé via .add() avec authUid (avant que tout passe par doc(uid))
+          const fallback = await getDocs(
+            query(collection(db, 'deposante'), where('authUid', '==', u.uid))
+          )
+          if (!fallback.empty) d = fallback.docs[0].data()
+        }
+        if (d) {
+          setPrenom(d.prenom || '')
+          setNom(d.nom || '')
+          setTelephone(d.telephone || '')
+          setAdresse1(d.adresse1 || '')
+          setAdresse2(d.adresse2 || '')
+          setIban(d.iban || '')
+          setBic(d.bic || '')
+          setBanqueAdresse(d.banqueAdresse || '')
+          setModePaiement(d.modePaiement || '')
+          setPieceIdentiteUrl(d.pieceIdentiteUrl || '')
+          setTrigramme(d.trigramme || '')
+          setContratSigne(!!d.contratSigne)
+          setContratUrl(d.contratUrl || '')
         }
       } catch (e) {
         console.error('Erreur chargement profil deposante', e)
@@ -133,7 +142,7 @@ export default function ProfilDeposantePage() {
       }
     })
     return () => unsub()
-  }, [])
+  }, [router])
 
   // =====================
   // CANVAS SIGNATURE
