@@ -189,7 +189,7 @@ function CheckoutContent() {
                   <div>
                     <p style={{ fontSize: '13px' }}>Livraison à domicile</p>
                     <p style={{ fontSize: '11px', color: fraisLivraisonPreview === 0 ? bleuElectrique : '#666' }}>
-                      {fraisLivraisonPreview === 0 ? 'Offerte' : `À partir de ${fraisLivraisonPreview}€`}
+                      {fraisLivraisonPreview === 0 ? 'Offerte en France' : `À partir de ${fraisLivraisonPreview}€`}
                     </p>
                   </div>
                 </label>
