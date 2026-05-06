@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const bleuElectrique = '#0000FF'
 
@@ -34,6 +34,7 @@ function Stars({ rating }: { rating: number }) {
 export default function GoogleReviews() {
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const scrollerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/google-reviews')
@@ -44,6 +45,14 @@ export default function GoogleReviews() {
       })
       .catch(e => setError(e.message))
   }, [])
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = scrollerRef.current
+    if (!el) return
+    const card = el.querySelector('article')
+    const step = card ? card.clientWidth + 16 : el.clientWidth * 0.8
+    el.scrollBy({ left: dir * step, behavior: 'smooth' })
+  }
 
   if (error) return null
   if (!data) {
@@ -57,9 +66,9 @@ export default function GoogleReviews() {
   if (data.reviews.length === 0) return null
 
   return (
-    <section className="px-6 lg:px-12 py-16" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <section className="py-16" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       {/* En-tête */}
-      <div className="flex items-baseline justify-between flex-wrap gap-4 mb-12">
+      <div className="px-6 lg:px-12 flex items-baseline justify-between flex-wrap gap-4 mb-10">
         <h2
           className="uppercase"
           style={{
@@ -72,7 +81,7 @@ export default function GoogleReviews() {
           Avis Google
           {data.preview && (
             <span style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#999', fontWeight: '400', marginLeft: '12px' }}>
-              (PREVIEW — clé API manquante)
+              (PREVIEW)
             </span>
           )}
         </h2>
@@ -83,69 +92,121 @@ export default function GoogleReviews() {
         </div>
       </div>
 
-      {/* Grille avis */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px" style={{ backgroundColor: '#000', border: '1px solid #000' }}>
-        {data.reviews.map((r, i) => (
-          <article
-            key={i}
-            className="p-6 lg:p-8 bg-white flex flex-col gap-4"
-            style={{ minHeight: '220px' }}
-          >
-            <div className="flex items-center gap-3">
-              {r.authorPhoto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={r.authorPhoto}
-                  alt={r.author}
-                  width={36}
-                  height={36}
-                  referrerPolicy="no-referrer"
-                  style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    backgroundColor: bleuElectrique,
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                  }}
-                >
-                  {r.author.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="flex flex-col">
-                <span style={{ fontSize: '13px', fontWeight: '600' }}>{r.author}</span>
-                <span style={{ fontSize: '11px', color: '#666' }}>{r.relativeTime}</span>
-              </div>
-            </div>
-            <Stars rating={r.rating} />
-            <p
+      {/* Carrousel */}
+      <div className="relative">
+        <div
+          ref={scrollerRef}
+          className="flex gap-4 overflow-x-auto px-6 lg:px-12 pb-4"
+          style={{
+            scrollSnapType: 'x mandatory',
+            scrollBehavior: 'smooth',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <style jsx>{`
+            div::-webkit-scrollbar { display: none; }
+          `}</style>
+          {data.reviews.map((r, i) => (
+            <article
+              key={i}
+              className="flex-shrink-0 flex flex-col gap-4 p-6"
               style={{
-                fontSize: '13px',
-                lineHeight: '1.6',
-                color: '#222',
-                display: '-webkit-box',
-                WebkitLineClamp: 8,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
+                width: 'min(85vw, 360px)',
+                scrollSnapAlign: 'start',
+                border: '1px solid #000',
+                backgroundColor: '#fff',
               }}
             >
-              {r.text}
-            </p>
-          </article>
-        ))}
+              <div className="flex items-center gap-3">
+                {r.authorPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.authorPhoto}
+                    alt={r.author}
+                    width={36}
+                    height={36}
+                    referrerPolicy="no-referrer"
+                    style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      backgroundColor: bleuElectrique,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                    }}
+                  >
+                    {r.author.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span style={{ fontSize: '13px', fontWeight: '600' }}>{r.author}</span>
+                  <span style={{ fontSize: '11px', color: '#666' }}>{r.relativeTime}</span>
+                </div>
+              </div>
+              <Stars rating={r.rating} />
+              <p
+                style={{
+                  fontSize: '13px',
+                  lineHeight: '1.6',
+                  color: '#222',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 7,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {r.text}
+              </p>
+            </article>
+          ))}
+        </div>
+
+        {/* Flèches navigation (desktop only) */}
+        <button
+          aria-label="Précédent"
+          onClick={() => scrollBy(-1)}
+          className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 items-center justify-center transition-opacity hover:opacity-60"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            backgroundColor: '#fff',
+            border: '1px solid #000',
+            zIndex: 5,
+          }}
+        >
+          <span style={{ fontSize: '18px', lineHeight: 1 }}>←</span>
+        </button>
+        <button
+          aria-label="Suivant"
+          onClick={() => scrollBy(1)}
+          className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 items-center justify-center transition-opacity hover:opacity-60"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            backgroundColor: '#fff',
+            border: '1px solid #000',
+            zIndex: 5,
+          }}
+        >
+          <span style={{ fontSize: '18px', lineHeight: 1 }}>→</span>
+        </button>
       </div>
 
       {/* Lien voir tous */}
       {data.mapsUri && (
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center px-6 lg:px-12">
           <a
             href={data.mapsUri}
             target="_blank"
