@@ -9,6 +9,7 @@ import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
+import { useLang, t } from '@/lib/i18n'
 
 function formatDisplayTitle(produit: Produit): string {
   // 1. Enlever le SKU du début
@@ -79,6 +80,7 @@ function getCloudinaryUrl(url: string, size: number = 800): string {
 }
 
 export default function ProductGrid({ produits, columns = 3, showFilters = true }: ProductGridProps) {
+  const lang = useLang()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -117,9 +119,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
   const [tri, setTri] = useState('nouveautes')
 
   const triLabels: { [key: string]: string } = {
-    'nouveautes': 'Nouveautés',
-    'prix-asc': 'Prix croissant',
-    'prix-desc': 'Prix décroissant',
+    'nouveautes': t('Nouveautés', 'New in', lang),
+    'prix-asc': t('Prix croissant', 'Price: low to high', lang),
+    'prix-desc': t('Prix décroissant', 'Price: high to low', lang),
   }
 
   useEffect(() => {
@@ -309,7 +311,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
             className="uppercase text-xs tracking-widest hover:opacity-50 transition whitespace-nowrap"
             style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
           >
-            Filtrer +
+            {t('Filtrer +', 'Filter +', lang)}
           </button>
 
           {/* Barre de recherche */}
@@ -318,7 +320,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher"
+              placeholder={t('Rechercher', 'Search', lang)}
               className="w-full px-4 py-2 pl-9 bg-gray-50 border border-gray-200 rounded-full text-xs focus:outline-none focus:border-black focus:bg-white transition-colors"
               style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
             />
@@ -402,7 +404,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                 </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300">
-                    Pas d'image
+                    {t("Pas d'image", 'No image', lang)}
                   </div>
                 )}
               </div>
@@ -439,7 +441,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     color: '#000'
                   }}
                 >
-                  {produit.prix.toLocaleString('fr-FR')} €
+                  {produit.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
                 </p>
               </div>
             </Link>
@@ -472,11 +474,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               className="flex justify-between items-center p-6"
               style={{ borderBottom: '1px solid #000' }}
             >
-              <span 
+              <span
                 className="uppercase text-sm tracking-widest font-semibold"
                 style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
               >
-                Filtre
+                {t('Filtre', 'Filter', lang)}
               </span>
               <button
                 onClick={() => setIsFilterOpen(false)}
@@ -492,11 +494,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               {/* Catégorie */}
               {categories.length > 0 && (
                 <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4 
+                  <h4
                     className="uppercase text-xs tracking-widest mb-4 font-semibold"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    Catégorie
+                    {t('Catégorie', 'Category', lang)}
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {categories.map((cat) => (
@@ -549,11 +551,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               {/* Marque */}
               {marques.length > 0 && (
                 <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4 
+                  <h4
                     className="uppercase text-xs tracking-widest mb-4 font-semibold"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    Marque
+                    {t('Marque', 'Brand', lang)}
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {marques.map((marque) => (
@@ -577,11 +579,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
 
               {/* Prix */}
               <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                <h4 
+                <h4
                   className="uppercase text-xs tracking-widest mb-4 font-semibold"
                   style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                 >
-                  Prix
+                  {t('Prix', 'Price', lang)}
                 </h4>
                 <div className="flex gap-4 items-center">
                   <input
@@ -613,11 +615,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
 
               {/* Taille */}
               <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                <h4 
+                <h4
                   className="uppercase text-xs tracking-widest mb-4 font-semibold"
                   style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                 >
-                  Taille
+                  {t('Taille', 'Size', lang)}
                 </h4>
                 {tailles.length > 0 ? (
                   <div className="grid grid-cols-4 gap-2">
@@ -638,11 +640,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                     ))}
                   </div>
                 ) : (
-                  <p 
+                  <p
                     className="text-sm text-gray-500"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    Aucune taille disponible
+                    {t('Aucune taille disponible', 'No size available', lang)}
                   </p>
                 )}
               </div>
@@ -650,11 +652,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               {/* Couleur */}
               {couleurs.length > 0 && (
                 <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4 
+                  <h4
                     className="uppercase text-xs tracking-widest mb-4 font-semibold"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    Couleur
+                    {t('Couleur', 'Color', lang)}
                   </h4>
                   <div className="grid grid-cols-3 gap-2">
                     {couleurs.map((couleur) => {
@@ -689,11 +691,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               {/* Matière */}
               {matieres.length > 0 && (
                 <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4 
+                  <h4
                     className="uppercase text-xs tracking-widest mb-4 font-semibold"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    Matière
+                    {t('Matière', 'Material', lang)}
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {matieres.map((matiere) => (
@@ -718,11 +720,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               {/* Modèle */}
               {modeles.length > 0 && (
                 <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4 
+                  <h4
                     className="uppercase text-xs tracking-widest mb-4 font-semibold"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    Modèle
+                    {t('Modèle', 'Style', lang)}
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {modeles.map((modele) => (
@@ -747,11 +749,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               {/* Motif */}
               {motifs.length > 0 && (
                 <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4 
+                  <h4
                     className="uppercase text-xs tracking-widest mb-4 font-semibold"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    Motif
+                    {t('Motif', 'Pattern', lang)}
                   </h4>
                   <div className="grid grid-cols-2 gap-2">
                     {motifs.map((motif) => (
@@ -775,25 +777,25 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
 
               {/* Promotion */}
               <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                <h4 
+                <h4
                   className="uppercase text-xs tracking-widest mb-4 font-semibold"
                   style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                 >
-                  Promotion
+                  {t('Promotion', 'Sale', lang)}
                 </h4>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <div 
+                  <div
                     className="w-5 h-5 flex items-center justify-center"
                     style={{ border: '1px solid #000' }}
                     onClick={() => setFilters({ ...filters, promotion: !filters.promotion })}
                   >
                     {filters.promotion && <span className="text-sm">✓</span>}
                   </div>
-                  <span 
+                  <span
                     className="text-sm uppercase tracking-wide"
                     style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
                   >
-                    En promotion uniquement
+                    {t('En promotion uniquement', 'On sale only', lang)}
                   </span>
                 </label>
               </div>
@@ -812,7 +814,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                   border: '1px solid #000',
                 }}
               >
-                Effacer
+                {t('Effacer', 'Clear', lang)}
               </button>
               <button
                 onClick={() => setIsFilterOpen(false)}
@@ -822,7 +824,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                   backgroundColor: '#000',
                 }}
               >
-                Appliquer
+                {t('Appliquer', 'Apply', lang)}
               </button>
             </div>
           </div>

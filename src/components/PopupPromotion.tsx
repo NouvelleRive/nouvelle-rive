@@ -3,18 +3,20 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useLang, t } from '@/lib/i18n'
 
 type PopupPromotionProps = {
   nombreAchats: number
 }
 
 export default function PopupPromotion({ nombreAchats }: PopupPromotionProps) {
+  const lang = useLang()
   const [isOpen, setIsOpen] = useState(false)
   const [hasShown, setHasShown] = useState(false)
 
   useEffect(() => {
     const popupShown = sessionStorage.getItem(`popup-shown-${nombreAchats}`)
-    
+
     if (!popupShown && !hasShown && nombreAchats > 0) {
       const timer = setTimeout(() => {
         setIsOpen(true)
@@ -36,30 +38,29 @@ export default function PopupPromotion({ nombreAchats }: PopupPromotionProps) {
   let message = ''
 
   if (nombreAchats === 1) {
-    titre = 'LIVRAISON OFFERTE'
-    message = 'SUR VOTRE PROCHAIN ARTICLE'
+    titre = t('LIVRAISON OFFERTE', 'FREE SHIPPING', lang)
+    message = t('SUR VOTRE PROCHAIN ARTICLE', 'ON YOUR NEXT ITEM', lang)
   } else if (nombreAchats === 2) {
     titre = '-15%'
-    message = 'SUR VOTRE 3ÈME ARTICLE'
+    message = t('SUR VOTRE 3ÈME ARTICLE', 'ON YOUR 3RD ITEM', lang)
   } else {
-    titre = 'MERCI'
-    message = 'VOS ENVOIS SERONT REGROUPÉS'
+    titre = t('MERCI', 'THANK YOU', lang)
+    message = t('VOS ENVOIS SERONT REGROUPÉS', 'YOUR ITEMS WILL BE SHIPPED TOGETHER', lang)
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
       onClick={handleClose}
     >
-      <div 
+      <div
         className="bg-white w-full max-w-lg relative"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Bouton fermer */}
         <button
           onClick={handleClose}
           className="absolute top-0 right-0 w-12 h-12 flex items-center justify-center text-black hover:bg-black hover:text-white transition-colors"
-          style={{ 
+          style={{
             fontSize: '24px',
             fontWeight: '300'
           }}
@@ -67,10 +68,9 @@ export default function PopupPromotion({ nombreAchats }: PopupPromotionProps) {
           ✕
         </button>
 
-        {/* Contenu */}
         <div className="p-12 pt-16 text-center">
-          <h2 
-            style={{ 
+          <h2
+            style={{
               fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               fontSize: 'clamp(48px, 10vw, 72px)',
               fontWeight: '700',
@@ -81,10 +81,10 @@ export default function PopupPromotion({ nombreAchats }: PopupPromotionProps) {
           >
             {titre}
           </h2>
-          
-          <p 
+
+          <p
             className="mt-4 mb-8"
-            style={{ 
+            style={{
               fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               fontSize: '11px',
               letterSpacing: '0.2em',
@@ -94,38 +94,36 @@ export default function PopupPromotion({ nombreAchats }: PopupPromotionProps) {
             {message}
           </p>
 
-          {/* Boutons */}
           <div className="space-y-3">
             <Link
               href="/boutique"
               onClick={handleClose}
               className="block w-full py-4 bg-black text-white text-center transition-colors hover:bg-white hover:text-black border border-black"
-              style={{ 
+              style={{
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                 fontSize: '11px',
                 letterSpacing: '0.2em',
                 fontWeight: '600'
               }}
             >
-              CONTINUER MES ACHATS
+              {t('CONTINUER MES ACHATS', 'CONTINUE SHOPPING', lang)}
             </Link>
-            
+
             <button
               onClick={handleClose}
               className="block w-full py-4 bg-white text-black text-center transition-colors hover:bg-black hover:text-white border border-black"
-              style={{ 
+              style={{
                 fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                 fontSize: '11px',
                 letterSpacing: '0.2em',
                 fontWeight: '600'
               }}
             >
-              FERMER
+              {t('FERMER', 'CLOSE', lang)}
             </button>
           </div>
         </div>
 
-        {/* Ligne décorative en bas */}
         <div className="h-1 bg-black" />
       </div>
     </div>

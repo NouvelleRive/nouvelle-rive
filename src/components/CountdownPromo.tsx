@@ -2,12 +2,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useLang, t } from '@/lib/i18n'
 
 type CountdownPromoProps = {
   nombreAchats: number
 }
 
 export default function CountdownPromo({ nombreAchats }: CountdownPromoProps) {
+  const lang = useLang()
   const [tempsRestant, setTempsRestant] = useState<string>('')
   const [isVisible, setIsVisible] = useState(false)
 
@@ -58,9 +60,13 @@ export default function CountdownPromo({ nombreAchats }: CountdownPromoProps) {
 
   const getMessage = () => {
     if (nombreAchats === 1) {
-      return 'LIVRAISON OFFERTE DÈS 2 ARTICLES • -15% SUR LE 3E'
+      return t(
+        'LIVRAISON OFFERTE DÈS 2 ARTICLES • -15% SUR LE 3E',
+        'FREE SHIPPING FROM 2 ITEMS • -15% ON THE 3RD',
+        lang
+      )
     }
-    return '-15% SUR LE 3E ARTICLE'
+    return t('-15% SUR LE 3E ARTICLE', '-15% ON THE 3RD ITEM', lang)
   }
 
   return (

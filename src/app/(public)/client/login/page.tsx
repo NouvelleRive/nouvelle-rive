@@ -11,6 +11,7 @@ import {
   GoogleAuthProvider,
   sendPasswordResetEmail
 } from 'firebase/auth'
+import { useLang, t } from '@/lib/i18n'
 
 // Détection des navigateurs in-app (WhatsApp, Instagram, Facebook, etc.)
 // qui cassent Firebase Auth à cause de sessionStorage partitionné
@@ -22,6 +23,7 @@ function isInAppBrowser(): boolean {
 
 export default function LoginPage() {
   const router = useRouter()
+  const lang = useLang()
   const [loadingClient, setLoadingClient] = useState(false)
   const [loadingDeposante, setLoadingDeposante] = useState(false)
   const [loadingPro, setLoadingPro] = useState(false)
@@ -50,6 +52,11 @@ export default function LoginPage() {
   const [passwordPro, setPasswordPro] = useState('')
   const [isSignupPro] = useState(false)
 
+  const errEmailUsed = t('Email déjà utilisé', 'Email already in use', lang)
+  const errWrongPassword = t('Mot de passe incorrect', 'Incorrect password', lang)
+  const errNoAccount = t('Aucun compte avec cet email', 'No account with this email', lang)
+  const errLogin = t('Erreur de connexion', 'Login error', lang)
+
   const handleClientSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setLoadingClient(true)
     try {
@@ -57,7 +64,7 @@ export default function LoginPage() {
       else await signInWithEmailAndPassword(auth, emailClient, passwordClient)
       router.push('/client')
     } catch (err: any) {
-      setError(err.code === 'auth/email-already-in-use' ? 'Email déjà utilisé' : err.code === 'auth/wrong-password' ? 'Mot de passe incorrect' : err.code === 'auth/user-not-found' ? 'Aucun compte avec cet email' : 'Erreur de connexion')
+      setError(err.code === 'auth/email-already-in-use' ? errEmailUsed : err.code === 'auth/wrong-password' ? errWrongPassword : err.code === 'auth/user-not-found' ? errNoAccount : errLogin)
     } finally { setLoadingClient(false) }
   }
 
@@ -65,15 +72,15 @@ export default function LoginPage() {
     try {
       await signInWithPopup(auth, new GoogleAuthProvider())
       router.push('/client')
-    } catch { setError('Erreur Google') }
+    } catch { setError(t('Erreur Google', 'Google error', lang)) }
   }
 
   const handleForgotPassword = async (email: string) => {
-    if (!email) { setError("Entre ton email d'abord"); return }
+    if (!email) { setError(t("Entre ton email d'abord", 'Enter your email first', lang)); return }
     try {
       await sendPasswordResetEmail(auth, email)
-      setError('Email de réinitialisation envoyé !')
-    } catch { setError('Erreur, vérifie ton email') }
+      setError(t('Email de réinitialisation envoyé !', 'Reset email sent!', lang))
+    } catch { setError(t('Erreur, vérifie ton email', 'Error, please check your email', lang)) }
   }
 
   const handleDeposanteSubmit = async (e: React.FormEvent) => {
@@ -93,10 +100,10 @@ export default function LoginPage() {
       }
       router.push('/deposante/profil')
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') setError('Email déjà utilisé')
-      else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') setError('Mot de passe incorrect')
-      else if (err.code === 'auth/user-not-found') setError('Aucun compte avec cet email')
-      else setError('Erreur de connexion')
+      if (err.code === 'auth/email-already-in-use') setError(errEmailUsed)
+      else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') setError(errWrongPassword)
+      else if (err.code === 'auth/user-not-found') setError(errNoAccount)
+      else setError(errLogin)
     } finally { setLoadingDeposante(false) }
   }
 
@@ -106,8 +113,8 @@ export default function LoginPage() {
       if (isSignupPro) await createUserWithEmailAndPassword(auth, emailPro, passwordPro)
       else await signInWithEmailAndPassword(auth, emailPro, passwordPro)
       router.push('/chineuse/formulaire')
-    } catch (err: any) {
-      setError('Erreur de connexion')
+    } catch {
+      setError(errLogin)
     } finally { setLoadingPro(false) }
   }
 
@@ -120,11 +127,20 @@ export default function LoginPage() {
 
         {inApp && (
           <div className="mb-4 bg-amber-50 border border-amber-300 text-amber-800 text-sm p-4 rounded-lg">
-            <p className="font-semibold mb-1">⚠️ Ouvre cette page dans Safari ou Chrome</p>
-            <p className="text-xs">
-              La connexion ne fonctionne pas dans le navigateur de WhatsApp/Instagram/Facebook.
-              Appuie sur les <strong>••• en haut à droite</strong> puis <strong>« Ouvrir dans le navigateur »</strong>.
+            <p className="font-semibold mb-1">
+              {t('⚠️ Ouvre cette page dans Safari ou Chrome', '⚠️ Open this page in Safari or Chrome', lang)}
             </p>
+            {lang === 'en' ? (
+              <p className="text-xs">
+                Login does not work in the WhatsApp/Instagram/Facebook in-app browser.
+                Tap the <strong>••• at the top-right</strong> then <strong>&laquo; Open in browser &raquo;</strong>.
+              </p>
+            ) : (
+              <p className="text-xs">
+                La connexion ne fonctionne pas dans le navigateur de WhatsApp/Instagram/Facebook.
+                Appuie sur les <strong>••• en haut à droite</strong> puis <strong>« Ouvrir dans le navigateur »</strong>.
+              </p>
+            )}
           </div>
         )}
 
@@ -138,10 +154,16 @@ export default function LoginPage() {
           {/* ── COLONNE 1 : CLIENT ── */}
           <div className="flex flex-col px-6 py-5 space-y-2 bg-white border border-gray-200 rounded-xl shadow-sm md:border-0 md:rounded-none md:shadow-none">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
-              Mon compte client
-              {isSignupClient && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
+              {t('Mon compte client', 'My customer account', lang)}
+              {isSignupClient && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">{t('Créer un compte', 'Create an account', lang)}</span>}
             </h2>
-            <p className="text-xs text-gray-500">Je veux revoir les pépites que j'ai achetées &amp; paramétrer mes alertes.</p>
+            <p className="text-xs text-gray-500">
+              {t(
+                "Je veux revoir les pépites que j'ai achetées & paramétrer mes alertes.",
+                'I want to revisit my finds & set up my alerts.',
+                lang
+              )}
+            </p>
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -154,51 +176,59 @@ export default function LoginPage() {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continuer avec Google
+              {t('Continuer avec Google', 'Continue with Google', lang)}
             </button>
             {isSignupClient && (
               <div className="grid grid-cols-2 gap-2">
-                <input value={prenomClient} onChange={e => setPrenomClient(e.target.value)} placeholder="Prénom" className={inputCls} />
-                <input value={nomClient} onChange={e => setNomClient(e.target.value)} placeholder="Nom" className={inputCls} />
+                <input value={prenomClient} onChange={e => setPrenomClient(e.target.value)} placeholder={t('Prénom', 'First name', lang)} className={inputCls} />
+                <input value={nomClient} onChange={e => setNomClient(e.target.value)} placeholder={t('Nom', 'Last name', lang)} className={inputCls} />
               </div>
             )}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" value={emailClient} onChange={e => setEmailClient(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
+              <input type="email" value={emailClient} onChange={e => setEmailClient(e.target.value)} required className={inputCls} placeholder={t('ton@email.com', 'your@email.com', lang)} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t('Mot de passe', 'Password', lang)}</label>
               <input type="password" value={passwordClient} onChange={e => setPasswordClient(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
               {!isSignupClient && (
                 <button type="button" onClick={() => handleForgotPassword(emailClient)} className="text-xs text-gray-400 hover:underline mt-1 block">
-                  Mot de passe oublié ?
+                  {t('Mot de passe oublié ?', 'Forgot password?', lang)}
                 </button>
               )}
             </div>
             <button onClick={handleClientSubmit} disabled={loadingClient} className={btnCls}>
-              {loadingClient ? 'Chargement...' : isSignupClient ? 'Créer mon compte' : 'Se connecter'}
+              {loadingClient
+                ? t('Chargement...', 'Loading...', lang)
+                : isSignupClient
+                  ? t('Créer mon compte', 'Create my account', lang)
+                  : t('Se connecter', 'Log in', lang)}
             </button>
             <button onClick={() => setIsSignupClient(!isSignupClient)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
-              {isSignupClient ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
+              {isSignupClient
+                ? t('Déjà un compte ? Se connecter', 'Already have an account? Log in', lang)
+                : t('Pas encore de compte ? Créer un compte', 'No account yet? Create one', lang)}
             </button>
           </div>
 
           {/* ── COLONNE 2 : DÉPOSANTE ── */}
           <div className="flex flex-col px-6 py-5 space-y-2 bg-white border border-gray-200 rounded-xl shadow-sm md:border-0 md:rounded-none md:shadow-none md:border-l md:border-gray-200">
             <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>
-              Vendre chez Nouvelle Rive
-              {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">Créer un compte</span>}
+              {t('Vendre chez Nouvelle Rive', 'Sell at Nouvelle Rive', lang)}
+              {isSignupDeposante && <span className="ml-2 text-xs font-normal bg-[#22209C] text-white px-2 py-0.5 rounded-full">{t('Créer un compte', 'Create an account', lang)}</span>}
             </h2>
-            <p className="text-xs text-gray-500">Je suis un·e particulier·e, je veux vendre mes affaires.</p>
+            <p className="text-xs text-gray-500">
+              {t('Je suis un·e particulier·e, je veux vendre mes affaires.', 'I am an individual seller and want to sell my pieces.', lang)}
+            </p>
             <Link href="/client/deposant/conditions" className="text-sm underline" style={{ color: '#22209C' }}>
-              Découvrir nos conditions de dépôt →
+              {t('Découvrir nos conditions de dépôt →', 'See our consignment terms →', lang)}
             </Link>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" value={emailDeposante} onChange={e => setEmailDeposante(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
+              <input type="email" value={emailDeposante} onChange={e => setEmailDeposante(e.target.value)} required className={inputCls} placeholder={t('ton@email.com', 'your@email.com', lang)} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t('Mot de passe', 'Password', lang)}</label>
               <div className="relative">
                 <input type={showPasswordDeposante ? 'text' : 'password'} value={passwordDeposante} onChange={e => setPasswordDeposante(e.target.value)} required minLength={6} className={inputCls} placeholder="••••••••" />
                 <button type="button" onClick={() => setShowPasswordDeposante(!showPasswordDeposante)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -211,33 +241,45 @@ export default function LoginPage() {
               </div>
             </div>
             <button onClick={handleDeposanteSubmit} disabled={loadingDeposante} className={btnCls}>
-              {loadingDeposante ? 'Chargement...' : isSignupDeposante ? 'Créer mon compte' : 'Se connecter'}
+              {loadingDeposante
+                ? t('Chargement...', 'Loading...', lang)
+                : isSignupDeposante
+                  ? t('Créer mon compte', 'Create my account', lang)
+                  : t('Se connecter', 'Log in', lang)}
             </button>
             <button onClick={() => setIsSignupDeposante(!isSignupDeposante)} className="w-full text-xs text-center hover:underline" style={{ color: '#22209C' }}>
-              {isSignupDeposante ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
+              {isSignupDeposante
+                ? t('Déjà un compte ? Se connecter', 'Already have an account? Log in', lang)
+                : t('Pas encore de compte ? Créer un compte', 'No account yet? Create one', lang)}
             </button>
           </div>
 
           {/* ── COLONNE 3 : PRO ── */}
           <div className="flex flex-col px-6 py-5 space-y-2 bg-white border border-gray-200 rounded-xl shadow-sm md:border-0 md:rounded-none md:shadow-none md:border-l md:border-gray-200">
-            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>Espace professionnel·les</h2>
-            <p className="text-xs text-gray-500">Je suis un·e professionnel·le, je veux rejoindre l'équipe.</p>
+            <h2 className="text-xl font-bold uppercase" style={{ color: '#22209C' }}>{t('Espace professionnel·les', 'For professionals', lang)}</h2>
+            <p className="text-xs text-gray-500">
+              {t("Je suis un·e professionnel·le, je veux rejoindre l'équipe.", 'I am a professional and want to join the team.', lang)}
+            </p>
             <Link href="/nous-rencontrer" className="text-sm underline" style={{ color: '#22209C' }}>
-              Découvrir la boutique →
+              {t('Découvrir la boutique →', 'Discover the shop →', lang)}
             </Link>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" value={emailPro} onChange={e => setEmailPro(e.target.value)} required className={inputCls} placeholder="ton@email.com" />
+              <input type="email" value={emailPro} onChange={e => setEmailPro(e.target.value)} required className={inputCls} placeholder={t('ton@email.com', 'your@email.com', lang)} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Mot de passe</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t('Mot de passe', 'Password', lang)}</label>
               <input type="password" value={passwordPro} onChange={e => setPasswordPro(e.target.value)} required className={inputCls} placeholder="••••••••" />
             </div>
             <button onClick={handleProSubmit} disabled={loadingPro} className={btnCls}>
-              {loadingPro ? 'Chargement...' : isSignupPro ? 'Créer mon compte' : 'Se connecter'}
+              {loadingPro
+                ? t('Chargement...', 'Loading...', lang)
+                : isSignupPro
+                  ? t('Créer mon compte', 'Create my account', lang)
+                  : t('Se connecter', 'Log in', lang)}
             </button>
             <a href="https://www.instagram.com/nouvellerive/?hl=fr" target="_blank" rel="noopener noreferrer" className="w-full text-xs text-center hover:underline block" style={{ color: '#22209C' }}>
-              Contacter Nouvelle Rive →
+              {t('Contacter Nouvelle Rive →', 'Contact Nouvelle Rive →', lang)}
             </a>
           </div>
 
@@ -245,7 +287,9 @@ export default function LoginPage() {
 
         {/* RETOUR À LA BOUTIQUE */}
         <div className="text-center mt-4">
-          <Link href="/boutique" className="text-sm text-gray-400 hover:underline">← Retour à la boutique</Link>
+          <Link href="/boutique" className="text-sm text-gray-400 hover:underline">
+            {t('← Retour à la boutique', '← Back to shop', lang)}
+          </Link>
         </div>
 
       </div>
