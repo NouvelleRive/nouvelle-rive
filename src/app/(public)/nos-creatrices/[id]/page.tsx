@@ -13,7 +13,9 @@ type Creatrice = {
   trigramme?: string
   specialite: string
   accroche: string
+  accrocheEn?: string
   description: string
+  descriptionEn?: string
   lien: string
   instagram: string
   imageUrl: string
@@ -54,7 +56,9 @@ export default function CreateurPage() {
             trigramme: data.trigramme || '',
             specialite: data.specialite || '',
             accroche: data.accroche || '',
+            accrocheEn: data.accrocheEn || '',
             description: data.description || '',
+            descriptionEn: data.descriptionEn || '',
             lien: data.lien || '',
             instagram: data.instagram || '',
             imageUrl: data.imageUrl || '',
@@ -150,14 +154,22 @@ export default function CreateurPage() {
     }
   }, [creatrice])
 
-  // Typewriter effect
+  // Accroche/description selon la langue (avec fallback FR)
+  const accrocheLocale = creatrice
+    ? (lang === 'en' && creatrice.accrocheEn ? creatrice.accrocheEn : creatrice.accroche)
+    : ''
+  const descriptionLocale = creatrice
+    ? (lang === 'en' && creatrice.descriptionEn ? creatrice.descriptionEn : creatrice.description)
+    : ''
+
+  // Typewriter effect — relance à chaque changement de texte (langue)
   useEffect(() => {
-    if (!creatrice || !creatrice.accroche) return
-    
+    if (!accrocheLocale) return
+
     setDisplayedText('')
     let currentIndex = 0
-    const text = creatrice.accroche
-    
+    const text = accrocheLocale
+
     const interval = setInterval(() => {
       if (currentIndex <= text.length) {
         setDisplayedText(text.slice(0, currentIndex))
@@ -168,7 +180,7 @@ export default function CreateurPage() {
     }, 50)
 
     return () => clearInterval(interval)
-  }, [creatrice])
+  }, [accrocheLocale])
 
   if (loading) {
     return (
@@ -241,10 +253,10 @@ export default function CreateurPage() {
           style={{ borderRight: '1px solid #000' }}
         >
           {/* Accroche avec typewriter */}
-          {creatrice.accroche && (
-            <p 
+          {accrocheLocale && (
+            <p
               className="uppercase font-semibold mb-8"
-              style={{ 
+              style={{
                 fontFamily: 'Helvetica Neue, sans-serif',
                 fontSize: 'clamp(12px, 1.4vw, 14px)',
                 letterSpacing: '0.06em',
@@ -254,24 +266,24 @@ export default function CreateurPage() {
               }}
             >
               {displayedText}
-              {displayedText.length < creatrice.accroche.length && (
+              {displayedText.length < accrocheLocale.length && (
                 <span className="animate-pulse">|</span>
               )}
             </p>
           )}
 
           {/* Description */}
-          {creatrice.description && (
-            <p 
+          {descriptionLocale && (
+            <p
               className="leading-relaxed mb-8"
-              style={{ 
+              style={{
                 fontFamily: 'Helvetica Neue, sans-serif',
                 fontSize: '14px',
                 lineHeight: '1.9',
                 color: '#333'
               }}
             >
-              {creatrice.description}
+              {descriptionLocale}
             </p>
           )}
 
