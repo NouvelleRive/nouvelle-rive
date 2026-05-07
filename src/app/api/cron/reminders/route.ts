@@ -70,8 +70,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 12h30 — récap du jour : tâches + restocks
-  if (inWindow(h, m, 12, 30)) {
+  // 12h15 — récap du jour : tâches + restocks
+  if (inWindow(h, m, 12, 15)) {
     // Tâches
     const tachesSnap = await adminDb.collection('taches').doc(dateStr).get()
     const tasks: { texte: string }[] = tachesSnap.exists ? (tachesSnap.data()?.items || []) : []
