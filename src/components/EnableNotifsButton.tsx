@@ -23,46 +23,74 @@ export default function EnableNotifsButton({
 }) {
   const [status, setStatus] = useState<'idle' | 'unsupported' | 'denied' | 'subscribed' | 'subscribing'>('idle')
 
-  useEffect(() => {
-    (async () => {
-      if (typeof window === 'undefined') return
-      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-        setStatus('unsupported')
+  // Inscription effective (avec ou sans demande de permission selon contexte)
+  const subscribe = async (askPermission: boolean): Promise<boolean> => {
+    if (askPermission) {
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') {
+        setStatus(perm === 'denied' ? 'denied' : 'idle')
+        return false
+      }
+    } else if (Notification.permission !== 'granted') {
+      return false
+    }
+    const reg = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' })
+    await navigator.serviceWorker.ready
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC),
+    })
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerId, subscription: sub.toJSON() }),
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error(data.error || 'erreur')
+    setStatus('subscribed')
+    return true
+  }
+
+  // Vérifie l'état + auto-resubscribe si permission granted mais sub manquante
+  const checkAndResubscribe = async () => {
+    if (typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setStatus('unsupported')
+      return
+    }
+    if (Notification.permission === 'denied') { setStatus('denied'); return }
+    if (Notification.permission !== 'granted') return
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/sw-push.js')
+      const sub = reg ? await reg.pushManager.getSubscription() : null
+      if (sub) {
+        setStatus('subscribed')
         return
       }
-      if (Notification.permission === 'denied') { setStatus('denied'); return }
-      try {
-        const reg = await navigator.serviceWorker.getRegistration('/sw-push.js')
-        if (!reg) return
-        const sub = await reg.pushManager.getSubscription()
-        if (sub) setStatus('subscribed')
-      } catch {}
-    })()
-  }, [])
+      // Permission accordée mais sub disparue (iOS silently invalide) → re-subscribe sans prompt
+      await subscribe(false)
+    } catch (e) {
+      console.warn('checkAndResubscribe failed:', e)
+    }
+  }
+
+  useEffect(() => {
+    checkAndResubscribe()
+    const onFocus = () => checkAndResubscribe()
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownerId])
 
   const enable = async () => {
     if (status === 'subscribed' || status === 'subscribing') return
     setStatus('subscribing')
     try {
-      const perm = await Notification.requestPermission()
-      if (perm !== 'granted') {
-        setStatus(perm === 'denied' ? 'denied' : 'idle')
-        return
-      }
-      const reg = await navigator.serviceWorker.register('/sw-push.js', { scope: '/' })
-      await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC),
-      })
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ownerId, subscription: sub.toJSON() }),
-      })
-      const data = await res.json()
-      if (!data.success) throw new Error(data.error || 'erreur')
-      setStatus('subscribed')
+      await subscribe(true)
     } catch (e: any) {
       console.error(e)
       alert('Impossible d\'activer les notifs : ' + (e?.message || 'erreur'))
