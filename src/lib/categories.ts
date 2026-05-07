@@ -3,7 +3,7 @@
 import { extractCategorie } from './tailles'
 
 export const MACRO_CATEGORIES: Record<string, string> = {
-  // Prêt-à-porter
+  // Prêt-à-porter (tout vêtement)
   'haut': 'Prêt-à-porter',
   'chemise': 'Prêt-à-porter',
   'pull': 'Prêt-à-porter',
@@ -20,13 +20,15 @@ export const MACRO_CATEGORIES: Record<string, string> = {
   'ensemble': 'Prêt-à-porter',
   'combinaison': 'Prêt-à-porter',
 
-  // Sacs & Maroquinerie
-  'sac': 'Sacs & Maroquinerie',
-  'portefeuille': 'Sacs & Maroquinerie',
-  'porte clef': 'Sacs & Maroquinerie',
-  'porte briquet': 'Sacs & Maroquinerie',
+  // Maroquinerie
+  'sac': 'Maroquinerie',
+  'portefeuille': 'Maroquinerie',
+  'porte clef': 'Maroquinerie',
 
-  // Accessoires
+  // Chaussures
+  'chaussures': 'Chaussures',
+
+  // Accessoires (incluant lunettes et vases)
   'ceinture': 'Accessoires',
   'chapeau': 'Accessoires',
   'casquette': 'Accessoires',
@@ -35,9 +37,9 @@ export const MACRO_CATEGORIES: Record<string, string> = {
   'gants': 'Accessoires',
   'accessoires': 'Accessoires',
   'accesoires': 'Accessoires',
-
-  // Chaussures
-  'chaussures': 'Chaussures',
+  'lunettes': 'Accessoires',
+  'vase': 'Accessoires',
+  'porte briquet': 'Accessoires',
 
   // Bijoux
   'bague': 'Bijoux',
@@ -45,17 +47,15 @@ export const MACRO_CATEGORIES: Record<string, string> = {
   'bracelet': 'Bijoux',
   'collier': 'Bijoux',
   'broche': 'Bijoux',
+  'broches': 'Bijoux',
   'charms': 'Bijoux',
   'earcuff': 'Bijoux',
   'piercing': 'Bijoux',
   'bijoux': 'Bijoux',
   'bijou de cravates et foulards': 'Bijoux',
-
-  // Lunettes
-  'lunettes': 'Lunettes',
 }
 
-export const MACRO_ORDER = ['Prêt-à-porter', 'Sacs & Maroquinerie', 'Accessoires', 'Chaussures', 'Bijoux', 'Lunettes']
+export const MACRO_ORDER = ['Prêt-à-porter', 'Maroquinerie', 'Bijoux', 'Chaussures', 'Accessoires']
 
 export function getMacroCategorie(categorieComplete: string): string | null {
   const cat = extractCategorie(categorieComplete).toLowerCase()
