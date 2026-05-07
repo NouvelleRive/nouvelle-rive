@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
 type Creatrice = {
@@ -16,7 +16,7 @@ type Creatrice = {
   lien: string
   instagram: string
   imageUrl: string
-  produitsPrefers?: string[] // IDs des produits
+  stockType: string
 }
 
 type Produit = {
@@ -56,6 +56,7 @@ export default function CreateurPage() {
             lien: data.lien || '',
             instagram: data.instagram || '',
             imageUrl: data.imageUrl || '',
+            stockType: data.stockType || '',
           })
         }
       } catch (error) {
@@ -68,51 +69,72 @@ export default function CreateurPage() {
     fetchCreatrice()
   }, [slug])
 
-  // Fetch les produits de la créatrice (par trigramme) et les trier par favoris
+  // Fetch produits : 3 derniers (pieceUnique) ou plus likés (smallBatch)
   useEffect(() => {
     async function fetchProduitsCreatrices() {
-      if (!creatrice) return
-      
+      if (!creatrice || !creatrice.trigramme) return
+
       try {
-        const produitsQuery = query(
-          collection(db, 'produits'),
-          where('trigramme', '==', creatrice.trigramme),
-          where('vendu', '!=', true)
+        const produitsSnap = await getDocs(
+          query(collection(db, 'produits'), where('trigramme', '==', creatrice.trigramme))
         )
-        const produitsSnap = await getDocs(produitsQuery)
-        
-        const produitsAvecFavoris = await Promise.all(
-          produitsSnap.docs.map(async (docSnap) => {
-            const data = docSnap.data()
-            
-            const favorisQuery = query(
-              collection(db, 'favoris'),
-              where('productId', '==', docSnap.id)
-            )
-            const favorisSnap = await getDocs(favorisQuery)
-            
-            return {
-              id: docSnap.id,
-              nom: data.nom || 'Produit',
-              prix: data.prix || 0,
-              imageUrl: data.imageUrls?.[0] || data.imageUrl || '',
-              nbFavoris: favorisSnap.size,
-              recu: data.recu === true,
-            }
+
+        const all = produitsSnap.docs
+          .map((d) => ({ id: d.id, ...(d.data() as any) }))
+          .filter((p: any) => {
+            if (p.vendu) return false
+            if ((p.quantite ?? 1) <= 0) return false
+            if (p.statut === 'retour' || p.statut === 'supprime') return false
+            if (p.hidden === true) return false
+            if (p.forceDisplay === false) return false
+            const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
+            return !!hasImage
           })
-        )
-        
-        const topProduits = produitsAvecFavoris
-         .filter(p => p.imageUrl && p.recu === true)
-        .sort((a, b) => b.nbFavoris - a.nbFavoris)
-        .slice(0, 3)
-        
-        setProduits(topProduits)
+
+        const isSmallBatch = creatrice.stockType === 'smallBatch'
+
+        if (isSmallBatch) {
+          const withLikes = await Promise.all(
+            all.map(async (p: any) => {
+              const fSnap = await getDocs(
+                query(collection(db, 'favoris'), where('productId', '==', p.id))
+              )
+              return { p, likes: fSnap.size }
+            })
+          )
+          withLikes.sort((a, b) => b.likes - a.likes)
+          setProduits(
+            withLikes.slice(0, 6).map(({ p }) => ({
+              id: p.id,
+              nom: p.nom || 'Produit',
+              prix: p.prix || 0,
+              imageUrl: p.imageUrls?.[0] || p.imageUrl || '',
+            }))
+          )
+        } else {
+          all.sort((a: any, b: any) => {
+            const ta = a.createdAt?.toMillis
+              ? a.createdAt.toMillis()
+              : new Date(a.createdAt || 0).getTime()
+            const tb = b.createdAt?.toMillis
+              ? b.createdAt.toMillis()
+              : new Date(b.createdAt || 0).getTime()
+            return tb - ta
+          })
+          setProduits(
+            all.slice(0, 3).map((p: any) => ({
+              id: p.id,
+              nom: p.nom || 'Produit',
+              prix: p.prix || 0,
+              imageUrl: p.imageUrls?.[0] || p.imageUrl || '',
+            }))
+          )
+        }
       } catch (error) {
         console.error('Erreur fetch produits:', error)
       }
     }
-    
+
     fetchProduitsCreatrices()
   }, [creatrice])
   
@@ -301,11 +323,13 @@ export default function CreateurPage() {
 
       {/* Section Produits */}
       <div className="py-8 text-center" style={{ borderBottom: '1px solid #000' }}>
-        <h2 
+        <h2
           className="uppercase tracking-widest"
           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px', letterSpacing: '0.15em' }}
         >
-          Ses pièces dans notre boutique
+          {creatrice.stockType === 'smallBatch'
+            ? 'Ses pièces les plus aimées'
+            : 'Ses 3 dernières pièces'}
         </h2>
       </div>
 
