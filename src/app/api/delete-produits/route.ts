@@ -4,6 +4,7 @@
   import { NextRequest, NextResponse } from 'next/server'
   import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
   import { FieldValue } from 'firebase-admin/firestore'
+  import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -31,13 +32,22 @@
 
       // Valider destock : pas besoin d'auth (vendeuses non connectées)
       if (justif === 'valider_destock') {
+        const produitData = produitSnap.data() as any
         await produitRef.update({
           statut: 'retour',
           statutRecuperation: null,
           dateRetour: FieldValue.serverTimestamp(),
           derniereAction: 'retour_valide',
         })
-        
+
+        // Le produit n'est plus sur le site → on le retire aussi d'eBay s'il y était.
+        await removeFromAllChannels({
+          id: String(productId),
+          sku: produitData?.sku,
+          ebayOfferId: produitData?.ebayOfferId,
+          ebayListingId: produitData?.ebayListingId,
+        }).catch(e => console.error('⚠️ Retrait multi-canal (retour) KO:', e?.message))
+
         return NextResponse.json({
           success: true,
           action: 'retour',
@@ -96,20 +106,36 @@
           dateDemandeRecuperation: FieldValue.serverTimestamp(),
           derniereAction: 'demande_recuperation',
         })
-        
+
+        // Le produit ne doit plus être achetable pendant la récupération → retrait eBay (et autres canaux).
+        await removeFromAllChannels({
+          id: String(productId),
+          sku: data?.sku,
+          ebayOfferId: data?.ebayOfferId,
+          ebayListingId: data?.ebayListingId,
+        }).catch(e => console.error('⚠️ Retrait multi-canal (récupération) KO:', e?.message))
+
         console.log(`✅ Produit ${productId} en attente de validation vendeuse`)
-        
+
         return NextResponse.json({
           success: true,
           action: 'demande_recuperation',
         })
 
       } else {
-        // Erreur → suppression Firestore → Cloud Function supprimera de Square
+        // Erreur → on retire d'eBay AVANT le delete (pour ne pas perdre les ids)
+        await removeFromAllChannels({
+          id: String(productId),
+          sku: data?.sku,
+          ebayOfferId: data?.ebayOfferId,
+          ebayListingId: data?.ebayListingId,
+        }).catch(e => console.error('⚠️ Retrait multi-canal (delete) KO:', e?.message))
+
+        // Suppression Firestore → Cloud Function supprimera de Square
         await produitRef.delete()
-        
+
         console.log(`✅ Produit ${productId} supprimé`)
-        
+
         return NextResponse.json({
           success: true,
           action: 'delete',

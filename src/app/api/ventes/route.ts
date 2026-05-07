@@ -4,6 +4,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { Timestamp } from 'firebase-admin/firestore'
+import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -136,6 +137,15 @@ export async function POST(req: NextRequest) {
       updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
     }
     await produitRef.update(updateData)
+
+    if (newQty === 0) {
+      await removeFromAllChannels({
+        id: produitId,
+        sku: p.sku,
+        ebayOfferId: p.ebayOfferId,
+        ebayListingId: p.ebayListingId,
+      }).catch(e => console.error('⚠️ Retrait multi-canal (POST) KO:', e?.message))
+    }
 
     console.log(`✅ Vente ${venteId} attribuée au produit ${produitId}`)
     return NextResponse.json({ success: true })
@@ -276,6 +286,15 @@ export async function PUT(req: NextRequest) {
       updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
     }
     await produitRef.update(updateData)
+
+    if (newQty === 0) {
+      await removeFromAllChannels({
+        id: produitId,
+        sku: p.sku,
+        ebayOfferId: p.ebayOfferId,
+        ebayListingId: p.ebayListingId,
+      }).catch(e => console.error('⚠️ Retrait multi-canal (PUT) KO:', e?.message))
+    }
 
     console.log(`✅ Vente ${venteId} attribuée au produit ${produitId}`)
     return NextResponse.json({ success: true })

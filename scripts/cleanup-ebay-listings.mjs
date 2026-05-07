@@ -1,7 +1,9 @@
 // Retire d'eBay les produits qui ne sont plus sur le site (vendus, repris, supprimés, stock 0).
 // Usage : node scripts/cleanup-ebay-listings.mjs           → dry-run (liste seulement)
 //         node scripts/cleanup-ebay-listings.mjs --apply   → exécute le retrait
-import 'dotenv/config'
+import dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })
+dotenv.config()
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
@@ -98,6 +100,15 @@ if (!APPLY) {
   process.exit(0)
 }
 
+// Vérifie que l'auth eBay fonctionne AVANT de toucher quoi que ce soit.
+try {
+  await getAccessToken()
+  console.log('\n🔐 Auth eBay OK')
+} catch (e) {
+  console.error(`\n❌ Auth eBay impossible — abort sans modifier Firestore.\n   ${e.message}`)
+  process.exit(1)
+}
+
 console.log(`\n🚀 Mode --apply : retrait effectif sur eBay…\n`)
 let okCount = 0
 let failCount = 0
@@ -105,14 +116,28 @@ for (const { p, reason } of candidates) {
   const sku = p.sku
   const offerId = p.ebayOfferId
   const label = `${sku || p.id} (${reason})`
+  let withdrawOk = !offerId  // pas d'offer = rien à withdraw, considéré OK
+  let deleteOk = !sku        // pas de sku = rien à delete, considéré OK
   try {
     if (offerId) {
-      try { await ebayCall(`/sell/inventory/v1/offer/${offerId}/withdraw`, 'POST'); console.log(`  ↳ withdraw offer ${offerId} ✅`) }
-      catch (e) { console.log(`  ↳ withdraw offer ${offerId} ⚠️ ${e.message}`) }
+      try { await ebayCall(`/sell/inventory/v1/offer/${offerId}/withdraw`, 'POST'); console.log(`  ↳ withdraw offer ${offerId} ✅`); withdrawOk = true }
+      catch (e) {
+        // 404 = déjà retiré côté eBay, on considère OK
+        if (/404|not.?found/i.test(e.message)) { console.log(`  ↳ withdraw offer ${offerId} (déjà retiré) ✅`); withdrawOk = true }
+        else { console.log(`  ↳ withdraw offer ${offerId} ❌ ${e.message}`) }
+      }
     }
     if (sku) {
-      try { await ebayCall(`/sell/inventory/v1/inventory_item/${sku}`, 'DELETE'); console.log(`  ↳ delete inventory ${sku} ✅`) }
-      catch (e) { console.log(`  ↳ delete inventory ${sku} ⚠️ ${e.message}`) }
+      try { await ebayCall(`/sell/inventory/v1/inventory_item/${sku}`, 'DELETE'); console.log(`  ↳ delete inventory ${sku} ✅`); deleteOk = true }
+      catch (e) {
+        if (/404|not.?found/i.test(e.message)) { console.log(`  ↳ delete inventory ${sku} (déjà supprimé) ✅`); deleteOk = true }
+        else { console.log(`  ↳ delete inventory ${sku} ❌ ${e.message}`) }
+      }
+    }
+    if (!withdrawOk || !deleteOk) {
+      console.log(`⏭️  ${label} : eBay KO, Firestore non modifié`)
+      failCount++
+      continue
     }
     const newPublishedOn = Array.isArray(p.publishedOn) ? p.publishedOn.filter(s => s !== 'ebay') : []
     await db.collection('produits').doc(p.id).update({

@@ -4,6 +4,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
+import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 
 // =====================
 // POST - Ajouter une vente manuellement
@@ -72,6 +73,14 @@ export async function POST(req: NextRequest) {
       venteManuelle: true,
       updatedAt: FieldValue.serverTimestamp()
     })
+
+    // Retirer d'eBay si le produit y était listé.
+    await removeFromAllChannels({
+      id: produitId,
+      sku: produit?.sku,
+      ebayOfferId: produit?.ebayOfferId,
+      ebayListingId: produit?.ebayListingId,
+    }).catch(e => console.error('⚠️ Retrait multi-canal (vente manuelle) KO:', e?.message))
 
     console.log(`✅ Vente manuelle créée pour produit ${produitId}`)
 
@@ -233,7 +242,7 @@ export async function DELETE(req: NextRequest) {
       // =====================
       // SUPPRIMER SANS REMETTRE EN CAISSE : juste annuler la vente
       // =====================
-      
+
       // Marquer comme supprimé (ni vendu, ni disponible)
       await produitRef.update({
         vendu: false,
@@ -243,6 +252,14 @@ export async function DELETE(req: NextRequest) {
         venteManuelle: FieldValue.delete(),
         updatedAt: FieldValue.serverTimestamp()
       })
+
+      // Produit supprimé du site → retirer aussi d'eBay s'il y était
+      await removeFromAllChannels({
+        id: produitId,
+        sku: produit?.sku,
+        ebayOfferId: produit?.ebayOfferId,
+        ebayListingId: produit?.ebayListingId,
+      }).catch(e => console.error('⚠️ Retrait multi-canal (suppression vente) KO:', e?.message))
 
       console.log(`✅ Vente supprimée pour produit ${produitId} (non remis en caisse)`)
 

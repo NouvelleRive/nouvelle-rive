@@ -6,36 +6,55 @@
  */
 
 import { removeFromEbay, isEbayConfigured } from '@/lib/ebay'
+import { adminDb } from '@/lib/firebaseAdmin'
 
 /**
- * Retire un produit d'eBay (si configuré et si listé)
+ * Retire un produit d'eBay et nettoie ebayListingId/ebayOfferId dans Firestore
+ * uniquement si le retrait eBay a réussi.
+ * Renvoie true si le retrait eBay s'est bien passé (ou n'avait rien à faire).
  */
 export async function removeProductFromEbay(
+  produitId: string,
   sku: string,
   ebayOfferId?: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     if (!isEbayConfigured()) {
       console.log('⏭️ eBay non configuré, skip retrait')
-      return
+      return false
     }
-
     if (!sku) {
       console.log('⏭️ Pas de SKU, skip retrait eBay')
-      return
+      return false
     }
 
     console.log(`🗑️ Retrait eBay: ${sku}`)
     const result = await removeFromEbay(sku, ebayOfferId)
-    
-    if (result.success) {
-      console.log(`✅ Produit retiré d'eBay: ${sku}`)
-    } else {
-      console.log(`⚠️ Échec retrait eBay (peut-être pas listé): ${result.error}`)
+
+    if (!result.success) {
+      console.warn(`⚠️ Échec retrait eBay ${sku} : ${result.error} — Firestore non modifié`)
+      return false
     }
+
+    // Nettoie les ids eBay côté Firestore pour ne pas garder un lien fantôme.
+    try {
+      const snap = await adminDb.collection('produits').doc(produitId).get()
+      const publishedOn = Array.isArray(snap.data()?.publishedOn) ? snap.data()!.publishedOn as string[] : []
+      await adminDb.collection('produits').doc(produitId).update({
+        ebayListingId: null,
+        ebayOfferId: null,
+        ebayPublishedAt: null,
+        publishedOn: publishedOn.filter(s => s !== 'ebay'),
+      })
+    } catch (e: any) {
+      console.warn(`⚠️ Retrait eBay OK mais maj Firestore KO pour ${produitId} : ${e?.message}`)
+    }
+
+    console.log(`✅ Produit retiré d'eBay: ${sku}`)
+    return true
   } catch (error: any) {
-    // Non bloquant - on continue même si eBay échoue
     console.error(`⚠️ Erreur retrait eBay (non bloquant): ${error?.message}`)
+    return false
   }
 }
 
@@ -62,7 +81,7 @@ export async function removeFromAllChannels(
   // Retrait eBay (sauf si vente vient d'eBay)
   if (excludeChannel !== 'ebay' && (produit.ebayOfferId || produit.ebayListingId)) {
     promises.push(
-      removeProductFromEbay(produit.sku || produit.id, produit.ebayOfferId)
+      removeProductFromEbay(produit.id, produit.sku || produit.id, produit.ebayOfferId).then(() => undefined)
     )
   }
 

@@ -388,6 +388,12 @@
           dateReception: Timestamp.now(),
           recuPar: vendeusePrenom,
         })
+        // Best-effort : si le produit match les règles luxe, le publier sur eBay
+        fetch('/api/ebay/publish-if-luxe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: p.id }),
+        }).catch(() => {})
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur réception:', err)
@@ -414,6 +420,12 @@
           dateSuppressionReception: Timestamp.now(),
           supprimePar: vendeusePrenom,
         })
+        // Retrait eBay best-effort si le produit y était listé
+        fetch('/api/produits/remove-ebay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: p.id }),
+        }).catch(() => {})
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur suppression:', err)

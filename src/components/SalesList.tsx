@@ -68,9 +68,6 @@ interface SalesListProps {
   // Sync
   onSync?: (startDate: string, endDate: string) => Promise<void>
   syncLoading?: boolean
-  // Import Excel (admin)
-  onImportExcel?: (rows: any[]) => Promise<void>
-  importLoading?: boolean
   // Refresh
   onRefresh?: () => void
 }
@@ -95,8 +92,6 @@ export default function SalesList({
   onAjouterVente,
   onSync,
   syncLoading = false,
-  onImportExcel,
-  importLoading = false,
   onRefresh,
 }: SalesListProps) {
 

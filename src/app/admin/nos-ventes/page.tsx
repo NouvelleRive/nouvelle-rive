@@ -24,9 +24,6 @@ export default function AdminNosVentesPage() {
   // Sync
   const [syncLoading, setSyncLoading] = useState(false)
 
-  // Import Excel
-  const [importLoading, setImportLoading] = useState(false)
-
   // Modals
   const [showModalAttribuer, setShowModalAttribuer] = useState(false)
   const [showModalSupprimer, setShowModalSupprimer] = useState(false)
@@ -197,28 +194,6 @@ export default function AdminNosVentesPage() {
     }
   }
 
-  // Import Excel
-  const handleImportExcel = async (rows: any[]) => {
-    setImportLoading(true)
-    try {
-      const res = await fetch('/api/import-ventes-excel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows })
-      })
-      const result = await res.json()
-      if (result.success) {
-        alert(`${result.imported} vente(s) importée(s)`)
-        await loadVentes()
-      } else {
-        alert(result.error || 'Erreur import')
-      }
-    } catch (err) {
-      alert('Erreur : FI')
-    } finally {
-      setImportLoading(false)
-    }
-  }
 
   // Ouvrir modal attribution
   const handleAttribuer = (vente: Vente) => {
@@ -469,8 +444,6 @@ export default function AdminNosVentesPage() {
         onAjouterVente={() => setShowModalAjout(true)}
         onSync={handleSync}
         syncLoading={syncLoading}
-        onImportExcel={handleImportExcel}
-        importLoading={importLoading}
         onRefresh={loadVentes}
       />
 
