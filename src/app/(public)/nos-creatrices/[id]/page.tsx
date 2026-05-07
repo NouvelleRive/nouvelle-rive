@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { useLang, t } from '@/lib/i18n'
 
 type Creatrice = {
   nom: string
@@ -29,7 +30,8 @@ type Produit = {
 export default function CreateurPage() {
   const params = useParams()
   const slug = params?.id as string
-  
+  const lang = useLang()
+
   const [creatrice, setCreatrice] = useState<Creatrice | null>(null)
   const [produits, setProduits] = useState<Produit[]>([])
   const [loading, setLoading] = useState(true)
@@ -173,7 +175,7 @@ export default function CreateurPage() {
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="uppercase tracking-widest" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-            Chargement...
+            {t('Chargement...', 'Loading...', lang)}
           </p>
         </div>
       </main>
@@ -185,10 +187,10 @@ export default function CreateurPage() {
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="uppercase tracking-widest mb-4" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-            Créatrice non trouvée
+            {t('Créatrice non trouvée', 'Designer not found', lang)}
           </p>
           <Link href="/nos-creatrices" className="uppercase text-xs tracking-widest underline hover:opacity-50">
-            Retour
+            {t('Retour', 'Back', lang)}
           </Link>
         </div>
       </main>
@@ -199,12 +201,12 @@ export default function CreateurPage() {
     <main className="min-h-screen bg-white">
       {/* Header */}
       <div className="py-4 px-6 text-center" style={{ borderBottom: '1px solid #000' }}>
-        <Link 
+        <Link
           href="/nos-creatrices"
           className="uppercase text-xs tracking-widest hover:opacity-50 transition"
           style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
         >
-          Nos Créatrices/Curateurices
+          {t('Nos Créatrices/Curateurices', 'Our Designers / Curators', lang)}
         </Link>
       </div>
 
@@ -283,7 +285,7 @@ export default function CreateurPage() {
                 className="uppercase text-xs tracking-widest hover:opacity-50 transition flex items-center gap-2"
                 style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
               >
-                <span>Site web</span>
+                <span>{t('Site web', 'Website', lang)}</span>
                 <span>→</span>
               </a>
             )}
@@ -315,7 +317,7 @@ export default function CreateurPage() {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
-              <p className="text-gray-400 text-xs uppercase tracking-wider">Image à venir</p>
+              <p className="text-gray-400 text-xs uppercase tracking-wider">{t('Image à venir', 'Image coming soon', lang)}</p>
             </div>
           )}
         </div>
@@ -328,8 +330,8 @@ export default function CreateurPage() {
           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px', letterSpacing: '0.15em' }}
         >
           {creatrice.stockType === 'smallBatch'
-            ? 'Ses pièces les plus aimées'
-            : 'Ses 3 dernières pièces'}
+            ? t('Ses pièces les plus aimées', 'Her most loved pieces', lang)
+            : t('Ses 3 dernières pièces', 'Her latest 3 pieces', lang)}
         </h2>
       </div>
 
@@ -355,7 +357,7 @@ export default function CreateurPage() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <p className="text-gray-400 text-xs uppercase">Image à venir</p>
+                    <p className="text-gray-400 text-xs uppercase">{t('Image à venir', 'Image coming soon', lang)}</p>
                   </div>
                 )}
               </div>
@@ -367,7 +369,7 @@ export default function CreateurPage() {
                   {creatrice.nom}
                 </p>
                 <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-                  {p.prix} EUR
+                  {p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
                 </p>
               </div>
             </Link>
@@ -375,23 +377,23 @@ export default function CreateurPage() {
         </div>
       ) : (
         <div className="py-20 text-center" style={{ borderBottom: '1px solid #000' }}>
-          <p 
+          <p
             className="uppercase tracking-widest text-gray-400"
             style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}
           >
-            Produits à venir prochainement
+            {t('Produits à venir prochainement', 'Pieces coming soon', lang)}
           </p>
         </div>
       )}
 
       {/* Retour */}
       <div className="py-12 text-center" style={{ borderBottom: '1px solid #000' }}>
-        <Link 
+        <Link
           href="/nos-creatrices"
           className="uppercase text-xs tracking-widest hover:opacity-50"
           style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
         >
-          Toutes nos Créatrices/Curateurices
+          {t('Toutes nos Créatrices/Curateurices', 'All our Designers / Curators', lang)}
         </Link>
       </div>
     </main>
