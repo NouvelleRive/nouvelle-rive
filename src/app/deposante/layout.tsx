@@ -8,9 +8,9 @@ import Link from 'next/link'
 import { db } from '@/lib/firebaseConfig'
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore'
 
-type Etapes = { profil: boolean; contrat: boolean; pieces: boolean; rdv: boolean }
+type Etapes = { profil: boolean; contrat: boolean; validee: boolean; pieces: boolean; rdv: boolean }
 type EtapesContextType = Etapes & { refreshEtapes: () => void; setEtape: (key: keyof Etapes, value: boolean) => void }
-export const EtapesContext = createContext<EtapesContextType>({ profil: false, contrat: false, pieces: false, rdv: false, refreshEtapes: () => {}, setEtape: () => {} })
+export const EtapesContext = createContext<EtapesContextType>({ profil: false, contrat: false, validee: false, pieces: false, rdv: false, refreshEtapes: () => {}, setEtape: () => {} })
 export const useEtapes = () => useContext(EtapesContext)
 
 function ProgressBar({ etapes }: { etapes: Etapes }) {
@@ -140,7 +140,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [etapes, setEtapes] = useState<Etapes>({ profil: false, contrat: false, pieces: false, rdv: false })
+  const [etapes, setEtapes] = useState<Etapes>({ profil: false, contrat: false, validee: false, pieces: false, rdv: false })
   const [showWelcome, setShowWelcome] = useState(false)
 
   const loadEtapes = async (u: User) => {
@@ -157,6 +157,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
       if (d) {
         const profilOk = !!(d.prenom && d.nom && d.adresse1 && d.telephone && d.iban && d.pieceIdentiteUrl)
         const contratOk = !!d.contratSigne
+        const valideeOk = !!d.validee
         const prodSnap = await getDocs(query(collection(db, 'produits'), where('chineur', '==', u.email)))
         const piecesOk = prodSnap.size > 0
         const restockSnap = await getDocs(collection(db, 'restocks'))
@@ -166,7 +167,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
             if (slot?.nom === (d.trigramme || '').toUpperCase()) rdvOk = true
           })
         })
-        setEtapes({ profil: profilOk, contrat: contratOk, pieces: piecesOk, rdv: rdvOk })
+        setEtapes({ profil: profilOk, contrat: contratOk, validee: valideeOk, pieces: piecesOk, rdv: rdvOk })
         if (!d.hasSeenWelcome) setShowWelcome(true)
       } else {
         setShowWelcome(true)
@@ -203,7 +204,8 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
       const d = snap.data() as any
       const profilOk = !!(d.prenom && d.nom && d.adresse1 && d.telephone && d.iban && d.pieceIdentiteUrl)
       const contratOk = !!d.contratSigne
-      setEtapes(prev => ({ ...prev, profil: profilOk, contrat: contratOk }))
+      const valideeOk = !!d.validee
+      setEtapes(prev => ({ ...prev, profil: profilOk, contrat: contratOk, validee: valideeOk }))
     })
     return () => unsub()
   }, [user])

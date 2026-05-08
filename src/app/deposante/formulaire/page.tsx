@@ -18,6 +18,7 @@ import { auth, db } from '@/lib/firebaseConfig'
 import ProductForm, { ProductFormData, Cat } from '@/components/ProductForm'
 import { checkSkuUnique } from '@/lib/admin/helpers'
 import { MARQUES_DEPOSANTE, NOMS_MARQUES_DEPOSANTE, getPrixRange } from '@/lib/marquesDeposante'
+import { useEtapes } from '../layout'
 
 const NOMS_MARQUES_LOWER = NOMS_MARQUES_DEPOSANTE.map(n => n.toLowerCase().trim())
 
@@ -70,6 +71,7 @@ async function computeNextSkuForTrigram(trigramme: string, userEmail: string): P
 // =====================
 export default function DeposanteFormulairePage() {
   const router = useRouter()
+  const etapes = useEtapes()
   const [user, setUser] = useState<User | null>(null)
   const [deposanteNom, setDeposanteNom] = useState<string>('DÉPOSANT·E')
   const [trigramme, setTrigramme] = useState<string>('')
@@ -193,11 +195,37 @@ export default function DeposanteFormulairePage() {
     }
   }
 
+  // Gates : profil + contrat + validée par vendeuse
+  if (!etapes.profil) {
+    return (
+      <main className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <p className="text-sm text-gray-600 mb-4">Vous devez d'abord compléter votre profil pour pouvoir déposer une pièce.</p>
+        <a href="/deposante/profil" className="inline-block px-4 py-2 bg-[#22209C] text-white text-xs font-semibold uppercase tracking-widest">Compléter mon profil →</a>
+      </main>
+    )
+  }
+  if (!etapes.contrat) {
+    return (
+      <main className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <p className="text-sm text-gray-600 mb-4">Vous devez signer le contrat de dépôt-vente pour pouvoir déposer une pièce.</p>
+        <a href="/deposante/profil" className="inline-block px-4 py-2 bg-[#22209C] text-white text-xs font-semibold uppercase tracking-widest">Signer mon contrat →</a>
+      </main>
+    )
+  }
+  if (!etapes.validee) {
+    return (
+      <main className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <p className="text-sm text-gray-700 font-medium mb-2">Profil en cours de validation 💙</p>
+        <p className="text-sm text-gray-500">Notre équipe vérifie vos informations. Vous recevrez un email dès que votre profil sera validé. Vous pourrez alors déposer vos pièces.</p>
+      </main>
+    )
+  }
+
   return (
     <main className="max-w-3xl mx-auto px-4 py-4">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-gray-500">Hello {deposanteNom} 👋</p>
+          <p className="text-sm text-gray-500">Hello {deposanteNom} 💙</p>
           <h1 className="text-xl font-bold text-[#22209C]">DÉPOSER UNE PIÈCE</h1>
         </div>
         <a

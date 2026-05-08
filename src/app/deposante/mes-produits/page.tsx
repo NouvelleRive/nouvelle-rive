@@ -49,6 +49,7 @@ export default function DeposanteMesProduits() {
 
 if (!etapes.profil) return <div className="p-12 text-center text-gray-500">Complète ton profil pour continuer →</div>
   if (!etapes.contrat) return <div className="p-12 text-center text-gray-500">Signe ton contrat pour continuer →</div>
+  if (!etapes.validee) return <div className="p-12 text-center text-gray-500">Profil en cours de validation 💙 — vous recevrez un email dès que c'est bon.</div>
 
   return (
     <ProductList
