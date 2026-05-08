@@ -33,7 +33,7 @@ export default function NavbarPublic() {
   }, [])
 
   const boutiqueLinks = [
-    { href: '/boutique', label: t('NEW IN', 'NEW IN', lang) },
+    { href: '/boutique', label: t('TOUT VOIR', 'SEE ALL', lang) },
     { href: '/nous-rencontrer', label: t('IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES', 'IRL: OUR BOUTIQUE — 8 RUE DES ECOUFFES', lang) },
     { href: '/ete', label: t('ÉTÉ', 'SUMMER', lang) },
     { href: '/soiree', label: t('SOIRÉE', 'EVENING', lang) },
