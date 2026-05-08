@@ -38,6 +38,7 @@ export default function NavbarPublic() {
     { href: '/ete', label: t('ÉTÉ', 'SUMMER', lang) },
     { href: '/soiree', label: t('SOIRÉE', 'EVENING', lang) },
     { href: '/les-iconiques', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONICS', lang) },
+    { href: '/iconiques-upcy', label: t('NOS PIÈCES UPCY FAVORITES', 'OUR FAVORITE UPCYCLED PIECES', lang) },
     { href: '/luxe', label: t('LE LUXE', 'LUXURY', lang) },
     { href: '/coups-de-coeur', label: t('NOS PIÈCES PRÉFÉRÉES', 'OUR FAVORITE GEMS', lang) },
     { href: '/nos-creatrices', label: t('NOS CRÉATRICES/CURATEURICES', 'OUR DESIGNERS / CURATORS', lang) },
