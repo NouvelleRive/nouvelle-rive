@@ -319,65 +319,90 @@ export default function DeposanteCalendrierPage() {
         </>}
       </div>
 
-      {/* En-tête mois */}
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={() => navMonth(-1)} className="p-1 hover:bg-gray-100 rounded"><ChevronLeft size={20} /></button>
-        <h2 className="text-lg font-semibold capitalize">{monthLabel}</h2>
-        <button onClick={() => navMonth(1)} className="p-1 hover:bg-gray-100 rounded"><ChevronRight size={20} /></button>
+      {/* En-tête mois (même format que PlanningCalendar) */}
+      <div className="flex items-center justify-center gap-6 mb-4">
+        <button onClick={() => navMonth(-1)} className="p-2 hover:bg-gray-100 rounded-lg transition"><ChevronLeft size={20} /></button>
+        <span className="text-lg font-semibold capitalize w-48 text-center">{monthLabel}</span>
+        <button onClick={() => navMonth(1)} className="p-2 hover:bg-gray-100 rounded-lg transition"><ChevronRight size={20} /></button>
       </div>
 
-      {/* Grille jours */}
-      <div className="grid grid-cols-7 gap-1 text-xs">
-        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(d => (
-          <div key={d} className="text-center font-medium text-gray-500 py-1">{d}</div>
-        ))}
-        {calendarDays.map((d, i) => {
-          if (!d) return <div key={`pad-${i}`} className="aspect-square" />
-          const dateStr = formatDateStr(currentMonth.year, currentMonth.month, d)
-          const info = getDayInfo(dateStr)
-          const baseClass = 'aspect-square border rounded p-1 flex flex-col items-center justify-start text-center transition-all'
-          let className = baseClass
-          let title = ''
-          if (info.isPast) {
-            className += ' bg-gray-50 text-gray-300 cursor-not-allowed'
-            title = 'Passé'
-          } else if (info.reservedByMe) {
-            className += ' bg-[#22209C] text-white font-semibold cursor-pointer hover:opacity-90'
-            title = 'Votre RDV'
-          } else if (info.dayHasChineuse) {
-            className += ' bg-amber-50 text-amber-700 cursor-not-allowed'
-            title = 'Chineuse en boutique'
-          } else if (info.fullyBooked) {
-            className += ' bg-gray-100 text-gray-400 cursor-not-allowed'
-            title = 'Complet'
-          } else {
-            className += ' bg-white hover:bg-[#22209C]/10 cursor-pointer text-gray-800'
-            title = `${info.creneauxDispo.length} créneau(x) dispo`
-          }
-          return (
-            <button
-              key={dateStr}
-              type="button"
-              disabled={info.isPast || (info.fullyBooked && !info.reservedByMe) || info.dayHasChineuse}
-              onClick={() => openModal(dateStr)}
-              title={title}
-              className={className}
-            >
-              <span className="text-sm">{d}</span>
-              {info.reservedByMe && <span className="text-[9px] mt-0.5">Mon RDV</span>}
-              {!info.reservedByMe && !info.isPast && !info.dayHasChineuse && !info.fullyBooked && (
-                <span className="text-[9px] text-gray-400 mt-0.5">{info.creneauxDispo.length}{info.isWeekend ? ' WE' : ''}</span>
-              )}
-            </button>
-          )
-        })}
+      {/* Légende */}
+      <div className="flex flex-wrap gap-3 mb-4 justify-center text-xs text-gray-600">
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-white border rounded-sm" /> Disponible</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-amber-50 border border-amber-200 rounded-sm" /> Chineuse en boutique</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-gray-100 border rounded-sm" /> Complet</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-[#22209C] rounded-sm" /> Votre RDV</span>
       </div>
 
-      <div className="mt-4 text-xs text-gray-500 flex flex-wrap gap-3">
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-white border rounded-sm" /> Disponible</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-amber-50 border border-amber-200 rounded-sm" /> Chineuse en boutique</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-gray-100 border rounded-sm" /> Complet</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-[#22209C] rounded-sm" /> Votre RDV</span>
+      {/* Grille jours (même format que PlanningCalendar) */}
+      <div className="bg-white rounded-xl border overflow-x-auto">
+        <div className="min-w-[560px]">
+          <div className="grid grid-cols-7 border-b bg-gray-50">
+            {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(j => (
+              <div key={j} className="text-center text-xs font-bold text-gray-500 py-2">{j}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {calendarDays.map((d, i) => {
+              if (d === null) return <div key={`pad-${i}`} className="border-b border-r min-h-[100px] bg-gray-50/50" />
+              const dateStr = formatDateStr(currentMonth.year, currentMonth.month, d)
+              const info = getDayInfo(dateStr)
+              const isToday = dateStr === today
+
+              let cellBg = 'bg-white'
+              let dayNumColor = isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'
+              let label: React.ReactNode = null
+              let title = ''
+              let interactive = false
+
+              if (info.isPast) {
+                cellBg = 'bg-gray-50/50'
+                dayNumColor = 'text-gray-300'
+                title = 'Passé'
+              } else if (info.reservedByMe) {
+                cellBg = 'bg-[#22209C]'
+                dayNumColor = 'text-white font-bold'
+                label = <div className="text-[10px] text-white/90 mt-1">Mon RDV {monRdv?.creneau}</div>
+                title = 'Votre RDV — cliquez pour modifier'
+                interactive = true
+              } else if (info.dayHasChineuse) {
+                cellBg = 'bg-amber-50'
+                dayNumColor = isToday ? 'text-amber-700 font-bold' : 'text-amber-600'
+                label = <div className="text-[10px] text-amber-700 mt-1">Chineuse</div>
+                title = 'Chineuse en boutique'
+              } else if (info.fullyBooked) {
+                cellBg = 'bg-gray-100'
+                dayNumColor = 'text-gray-400'
+                label = <div className="text-[10px] text-gray-400 mt-1">Complet</div>
+                title = 'Complet'
+              } else {
+                cellBg = isToday ? 'bg-blue-50 hover:bg-[#22209C]/10' : 'bg-white hover:bg-[#22209C]/10'
+                label = (
+                  <div className="text-[10px] text-gray-500 mt-1">
+                    {info.creneauxDispo.length} créneau{info.creneauxDispo.length !== 1 ? 'x' : ''} dispo
+                    {info.isWeekend && <span className="ml-1 text-[#22209C]">WE</span>}
+                  </div>
+                )
+                title = `${info.creneauxDispo.length} créneau(x) dispo`
+                interactive = true
+              }
+
+              return (
+                <button
+                  key={dateStr}
+                  type="button"
+                  disabled={!interactive}
+                  onClick={() => interactive && openModal(dateStr)}
+                  title={title}
+                  className={`border-b border-r min-h-[100px] p-2 text-left transition-colors ${cellBg} ${interactive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                >
+                  <span className={`text-sm ${dayNumColor}`}>{d}</span>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Modale RDV */}
