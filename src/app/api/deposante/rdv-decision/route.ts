@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
                   <p style="font-size:18px;font-weight:bold;">${jour}<br/>à <span style="color:#22209C;">${creneau}</span></p>
                   <p>Adresse : <strong>8 rue des Écouffes, 75004 Paris</strong></p>
                   <p style="margin-top:24px;">Pensez à apporter les pièces sélectionnées dans votre espace.</p>
-                  <p style="font-size:12px;color:#888;margin-top:32px;">À très bientôt.</p>
+                  <p style="font-size:12px;color:#888;margin-top:32px;">À très bientôt 🌊</p>
                 </div>
               `,
             })
