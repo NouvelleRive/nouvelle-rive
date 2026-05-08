@@ -63,6 +63,7 @@ interface ProductGridProps {
   produits: Produit[]
   columns?: 2 | 3 | 4
   showFilters?: boolean
+  emphasizeBrand?: boolean
 }
 
 function getCloudinaryUrl(url: string, size: number = 800): string {
@@ -79,7 +80,7 @@ function getCloudinaryUrl(url: string, size: number = 800): string {
   return url.replace('/upload/', `/upload/${transformations}/`)
 }
 
-export default function ProductGrid({ produits, columns = 3, showFilters = true }: ProductGridProps) {
+export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false }: ProductGridProps) {
   const lang = useLang()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
@@ -410,28 +411,57 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
               </div>
               
               <div className="py-2 md:py-3 px-1 md:px-2 text-center bg-white">
-                <h3 
-                  className="uppercase font-semibold line-clamp-2"
-                  style={{ 
-                    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                    fontSize: '10px',
-                    letterSpacing: '0.03em'
-                  }}
-                >
-                  {formatDisplayTitle(produit)}
-                </h3>
-                {produit.marque && (
-                  <p
-                    className="mt-1 uppercase"
-                    style={{
-                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                      fontSize: '10px',
-                      letterSpacing: '0.05em',
-                      color: '#666'
-                    }}
-                  >
-                    {produit.marque}
-                  </p>
+                {emphasizeBrand && produit.marque ? (
+                  <>
+                    <h3
+                      className="uppercase font-bold line-clamp-1"
+                      style={{
+                        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                        fontSize: '14px',
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      {produit.marque}
+                    </h3>
+                    <p
+                      className="mt-1 uppercase line-clamp-2"
+                      style={{
+                        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                        fontSize: '10px',
+                        letterSpacing: '0.03em',
+                        color: '#666',
+                        fontWeight: 400
+                      }}
+                    >
+                      {formatDisplayTitle(produit)}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3
+                      className="uppercase font-semibold line-clamp-2"
+                      style={{
+                        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                        fontSize: '10px',
+                        letterSpacing: '0.03em'
+                      }}
+                    >
+                      {formatDisplayTitle(produit)}
+                    </h3>
+                    {produit.marque && (
+                      <p
+                        className="mt-1 uppercase"
+                        style={{
+                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                          fontSize: '10px',
+                          letterSpacing: '0.05em',
+                          color: '#666'
+                        }}
+                      >
+                        {produit.marque}
+                      </p>
+                    )}
+                  </>
                 )}
                 <p
                   className="mt-1"

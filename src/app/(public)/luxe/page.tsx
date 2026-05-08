@@ -57,7 +57,7 @@ export default function Page() {
         </h1>
       </div>
       <div className="w-full border-t border-black" />
-      <ProductGrid produits={produitsMixes} columns={3} />
+      <ProductGrid produits={produitsMixes} columns={3} emphasizeBrand />
       {loadingMore && (
         <div className="py-8 text-center">
           <p className="text-gray-500 text-sm">{t('Chargement...', 'Loading...', lang)}</p>
