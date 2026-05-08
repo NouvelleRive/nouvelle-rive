@@ -9,9 +9,9 @@ import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
-import { useLang, t, translateCategory } from '@/lib/i18n'
+import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, type Lang } from '@/lib/i18n'
 
-function formatDisplayTitle(produit: Produit): string {
+function formatDisplayTitle(produit: Produit, lang: Lang = 'fr'): string {
   // 1. Enlever le SKU du début
   let title = produit.nom.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')
 
@@ -26,20 +26,25 @@ function formatDisplayTitle(produit: Produit): string {
   const extras: string[] = []
 
   if (produit.material && !titleLower.includes(produit.material.toLowerCase().split(',')[0].trim())) {
-    extras.push(produit.material.split(',')[0].trim())
+    const mat = produit.material.split(',')[0].trim()
+    extras.push(translateMaterial(mat, lang))
   }
   if (produit.color && !titleLower.includes(produit.color.toLowerCase().split(',')[0].trim())) {
-    extras.push(produit.color.split(',')[0].trim())
+    const col = produit.color.split(',')[0].trim()
+    extras.push(translateColor(col, lang))
   }
   if (produit.taille && !titleLower.includes(produit.taille.toLowerCase())) {
     extras.push(produit.taille)
   }
 
+  // Si EN : on traduit aussi mot à mot le `nom` libre tapé par la chineuse
+  const baseTitle = translateProductTitle(title, lang)
+
   if (extras.length > 0) {
-    title = title + ' ' + extras.join(' ')
+    return (baseTitle + ' ' + extras.join(' ')).replace(/\s+/g, ' ').trim()
   }
 
-  return title.replace(/\s+/g, ' ').trim()
+  return baseTitle.replace(/\s+/g, ' ').trim()
 }
 
 type Produit = {
@@ -433,7 +438,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         fontWeight: 400
                       }}
                     >
-                      {formatDisplayTitle(produit)}
+                      {formatDisplayTitle(produit, lang)}
                     </p>
                   </>
                 ) : (
@@ -446,7 +451,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         letterSpacing: '0.03em'
                       }}
                     >
-                      {formatDisplayTitle(produit)}
+                      {formatDisplayTitle(produit, lang)}
                     </h3>
                     {produit.marque && (
                       <p
@@ -703,14 +708,14 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                             color: '#000',
                           }}
                         >
-                          <span 
+                          <span
                             className="w-4 h-4 rounded-full flex-shrink-0"
-                            style={{ 
+                            style={{
                               background: paletteEntry?.hex || '#ccc',
                               border: couleur === 'Blanc' || couleur === 'Écru' || couleur === 'Crème' ? '1px solid #ccc' : 'none',
                             }}
                           />
-                          {couleur}
+                          {translateColor(couleur!, lang)}
                         </button>
                       )
                     })}
@@ -740,7 +745,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                           color: filters.material === matiere ? '#fff' : '#000',
                         }}
                       >
-                        {matiere}
+                        {translateMaterial(matiere!, lang)}
                       </button>
                     ))}
                   </div>
@@ -769,7 +774,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                           color: filters.modele === modele ? '#fff' : '#000',
                         }}
                       >
-                        {modele}
+                        {translateModele(modele, lang)}
                       </button>
                     ))}
                   </div>
@@ -798,7 +803,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                           color: filters.motif === motif ? '#fff' : '#000',
                         }}
                       >
-                        {motif}
+                        {translateMotif(motif, lang)}
                       </button>
                     ))}
                   </div>

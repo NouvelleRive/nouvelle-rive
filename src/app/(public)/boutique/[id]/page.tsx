@@ -8,7 +8,7 @@ import { db } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
 import { useCart } from '@/lib/cart'
-import { useLang, t, translateCategory } from '@/lib/i18n'
+import { useLang, t, translateCategory, translateMaterial, translateColor, translateProductTitle } from '@/lib/i18n'
 
 type Produit = {
   id: string
@@ -333,7 +333,7 @@ export default function ProduitPage() {
                 color: '#000'
               }}
             >
-              {produit.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
+              {translateProductTitle(produit.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, ''), lang)}
             </h2>
 
             {(produit as any).sku && (
@@ -455,13 +455,13 @@ export default function ProduitPage() {
                     <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Catégorie', 'Category', lang)}</span>{translateCategory(catClean, lang)}</p>
                   )}
                   {produit.material && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Matière', 'Material', lang)}</span>{produit.material}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Matière', 'Material', lang)}</span>{translateMaterial(produit.material, lang)}</p>
                   )}
                   {produit.composition && (
                     <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Composition', 'Composition', lang)}</span>{produit.composition}</p>
                   )}
                   {produit.color && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Couleur', 'Color', lang)}</span>{produit.color}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Couleur', 'Color', lang)}</span>{translateColor(produit.color, lang)}</p>
                   )}
                   {afficherTaille(produit.categorie) && produit.taille && (
                     <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Taille', 'Size', lang)}</span>{produit.taille}</p>
