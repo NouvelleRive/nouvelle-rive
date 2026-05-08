@@ -698,13 +698,16 @@
                           const qteRestock = (p as any).quantiteRestock || 0
                           const nouvelleQte = (p.quantite ?? 0) + qteRestock
                           try {
+                            const now = Timestamp.now()
                             await updateDoc(doc(db, 'produits', p.id), {
                               quantite: nouvelleQte,
                               statut: 'active',
+                              vendu: false,
                               statutRestock: null,
                               quantiteRestock: null,
                               dateDemandeRestock: null,
-                              dateRestock: Timestamp.now(),
+                              dateRestock: now,
+                              createdAt: now,
                               restockParVendeuse: vendeusePrenom,
                             })
                           } catch (err) {
