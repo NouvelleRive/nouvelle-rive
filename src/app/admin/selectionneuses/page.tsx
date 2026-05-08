@@ -154,7 +154,8 @@
     const [placesDisponibles, setPlacesDisponibles] = useState<{ pap: number; maro: number; total: number } | null>(null)
 
     useEffect(() => {
-      getDocs(collection(db, 'deposante')).then(snap => {
+      // Ne lister que les déposantes validées par une vendeuse / admin
+      getDocs(query(collection(db, 'deposante'), where('validee', '==', true))).then(snap => {
         setDeposantesParticulieres(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       })
       // Lecture capacité depuis siteConfig (rules autorisent admin write).
