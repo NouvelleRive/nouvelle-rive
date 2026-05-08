@@ -79,16 +79,16 @@ export async function POST(req: NextRequest) {
               from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
               to: dep.email,
               bcc: 'nouvelleriveparis@gmail.com',
-              subject: `✅ Rendez-vous confirmé — ${jour} à ${creneau}`,
+              subject: `Rendez-vous confirmé — ${jour} à ${creneau} 💙`,
               html: `
                 <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
-                  <h1 style="color:#22209C;">Rendez-vous confirmé</h1>
+                  <h1 style="color:#22209C;">Rendez-vous confirmé 💙</h1>
                   <p>Bonjour ${dep.prenom || ''},</p>
                   <p>Nous vous attendons en boutique pour votre dépôt :</p>
                   <p style="font-size:18px;font-weight:bold;">${jour}<br/>à <span style="color:#22209C;">${creneau}</span></p>
                   <p>Adresse : <strong>8 rue des Écouffes, 75004 Paris</strong></p>
                   <p style="margin-top:24px;">Pensez à apporter les pièces sélectionnées dans votre espace.</p>
-                  <p style="font-size:12px;color:#888;margin-top:32px;">À très bientôt 🌊</p>
+                  <p style="font-size:12px;color:#888;margin-top:32px;">À très bientôt.</p>
                 </div>
               `,
             })

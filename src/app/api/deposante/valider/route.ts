@@ -54,12 +54,12 @@ export async function POST(req: NextRequest) {
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: data.email,
             bcc: 'nouvelleriveparis@gmail.com',
-            subject: '✅ Votre profil a été validé',
+            subject: 'Votre profil a été validé 💙',
             html: `
               <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
-                <h1 style="color:#22209C;">Bienvenue chez Nouvelle Rive !</h1>
+                <h1 style="color:#22209C;">Bienvenue chez Nouvelle Rive 💙</h1>
                 <p>Bonjour ${data.prenom || ''},</p>
-                <p>Votre profil de déposante a été validé par notre équipe ✨</p>
+                <p>Votre profil de déposante a été validé par notre équipe.</p>
                 <p>Vous pouvez maintenant <strong>déposer vos pièces</strong> via votre espace, puis prendre rendez-vous pour les apporter en boutique.</p>
                 <p style="margin-top:24px;">
                   <a href="https://www.nouvellerive.eu/deposante/formulaire" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Déposer mes pièces</a>
