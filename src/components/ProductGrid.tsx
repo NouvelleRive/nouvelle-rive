@@ -9,7 +9,7 @@ import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
-import { useLang, t } from '@/lib/i18n'
+import { useLang, t, translateCategory } from '@/lib/i18n'
 
 function formatDisplayTitle(produit: Produit): string {
   // 1. Enlever le SKU du début
@@ -513,7 +513,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                           color: filters.categorie === cat ? '#fff' : '#000',
                         }}
                       >
-                        {cat}
+                        {translateCategory(cat, lang)}
                       </button>
                     ))}
                   </div>
@@ -539,7 +539,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true 
                               color: isSelected ? '#fff' : '#555',
                             }}
                           >
-                            {sousCat}
+                            {translateCategory(sousCat, lang)}
                           </button>
                         )
                       })}

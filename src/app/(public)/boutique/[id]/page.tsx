@@ -8,7 +8,7 @@ import { db } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
 import { useCart } from '@/lib/cart'
-import { useLang, t } from '@/lib/i18n'
+import { useLang, t, translateCategory } from '@/lib/i18n'
 
 type Produit = {
   id: string
@@ -452,7 +452,7 @@ export default function ProduitPage() {
                     <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Marque', 'Brand', lang)}</span>{produit.marque}</p>
                   )}
                   {catClean && (
-                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Catégorie', 'Category', lang)}</span>{catClean}</p>
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Catégorie', 'Category', lang)}</span>{translateCategory(catClean, lang)}</p>
                   )}
                   {produit.material && (
                     <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Matière', 'Material', lang)}</span>{produit.material}</p>

@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useLang, t } from '@/lib/i18n'
+import { getCreatriceI18n } from '@/lib/creatricesI18n'
 
 type Creatrice = {
   nom: string
@@ -154,12 +155,18 @@ export default function CreateurPage() {
     }
   }, [creatrice])
 
-  // Accroche/description selon la langue (avec fallback FR)
+  // Accroche/description selon la langue
+  // Priorité : champ Firestore *En → fallback table hardcodée → fallback FR
+  const fallbackEn = creatrice ? getCreatriceI18n(creatrice.slug, creatrice.nom) : null
   const accrocheLocale = creatrice
-    ? (lang === 'en' && creatrice.accrocheEn ? creatrice.accrocheEn : creatrice.accroche)
+    ? (lang === 'en'
+        ? (creatrice.accrocheEn || fallbackEn?.accrocheEn || creatrice.accroche)
+        : creatrice.accroche)
     : ''
   const descriptionLocale = creatrice
-    ? (lang === 'en' && creatrice.descriptionEn ? creatrice.descriptionEn : creatrice.description)
+    ? (lang === 'en'
+        ? (creatrice.descriptionEn || fallbackEn?.descriptionEn || creatrice.description)
+        : creatrice.description)
     : ''
 
   // Typewriter effect — relance à chaque changement de texte (langue)
