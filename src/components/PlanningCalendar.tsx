@@ -250,21 +250,26 @@ export default function PlanningCalendar({
           const slot = restockSlots[key]
           const editable = canEditRestock(slot)
           const options = getRestockOptions(slot)
+          const isDeposante = slot?.type === 'deposante'
+          // Couleur différente pour distinguer chineuse vs déposante
+          const slotColors = isDeposante
+            ? 'text-rose-700 bg-rose-50'
+            : 'text-gray-700 bg-gray-50'
           return (
             <div key={cr} className="mb-0.5">
               {editable && options.length > 0 ? (
                 <select
                   value={slot?.nom || ''}
                   onChange={e => handleRestockChange(ds, cr, e.target.value)}
-                  className="w-full text-[10px] rounded px-1 py-0.5 border-0 cursor-pointer font-medium bg-transparent text-gray-500"
+                  className={`w-full text-[10px] rounded px-1 py-0.5 border-0 cursor-pointer font-medium ${slot ? slotColors : 'bg-transparent text-gray-500'}`}
                   title={cr}
                 >
                   <option value="">{cr}</option>
                   {options.map((p, i) => <option key={i} value={p.nom}>{p.nom}</option>)}
                 </select>
               ) : (
-                <div className="w-full text-[10px] rounded px-1 py-0.5 font-medium truncate text-gray-700 bg-gray-50" title={slot?.nom || cr}>
-                  {slot ? slot.nom : <span className="text-gray-300">{cr}</span>}
+                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}` : cr}>
+                  {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">{cr}</span>}
                 </div>
               )}
             </div>
