@@ -4,6 +4,9 @@ import { useEffect, useState, useMemo } from 'react'
 import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore'
+import { UserPlus, Calendar } from 'lucide-react'
+
+type Tab = 'deposante' | 'rdv'
 
 type Deposante = {
   id: string
@@ -49,6 +52,7 @@ function frenchDate(dateStr: string): string {
 }
 
 export default function DemandesDepotPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('deposante')
   const [deposantes, setDeposantes] = useState<Deposante[]>([])
   const [restockMonths, setRestockMonths] = useState<Record<string, Record<string, RestockSlot>>>({})
   const [pieces, setPieces] = useState<Record<string, any>>({}) // index par id
@@ -178,17 +182,53 @@ export default function DemandesDepotPage() {
   if (loading) return <div className="p-12 text-center text-gray-500">Chargement...</div>
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold text-[#22209C]">Demandes de dépôt</h1>
-        <p className="text-sm text-gray-600 mt-1">{profilsEnAttente.length} profil(s) à valider · {rdvsEnAttente.length} RDV en attente</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Tabs sticky (même layout que /vendeuse/restock) */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-30">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('deposante')}
+              className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                activeTab === 'deposante'
+                  ? 'border-[#22209C] text-[#22209C]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <UserPlus size={18} />
+              <span>New déposante</span>
+              {profilsEnAttente.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-[#22209C] text-white text-xs rounded-full">
+                  {profilsEnAttente.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('rdv')}
+              className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
+                activeTab === 'rdv'
+                  ? 'border-amber-600 text-amber-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Calendar size={18} />
+              <span>New dépôt / départ</span>
+              {rdvsEnAttente.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-amber-600 text-white text-xs rounded-full">
+                  {rdvsEnAttente.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* SECTION PROFILS EN ATTENTE */}
+      <div className="max-w-4xl mx-auto px-4 py-6">
+
+      {activeTab === 'deposante' && (
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Profils déposantes en attente de validation</h2>
         {profilsEnAttente.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">Aucun profil en attente.</p>
+          <p className="text-sm text-gray-400 italic text-center py-12">Aucun profil en attente.</p>
         ) : (
           <div className="space-y-3">
             {profilsEnAttente.map(d => (
@@ -227,12 +267,12 @@ export default function DemandesDepotPage() {
           </div>
         )}
       </section>
+      )}
 
-      {/* SECTION RDV EN ATTENTE */}
+      {activeTab === 'rdv' && (
       <section>
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">RDV à valider</h2>
         {rdvsEnAttente.length === 0 ? (
-          <p className="text-sm text-gray-400 italic">Aucun RDV en attente.</p>
+          <p className="text-sm text-gray-400 italic text-center py-12">Aucun RDV en attente.</p>
         ) : (
           <div className="space-y-3">
             {rdvsEnAttente.map(entry => {
@@ -283,6 +323,9 @@ export default function DemandesDepotPage() {
           </div>
         )}
       </section>
+      )}
+
+      </div>
     </div>
   )
 }
