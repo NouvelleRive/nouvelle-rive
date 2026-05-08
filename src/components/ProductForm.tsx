@@ -381,6 +381,9 @@ async function compressImage(file: File): Promise<string> {
     requirePhoto?: boolean
     showPhotoSuggestion?: boolean
     limitTryonGeneration?: boolean
+    // Si fourni, affiche une fourchette de prix conseillée sous le champ Prix
+    // selon la marque + catégorie courantes (ex: déposantes via lib marquesDeposante)
+    priceRangeFor?: (marque: string, categorie: string) => { min: number; max: number } | null
   }
 
   // =====================
@@ -446,6 +449,7 @@ async function compressImage(file: File): Promise<string> {
     requirePhoto = false,
     showPhotoSuggestion = false,
     limitTryonGeneration = false,
+    priceRangeFor,
   }: ProductFormProps) {
     
     // Refs pour les inputs caméra
@@ -1693,6 +1697,18 @@ async function compressImage(file: File): Promise<string> {
                   className="w-full border rounded px-2 py-1.5 text-sm"
                   placeholder="45"
                 />
+                {priceRangeFor && (() => {
+                  const range = priceRangeFor(formData.marque || '', formData.categorie || '')
+                  if (!range) return null
+                  const prixNum = parseFloat(formData.prix || '')
+                  const isOutOfRange = !!formData.prix && (prixNum < range.min || prixNum > range.max)
+                  return (
+                    <p className={`text-[11px] mt-1 ${isOutOfRange ? 'text-orange-600' : 'text-gray-500'}`}>
+                      💡 Fourchette conseillée : <strong>{range.min}€ – {range.max}€</strong>
+                      {isOutOfRange && ' — hors fourchette'}
+                    </p>
+                  )
+                })()}
               </div>
 
               {/* Quantité */}

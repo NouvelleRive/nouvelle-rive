@@ -256,6 +256,7 @@ export default function DeposanteFormulairePage() {
         requirePhoto={true}
         showPhotoSuggestion={true}
         limitTryonGeneration={true}
+        priceRangeFor={(marque, categorie) => getPrixRange(marque, categorie)}
       />
 
       {!trigramme?.trim() && (
