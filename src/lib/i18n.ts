@@ -367,22 +367,134 @@ export const translateMotif = (fr: string, lang: Lang) => translateWithDict(fr, 
 export const translateModele = (fr: string, lang: Lang) => translateWithDict(fr, MODELE_EN, lang)
 export const translateColor = (fr: string, lang: Lang) => translateWithDict(fr, COLOR_EN, lang)
 
-// Traduit chaque mot connu d'un titre de produit (matières/modèles/couleurs/motifs)
+// Tailles : la plupart sont déjà universelles (XS/S/M/L/XL/XXL, 36, 38, …),
+// on traduit surtout "Taille unique" et variantes.
+const SIZE_EN: Record<string, string> = {
+  'taille unique': 'One size',
+  'unique': 'One size',
+  'os': 'OS',
+}
+export function translateSize(fr: string, lang: Lang): string {
+  if (lang !== 'en' || !fr) return fr
+  const direct = lookupWithCase(fr.trim(), SIZE_EN)
+  return direct ?? fr
+}
+
+// Mots-outils FR fréquents dans les titres de produits ("en", "à", "de"…)
+const TITLE_WORDS_EN: Record<string, string> = {
+  'en': 'in',
+  'à': 'with',
+  'au': 'with',
+  'aux': 'with',
+  'avec': 'with',
+  'et': 'and',
+  'ou': 'or',
+  'sans': 'without',
+  'le': 'the',
+  'la': 'the',
+  'les': 'the',
+  'pour': 'for',
+}
+
+// Vocabulaire décoratif fréquent (formes, motifs courts, ornements, parties du corps)
+const DECOR_EN: Record<string, string> = {
+  // Formes / ornements
+  'cœur': 'heart',
+  'coeur': 'heart',
+  'étoile': 'star',
+  'etoile': 'star',
+  'lune': 'moon',
+  'soleil': 'sun',
+  'fleur': 'flower',
+  'feuille': 'leaf',
+  'feuilles': 'leaves',
+  'plume': 'feather',
+  'main': 'hand',
+  'œil': 'eye',
+  'oeil': 'eye',
+  'oeuf': 'egg',
+  'serpent': 'snake',
+  'papillon': 'butterfly',
+  'goutte': 'drop',
+  'noeud': 'bow',
+  'nœud': 'bow',
+  'croix': 'cross',
+  'losange': 'diamond shape',
+  'éclair': 'lightning',
+  // Adjectifs fréquents
+  'vintage': 'vintage',
+  'doré': 'gold-tone',
+  'dorée': 'gold-tone',
+  'argenté': 'silver-tone',
+  'argentée': 'silver-tone',
+  'long': 'long',
+  'longue': 'long',
+  'court': 'short',
+  'courte': 'short',
+  'large': 'wide',
+  'fin': 'fine',
+  'fine': 'fine',
+  'épais': 'thick',
+  'épaisse': 'thick',
+  'petit': 'small',
+  'petite': 'small',
+  'grand': 'large',
+  'grande': 'large',
+  'rétro': 'retro',
+  'retro': 'retro',
+  'classique': 'classic',
+  'moderne': 'modern',
+  'ancien': 'antique',
+  'ancienne': 'antique',
+  'unique': 'unique',
+  'rare': 'rare',
+  // Genre / coupe
+  'femme': 'women\'s',
+  'homme': 'men\'s',
+  'enfant': 'kids\'',
+  'taille': 'size',
+}
+
+// Traduit chaque mot connu d'un titre de produit (catégories/matières/modèles/couleurs/motifs)
 // Utilisé pour les `nom` produits tapés librement par les chineuses
+//
+// Étape 1 : remplace d'abord les expressions multi-mots (ex: "boucles d'oreilles" → "earrings")
+// Étape 2 : remplace les mots simples restants
 export function translateProductTitle(title: string, lang: Lang): string {
   if (lang !== 'en' || !title) return title
   const allDicts: Record<string, string> = {
+    ...CATEGORY_EN,
     ...MATERIAL_EN,
     ...MODELE_EN,
     ...COLOR_EN,
     ...MOTIF_EN,
+    ...TITLE_WORDS_EN,
+    ...DECOR_EN,
   }
-  // Découpe sur les espaces tout en préservant la ponctuation
-  return title
+
+  let result = title
+
+  // Étape 1 : multi-mots (les plus longs d'abord pour éviter les sous-correspondances)
+  const multi = Object.entries(allDicts)
+    .filter(([k]) => /\s|'|’/.test(k))
+    .sort((a, b) => b[0].length - a[0].length)
+
+  for (const [fr, en] of multi) {
+    // Échappe les caractères regex spéciaux
+    const escaped = fr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/['’]/g, "['’]")
+    const re = new RegExp(`\\b${escaped}\\b`, 'gi')
+    result = result.replace(re, (match) => {
+      if (match === match.toUpperCase()) return en.toUpperCase()
+      if (match[0] === match[0].toUpperCase()) return en[0].toUpperCase() + en.slice(1)
+      return en
+    })
+  }
+
+  // Étape 2 : mots simples
+  return result
     .split(/(\s+)/)
     .map((token) => {
       if (/^\s+$/.test(token) || !token) return token
-      // Strip ponctuation finale pour le lookup, on la remet ensuite
       const m = token.match(/^([\p{L}\d'’\-]+)([^\p{L}\d]*)$/u)
       if (!m) return token
       const word = m[1]
