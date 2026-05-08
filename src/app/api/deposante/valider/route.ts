@@ -60,9 +60,10 @@ export async function POST(req: NextRequest) {
                 <h1 style="color:#22209C;">Bienvenue chez Nouvelle Rive 💙</h1>
                 <p>Bonjour ${data.prenom || ''},</p>
                 <p>Votre profil de déposante a été validé par notre équipe.</p>
-                <p>Vous pouvez maintenant <strong>déposer vos pièces</strong> via votre espace, puis prendre rendez-vous pour les apporter en boutique.</p>
+                <p>Vous pouvez maintenant <strong>ajouter vos pièces</strong> via votre espace, puis <strong>prendre rendez-vous</strong> pour les apporter en boutique.</p>
                 <p style="margin-top:24px;">
-                  <a href="https://www.nouvellerive.eu/deposante/formulaire" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Déposer mes pièces</a>
+                  <a href="https://www.nouvellerive.eu/deposante/formulaire" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;margin-right:8px;margin-bottom:8px;">Ajouter des pièces</a>
+                  <a href="https://www.nouvellerive.eu/deposante/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;margin-bottom:8px;">Prendre RDV</a>
                 </p>
                 <p style="font-size:12px;color:#888;margin-top:32px;">À bientôt en boutique au 8 rue des Écouffes, 75004 Paris.</p>
               </div>
