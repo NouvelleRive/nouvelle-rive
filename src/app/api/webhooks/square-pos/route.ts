@@ -88,6 +88,7 @@ export async function POST(request: Request) {
     }
 
     const lineItems = order.lineItems || []
+    const orderNote = (order as any).note || null
 
     // Date stable côté Square pour rester correcte même si le webhook re-fire plus tard
     const saleDate = order.closedAt
@@ -111,7 +112,9 @@ export async function POST(request: Request) {
       const venteDocId = `${orderId}_${item.uid || `i${idx}`}`
 
       if (!catalogObjectId) {
-        console.log('📝 [POS] Article sans catalogObjectId (montant perso):', itemName)
+        const itemNote = (item as any).note || null
+        const remarque = itemNote || orderNote || null
+        console.log('📝 [POS] Article sans catalogObjectId (montant perso):', itemName, remarque ? `— remarque: ${remarque}` : '')
 
         const prixVenteReel = item.totalMoney?.amount
           ? Number(item.totalMoney.amount) / 100
@@ -120,6 +123,7 @@ export async function POST(request: Request) {
         await adminDb.collection('ventes').doc(venteDocId).set({
           produitId: null,
           nom: itemName,
+          remarque,
           sku: null,
           trigramme: null,
           chineur: null,
@@ -251,9 +255,12 @@ export async function POST(request: Request) {
 
         // Créer une entrée dans la collection "ventes" pour le suivi
         // Un seul doc par line item, partagé avec le webhook /webhooks/square via venteDocId
+        const itemNote = (item as any).note || null
+        const remarque = itemNote || orderNote || null
         await adminDb.collection('ventes').doc(venteDocId).set({
           produitId: produitId,
           nom: produitData.nom || itemName,
+          remarque,
           sku: produitData.sku || null,
           categorie: produitData.categorie || null,
           marque: produitData.marque || null,

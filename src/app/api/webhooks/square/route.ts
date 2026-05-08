@@ -315,11 +315,14 @@ export async function POST(request: Request) {
     // Vente caisse (pas de productId du tout) → garder le comportement existant
     if (productIds.length === 0) {
       const lineItems = order?.lineItems || []
+      const orderNote = (order as any)?.note || null
       console.log('🏪 Vente caisse détectée (pas de productId)')
 
       for (let idx = 0; idx < lineItems.length; idx++) {
         const item = lineItems[idx]
         const itemName = item.name || ''
+        const itemNote = (item as any).note || null
+        const remarque = itemNote || orderNote || null
         const prix = item.totalMoney?.amount ? Number(item.totalMoney.amount) / 100 : 0
         const venteDocId = `${orderId}_${item.uid || `i${idx}`}`
 
@@ -384,6 +387,7 @@ export async function POST(request: Request) {
           nomSquare: itemName,
           produitId: produitDoc?.id || null,
           nom: produitData?.nom || itemName,
+          remarque,
           sku: produitData?.sku || sku,
           skuSquare: sku,
           chineur: chineurEmail,
