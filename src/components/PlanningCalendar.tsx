@@ -251,9 +251,9 @@ export default function PlanningCalendar({
           const editable = canEditRestock(slot)
           const options = getRestockOptions(slot)
           const isDeposante = slot?.type === 'deposante'
-          // Couleur différente pour distinguer chineuse vs déposante
+          // Orange pour les déposantes (cohérent avec /admin/selectionneuses), gris pour les chineuses
           const slotColors = isDeposante
-            ? 'text-rose-700 bg-rose-50'
+            ? 'text-orange-700 bg-orange-50'
             : 'text-gray-700 bg-gray-50'
           return (
             <div key={cr} className="mb-0.5">
