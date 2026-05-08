@@ -37,6 +37,7 @@ export default function CreateurPage() {
 
   const [creatrice, setCreatrice] = useState<Creatrice | null>(null)
   const [produits, setProduits] = useState<Produit[]>([])
+  const [visibleCount, setVisibleCount] = useState(12)
   const [loading, setLoading] = useState(true)
   const [displayedText, setDisplayedText] = useState('')
 
@@ -111,7 +112,7 @@ export default function CreateurPage() {
           )
           withLikes.sort((a, b) => b.likes - a.likes)
           setProduits(
-            withLikes.slice(0, 6).map(({ p }) => ({
+            withLikes.map(({ p }) => ({
               id: p.id,
               nom: p.nom || 'Produit',
               prix: p.prix || 0,
@@ -129,7 +130,7 @@ export default function CreateurPage() {
             return tb - ta
           })
           setProduits(
-            all.slice(0, 3).map((p: any) => ({
+            all.map((p: any) => ({
               id: p.id,
               nom: p.nom || 'Produit',
               prix: p.prix || 0,
@@ -154,6 +155,20 @@ export default function CreateurPage() {
       }
     }
   }, [creatrice])
+
+  // Infinite scroll
+  useEffect(() => {
+    function onScroll() {
+      if (
+        window.innerHeight + window.scrollY >=
+        document.body.offsetHeight - 600
+      ) {
+        setVisibleCount((c) => (c < produits.length ? c + 12 : c))
+      }
+    }
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [produits.length])
 
   // Accroche/description selon la langue
   // Priorité : champ Firestore *En → fallback table hardcodée → fallback FR
@@ -349,15 +364,15 @@ export default function CreateurPage() {
           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px', letterSpacing: '0.15em' }}
         >
           {creatrice.stockType === 'smallBatch'
-            ? t('Ses pièces les plus aimées', 'Her most loved pieces', lang)
-            : t('Ses 3 dernières pièces', 'Her latest 3 pieces', lang)}
+            ? t('Sa collection — par les plus aimées', 'Her collection — most loved first', lang)
+            : t('Toute sa collection', 'Her full collection', lang)}
         </h2>
       </div>
 
       {/* Grille Produits - GARDE TON DESIGN ORIGINAL */}
       {produits.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3" style={{ borderLeft: '1px solid #000' }}>
-          {produits.map((p) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3" style={{ borderLeft: '1px solid #000' }}>
+          {produits.slice(0, visibleCount).map((p) => (
             <Link 
               key={p.id} 
               href={'/boutique/' + p.id}
