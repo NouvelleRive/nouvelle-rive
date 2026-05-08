@@ -13,6 +13,7 @@ import { useLang, t, translateCategory, translateMaterial, translateColor, trans
 type Produit = {
   id: string
   nom: string
+  nomEn?: string
   prix: number
   imageUrls: string[]
   photos?: {
@@ -24,6 +25,7 @@ type Produit = {
   categorie: string
   marque?: string
   description?: string
+  descriptionEn?: string
   taille?: string
   color?: string
   material?: string
@@ -333,7 +335,7 @@ export default function ProduitPage() {
                 color: '#000'
               }}
             >
-              {translateProductTitle(produit.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, ''), lang)}
+              {(lang === 'en' && produit.nomEn ? produit.nomEn : produit.nom).replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
             </h2>
 
             {(produit as any).sku && (
@@ -358,16 +360,17 @@ export default function ProduitPage() {
             </p>
 
             {/* Description - minuscules */}
-            {produit.description && (
-              <p 
-                style={{ 
-                  fontSize: '13px', 
-                  lineHeight: '1.7', 
+            {(lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description) && (
+              <p
+                style={{
+                  fontSize: '13px',
+                  lineHeight: '1.7',
                   color: '#333',
-                  fontWeight: '300'
+                  fontWeight: '300',
+                  whiteSpace: 'pre-wrap'
                 }}
               >
-                {produit.description}
+                {lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description}
               </p>
             )}
 

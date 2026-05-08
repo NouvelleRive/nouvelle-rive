@@ -9,11 +9,14 @@ import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
-import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, type Lang } from '@/lib/i18n'
+import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 
 function formatDisplayTitle(produit: Produit, lang: Lang = 'fr'): string {
+  // Si traduction Firestore dispo en EN, on l'utilise direct (priorité absolue)
+  const sourceTitle = (lang === 'en' && produit.nomEn) ? produit.nomEn : produit.nom
+
   // 1. Enlever le SKU du début
-  let title = produit.nom.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')
+  let title = sourceTitle.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')
 
   // 2. Enlever la marque du titre (elle s'affiche séparément en dessous)
   if (produit.marque) {
@@ -34,11 +37,13 @@ function formatDisplayTitle(produit: Produit, lang: Lang = 'fr'): string {
     extras.push(translateColor(col, lang))
   }
   if (produit.taille && !titleLower.includes(produit.taille.toLowerCase())) {
-    extras.push(produit.taille)
+    extras.push(translateSize(produit.taille, lang))
   }
 
-  // Si EN : on traduit aussi mot à mot le `nom` libre tapé par la chineuse
-  const baseTitle = translateProductTitle(title, lang)
+  // Si on a déjà la traduction Firestore on l'utilise telle quelle.
+  // Sinon (EN sans nomEn ou FR), on passe par le dictionnaire.
+  const useFirestoreEn = lang === 'en' && !!produit.nomEn
+  const baseTitle = useFirestoreEn ? title : translateProductTitle(title, lang)
 
   if (extras.length > 0) {
     return (baseTitle + ' ' + extras.join(' ')).replace(/\s+/g, ' ').trim()
@@ -50,6 +55,7 @@ function formatDisplayTitle(produit: Produit, lang: Lang = 'fr'): string {
 type Produit = {
   id: string
   nom: string
+  nomEn?: string
   prix: number
   imageUrls: string[]
   marque?: string
