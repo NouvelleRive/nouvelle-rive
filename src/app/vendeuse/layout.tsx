@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
-import { ClipboardList, Package, ShoppingBag, Shirt, Calendar, Inbox } from 'lucide-react'
+import { ClipboardList, Package, ShoppingBag, Shirt, Calendar } from 'lucide-react'
 
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -19,7 +19,6 @@ function VendeuseNavbar() {
     { href: '/vendeuse/produits', label: 'Produits', icon: Shirt },
     { href: '/vendeuse/calendrier', label: 'Calendrier', icon: Calendar },
     { href: '/vendeuse/restock', label: 'RE/DEstock', icon: Package },
-    { href: '/vendeuse/demandes-depot', label: 'Dépôt', icon: Inbox },
   ]
 
   const isActive = (href: string) => pathname === href
@@ -29,9 +28,19 @@ function VendeuseNavbar() {
       <div className="max-w-6xl mx-auto px-4 py-3">
         <div className="hidden sm:flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/vendeuse/calendrier" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
-              Nouvelle Rive
-            </Link>
+            <div className="flex flex-col items-center">
+              <Link href="/vendeuse/calendrier" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
+                Nouvelle Rive
+              </Link>
+              <Link
+                href="/vendeuse/demandes-depot"
+                className={`text-[10px] uppercase tracking-widest font-medium transition-colors ${
+                  isActive('/vendeuse/demandes-depot') ? 'text-[#22209C] underline' : 'text-gray-400 hover:text-[#22209C]'
+                }`}
+              >
+                Dépôt
+              </Link>
+            </div>
             <Link href="/vendeuse/inventaire" className="text-xs text-gray-400 hover:text-[#22209C] border border-gray-200 rounded px-2 py-1 flex items-center gap-1">
               <ClipboardList size={12} />
               Inventaire
@@ -56,10 +65,20 @@ function VendeuseNavbar() {
         </div>
 
         <div className="sm:hidden">
-          <div className="flex items-center justify-center mb-3 gap-3">
-            <Link href="/vendeuse/calendrier" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
-              Nouvelle Rive
-            </Link>
+          <div className="flex items-start justify-center mb-3 gap-3">
+            <div className="flex flex-col items-center">
+              <Link href="/vendeuse/calendrier" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
+                Nouvelle Rive
+              </Link>
+              <Link
+                href="/vendeuse/demandes-depot"
+                className={`text-[10px] uppercase tracking-widest font-medium transition-colors ${
+                  isActive('/vendeuse/demandes-depot') ? 'text-[#22209C] underline' : 'text-gray-400 hover:text-[#22209C]'
+                }`}
+              >
+                Dépôt
+              </Link>
+            </div>
             <Link href="/vendeuse/inventaire" className="text-xs text-gray-400 hover:text-[#22209C] border border-gray-200 rounded px-2 py-1 flex items-center gap-1">
               <ClipboardList size={12} />
               Inventaire
