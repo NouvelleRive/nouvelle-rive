@@ -6,16 +6,20 @@
   import { db } from '@/lib/firebaseConfig'
   import ProductGrid from '@/components/ProductGrid'
   import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+  import { useLang, t } from '@/lib/i18n'
 
   type Iconique = {
     id: string
     nom: string
+    nomEn?: string
     slug: string
     dateCreation: string
     histoire: string
+    histoireEn?: string
     valeurNeuf: number
     tendancePrix: 'monte' | 'descend'
     pourquoiMust: string
+    pourquoiMustEn?: string
     categorieRecherche: string  // mot dans le nom OU la catégorie (ex: "trench")
     marque?: string  // marque exacte, ou 'luxe' pour matcher LUXURY_BRANDS
     chineuseTrigrammes?: string[]  // trigrammes de chineuses (ex: ["GIG", "CDB"])
@@ -28,6 +32,7 @@
   type Produit = any
 
   export default function LesIconiquesPage() {
+    const lang = useLang()
     const [iconiques, setIconiques] = useState<Iconique[]>([])
     const [produits, setProduits] = useState<{ [key: string]: Produit[] }>({})
     const [loading, setLoading] = useState(true)
@@ -49,12 +54,15 @@
             data.push({
               id: doc.id,
               nom: docData.nom || '',
+              nomEn: docData.nomEn || '',
               slug: docData.slug || doc.id,
               dateCreation: docData.dateCreation || '',
               histoire: docData.histoire || '',
+              histoireEn: docData.histoireEn || '',
               valeurNeuf: docData.valeurNeuf || 0,
               tendancePrix: docData.tendancePrix || 'monte',
               pourquoiMust: docData.pourquoiMust || '',
+              pourquoiMustEn: docData.pourquoiMustEn || '',
               categorieRecherche: docData.categorieRecherche || '',
               marque: docData.marque || '',
               chineuseTrigrammes: docData.chineuseTrigrammes || [],
@@ -217,7 +225,7 @@
         <main className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
             <p className="uppercase tracking-widest" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-              Chargement des iconiques...
+              {t('Chargement des iconiques...', 'Loading icons...', lang)}
             </p>
           </div>
         </main>
@@ -229,10 +237,10 @@
         <main className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
             <p className="uppercase tracking-widest mb-4" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-              Aucun produit iconique pour le moment
+              {t('Aucun produit iconique pour le moment', 'No iconic pieces yet', lang)}
             </p>
             <Link href="/" className="uppercase text-xs tracking-widest underline hover:opacity-50">
-              Retour à l'accueil
+              {t("Retour à l'accueil", 'Back to home', lang)}
             </Link>
           </div>
         </main>
@@ -252,7 +260,7 @@
               textTransform: 'uppercase'
             }}
           >
-            LES ICONIQUES<br />DU VINTAGE
+            {lang === 'en' ? <>VINTAGE<br />ICONICS</> : <>LES ICONIQUES<br />DU VINTAGE</>}
           </h1>
         </div>
         <div className="w-full border-t border-black" />
@@ -365,14 +373,14 @@
                         lineHeight: '0.9',
                       }}
                     >
-                      {item.nom}
+                      {lang === 'en' && item.nomEn ? item.nomEn : item.nom}
                     </h2>
 
                     {/* Catchphrase = pourquoiMust */}
-                    {item.pourquoiMust && (
-                      <p 
+                    {(lang === 'en' && item.pourquoiMustEn ? item.pourquoiMustEn : item.pourquoiMust) && (
+                      <p
                         className="uppercase tracking-widest mb-12 relative z-10"
-                        style={{ 
+                        style={{
                           fontFamily: 'Helvetica Neue, sans-serif',
                           fontSize: '12px',
                           top: '3%',
@@ -380,65 +388,67 @@
                           letterSpacing: '0.25em'
                         }}
                       >
-                        {item.pourquoiMust}
+                        {lang === 'en' && item.pourquoiMustEn ? item.pourquoiMustEn : item.pourquoiMust}
                       </p>
                     )}
 
                     {/* Date de création */}
                     {item.dateCreation && (
                       <div className="mb-2 relative z-10">
-                        <p 
+                        <p
                           className="font-bold uppercase"
                           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', lineHeight: '1.4' }}
                         >
-                          DATE DE CREATION :{' '}
+                          {t('DATE DE CREATION', 'YEAR CREATED', lang)} :{' '}
                           <span className="font-normal">{item.dateCreation}</span>
                         </p>
                       </div>
                     )}
 
                     {/* Histoire */}
-                    {item.histoire && (
+                    {(lang === 'en' && item.histoireEn ? item.histoireEn : item.histoire) && (
                       <div className="mb-2 relative z-10">
-                        <p 
+                        <p
                           className="font-bold uppercase"
                           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', display: 'inline', lineHeight: '1.4' }}
                         >
-                          HISTOIRE :{' '}
+                          {t('HISTOIRE', 'STORY', lang)} :{' '}
                         </p>
-                        <span 
+                        <span
                           className="font-normal"
-                          style={{ 
+                          style={{
                             fontFamily: 'Helvetica Neue, sans-serif',
                             fontSize: '12px',
                             lineHeight: '1.4'
                           }}
                         >
-                          {item.histoire}
+                          {lang === 'en' && item.histoireEn ? item.histoireEn : item.histoire}
                         </span>
                       </div>
                     )}
 
                     {/* Valeur neuf */}
                     <div className="mb-2 relative z-10">
-                      <p 
+                      <p
                         className="font-bold uppercase"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', lineHeight: '1.4' }}
                       >
-                        VALEUR NEUF :{' '}
-                        <span className="font-normal">{item.valeurNeuf.toLocaleString('fr-FR')}€</span>
+                        {t('VALEUR NEUF', 'RETAIL VALUE', lang)} :{' '}
+                        <span className="font-normal">{item.valeurNeuf.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')}€</span>
                       </p>
                     </div>
 
                     {/* Tendance marché */}
                     <div className="mb-8 relative z-10">
-                      <p 
+                      <p
                         className="font-bold uppercase"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', lineHeight: '1.4' }}
                       >
-                        TENDANCE MARCHÉ :{' '}
+                        {t('TENDANCE MARCHÉ', 'MARKET TREND', lang)} :{' '}
                         <span className="font-normal lowercase">
-                          {item.tendancePrix === 'monte' ? 'prix en hausse' : 'prix en baisse'}
+                          {item.tendancePrix === 'monte'
+                            ? t('prix en hausse', 'rising prices', lang)
+                            : t('prix en baisse', 'falling prices', lang)}
                         </span>
                       </p>
                     </div>
@@ -454,7 +464,7 @@
                         className="uppercase tracking-widest font-semibold"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
                       >
-                        Nos {item.nom}
+                        {t('Nos', 'Our', lang)} {lang === 'en' && item.nomEn ? item.nomEn : item.nom}
                       </p>
                     </div>
                     <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />
