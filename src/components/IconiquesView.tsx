@@ -704,7 +704,9 @@ export default function IconiquesView({
                           {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                         </p>
                       </div>
-                      <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />
+                      <div style={{ maxWidth: produits[item.id].length <= 2 ? `${produits[item.id].length * 320}px` : 'none', margin: '0 auto' }}>
+                        <ProductGrid produits={produits[item.id]} columns={Math.min(produits[item.id].length, 4)} showFilters={false} />
+                      </div>
                     </div>
                   )
                 )
