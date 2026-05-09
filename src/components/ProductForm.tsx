@@ -448,7 +448,7 @@ async function compressImage(file: File): Promise<string> {
     requireBrand = false,
     requirePhoto = false,
     showPhotoSuggestion = false,
-    limitTryonGeneration = false,
+    limitTryonGeneration = true,
     priceRangeFor,
   }: ProductFormProps) {
     
