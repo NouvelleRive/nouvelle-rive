@@ -350,13 +350,6 @@ export default function VendeuseCalendrierPage() {
       </div>
 
       <div className="mt-6">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Pointage arrivée / départ</h2>
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <PointageWidget />
-        </div>
-      </div>
-
-      <div className="mt-6">
         <PointagesSection
           vendeuses={vendeuses as any}
           monthKey={monthKey}
@@ -364,6 +357,13 @@ export default function VendeuseCalendrierPage() {
           planningSlots={planningSlots}
           readOnly={!isAdmin}
         />
+      </div>
+
+      <div className="mt-6">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Pointage arrivée / départ</h2>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <PointageWidget />
+        </div>
       </div>
     </div>
   )
