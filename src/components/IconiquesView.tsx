@@ -27,6 +27,7 @@ export type Iconique = {
   materialContient?: string
   images: string[]
   ordre: number
+  soldOut?: boolean
 }
 
 type Produit = any
@@ -89,6 +90,7 @@ export default function IconiquesView({
             materialContient: docData.materialContient || '',
             images: docData.images || [],
             ordre: docData.ordre || 0,
+            soldOut: docData.soldOut === true,
           })
         })
 
@@ -335,6 +337,25 @@ export default function IconiquesView({
                       <p className="text-gray-400 text-xs uppercase tracking-wider">{t('Image à venir', 'Image coming soon', lang)}</p>
                     </div>
                   )}
+                  {item.soldOut && (
+                    <div
+                      className="absolute top-1/2 left-1/2 pointer-events-none select-none"
+                      style={{
+                        transform: 'translate(-50%, -50%) rotate(-12deg)',
+                        border: '6px solid #C8102E',
+                        color: '#C8102E',
+                        padding: '12px 36px',
+                        fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
+                        fontSize: 'clamp(28px, 5vw, 56px)',
+                        fontWeight: 900,
+                        letterSpacing: '0.1em',
+                        background: 'rgba(255,255,255,0.92)',
+                        boxShadow: '0 0 0 2px rgba(255,255,255,0.92) inset',
+                      }}
+                    >
+                      SOLD OUT
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-12 md:p-16 lg:p-20 flex flex-col justify-center bg-white relative overflow-hidden">
@@ -447,18 +468,44 @@ export default function IconiquesView({
                 </div>
               </div>
 
-              {produits[item.id] && produits[item.id].length > 0 && (
-                <div style={{ borderTop: '1px solid #000' }}>
-                  <div className="px-6 md:px-12 pt-10 pb-4">
-                    <p
-                      className="uppercase tracking-widest font-semibold"
-                      style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
-                    >
-                      {t('Nos', 'Our', lang)} {lang === 'en' && item.nomEn ? item.nomEn : item.nom}
-                    </p>
-                  </div>
-                  <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />
+              {item.soldOut ? (
+                <div style={{ borderTop: '1px solid #000' }} className="px-6 md:px-12 py-16 text-center">
+                  <p
+                    className="uppercase font-bold mb-2"
+                    style={{
+                      fontFamily: 'Helvetica Neue, sans-serif',
+                      fontSize: '14px',
+                      letterSpacing: '0.25em',
+                      color: '#C8102E',
+                    }}
+                  >
+                    {t('Tout est vendu — restock bientôt', 'All sold out — restock soon', lang)}
+                  </p>
+                  <p
+                    className="uppercase tracking-widest"
+                    style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px', color: '#666' }}
+                  >
+                    {t(
+                      `Inscris-toi à la newsletter pour être prévenu·e du retour des ${item.nom}`,
+                      `Sign up for the newsletter to be notified when ${item.nomEn || item.nom} are back`,
+                      lang
+                    )}
+                  </p>
                 </div>
+              ) : (
+                produits[item.id] && produits[item.id].length > 0 && (
+                  <div style={{ borderTop: '1px solid #000' }}>
+                    <div className="px-6 md:px-12 pt-10 pb-4">
+                      <p
+                        className="uppercase tracking-widest font-semibold"
+                        style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
+                      >
+                        {t('Nos', 'Our', lang)} {lang === 'en' && item.nomEn ? item.nomEn : item.nom}
+                      </p>
+                    </div>
+                    <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />
+                  </div>
+                )
               )}
             </div>
           ))}

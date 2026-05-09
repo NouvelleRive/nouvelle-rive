@@ -56,6 +56,7 @@ const ICONIQUES = [
     ],
     chineuseTrigrammes: ['DISI'],
     categorieRecherche: 'ana',
+    soldOut: true,
   },
   {
     id: 'amadora-age-paris',
