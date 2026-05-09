@@ -69,7 +69,9 @@ async function getChineuseInfo(produit: ProduitDoc): Promise<ChineuseInfo | null
     const ch = chDoc.data() as any
     return {
       accroche: ch.accroche,
+      accrocheEn: ch.accrocheEn,
       description: ch.description,
+      descriptionEn: ch.descriptionEn,
       nom: ch.nom,
       texteEcoCirculaire: ch.texteEcoCirculaire || 1,
       stockType: ch.stockType,

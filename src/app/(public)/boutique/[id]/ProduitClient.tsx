@@ -38,7 +38,9 @@ export type Produit = {
 
 export type ChineuseInfo = {
   accroche?: string
+  accrocheEn?: string
   description?: string
+  descriptionEn?: string
   nom?: string
   texteEcoCirculaire?: number
   stockType?: string
@@ -299,25 +301,29 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
               </p>
             </AccordionSection>
 
-            {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
-              <AccordionSection title={chineuseInfo.stockType === 'smallBatch' ? t('Histoire de la maison', 'About the house', lang) : t('Découvrir la chineuse', 'Meet the curator', lang)}>
-                {chineuseInfo.nom && (
-                  <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
-                    {chineuseInfo.nom}
-                  </p>
-                )}
-                {chineuseInfo.accroche && (
-                  <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>
-                    {chineuseInfo.accroche}
-                  </p>
-                )}
-                {chineuseInfo.description && (
-                  <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
-                    {chineuseInfo.description}
-                  </p>
-                )}
-              </AccordionSection>
-            )}
+            {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (() => {
+              const accrocheLocale = lang === 'en' ? (chineuseInfo.accrocheEn || chineuseInfo.accroche) : chineuseInfo.accroche
+              const descriptionLocale = lang === 'en' ? (chineuseInfo.descriptionEn || chineuseInfo.description) : chineuseInfo.description
+              return (
+                <AccordionSection title={chineuseInfo.stockType === 'smallBatch' ? t('Histoire de la maison', 'About the house', lang) : t('Découvrir la chineuse', 'Meet the curator', lang)}>
+                  {chineuseInfo.nom && (
+                    <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                      {chineuseInfo.nom}
+                    </p>
+                  )}
+                  {accrocheLocale && (
+                    <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>
+                      {accrocheLocale}
+                    </p>
+                  )}
+                  {descriptionLocale && (
+                    <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
+                      {descriptionLocale}
+                    </p>
+                  )}
+                </AccordionSection>
+              )
+            })()}
 
             <AccordionSection title={t('Livraison & retrait', 'Delivery & pickup', lang)}>
               <div style={{ fontSize: '13px', lineHeight: '2', color: '#666', fontWeight: '300' }}>
