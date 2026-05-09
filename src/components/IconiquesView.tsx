@@ -428,6 +428,7 @@ export default function IconiquesView({
                       top: '5%',
                       letterSpacing: '-0.02em',
                       lineHeight: '0.9',
+                      whiteSpace: 'pre-line',
                     }}
                   >
                     {lang === 'en' && item.nomEn ? item.nomEn : item.nom}
