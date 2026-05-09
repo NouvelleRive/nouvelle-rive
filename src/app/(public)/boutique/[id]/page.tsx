@@ -34,6 +34,7 @@ type Produit = {
   composition?: string
   entretien?: string
   vendu: boolean
+  videoUrl?: string
 }
 
 // Catégories qui n'ont pas de taille
@@ -268,16 +269,32 @@ export default function ProduitPage() {
           <>
           <div className="flex flex-col">
             {getAllImages(produit).map((url, index) => (
-              <div 
-                key={index} 
-                className="w-full"
-                style={{ borderBottom: index < getAllImages(produit).length - 1 ? '1px solid #000' : 'none' }}
-              >
-                <img
-                  src={url}
-                  alt={`${produit.nom} - Photo ${index + 1}`}
-                  className="w-full h-auto object-cover"
-                />
+              <div key={`img-${index}`}>
+                <div
+                  className="w-full"
+                  style={{ borderBottom: '1px solid #000' }}
+                >
+                  <img
+                    src={url}
+                    alt={`${produit.nom} - Photo ${index + 1}`}
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+                {/* Vidéo en 2e position après la photo principale */}
+                {index === 0 && produit.videoUrl && /\.mp4(\?|$)/i.test(produit.videoUrl) && (
+                  <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
+                    <video
+                      src={produit.videoUrl}
+                      className="w-full h-auto"
+                      style={{ background: '#000', display: 'block' }}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      controls
+                    />
+                  </div>
+                )}
               </div>
             ))}
           </div>

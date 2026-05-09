@@ -358,11 +358,17 @@ export default function IconiquesView({
             setCurrentIndex(newIndex)
           }}
         >
-          {iconiques.map((item) => (
+          {iconiques.map((item) => {
+            // Layout : si 1-2 vidéos + produits matchés + pas soldOut → side-by-side desktop (vidéos gauche / produits droite).
+            // Si 3 vidéos ou plus → tout en pleine largeur empilé.
+            const hasVideos = item.videos && item.videos.length > 0
+            const hasProduits = produits[item.id] && produits[item.id].length > 0
+            const sideBySide = !!hasVideos && item.videos!.length < 3 && hasProduits && !item.soldOut
+            return (
             <div key={item.id} className="min-w-full snap-center">
               <div className="grid grid-cols-1 md:grid-cols-2">
                 <div
-                  className="aspect-square md:aspect-auto md:min-h-[560px] bg-gray-50 overflow-hidden relative cursor-crosshair"
+                  className="aspect-square bg-gray-50 overflow-hidden relative cursor-crosshair"
                   onMouseMove={(e) => handleMouseMove(e, item.id, item.images.length)}
                   onMouseLeave={() => handleMouseLeave(item.id)}
                   style={{ borderRight: '1px solid #000' }}
@@ -506,7 +512,7 @@ export default function IconiquesView({
               </div>
 
               {(item.buyLink || (item.videos && item.videos.length > 0)) && (
-                <div style={{ borderTop: '1px solid #000' }} className="bg-white">
+                <div style={{ borderTop: '1px solid #000', borderRight: sideBySide ? '1px solid #000' : 'none' }} className={`bg-white ${sideBySide ? 'lg:float-left lg:w-1/2' : ''}`}>
                   {item.buyLink && (
                     <div className="px-6 md:px-12 py-8 text-center" style={{ borderBottom: item.videos && item.videos.length > 0 ? '1px solid #000' : 'none' }}>
                       <a
@@ -532,8 +538,8 @@ export default function IconiquesView({
                       <div
                         className="grid gap-6 mx-auto"
                         style={{
-                          gridTemplateColumns: `repeat(${Math.min(item.videos.length, 3)}, minmax(0, 1fr))`,
-                          maxWidth: item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
+                          gridTemplateColumns: `repeat(${Math.min(item.videos.length, sideBySide ? 1 : 3)}, minmax(0, 1fr))`,
+                          maxWidth: sideBySide ? '420px' : item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
                         }}
                       >
                         {item.videos.map((url) => {
@@ -652,7 +658,7 @@ export default function IconiquesView({
                 </div>
               ) : (
                 produits[item.id] && produits[item.id].length > 0 && (
-                  <div style={{ borderTop: '1px solid #000' }}>
+                  <div style={{ borderTop: '1px solid #000' }} className={sideBySide ? 'lg:float-right lg:w-1/2' : ''}>
                     <div className="px-6 md:px-12 pt-10 pb-4">
                       <p
                         className="uppercase tracking-widest font-semibold"
@@ -661,12 +667,13 @@ export default function IconiquesView({
                         {t('Nos', 'Our', lang)} {nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                       </p>
                     </div>
-                    <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />
+                    <ProductGrid produits={produits[item.id]} columns={sideBySide ? 2 : 4} showFilters={false} />
                   </div>
                 )
               )}
+              {sideBySide && <div className="clear-both" />}
             </div>
-          ))}
+          )})}
         </div>
 
         <div className="flex justify-center gap-2 py-6">
