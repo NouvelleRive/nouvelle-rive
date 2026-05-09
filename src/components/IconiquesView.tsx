@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import ProductGrid from '@/components/ProductGrid'
+import FavoriteButton from '@/components/FavoriteButton'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { useLang, t } from '@/lib/i18n'
 
@@ -512,10 +513,10 @@ export default function IconiquesView({
                 </div>
               </div>
 
-              {(item.buyLink || (item.videos && item.videos.length > 0)) && (
-                <div style={{ borderTop: '1px solid #000', borderRight: sideBySide ? '1px solid #000' : 'none' }} className={`bg-white ${sideBySide ? 'lg:float-left lg:w-1/3' : ''}`}>
+              {(item.buyLink || (!sideBySide && item.videos && item.videos.length > 0)) && (
+                <div style={{ borderTop: '1px solid #000' }} className="bg-white">
                   {item.buyLink && (
-                    <div className="px-6 md:px-12 py-8 text-center" style={{ borderBottom: item.videos && item.videos.length > 0 ? '1px solid #000' : 'none' }}>
+                    <div className="px-6 md:px-12 py-8 text-center" style={{ borderBottom: !sideBySide && item.videos && item.videos.length > 0 ? '1px solid #000' : 'none' }}>
                       <a
                         href={item.buyLink}
                         target="_blank"
@@ -534,13 +535,13 @@ export default function IconiquesView({
                       </a>
                     </div>
                   )}
-                  {item.videos && item.videos.length > 0 && (
-                    <div className={sideBySide ? '' : 'px-6 md:px-12 py-10'}>
+                  {!sideBySide && item.videos && item.videos.length > 0 && (
+                    <div className="px-6 md:px-12 py-10">
                       <div
-                        className={`grid mx-auto ${sideBySide ? 'gap-0' : 'gap-6'}`}
+                        className="grid gap-6 mx-auto"
                         style={{
                           gridTemplateColumns: `repeat(${Math.min(item.videos.length, 3)}, minmax(0, 1fr))`,
-                          maxWidth: sideBySide ? '100%' : item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
+                          maxWidth: item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
                         }}
                       >
                         {item.videos.map((url) => {
@@ -644,7 +645,7 @@ export default function IconiquesView({
                 produits[item.id] && produits[item.id].length > 0 && (
                   sideBySide ? (
                     <>
-                      <div style={{ borderTop: '1px solid #000' }} className="lg:float-right lg:w-2/3">
+                      <div style={{ borderTop: '1px solid #000' }}>
                         <div className="px-6 md:px-12 pt-10 pb-4">
                           <p
                             className="uppercase tracking-widest font-semibold"
@@ -653,12 +654,46 @@ export default function IconiquesView({
                             {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                           </p>
                         </div>
-                        <ProductGrid produits={produits[item.id].slice(0, 6)} columns={3} showFilters={false} />
+                        {/* Ligne 1 : 1 vidéo + 2 produits, alignement bas via flex-grow */}
+                        <div className="grid grid-cols-3" style={{ borderLeft: '1px solid #000' }}>
+                          <div className="flex flex-col bg-black" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
+                            <div className="aspect-square overflow-hidden">
+                              {(() => {
+                                const url = item.videos![0]
+                                if (/\.mp4(\?|$)/i.test(url)) {
+                                  return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
+                                }
+                                const embed = instagramEmbed(url)
+                                if (!embed) return null
+                                return <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                              })()}
+                            </div>
+                            <div className="bg-white flex-grow" />
+                          </div>
+                          {produits[item.id].slice(0, 2).map((p: any) => {
+                            const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
+                            return (
+                              <div key={p.id} className="relative" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
+                                <Link href={`/boutique/${p.id}`} className="flex flex-col h-full group">
+                                  <div className="aspect-square overflow-hidden bg-white">
+                                    {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
+                                  </div>
+                                  <div className="py-4 px-3 text-center bg-white flex-grow">
+                                    <h3 className="uppercase font-semibold line-clamp-2" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px' }}>{p.nom}</h3>
+                                    {p.marque && <p className="mt-1 uppercase" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px', color: '#666' }}>{p.marque}</p>}
+                                    <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>{p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
+                                  </div>
+                                </Link>
+                                <div className="absolute top-2 right-2 z-10"><FavoriteButton productId={p.id} size={20} /></div>
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
-                      <div className="clear-both" />
-                      {produits[item.id].length > 6 && (
+                      {/* Reste des produits en pleine largeur */}
+                      {produits[item.id].length > 2 && (
                         <div style={{ borderTop: '1px solid #000' }}>
-                          <ProductGrid produits={produits[item.id].slice(6)} columns={4} showFilters={false} />
+                          <ProductGrid produits={produits[item.id].slice(2)} columns={3} showFilters={false} />
                         </div>
                       )}
                     </>
