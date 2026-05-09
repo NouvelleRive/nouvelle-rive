@@ -538,8 +538,8 @@ export default function IconiquesView({
                       <div
                         className="grid gap-6 mx-auto"
                         style={{
-                          gridTemplateColumns: `repeat(${Math.min(item.videos.length, sideBySide ? 1 : 3)}, minmax(0, 1fr))`,
-                          maxWidth: sideBySide ? '420px' : item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
+                          gridTemplateColumns: `repeat(${Math.min(item.videos.length, 3)}, minmax(0, 1fr))`,
+                          maxWidth: sideBySide ? '100%' : item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
                         }}
                       >
                         {item.videos.map((url) => {
