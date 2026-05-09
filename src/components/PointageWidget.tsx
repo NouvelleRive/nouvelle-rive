@@ -91,6 +91,17 @@ export default function PointageWidget() {
         alert(data.error || 'Erreur de pointage')
       } else {
         await fetchPointage()
+        if (action === 'arrivee' && Array.isArray(data.missingDeparts) && data.missingDeparts.length > 0) {
+          const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+          const lignes = data.missingDeparts.map((d: string) => {
+            const [, mm, dd] = d.split('-')
+            return `• ${parseInt(dd, 10)} ${monthNames[parseInt(mm, 10) - 1]}`
+          }).join('\n')
+          alert(
+            `⏰ Tu as oublié de pointer ton départ :\n\n${lignes}\n\n` +
+            `Envoie-nous ton heure de départ par message pour qu'on ferme ta journée 💙`
+          )
+        }
       }
     } catch (e: any) {
       if (e?.code === 1) {

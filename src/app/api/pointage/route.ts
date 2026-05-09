@@ -111,7 +111,14 @@ export async function POST(req: NextRequest) {
         arriveeGps: { lat, lng },
         createdAt: existing?.createdAt || Timestamp.fromDate(now),
       }, { merge: true })
-      return NextResponse.json({ success: true, action: 'arrivee', at: now.toISOString() })
+      // Détecte les pointages passés sans départ pour rappel à la vendeuse
+      const pastSnap = await adminDb.collection('pointages').where('vendeuseId', '==', vendeuseId).get()
+      const missingDeparts = pastSnap.docs
+        .map(d => d.data())
+        .filter(x => x.date < dateStr && x.arrivee && !x.depart)
+        .map(x => x.date)
+        .sort()
+      return NextResponse.json({ success: true, action: 'arrivee', at: now.toISOString(), missingDeparts })
     }
 
     // action === 'depart'
