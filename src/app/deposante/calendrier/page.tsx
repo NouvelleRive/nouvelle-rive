@@ -304,10 +304,7 @@ export default function DeposanteCalendrierPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-6">
-      <h1 className="text-2xl font-bold text-[#22209C] mb-2">Prendre rendez-vous</h1>
-      <p className="text-sm text-gray-600 mb-4">
-        Choisissez un jour disponible (week-end ou jour sans chineuse) pour déposer vos pièces — <strong>{MAX_PIECES_PAR_RDV} pièces maximum</strong> par rendez-vous.
-      </p>
+      <h1 className="text-2xl font-bold text-[#22209C] mb-4">Prendre rendez-vous</h1>
 
       <div className="mb-4 p-3 bg-gray-50 border rounded text-xs flex flex-wrap gap-3">
         <span><span className={`font-medium ${placesDisponibles.pap === 0 ? 'text-orange-500' : 'text-gray-700'}`}>PAP : {placesDisponibles.pap} place{placesDisponibles.pap !== 1 ? 's' : ''}</span></span>
