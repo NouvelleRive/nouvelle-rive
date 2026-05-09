@@ -701,6 +701,7 @@
                             await updateDoc(doc(db, 'produits', p.id), {
                               quantite: nouvelleQte,
                               statut: 'active',
+                              vendu: false,
                               statutRestock: null,
                               quantiteRestock: null,
                               dateDemandeRestock: null,
