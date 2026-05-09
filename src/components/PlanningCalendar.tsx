@@ -238,7 +238,10 @@ export default function PlanningCalendar({
   const renderRestockDropdowns = (ds: string, usePlanningSlots = false) => {
     const [y, m, d] = ds.split('-').map(Number)
     const dow = new Date(y, m - 1, d).getDay()
-    if (dow === 0 || dow === 6) return null
+    const isWeekend = dow === 0 || dow === 6
+    // Week-end : autorisé uniquement pour les déposantes (la boutique reste fermée pour les
+    // chineuses le week-end, donc on n'affiche pas de créneaux pour elles).
+    if (isWeekend && userType !== 'deposante') return null
     const creneaux: string[] = dow === 2 ? ['13h', '16h', '18h'] : ['13h', '16h']
     const slots = usePlanningSlots ? planningSlots : planningRestockSlots
     const vList = usePlanningSlots ? vendeuses : vendeusesRestock
@@ -259,32 +262,32 @@ export default function PlanningCalendar({
           const options = getRestockOptions(slot)
           const isDeposante = slot?.type === 'deposante'
           const isMine = slot && userNom && slot.nom === userNom
-          // Orange pour les déposantes (cohérent avec /admin/selectionneuses), gris pour les chineuses
           const slotColors = isDeposante
             ? 'text-orange-700 bg-orange-50'
             : 'text-gray-700 bg-gray-50'
-          // Pour un user non-admin : on cache les noms des autres (chineuses ou autres déposantes)
-          // Affichage anonyme "—" pour ne pas révéler qui est là.
-          const maskOtherName = userType !== 'admin' && slot && !isMine
+          // User non-admin : on n'affiche RIEN pour les créneaux pris par quelqu'un d'autre.
+          // Seul son propre RDV et les créneaux libres sont visibles.
+          const isOtherSlot = userType !== 'admin' && slot && !isMine
+          if (isOtherSlot) return null
           return (
             <div key={cr} className="mb-0.5">
               {editable && options.length > 0 ? (
                 <select
                   value={slot?.nom || ''}
                   onChange={e => handleRestockChange(ds, cr, e.target.value)}
-                  className={`w-full text-[10px] rounded px-1 py-0.5 border-0 cursor-pointer font-medium ${slot ? slotColors : 'bg-transparent text-gray-500'}`}
+                  className={`w-full text-[10px] rounded px-1 py-0.5 cursor-pointer font-semibold border ${
+                    slot
+                      ? `${slotColors} border-transparent`
+                      : 'bg-white text-[#22209C] border-[#22209C] hover:bg-[#22209C]/5'
+                  }`}
                   title={cr}
                 >
                   <option value="">{cr}</option>
                   {options.map((p, i) => <option key={i} value={p.nom}>{p.nom}</option>)}
                 </select>
               ) : (
-                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${slot ? (maskOtherName ? 'text-gray-400 bg-gray-100' : slotColors) : 'text-gray-700 bg-gray-50'}`} title={slot ? (maskOtherName ? `${cr} — indisponible` : `${slot.nom}${isDeposante ? ' (déposante)' : ''}`) : cr}>
-                  {slot
-                    ? (maskOtherName
-                      ? <span>{cr} — indispo</span>
-                      : <>{isDeposante && '◆ '}{slot.nom}</>)
-                    : <span className="text-gray-300">{cr}</span>}
+                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}` : cr}>
+                  {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">{cr}</span>}
                 </div>
               )}
             </div>
