@@ -373,14 +373,11 @@ export default function CreateurPage() {
           <div
             className="grid gap-6 mx-auto"
             style={{
-              gridTemplateColumns: `repeat(${Math.min(creatrice.videos.length, 3)}, minmax(0, 1fr))`,
-              maxWidth:
-                creatrice.videos.length === 1 ? '420px'
-                : creatrice.videos.length === 2 ? '880px'
-                : '1280px',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              maxWidth: '1280px',
             }}
           >
-            {creatrice.videos.map((url) => {
+            {creatrice.videos.slice(0, 3).map((url) => {
               // .mp4 → HTML5 video avec autoplay
               if (/\.mp4(\?|$)/i.test(url)) {
                 return (
