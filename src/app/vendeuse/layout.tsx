@@ -1,10 +1,11 @@
 // app/vendeuse/layout.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebaseConfig'
+import { auth, db } from '@/lib/firebaseConfig'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import Link from 'next/link'
 import { ClipboardList, Package, ShoppingBag, Shirt, Calendar, Inbox } from 'lucide-react'
 
@@ -14,13 +15,63 @@ const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 function VendeuseNavbar() {
   const pathname = usePathname()
 
-  const links = [
-    { href: '/vendeuse/commandes', label: 'Commandes', icon: ShoppingBag },
-    { href: '/vendeuse/produits', label: 'Produits', icon: Shirt },
-    { href: '/vendeuse/calendrier', label: 'Calendrier', icon: Calendar },
-    { href: '/vendeuse/restock', label: 'RE/DEstock', icon: Package },
-    { href: '/vendeuse/demandes-depot', label: 'Dépôt', icon: Inbox },
-  ]
+  // Compteurs de notifs
+  const [depotCount, setDepotCount] = useState(0)
+  const [commandesCount, setCommandesCount] = useState(0)
+
+  // Déposantes en attente de validation profil + RDV en attente (3 mois courants)
+  useEffect(() => {
+    let nbProfils = 0
+    let nbRdvs = 0
+    const update = () => setDepotCount(nbProfils + nbRdvs)
+
+    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const monthKeys = new Set<string>()
+    for (let i = 0; i < 3; i++) {
+      const m = new Date(now.getFullYear(), now.getMonth() + i, 1)
+      monthKeys.add(`${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`)
+    }
+
+    const unsubDep = onSnapshot(collection(db, 'deposante'), (snap) => {
+      nbProfils = snap.docs.filter(d => {
+        const x = d.data() as any
+        return x.contratSigne === true && !x.validee && !x.refusee
+      }).length
+      update()
+    })
+    const unsubRestocks = onSnapshot(collection(db, 'restocks'), (snap) => {
+      let count = 0
+      snap.docs.forEach(d => {
+        if (!monthKeys.has(d.id)) return
+        const slots = (d.data() as any).slots || {}
+        Object.entries(slots).forEach(([key, slot]: [string, any]) => {
+          if (!slot || slot.type !== 'deposante') return
+          if (slot.acceptee === true || slot.refusee === true) return
+          if ((key.split('_')[0] || '') < today) return
+          count++
+        })
+      })
+      nbRdvs = count
+      update()
+    })
+    return () => { unsubDep(); unsubRestocks() }
+  }, [])
+
+  // Commandes payées en attente de préparation
+  useEffect(() => {
+    const q = query(collection(db, 'commandes'), where('statut', '==', 'payée'))
+    const unsub = onSnapshot(q, (snap) => setCommandesCount(snap.size))
+    return () => unsub()
+  }, [])
+
+  const links = useMemo(() => [
+    { href: '/vendeuse/commandes', label: 'Commandes', icon: ShoppingBag, badge: commandesCount },
+    { href: '/vendeuse/produits', label: 'Produits', icon: Shirt, badge: 0 },
+    { href: '/vendeuse/calendrier', label: 'Calendrier', icon: Calendar, badge: 0 },
+    { href: '/vendeuse/restock', label: 'RE/DEstock', icon: Package, badge: 0 },
+    { href: '/vendeuse/demandes-depot', label: 'Dépôt', icon: Inbox, badge: depotCount },
+  ], [commandesCount, depotCount])
 
   const isActive = (href: string) => pathname === href
 
@@ -42,13 +93,20 @@ function VendeuseNavbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                className={`text-sm font-medium transition-colors flex items-center gap-1.5 relative ${
                   isActive(link.href)
                     ? 'text-[#22209C] underline'
                     : 'text-gray-600 hover:text-[#22209C]'
                 }`}
               >
-                <link.icon size={16} />
+                <span className="relative">
+                  <link.icon size={16} />
+                  {link.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {link.badge}
+                    </span>
+                  )}
+                </span>
                 {link.label}
               </Link>
             ))}
@@ -78,7 +136,14 @@ function VendeuseNavbar() {
                       : 'text-gray-500 hover:text-[#22209C]'
                   }`}
                 >
-                  <Icon size={20} />
+                  <span className="relative">
+                    <Icon size={20} />
+                    {link.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {link.badge}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-[10px] font-medium">{link.label}</span>
                 </Link>
               )

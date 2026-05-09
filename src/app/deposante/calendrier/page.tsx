@@ -271,6 +271,18 @@ export default function DeposanteCalendrierPage() {
         await setDoc(ref, { slots })
       }
 
+      // Email "demande de RDV reçue, en attente de validation par l'équipe"
+      try {
+        const idToken = await auth.currentUser?.getIdToken()
+        if (idToken) {
+          await fetch('/api/deposante/rdv-demande', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ monthKey, slotKey: newKey }),
+          })
+        }
+      } catch (e) { console.error('rdv-demande email:', e) }
+
       setOpenDate(null)
     } catch (e: any) {
       setErrorMsg(e?.message || 'Erreur sauvegarde')
@@ -306,13 +318,19 @@ export default function DeposanteCalendrierPage() {
     <div className="max-w-5xl mx-auto p-4 md:p-6">
       <h1 className="text-2xl font-bold text-[#22209C] mb-4">Prendre rendez-vous</h1>
 
+      {monRdv && !(monRdv.slot as any).acceptee && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-[#22209C]">
+          Dépôt en cours de validation 💙 — notre équipe revoit votre RDV et vos pièces, vous recevrez un email dès que c'est confirmé.
+        </div>
+      )}
+
       <div className="mb-4 p-3 bg-gray-50 border rounded text-xs flex flex-wrap gap-3">
         <span><span className={`font-medium ${placesDisponibles.pap === 0 ? 'text-orange-500' : 'text-gray-700'}`}>PAP : {placesDisponibles.pap} place{placesDisponibles.pap !== 1 ? 's' : ''}</span></span>
         <span className="text-gray-300">·</span>
         <span><span className={`font-medium ${placesDisponibles.maro === 0 ? 'text-orange-500' : 'text-gray-700'}`}>MARO : {placesDisponibles.maro} place{placesDisponibles.maro !== 1 ? 's' : ''}</span></span>
         {monRdv && <>
           <span className="text-gray-300">·</span>
-          <span className="font-medium text-[#22209C]">Votre RDV : {monRdv.dateStr} à {monRdv.creneau} ({monRdv.slot.pieceIds?.length || 0} pièce{(monRdv.slot.pieceIds?.length || 0) !== 1 ? 's' : ''})</span>
+          <span className="font-medium text-[#22209C]">Votre RDV : {monRdv.dateStr} à {monRdv.creneau} ({monRdv.slot.pieceIds?.length || 0} pièce{(monRdv.slot.pieceIds?.length || 0) !== 1 ? 's' : ''}){(monRdv.slot as any).acceptee ? ' ✓ confirmé' : ' · en attente'}</span>
         </>}
       </div>
 

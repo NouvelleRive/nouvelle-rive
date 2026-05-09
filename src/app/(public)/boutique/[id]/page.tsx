@@ -89,23 +89,23 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const produit = await getProduit(id)
   if (!produit) {
-    return { title: 'Produit introuvable | Nouvelle Rive', robots: { index: false } }
+    return { title: 'Produit introuvable', robots: { index: false } }
   }
 
   const titleBase = buildTitle(produit)
-  const title = `${titleBase} | Nouvelle Rive`
   const baseDescription = produit.description?.trim() || `${titleBase} — pièce vintage chinée à Paris, sélectionnée par Nouvelle Rive.`
   const description = baseDescription.length > 155 ? `${baseDescription.slice(0, 152).trim()}…` : baseDescription
 
   const image = produit.imageUrls?.[0] || produit.photos?.face || `${BASE_URL}/icon-512.png`
   const url = `${BASE_URL}/boutique/${produit.id}`
+  const ogTitle = `${titleBase} — Nouvelle Rive`
 
   return {
-    title,
+    title: titleBase,
     description,
     alternates: { canonical: url },
     openGraph: {
-      title,
+      title: ogTitle,
       description,
       url,
       type: 'website',
@@ -115,7 +115,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: ogTitle,
       description,
       images: [image],
     },

@@ -36,6 +36,7 @@ iconSnap.forEach((d) => {
   iconiques.push({
     id: d.id,
     nom: x.nom,
+    videos: x.videos,
     videoUrl: x.videos[0],
     categorieRecherche: x.categorieRecherche || '',
     marque: x.marque || '',
