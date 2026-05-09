@@ -6,7 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
 import { getPlacesDisponibles, isMaro } from '@/lib/capaciteDepot'
 import { useEtapes } from '../layout'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import PlanningCalendar from '@/components/PlanningCalendar'
 
 const MAX_PIECES_PAR_RDV = 5
 // Créneaux horaires (même règles que les chineuses : mardi a un créneau de plus)
@@ -316,13 +316,6 @@ export default function DeposanteCalendrierPage() {
         </>}
       </div>
 
-      {/* En-tête mois (même format que PlanningCalendar) */}
-      <div className="flex items-center justify-center gap-6 mb-4">
-        <button onClick={() => navMonth(-1)} className="p-2 hover:bg-gray-100 rounded-lg transition"><ChevronLeft size={20} /></button>
-        <span className="text-lg font-semibold capitalize w-48 text-center">{monthLabel}</span>
-        <button onClick={() => navMonth(1)} className="p-2 hover:bg-gray-100 rounded-lg transition"><ChevronRight size={20} /></button>
-      </div>
-
       {/* Légende */}
       <div className="flex flex-wrap gap-3 mb-4 justify-center text-xs text-gray-600">
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-white border rounded-sm" /> Disponible</span>
@@ -330,74 +323,22 @@ export default function DeposanteCalendrierPage() {
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-[#22209C] rounded-sm" /> Votre RDV</span>
       </div>
 
-      {/* Grille jours (même format que PlanningCalendar) */}
-      <div className="bg-white rounded-xl border overflow-x-auto">
-        <div className="min-w-[560px]">
-          <div className="grid grid-cols-7 border-b bg-gray-50">
-            {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(j => (
-              <div key={j} className="text-center text-xs font-bold text-gray-500 py-2">{j}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7">
-            {calendarDays.map((d, i) => {
-              if (d === null) return <div key={`pad-${i}`} className="border-b border-r min-h-[100px] bg-gray-50/50" />
-              const dateStr = formatDateStr(currentMonth.year, currentMonth.month, d)
-              const info = getDayInfo(dateStr)
-              const isToday = dateStr === today
-
-              let cellBg = 'bg-white'
-              let dayNumColor = isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'
-              let label: React.ReactNode = null
-              let title = ''
-              let interactive = false
-
-              if (info.isPast) {
-                cellBg = 'bg-gray-50/50'
-                dayNumColor = 'text-gray-300'
-                title = 'Passé'
-              } else if (info.reservedByMe) {
-                cellBg = 'bg-[#22209C]'
-                dayNumColor = 'text-white font-bold'
-                label = <div className="text-[10px] text-white/90 mt-1">Mon RDV {monRdv?.creneau}</div>
-                title = 'Votre RDV — cliquez pour modifier'
-                interactive = true
-              } else if (info.dayHasChineuse || info.fullyBooked) {
-                // Côté déposante : on ne révèle pas qu'il y a une chineuse,
-                // on affiche juste 0 créneau dispo (comportement identique pour fully booked).
-                cellBg = 'bg-gray-100'
-                dayNumColor = 'text-gray-400'
-                label = <div className="text-[10px] text-gray-400 mt-1">0 créneau dispo</div>
-                title = 'Aucun créneau disponible'
-              } else {
-                cellBg = isToday ? 'bg-blue-50 hover:bg-[#22209C]/10' : 'bg-white hover:bg-[#22209C]/10'
-                label = (
-                  <div className="text-[10px] text-gray-600 mt-1 leading-tight">
-                    {info.creneauxDispo.map((cr, k) => (
-                      <span key={cr}>{cr}{k < info.creneauxDispo.length - 1 ? ' · ' : ''}</span>
-                    ))}
-                  </div>
-                )
-                title = `Créneaux dispo : ${info.creneauxDispo.join(', ')}`
-                interactive = true
-              }
-
-              return (
-                <button
-                  key={dateStr}
-                  type="button"
-                  disabled={!interactive}
-                  onClick={() => interactive && openModal(dateStr)}
-                  title={title}
-                  className={`border-b border-r min-h-[100px] p-2 text-left transition-colors ${cellBg} ${interactive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                >
-                  <span className={`text-sm ${dayNumColor}`}>{d}</span>
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
+      <PlanningCalendar
+        mode="deposante-rdv"
+        currentMonth={currentMonth}
+        onNavigate={navMonth}
+        onDayClick={openModal}
+        dayInfo={(ds) => {
+          const info = getDayInfo(ds)
+          return {
+            isPast: info.isPast,
+            creneauxDispo: info.creneauxDispo,
+            reservedByMe: info.reservedByMe,
+            reservedCreneau: monRdv?.dateStr === ds ? monRdv.creneau : undefined,
+            fullyBooked: info.fullyBooked || info.dayHasChineuse,
+          }
+        }}
+      />
 
       {/* Modale RDV */}
       {openDate && (

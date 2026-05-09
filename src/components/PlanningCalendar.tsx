@@ -18,7 +18,7 @@ type RestockSlots = Record<string, RestockSlotData>
 type Participant = { nom: string; type: 'chineuse' | 'deposante'; trigramme?: string }
 
 interface PlanningCalendarProps {
-  mode: 'planning' | 'restock' | 'unified'
+  mode: 'planning' | 'restock' | 'unified' | 'deposante-rdv'
   vendeuses?: Vendeuse[]
   planningSlots?: PlanningSlots
   planningLoading?: boolean
@@ -38,6 +38,16 @@ interface PlanningCalendarProps {
   onNavigate?: (delta: number) => void
   dailyCA?: Record<string, number>
   dailyCAByCreneau?: Record<string, { '12-20': number; '11-17': number }>
+  // Mode "deposante-rdv" : callback quand la déposante clique un jour
+  onDayClick?: (dateStr: string) => void
+  // Mode "deposante-rdv" : créneaux dispo par jour (déjà calculés côté page)
+  dayInfo?: (dateStr: string) => {
+    isPast: boolean
+    creneauxDispo: string[]
+    reservedByMe: boolean
+    reservedCreneau?: string
+    fullyBooked: boolean
+  }
 }
 
 export default function PlanningCalendar({
@@ -61,6 +71,8 @@ export default function PlanningCalendar({
   onNavigate: externalNavigate,
   dailyCA = {},
   dailyCAByCreneau = {},
+  onDayClick,
+  dayInfo,
 }: PlanningCalendarProps) {
 
   const [internalMonth, setInternalMonth] = useState(() => {
@@ -203,7 +215,7 @@ export default function PlanningCalendar({
   const monthLabel = new Date(currentMonth.year, currentMonth.month).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
   const activeVendeuses = vendeuses.filter(v => v.actif)
   const getVendeuse = (id: string) => vendeuses.find(v => v.id === id)
-  const isLoading = mode === 'planning' ? planningLoading : mode === 'restock' ? restockLoading : planningLoading || restockLoading
+  const isLoading = mode === 'deposante-rdv' ? false : (mode === 'planning' ? planningLoading : mode === 'restock' ? restockLoading : planningLoading || restockLoading)
 
   const renderPlanningDropdowns = (ds: string) => (
     <>
@@ -381,6 +393,51 @@ export default function PlanningCalendar({
                 const ds = `${currentMonth.year}-${String(currentMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                 const now = new Date()
                 const isToday = day === now.getDate() && currentMonth.month === now.getMonth() && currentMonth.year === now.getFullYear()
+
+                // Mode déposante-RDV : cellule cliquable, affichage des créneaux dispo / RDV / "0 dispo"
+                if (mode === 'deposante-rdv') {
+                  const info = dayInfo?.(ds)
+                  let cellBg = isToday ? 'bg-blue-50' : 'bg-white'
+                  let dayNumColor = isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'
+                  let label: React.ReactNode = null
+                  let interactive = false
+                  if (!info || info.isPast) {
+                    cellBg = 'bg-gray-50/50'
+                    dayNumColor = 'text-gray-300'
+                  } else if (info.reservedByMe) {
+                    cellBg = 'bg-[#22209C]'
+                    dayNumColor = 'text-white font-bold'
+                    label = <div className="text-[10px] text-white/90 mt-1">Mon RDV {info.reservedCreneau}</div>
+                    interactive = true
+                  } else if (info.fullyBooked) {
+                    cellBg = 'bg-gray-100'
+                    dayNumColor = 'text-gray-400'
+                    label = <div className="text-[10px] text-gray-400 mt-1">0 créneau dispo</div>
+                  } else {
+                    cellBg = isToday ? 'bg-blue-50' : 'bg-white'
+                    label = (
+                      <div className="text-[10px] text-gray-600 mt-1 leading-tight">
+                        {info.creneauxDispo.map((cr, k) => (
+                          <span key={cr}>{cr}{k < info.creneauxDispo.length - 1 ? ' · ' : ''}</span>
+                        ))}
+                      </div>
+                    )
+                    interactive = true
+                  }
+                  return (
+                    <button
+                      key={ds}
+                      type="button"
+                      disabled={!interactive}
+                      onClick={() => interactive && onDayClick?.(ds)}
+                      className={`border-b border-r min-h-[100px] p-2 text-left transition-colors ${cellBg} ${interactive ? 'cursor-pointer hover:bg-[#22209C]/10' : 'cursor-not-allowed'}`}
+                    >
+                      <span className={`text-xs ${dayNumColor}`}>{day}</span>
+                      {label}
+                    </button>
+                  )
+                }
+
                 return (
                   <div key={ds} className={`border-b border-r min-h-[100px] p-1 ${isToday ? 'bg-blue-50' : ''}`}>
                     <div className="flex items-center justify-between mb-1">
