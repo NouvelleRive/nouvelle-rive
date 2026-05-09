@@ -381,6 +381,24 @@ export default function CreateurPage() {
             }}
           >
             {creatrice.videos.map((url) => {
+              // .mp4 → HTML5 video avec autoplay
+              if (/\.mp4(\?|$)/i.test(url)) {
+                return (
+                  <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                    <video
+                      src={url}
+                      className="w-full h-full object-cover"
+                      style={{ background: '#000' }}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      controls
+                    />
+                  </div>
+                )
+              }
+              // fallback : URL Instagram → iframe
               const embed = instagramEmbed(url)
               if (!embed) return null
               return (
