@@ -270,7 +270,13 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
     filteredProduits = filteredProduits.filter(p => {
       const cat = typeof p.categorie === 'object' ? (p.categorie as any)?.label : p.categorie
-      const text = stripAccents([p.nom, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif].filter(Boolean).join(' '))
+      const description = (p as { description?: string }).description
+      const descriptionEn = (p as { descriptionEn?: string }).descriptionEn
+      const text = stripAccents(
+        [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn]
+          .filter(Boolean)
+          .join(' ')
+      )
       return searchTerms.every(t => text.includes(t))
     })
   }
