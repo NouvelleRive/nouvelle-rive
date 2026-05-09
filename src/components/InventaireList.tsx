@@ -2,7 +2,7 @@
   'use client'
 
   import { useState, useMemo, useRef, useEffect } from 'react'
-  import { db } from '@/lib/firebaseConfig'
+  import { db, auth } from '@/lib/firebaseConfig'
   import { doc, updateDoc, Timestamp } from 'firebase/firestore'
   import {
     Search, X, Check, AlertTriangle, Package, PackageCheck,
@@ -48,6 +48,11 @@
     statutRecuperation?: 'aRecuperer' | 'vole' | null
     dateSignalement?: Timestamp
     signalePar?: string
+    source?: 'chineuse' | 'deposante'
+    trigramme?: string
+    photosDefautsReception?: string[]
+    noteReception?: string
+    bonDepotEnvoyeAt?: Timestamp
   }
 
   export type Deposant = {
@@ -149,6 +154,15 @@
     const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
     const [newPhotos, setNewPhotos] = useState<File[]>([])
     const [uploadingPhotos, setUploadingPhotos] = useState(false)
+    // Réception DEP (déposante) : modale de confirmation avec note + photos défauts
+    const [receptionTarget, setReceptionTarget] = useState<Produit | null>(null)
+    const [receptionNote, setReceptionNote] = useState('')
+    const [receptionDefautUrls, setReceptionDefautUrls] = useState<string[]>([])
+    const [receptionUploading, setReceptionUploading] = useState(false)
+    const [receptionSaving, setReceptionSaving] = useState(false)
+    // Popup "Générer bon de dépôt" quand toutes les pièces DEP du trigramme sont reçues
+    const [bonDepotTrigramme, setBonDepotTrigramme] = useState<string | null>(null)
+    const [bonDepotGenerating, setBonDepotGenerating] = useState(false)
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
     const loaderRef = useRef<HTMLDivElement>(null)
@@ -380,15 +394,21 @@
 
     const handleMarkReceived = async (p: Produit) => {
       if (processingIds.has(p.id)) return
+      // Pour une pièce déposante : ouvrir la modale de confirmation (note + photos défauts)
+      if (p.source === 'deposante') {
+        setReceptionTarget(p)
+        setReceptionNote('')
+        setReceptionDefautUrls([])
+        return
+      }
+      // Sinon, réception directe (chineuses)
       setProcessingIds((prev) => new Set(prev).add(p.id))
-
       try {
         await updateDoc(doc(db, 'produits', p.id), {
           recu: true,
           dateReception: Timestamp.now(),
           recuPar: vendeusePrenom,
         })
-        // Best-effort : si le produit match les règles luxe, le publier sur eBay
         fetch('/api/ebay/publish-if-luxe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -404,6 +424,97 @@
           next.delete(p.id)
           return next
         })
+      }
+    }
+
+    // Confirmation depuis la modale réception DEP : update + check fin de session
+    const confirmReceptionDep = async () => {
+      if (!receptionTarget) return
+      setReceptionSaving(true)
+      try {
+        const update: any = {
+          recu: true,
+          dateReception: Timestamp.now(),
+          recuPar: vendeusePrenom,
+        }
+        if (receptionNote.trim()) update.noteReception = receptionNote.trim()
+        if (receptionDefautUrls.length > 0) update.photosDefautsReception = receptionDefautUrls
+        await updateDoc(doc(db, 'produits', receptionTarget.id), update)
+
+        fetch('/api/ebay/publish-if-luxe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: receptionTarget.id }),
+        }).catch(() => {})
+
+        const target = receptionTarget
+        setReceptionTarget(null)
+        setReceptionNote('')
+        setReceptionDefautUrls([])
+        onProductUpdate?.()
+
+        // Détection : reste-t-il d'autres pièces DEP non reçues pour ce trigramme ?
+        if (target.trigramme) {
+          const remainingDep = produits.filter(p =>
+            p.id !== target.id &&
+            p.source === 'deposante' &&
+            p.trigramme === target.trigramme &&
+            !p.recu &&
+            p.statut !== 'supprime'
+          )
+          if (remainingDep.length === 0) {
+            setBonDepotTrigramme(target.trigramme)
+          }
+        }
+      } catch (err) {
+        console.error('Erreur réception DEP:', err)
+        alert('Erreur : réception non enregistrée')
+      } finally {
+        setReceptionSaving(false)
+      }
+    }
+
+    const handleAddDefautPhotos = async (files: FileList | null) => {
+      if (!files || files.length === 0) return
+      setReceptionUploading(true)
+      try {
+        const urls: string[] = []
+        for (const file of Array.from(files)) {
+          const url = await uploadToBunny(file)
+          urls.push(url)
+        }
+        setReceptionDefautUrls(prev => [...prev, ...urls])
+      } catch (e: any) {
+        alert('Erreur upload photo : ' + (e?.message || ''))
+      } finally {
+        setReceptionUploading(false)
+      }
+    }
+
+    const generateBonDepot = async () => {
+      if (!bonDepotTrigramme) return
+      setBonDepotGenerating(true)
+      try {
+        const idToken = await auth.currentUser?.getIdToken()
+        const res = await fetch('/api/deposante/bon-depot', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+          },
+          body: JSON.stringify({ trigramme: bonDepotTrigramme, vendeusePrenom }),
+        })
+        const data = await res.json()
+        if (!data.success) {
+          alert('Erreur génération bon : ' + (data.error || 'inconnue'))
+          return
+        }
+        alert(`Bon de dépôt envoyé à ${data.email || 'la déposante'} (${data.nbPieces || 0} pièce${(data.nbPieces || 0) > 1 ? 's' : ''})`)
+        setBonDepotTrigramme(null)
+      } catch (e: any) {
+        alert('Erreur : ' + (e?.message || 'inconnue'))
+      } finally {
+        setBonDepotGenerating(false)
       }
     }
 
@@ -1209,6 +1320,107 @@
                   className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878] disabled:opacity-50 transition-colors"
                 >
                   {uploadingPhotos ? '📤 Upload...' : processingIds.has(editTarget.id) ? '...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modale réception déposante : note + photos défauts */}
+        {receptionTarget && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-1 text-[#22209C]">Réception du dépôt</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                <strong>{receptionTarget.sku || receptionTarget.nom}</strong>
+                {receptionTarget.trigramme ? ` · ${receptionTarget.trigramme}` : ''}
+              </p>
+
+              <label className="block text-xs font-medium text-gray-600 mb-1">Note de réception (optionnel)</label>
+              <textarea
+                value={receptionNote}
+                onChange={e => setReceptionNote(e.target.value)}
+                placeholder="Ex : petite tache au col, doublure décousue…"
+                rows={3}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
+              />
+
+              <label className="block text-xs font-medium text-gray-600 mb-1">Photos des défauts (optionnel)</label>
+              {receptionDefautUrls.length > 0 && (
+                <div className="flex gap-2 flex-wrap mb-2">
+                  {receptionDefautUrls.map((url, idx) => (
+                    <div key={idx} className="relative">
+                      <img src={url} alt={`Défaut ${idx + 1}`} className="w-16 h-16 object-cover rounded-lg border" />
+                      <button
+                        type="button"
+                        onClick={() => setReceptionDefautUrls(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label className="flex items-center justify-center gap-2 py-2 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg text-blue-600 hover:bg-blue-100 transition cursor-pointer text-sm mb-4">
+                <Camera size={18} />
+                {receptionUploading ? 'Upload…' : 'Ajouter une photo'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handleAddDefautPhotos(e.target.files)
+                    e.target.value = ''
+                  }}
+                />
+              </label>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setReceptionTarget(null); setReceptionNote(''); setReceptionDefautUrls([]) }}
+                  disabled={receptionSaving || receptionUploading}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmReceptionDep}
+                  disabled={receptionSaving || receptionUploading}
+                  className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878] disabled:opacity-50"
+                >
+                  {receptionSaving ? '...' : 'Confirmer réception'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Popup : toutes les pièces DEP de ce trigramme reçues → générer le bon de dépôt */}
+        {bonDepotTrigramme && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Dépôt complet 💙</h3>
+              <p className="text-sm text-gray-700 mb-4">
+                Toutes les pièces de <strong>{bonDepotTrigramme}</strong> sont réceptionnées.
+                Voulez-vous générer le bon de dépôt et l'envoyer par email à la déposante ?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setBonDepotTrigramme(null)}
+                  disabled={bonDepotGenerating}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Plus tard
+                </button>
+                <button
+                  onClick={generateBonDepot}
+                  disabled={bonDepotGenerating}
+                  className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878] disabled:opacity-50"
+                >
+                  {bonDepotGenerating ? 'Envoi…' : 'Générer le bon'}
                 </button>
               </div>
             </div>
