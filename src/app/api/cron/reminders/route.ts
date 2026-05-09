@@ -103,6 +103,49 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 11h00 — rappel "départ pas pointé" envoyé à la vendeuse uniquement
+  // les jours où elle travaille (sinon notif inutile pour celles qui n'ont pas oublié).
+  // La vendeuse doit nous envoyer son horaire de départ — la correction se fait côté admin.
+  if (inWindow(h, m, 11, 0)) {
+    const planningSnap = await adminDb.collection('planning').doc(monthKey).get()
+    const slots = planningSnap.exists ? (planningSnap.data()?.slots || {}) : {}
+    const vendeusesAujourdhui = new Set<string>()
+    const v1117 = slots[`${dateStr}_11-17`]
+    const v1220 = slots[`${dateStr}_12-20`]
+    if (v1117) vendeusesAujourdhui.add(v1117)
+    if (v1220) vendeusesAujourdhui.add(v1220)
+
+    if (vendeusesAujourdhui.size > 0) {
+      const vendSnap = await adminDb.collection('vendeuses').get()
+      const prenomById = new Map<string, string>()
+      vendSnap.docs.forEach(d => prenomById.set(d.id, (d.data() as any).prenom || d.id))
+      const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+
+      for (const vid of vendeusesAujourdhui) {
+        const ptgSnap = await adminDb.collection('pointages').where('vendeuseId', '==', vid).get()
+        const incomplete = ptgSnap.docs.filter(d => {
+          const x = d.data()
+          return x.date < dateStr && x.arrivee && !x.depart
+        })
+        if (incomplete.length === 0) continue
+
+        const prenom = prenomById.get(vid) || vid
+        for (const doc of incomplete) {
+          const x = doc.data() as any
+          const [, mm, dd] = (x.date as string).split('-')
+          const dateLabel = `${parseInt(dd, 10)} ${monthNames[parseInt(mm, 10) - 1]}`
+          await sendPushToOwner('boutique', {
+            title: '⏰ Départ pas pointé',
+            body: `${prenom}, envoie-nous ton heure de départ du ${dateLabel} pour qu'on ferme ta journée 💙`,
+            url: '/vendeuse/calendrier',
+            tag: `depart-oublie-${x.date}-${vid}`,
+          })
+          actions.push(`depart-oublie-${vid}-${x.date}`)
+        }
+      }
+    }
+  }
+
   // Rappels pointage départ — déclenchés 5 min avant la fin de chaque créneau
   // 16h55 pour slot 11-17, 19h55 pour slot 12-20.
   for (const slot of [{ name: '11-17', trigH: 16, trigM: 55 }, { name: '12-20', trigH: 19, trigM: 55 }]) {
