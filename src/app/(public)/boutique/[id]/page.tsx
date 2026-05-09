@@ -13,7 +13,33 @@ async function getProduit(id: string): Promise<ProduitDoc | null> {
   try {
     const snap = await adminDb.collection('produits').doc(id).get()
     if (!snap.exists) return null
-    return { id: snap.id, ...snap.data() } as ProduitDoc
+    const raw = snap.data() as any
+    // Ne passer que les champs sérialisables utilisés côté client (pas de Timestamp)
+    const produit: ProduitDoc = {
+      id: snap.id,
+      nom: raw.nom,
+      nomEn: raw.nomEn,
+      prix: raw.prix,
+      imageUrls: raw.imageUrls || [],
+      sku: raw.sku,
+      photos: raw.photos,
+      categorie: raw.categorie,
+      marque: raw.marque,
+      description: raw.description,
+      descriptionEn: raw.descriptionEn,
+      taille: raw.taille,
+      color: raw.color,
+      material: raw.material,
+      madeIn: raw.madeIn,
+      etat: raw.etat,
+      composition: raw.composition,
+      entretien: raw.entretien,
+      vendu: !!raw.vendu,
+      videoUrl: raw.videoUrl,
+      chineurUid: raw.chineurUid,
+      chineur: raw.chineur,
+    }
+    return produit
   } catch (err) {
     console.error('[boutique/[id]] getProduit error:', err)
     return null
