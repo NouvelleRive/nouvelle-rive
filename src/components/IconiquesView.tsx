@@ -512,7 +512,7 @@ export default function IconiquesView({
               </div>
 
               {(item.buyLink || (item.videos && item.videos.length > 0)) && (
-                <div style={{ borderTop: '1px solid #000', borderRight: sideBySide ? '1px solid #000' : 'none' }} className={`bg-white ${sideBySide ? 'lg:float-left lg:w-1/2' : ''}`}>
+                <div style={{ borderTop: '1px solid #000', borderRight: sideBySide ? '1px solid #000' : 'none' }} className={`bg-white ${sideBySide ? 'lg:float-left lg:w-1/3' : ''}`}>
                   {item.buyLink && (
                     <div className="px-6 md:px-12 py-8 text-center" style={{ borderBottom: item.videos && item.videos.length > 0 ? '1px solid #000' : 'none' }}>
                       <a
@@ -658,7 +658,7 @@ export default function IconiquesView({
                 </div>
               ) : (
                 produits[item.id] && produits[item.id].length > 0 && (
-                  <div style={{ borderTop: '1px solid #000' }} className={sideBySide ? 'lg:float-right lg:w-1/2' : ''}>
+                  <div style={{ borderTop: '1px solid #000' }} className={sideBySide ? 'lg:float-right lg:w-2/3' : ''}>
                     <div className="px-6 md:px-12 pt-10 pb-4">
                       <p
                         className="uppercase tracking-widest font-semibold"
