@@ -140,16 +140,16 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
         {allImages.length > 0 ? (
           <>
             <div className="flex flex-col">
+              {/* Vidéo en premier */}
+              {produit.videoUrl && /\.mp4(\?|$)/i.test(produit.videoUrl) && (
+                <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
+                  <video src={produit.videoUrl} className="w-full h-auto" style={{ background: '#000', display: 'block' }} autoPlay muted loop playsInline controls />
+                </div>
+              )}
+              {/* Puis les photos */}
               {allImages.map((url, index) => (
-                <div key={`img-${index}`}>
-                  <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
-                    <img src={url} alt={`${produit.nom} - Photo ${index + 1}`} className="w-full h-auto object-cover" />
-                  </div>
-                  {index === 0 && produit.videoUrl && /\.mp4(\?|$)/i.test(produit.videoUrl) && (
-                    <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
-                      <video src={produit.videoUrl} className="w-full h-auto" style={{ background: '#000', display: 'block' }} autoPlay muted loop playsInline controls />
-                    </div>
-                  )}
+                <div key={`img-${index}`} className="w-full" style={{ borderBottom: '1px solid #000' }}>
+                  <img src={url} alt={`${produit.nom} - Photo ${index + 1}`} className="w-full h-auto object-cover" />
                 </div>
               ))}
             </div>
