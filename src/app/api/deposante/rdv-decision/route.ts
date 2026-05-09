@@ -73,6 +73,34 @@ export async function POST(req: NextRequest) {
         const dep = depSnap.docs[0].data() as any
         const [dateStr, creneau] = slotKey.split('_')
         const jour = frenchDate(dateStr)
+
+        // Récupère les pièces du RDV pour les afficher avec photo
+        let piecesHtml = ''
+        if (slot.pieceIds && slot.pieceIds.length > 0 && decision === 'accepter') {
+          const piecesData: any[] = []
+          for (const id of slot.pieceIds) {
+            try {
+              const ps = await adminDb.collection('produits').doc(id).get()
+              if (ps.exists) piecesData.push({ id: ps.id, ...(ps.data() as any) })
+            } catch {}
+          }
+          if (piecesData.length) {
+            const rows = piecesData.map(p => `
+              <tr>
+                <td style="padding:8px;border-bottom:1px solid #eee;width:80px;">
+                  ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:4px;display:block;" />` : ''}
+                </td>
+                <td style="padding:8px;border-bottom:1px solid #eee;font-size:13px;">
+                  <strong>${p.sku || ''}</strong> ${(p.nom || '').replace(`${p.sku} - `, '')}<br/>
+                  <span style="color:#888;font-size:11px;">${(p.categorie || '').replace('DEP - ', '')} · ${p.prix || ''}€</span>
+                </td>
+              </tr>`).join('')
+            piecesHtml = `
+              <p style="margin-top:24px;font-weight:600;">Pièces à apporter :</p>
+              <table style="width:100%;border-collapse:collapse;margin-top:8px;">${rows}</table>`
+          }
+        }
+
         if (decision === 'accepter' && dep.email) {
           try {
             await resend.emails.send({
@@ -87,7 +115,7 @@ export async function POST(req: NextRequest) {
                   <p>Nous vous attendons en boutique pour votre dépôt :</p>
                   <p style="font-size:18px;font-weight:bold;">${jour}<br/>à <span style="color:#22209C;">${creneau}</span></p>
                   <p>Adresse : <strong>8 rue des Écouffes, 75004 Paris</strong></p>
-                  <p style="margin-top:24px;">Pensez à apporter les pièces sélectionnées dans votre espace.</p>
+                  ${piecesHtml}
                   <p style="font-size:12px;color:#888;margin-top:32px;">À très bientôt 🌊</p>
                 </div>
               `,
