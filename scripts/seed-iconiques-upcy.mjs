@@ -55,7 +55,7 @@ const ICONIQUES = [
       'https://nouvellerive.b-cdn.net/produits/conserved_1774642945305_au2bbx.png',
     ],
     chineuseTrigrammes: ['DISI'],
-    categorieRecherche: 'top',
+    categorieRecherche: 'ana',
   },
   {
     id: 'amadora-age-paris',
