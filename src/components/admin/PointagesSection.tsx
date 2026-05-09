@@ -98,36 +98,42 @@ export default function PointagesSection({
   }
 
   const createPointage = async () => {
-    if (!newVendeuseId || !newArrivee) {
-      alert('Vendeuse et arrivée requises')
-      return
+    if (!newVendeuseId) { alert('Choisis une vendeuse'); return }
+    if (!newArrivee) { alert('Saisis une heure d\'arrivée'); return }
+    if (!auth.currentUser) { alert('Tu dois être connectée comme admin'); return }
+    try {
+      const arriveeDate = new Date(newArrivee)
+      const dateStr = `${arriveeDate.getFullYear()}-${String(arriveeDate.getMonth() + 1).padStart(2, '0')}-${String(arriveeDate.getDate()).padStart(2, '0')}`
+      const id = pointageDocId(arriveeDate, newVendeuseId)
+      const token = await auth.currentUser.getIdToken()
+      const res = await fetch('/api/pointage', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id,
+          vendeuseId: newVendeuseId,
+          date: dateStr,
+          arrivee: arriveeDate.toISOString(),
+          depart: newDepart ? new Date(newDepart).toISOString() : null,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCreating(false)
+        setNewVendeuseId('')
+        setNewArrivee('')
+        setNewDepart('')
+        await fetchPointages()
+      } else {
+        alert(data.error || `Erreur ${res.status}`)
+      }
+    } catch (e: any) {
+      console.error('[createPointage]', e)
+      alert(`Erreur : ${e?.message || e}`)
     }
-    const arriveeDate = new Date(newArrivee)
-    const dateStr = `${arriveeDate.getFullYear()}-${String(arriveeDate.getMonth() + 1).padStart(2, '0')}-${String(arriveeDate.getDate()).padStart(2, '0')}`
-    const id = pointageDocId(arriveeDate, newVendeuseId)
-    const token = await auth.currentUser?.getIdToken()
-    const res = await fetch('/api/pointage', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        id,
-        vendeuseId: newVendeuseId,
-        date: dateStr,
-        arrivee: arriveeDate.toISOString(),
-        depart: newDepart ? new Date(newDepart).toISOString() : null,
-      }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      setCreating(false)
-      setNewVendeuseId('')
-      setNewArrivee('')
-      setNewDepart('')
-      await fetchPointages()
-    } else alert(data.error || 'Erreur')
   }
 
   const saveEdit = async (id: string) => {
