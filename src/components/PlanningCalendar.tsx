@@ -258,10 +258,14 @@ export default function PlanningCalendar({
           const editable = canEditRestock(slot)
           const options = getRestockOptions(slot)
           const isDeposante = slot?.type === 'deposante'
+          const isMine = slot && userNom && slot.nom === userNom
           // Orange pour les déposantes (cohérent avec /admin/selectionneuses), gris pour les chineuses
           const slotColors = isDeposante
             ? 'text-orange-700 bg-orange-50'
             : 'text-gray-700 bg-gray-50'
+          // Pour un user non-admin : on cache les noms des autres (chineuses ou autres déposantes)
+          // Affichage anonyme "—" pour ne pas révéler qui est là.
+          const maskOtherName = userType !== 'admin' && slot && !isMine
           return (
             <div key={cr} className="mb-0.5">
               {editable && options.length > 0 ? (
@@ -275,8 +279,12 @@ export default function PlanningCalendar({
                   {options.map((p, i) => <option key={i} value={p.nom}>{p.nom}</option>)}
                 </select>
               ) : (
-                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}` : cr}>
-                  {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">{cr}</span>}
+                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${slot ? (maskOtherName ? 'text-gray-400 bg-gray-100' : slotColors) : 'text-gray-700 bg-gray-50'}`} title={slot ? (maskOtherName ? `${cr} — indisponible` : `${slot.nom}${isDeposante ? ' (déposante)' : ''}`) : cr}>
+                  {slot
+                    ? (maskOtherName
+                      ? <span>{cr} — indispo</span>
+                      : <>{isDeposante && '◆ '}{slot.nom}</>)
+                    : <span className="text-gray-300">{cr}</span>}
                 </div>
               )}
             </div>
