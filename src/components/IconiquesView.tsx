@@ -33,7 +33,8 @@ export type Iconique = {
 type Produit = any
 
 type Props = {
-  collectionName: string
+  /** Filtre sur le champ `type` du doc Firestore. Absence/`'vintage'` traités comme vintage. */
+  typeFilter: 'vintage' | 'upcy'
   titleFr: ReactNode
   titleEn: ReactNode
   loadingFr?: string
@@ -45,7 +46,7 @@ type Props = {
 }
 
 export default function IconiquesView({
-  collectionName,
+  typeFilter,
   titleFr,
   titleEn,
   loadingFr = 'Chargement des iconiques...',
@@ -65,12 +66,15 @@ export default function IconiquesView({
   useEffect(() => {
     async function fetchIconiques() {
       try {
-        const querySnapshot = await getDocs(collection(db, collectionName))
+        const querySnapshot = await getDocs(collection(db, 'iconiques'))
         const data: Iconique[] = []
 
         querySnapshot.forEach((doc) => {
           const docData = doc.data()
           if (docData.displayOnWebsite === false) return
+          // Filtre par type : absence de type = vintage (rétro-compat).
+          const docType = docData.type || 'vintage'
+          if (docType !== typeFilter) return
           data.push({
             id: doc.id,
             nom: docData.nom || '',
@@ -169,7 +173,7 @@ export default function IconiquesView({
     }
 
     fetchIconiques()
-  }, [collectionName])
+  }, [typeFilter])
 
   const scroll = (direction: 'left' | 'right') => {
     if (!sliderRef.current) return

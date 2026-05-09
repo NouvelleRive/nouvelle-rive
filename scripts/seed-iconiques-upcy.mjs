@@ -257,6 +257,7 @@ for (const it of ICONIQUES) {
   const fullData = {
     ...data,
     slug: id,
+    type: 'upcy',
     displayOnWebsite: true,
     valeurNeuf: 0,
     tendancePrix: 'monte',
@@ -266,7 +267,7 @@ for (const it of ICONIQUES) {
     materialContient: '',
   }
   try {
-    await db.collection('iconiques-upcy').doc(id).set(fullData, { merge: true })
+    await db.collection('iconiques').doc(id).set(fullData, { merge: true })
     written++
     console.log(`✓ #${data.ordre} ${id}`)
   } catch (e) {

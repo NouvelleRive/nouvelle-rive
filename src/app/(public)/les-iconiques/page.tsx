@@ -5,7 +5,7 @@ import IconiquesView from '@/components/IconiquesView'
 export default function LesIconiquesPage() {
   return (
     <IconiquesView
-      collectionName="iconiques"
+      typeFilter="vintage"
       titleFr={<>LES ICONIQUES<br />DU VINTAGE</>}
       titleEn={<>VINTAGE<br />ICONICS</>}
       loadingFr="Chargement des iconiques..."

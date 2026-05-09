@@ -5,7 +5,7 @@ import IconiquesView from '@/components/IconiquesView'
 export default function IconiquesUpcyPage() {
   return (
     <IconiquesView
-      collectionName="iconiques-upcy"
+      typeFilter="upcy"
       titleFr={<>NOS PIÈCES UPCY<br />FAVORITES</>}
       titleEn={<>OUR FAVORITE<br />UPCYCLED PIECES</>}
       loadingFr="Chargement des pièces upcyclées..."
