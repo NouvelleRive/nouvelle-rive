@@ -654,31 +654,28 @@ export default function IconiquesView({
                             {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                           </p>
                         </div>
-                        {/* Ligne 1 : 1 vidéo + 2 produits, alignement bas via flex-grow */}
-                        <div className="grid grid-cols-3" style={{ borderLeft: '1px solid #000' }}>
-                          <div className="flex flex-col bg-black" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
-                            <div className="aspect-square overflow-hidden">
-                              {(() => {
-                                const url = item.videos![0]
-                                if (/\.mp4(\?|$)/i.test(url)) {
-                                  return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
-                                }
-                                const embed = instagramEmbed(url)
-                                if (!embed) return null
-                                return <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
-                              })()}
-                            </div>
-                            <div className="bg-white flex-grow" />
+                        {/* Ligne 1 : 1 vidéo (full 9/16) + 2 produits avec image étirée pour matcher la hauteur */}
+                        <div className="grid grid-cols-3" style={{ borderLeft: '1px solid #000', alignItems: 'stretch' }}>
+                          <div className="bg-black" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000', aspectRatio: '9 / 16' }}>
+                            {(() => {
+                              const url = item.videos![0]
+                              if (/\.mp4(\?|$)/i.test(url)) {
+                                return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
+                              }
+                              const embed = instagramEmbed(url)
+                              if (!embed) return null
+                              return <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                            })()}
                           </div>
                           {produits[item.id].slice(0, 2).map((p: any) => {
                             const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
                             return (
-                              <div key={p.id} className="relative" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
-                                <Link href={`/boutique/${p.id}`} className="flex flex-col h-full group">
-                                  <div className="aspect-square overflow-hidden bg-white">
+                              <div key={p.id} className="relative flex flex-col" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
+                                <Link href={`/boutique/${p.id}`} className="flex flex-col flex-grow group">
+                                  <div className="overflow-hidden bg-white flex-grow">
                                     {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
                                   </div>
-                                  <div className="py-4 px-3 text-center bg-white flex-grow">
+                                  <div className="py-4 px-3 text-center bg-white">
                                     <h3 className="uppercase font-semibold line-clamp-2" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px' }}>{p.nom}</h3>
                                     {p.marque && <p className="mt-1 uppercase" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px', color: '#666' }}>{p.marque}</p>}
                                     <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>{p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
