@@ -47,8 +47,12 @@ const ICONIQUES = [
       "Digger Sister taille ses tops dans des chutes textiles dormantes : chemises retravaillées, patchworks de tissus chinés, coupes ajustées qui sculptent la silhouette. Chaque exemplaire est unique — c'est l'essence même du upcycling. Pensé et cousu à Paris, dans l'atelier de Nejma.",
     histoireEn:
       "Digger Sister cuts her tops from dormant textile scraps: reworked shirts, patchworks of sourced fabrics, fitted cuts that sculpt the silhouette. Every piece is one of a kind — that's the very essence of upcycling. Designed and sewn in Paris, in Nejma's atelier.",
+    // Photos hero = vrais Top Ana (tous vendus, mais la pièce iconique reste).
+    // Le matcher tire en dessous les tops DISI encore en stock.
     images: [
-      'https://nouvellerive.b-cdn.net/produits/conserved_1776411119110_sh3qzk.png',
+      'https://nouvellerive.b-cdn.net/produits/detoured_1776413739944_85gvy9.png',
+      'https://nouvellerive.b-cdn.net/produits/on-model/on-model_1773692618648_gjo0yw.png',
+      'https://nouvellerive.b-cdn.net/produits/conserved_1774642945305_au2bbx.png',
     ],
     chineuseTrigrammes: ['DISI'],
     categorieRecherche: 'top',
@@ -66,8 +70,13 @@ const ICONIQUES = [
       "Eva et Mégane fondent ÂGE Paris en 2021 avec une obsession : réinventer le tailleur. Leur Amadora — coupe nette, épaules structurées — est taillée dans des rouleaux de deadstock chinés chez Christian Dior et Emmanuelle Khanh. Cousue à Paris par des couturiers issus des grandes maisons, elle traverse les saisons avec l'élégance silencieuse des pièces faites pour durer.",
     histoireEn:
       'Eva and Mégane founded ÂGE Paris in 2021 with one obsession: reinventing the suit. Their Amadora — clean cut, structured shoulders — is tailored from deadstock rolls sourced at Christian Dior and Emmanuelle Khanh. Sewn in Paris by tailors from major fashion houses, it crosses seasons with the silent elegance of pieces built to last.',
+    // 5 coloris : noir, gris, marine, beige, marron (sur 12 variantes au total)
     images: [
+      'https://nouvellerive.b-cdn.net/produits/on-model/on-model_1770231109017_2i926k.png',
+      'https://nouvellerive.b-cdn.net/produits/on-model/on-model_1773244104877_83ty5n.png',
+      'https://nouvellerive.b-cdn.net/produits/on-model/on-model_1770230829377_j62v4m.png',
       'https://nouvellerive.b-cdn.net/produits/formatted_1778235701992_0spqqy.png',
+      'https://nouvellerive.b-cdn.net/produits/detoured_1770289191936_x090lr.png',
     ],
     chineuseTrigrammes: ['AGE'],
     categorieRecherche: 'amadora',
