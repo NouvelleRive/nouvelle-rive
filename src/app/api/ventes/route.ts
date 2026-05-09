@@ -132,9 +132,21 @@ export async function POST(req: NextRequest) {
     const newQty = Math.max(0, (p.quantite || 1) - 1)
     const updateData: any = { quantite: newQty }
     if (newQty === 0) {
-      updateData.vendu = true
-      updateData.dateVente = venteData?.dateVente || Timestamp.now()
-      updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
+      // Check smallBatch pour ne pas mettre vendu=true sur les pièces avec stock multiple
+      const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+      let isSmallBatch = false
+      if (tri) {
+        const chSnap = await adminDb.collection('chineuse').where('trigramme', '==', tri).limit(1).get()
+        if (!chSnap.empty) isSmallBatch = chSnap.docs[0].data().stockType === 'smallBatch'
+      }
+      if (isSmallBatch) {
+        updateData.statut = 'outOfStock'
+        updateData.dateRupture = venteData?.dateVente || Timestamp.now()
+      } else {
+        updateData.vendu = true
+        updateData.dateVente = venteData?.dateVente || Timestamp.now()
+        updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
+      }
     }
     await produitRef.update(updateData)
 
@@ -281,9 +293,21 @@ export async function PUT(req: NextRequest) {
     const newQty = Math.max(0, (p.quantite || 1) - 1)
     const updateData: any = { quantite: newQty }
     if (newQty === 0) {
-      updateData.vendu = true
-      updateData.dateVente = venteData?.dateVente || Timestamp.now()
-      updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
+      // Check smallBatch pour ne pas mettre vendu=true sur les pièces avec stock multiple
+      const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+      let isSmallBatch = false
+      if (tri) {
+        const chSnap = await adminDb.collection('chineuse').where('trigramme', '==', tri).limit(1).get()
+        if (!chSnap.empty) isSmallBatch = chSnap.docs[0].data().stockType === 'smallBatch'
+      }
+      if (isSmallBatch) {
+        updateData.statut = 'outOfStock'
+        updateData.dateRupture = venteData?.dateVente || Timestamp.now()
+      } else {
+        updateData.vendu = true
+        updateData.dateVente = venteData?.dateVente || Timestamp.now()
+        updateData.prixVenteReel = prixVenteReel || venteData?.prixVenteReel
+      }
     }
     await produitRef.update(updateData)
 
