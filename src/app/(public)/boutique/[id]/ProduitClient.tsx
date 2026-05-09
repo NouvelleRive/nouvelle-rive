@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
-import { useLang, t } from '@/lib/i18n'
+import { useCart } from '@/lib/cart'
+import { useLang, t, translateCategory, translateMaterial, translateColor } from '@/lib/i18n'
 
-type Produit = {
+export type Produit = {
   id: string
   nom: string
+  nomEn?: string
   prix: number
   imageUrls: string[]
   sku?: string
@@ -22,19 +24,24 @@ type Produit = {
   categorie: any
   marque?: string
   description?: string
+  descriptionEn?: string
   taille?: string
   color?: string
   material?: string
   madeIn?: string
+  etat?: string
+  composition?: string
   entretien?: string
   vendu: boolean
+  videoUrl?: string
 }
 
-type ChineuseInfo = {
+export type ChineuseInfo = {
   accroche?: string
   description?: string
   nom?: string
   texteEcoCirculaire?: number
+  stockType?: string
 }
 
 const categoriesSansTaille = ['bijoux', "boucles d'oreilles", 'colliers', 'bracelets', 'bagues', 'lunettes', 'lunettes de soleil', 'montres', 'accessoires']
@@ -78,6 +85,8 @@ function AccordionSection({ title, children, defaultOpen = false }: { title: str
 export default function ProduitClient({ produit, chineuseInfo }: { produit: Produit; chineuseInfo: ChineuseInfo | null }) {
   const router = useRouter()
   const lang = useLang()
+  const { addItem, hasItem, hydrated } = useCart()
+  const [justAdded, setJustAdded] = useState(false)
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
   const afficherTaille = (categorie: any) => {
@@ -85,7 +94,42 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
     return !categoriesSansTaille.some(cat => catLower.includes(cat))
   }
 
+  const handleAjouterPanier = () => {
+    const ok = addItem({
+      id: produit.id,
+      nom: produit.nom,
+      prix: produit.prix,
+      imageUrl: produit.imageUrls?.[0] || produit.photos?.face || null,
+      marque: produit.marque || null,
+      sku: produit.sku || null,
+    })
+    if (ok) {
+      setJustAdded(true)
+      setTimeout(() => setJustAdded(false), 1500)
+    }
+  }
+
+  const dansLePanier = hasItem(produit.id)
+
+  if (produit.vendu) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-white" style={{ fontFamily: fontHelvetica }}>
+        <p className="uppercase text-xs tracking-widest mb-2" style={{ color: '#999' }}>
+          {t('Vendu', 'Sold', lang)}
+        </p>
+        <p className="text-xs mb-6" style={{ color: '#999' }}>
+          {t('Cette pièce a trouvé preneur', 'This piece has found a new home', lang)}
+        </p>
+        <Link href="/boutique" className="uppercase text-xs tracking-widest hover:opacity-50 transition">
+          {t("← Découvrir d'autres pièces", '← Discover other pieces', lang)}
+        </Link>
+      </div>
+    )
+  }
+
   const allImages = getAllImages(produit)
+  const catRaw = typeof produit.categorie === 'string' ? produit.categorie : (produit.categorie as any)?.label || ''
+  const catClean = catRaw.replace(/^[A-Z]{2,5}\s*[-–]\s*/, '').trim()
 
   return (
     <div className="flex flex-col lg:flex-row bg-white" style={{ fontFamily: fontHelvetica, minHeight: 'calc(100vh - 80px)' }}>
@@ -95,8 +139,15 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
           <>
             <div className="flex flex-col">
               {allImages.map((url, index) => (
-                <div key={index} className="w-full" style={{ borderBottom: index < allImages.length - 1 ? '1px solid #000' : 'none' }}>
-                  <img src={url} alt={`${produit.nom} - Photo ${index + 1}`} className="w-full h-auto object-cover" />
+                <div key={`img-${index}`}>
+                  <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
+                    <img src={url} alt={`${produit.nom} - Photo ${index + 1}`} className="w-full h-auto object-cover" />
+                  </div>
+                  {index === 0 && produit.videoUrl && /\.mp4(\?|$)/i.test(produit.videoUrl) && (
+                    <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
+                      <video src={produit.videoUrl} className="w-full h-auto" style={{ background: '#000', display: 'block' }} autoPlay muted loop playsInline controls />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -127,16 +178,20 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
               </h1>
             )}
             <h2 className="uppercase mb-4" style={{ fontSize: '20px', letterSpacing: '0.08em', fontWeight: '300', color: '#000' }}>
-              {produit.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
+              {(lang === 'en' && produit.nomEn ? produit.nomEn : produit.nom).replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
             </h2>
             {produit.sku && (
               <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '-12px', marginBottom: '16px', letterSpacing: '0.05em' }}>
                 {produit.sku}
               </p>
             )}
-            <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>{produit.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
-            {produit.description && (
-              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>{produit.description}</p>
+            <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>
+              {produit.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
+            </p>
+            {(lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description) && (
+              <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>
+                {lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description}
+              </p>
             )}
             <p style={{ fontSize: '11px', lineHeight: '1.6', color: '#999', fontWeight: '300', marginTop: '16px' }}>
               {t(
@@ -146,18 +201,38 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
               )}
             </p>
 
-            <div className="mt-8 mb-6">
+            <div className="mt-8 mb-6 space-y-3">
               <button
-                onClick={() => router.push(`/checkout?productId=${produit.id}`)}
-                className="w-full py-4 uppercase transition hover:opacity-80"
-                style={{ backgroundColor: '#000', color: '#fff', fontSize: '13px', letterSpacing: '0.15em', fontWeight: '400' }}
+                onClick={handleAjouterPanier}
+                disabled={!hydrated || dansLePanier}
+                className="w-full py-4 uppercase transition hover:opacity-80 disabled:opacity-100 disabled:cursor-default"
+                style={{
+                  backgroundColor: dansLePanier ? '#0000FF' : '#000',
+                  color: '#fff',
+                  fontSize: '13px',
+                  letterSpacing: '0.15em',
+                  fontWeight: '400'
+                }}
               >
-                {t('Acheter', 'Buy now', lang)}
+                {justAdded
+                  ? t('AJOUTÉ AU PANIER ✓', 'ADDED TO CART ✓', lang)
+                  : dansLePanier
+                    ? t('DÉJÀ DANS LE PANIER', 'ALREADY IN CART', lang)
+                    : t('AJOUTER AU PANIER', 'ADD TO CART', lang)}
               </button>
+              {dansLePanier && (
+                <button
+                  onClick={() => router.push('/panier')}
+                  className="w-full py-4 uppercase transition hover:bg-black hover:text-white border border-black"
+                  style={{ backgroundColor: '#fff', color: '#000', fontSize: '13px', letterSpacing: '0.15em', fontWeight: '400' }}
+                >
+                  {t('VOIR LE PANIER', 'VIEW CART', lang)}
+                </button>
+              )}
             </div>
 
             <AccordionSection title={t('Économie circulaire et engagement', 'Circular economy & commitment', lang)}>
-              <div style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
+              <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#1a1a1a', fontWeight: '400' }}>
                 {(() => {
                   const key = (chineuseInfo?.texteEcoCirculaire || 1) as TexteEcoKey
                   const texte = TEXTES_ECO_CIRCULAIRE[key]
@@ -171,16 +246,48 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
               </div>
             </AccordionSection>
 
-            {(produit.taille || produit.material || produit.color || produit.madeIn) && (
+            {(produit.marque || produit.categorie || produit.taille || produit.material || produit.color || produit.madeIn || produit.composition || produit.etat) && (
               <AccordionSection title={t('Taille et caractéristiques', 'Size & details', lang)} defaultOpen={true}>
-                <div style={{ fontSize: '13px', lineHeight: '2', color: '#666', fontWeight: '300' }}>
-                  {afficherTaille(produit.categorie) && produit.taille && <p><span style={{ color: '#999' }}>{t('Taille :', 'Size:', lang)}</span> {produit.taille}</p>}
-                  {produit.material && <p><span style={{ color: '#999' }}>{t('Matière :', 'Material:', lang)}</span> {produit.material}</p>}
-                  {produit.color && <p><span style={{ color: '#999' }}>{t('Couleur :', 'Color:', lang)}</span> {produit.color}</p>}
-                  {produit.madeIn && <p><span style={{ color: '#999' }}>{t('Origine :', 'Origin:', lang)}</span> {produit.madeIn}</p>}
+                <div style={{ fontSize: '14px', lineHeight: '2', color: '#1a1a1a', fontWeight: '400' }}>
+                  {produit.marque && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Marque', 'Brand', lang)}</span>{produit.marque}</p>
+                  )}
+                  {catClean && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Catégorie', 'Category', lang)}</span>{translateCategory(catClean, lang)}</p>
+                  )}
+                  {produit.material && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Matière', 'Material', lang)}</span>{translateMaterial(produit.material, lang)}</p>
+                  )}
+                  {produit.composition && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Composition', 'Composition', lang)}</span>{produit.composition}</p>
+                  )}
+                  {produit.color && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Couleur', 'Color', lang)}</span>{translateColor(produit.color, lang)}</p>
+                  )}
+                  {afficherTaille(produit.categorie) && produit.taille && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Taille', 'Size', lang)}</span>{produit.taille}</p>
+                  )}
+                  {produit.madeIn && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('Origine', 'Origin', lang)}</span>{produit.madeIn.replace(/^Made in\s+/i, '').trim()}</p>
+                  )}
+                  {produit.etat && (
+                    <p><span style={{ color: '#888', display: 'inline-block', minWidth: '110px' }}>{t('État', 'Condition', lang)}</span>{produit.etat}</p>
+                  )}
                 </div>
               </AccordionSection>
             )}
+
+            <AccordionSection title={t('À propos de Nouvelle Rive', 'About Nouvelle Rive', lang)}>
+              <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#1a1a1a', fontWeight: '400' }}>
+                <p style={{ marginBottom: '12px' }}>
+                  {t(
+                    'Nouvelle Rive réunit des chineuses indépendantes qui sélectionnent les plus belles pièces vintage de Paris. Chaque pièce passe par notre boutique du Marais pour une vérification en main propre.',
+                    'Nouvelle Rive brings together independent vintage hunters who curate the finest vintage pieces in Paris. Every item is checked in person at our Le Marais boutique.',
+                    lang
+                  )}
+                </p>
+              </div>
+            </AccordionSection>
 
             <AccordionSection title={t('Entretien', 'Care', lang)}>
               <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
@@ -193,10 +300,22 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
             </AccordionSection>
 
             {chineuseInfo && (chineuseInfo.accroche || chineuseInfo.description) && (
-              <AccordionSection title={t('Histoire de la maison', 'About the house', lang)}>
-                {chineuseInfo.nom && <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>{chineuseInfo.nom}</p>}
-                {chineuseInfo.accroche && <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>{chineuseInfo.accroche}</p>}
-                {chineuseInfo.description && <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>{chineuseInfo.description}</p>}
+              <AccordionSection title={chineuseInfo.stockType === 'smallBatch' ? t('Histoire de la maison', 'About the house', lang) : t('Découvrir la chineuse', 'Meet the curator', lang)}>
+                {chineuseInfo.nom && (
+                  <p style={{ fontSize: '18px', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    {chineuseInfo.nom}
+                  </p>
+                )}
+                {chineuseInfo.accroche && (
+                  <p style={{ fontSize: '14px', lineHeight: '1.7', color: '#333', fontWeight: '400', fontStyle: 'italic', marginBottom: '12px' }}>
+                    {chineuseInfo.accroche}
+                  </p>
+                )}
+                {chineuseInfo.description && (
+                  <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#666', fontWeight: '300' }}>
+                    {chineuseInfo.description}
+                  </p>
+                )}
               </AccordionSection>
             )}
 
