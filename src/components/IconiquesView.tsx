@@ -32,6 +32,14 @@ export type Iconique = {
 
 type Produit = any
 
+// Retire l'article initial (Le/La/Les/L'/The) pour préfixer proprement par "Nos"/"Our".
+// "La Veste Amadora" → "Veste Amadora", "Le Top Ana" → "Top Ana", "Les Chemises" → "Chemises".
+function nomNoArticle(nom: string, lang: 'fr' | 'en'): string {
+  if (!nom) return ''
+  if (lang === 'en') return nom.replace(/^the\s+/i, '')
+  return nom.replace(/^(les|le|la|l['’])\s*/i, '')
+}
+
 type Props = {
   /** Filtre sur le champ `type` du doc Firestore. Absence/`'vintage'` traités comme vintage. */
   typeFilter: 'vintage' | 'upcy'
@@ -105,16 +113,21 @@ export default function IconiquesView({
         data.forEach(item => { initialIndices[item.id] = 0 })
         setImageIndices(initialIndices)
 
-        const allProduitsSnapshot = await getDocs(
-          query(collection(db, 'produits'), where('vendu', '==', false))
-        )
-        const allProduits = allProduitsSnapshot.docs
+        // Pour les iconiques soldOut on a besoin des vendus aussi → on fetch tout
+        // puis on partitionne ensuite.
+        const hasSoldOut = data.some(d => d.soldOut)
+        const allProduitsSnapshot = hasSoldOut
+          ? await getDocs(collection(db, 'produits'))
+          : await getDocs(query(collection(db, 'produits'), where('vendu', '==', false)))
+        const baseProduits = allProduitsSnapshot.docs
           .map(d => ({ id: d.id, ...d.data() } as any))
-          .filter(p => (p.quantite ?? 1) > 0 && p.statut !== 'retour' && p.statut !== 'supprime')
+          .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
           .filter(p => {
             const firstImg = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
             return !!firstImg
           })
+        // En stock pour iconiques normaux : non vendu + qte>0
+        const allProduits = baseProduits.filter(p => p.vendu !== true && (p.quantite ?? 1) > 0)
 
         const produitsData: { [key: string]: Produit[] } = {}
         const norm = (s: string) =>
@@ -135,7 +148,10 @@ export default function IconiquesView({
             continue
           }
 
-          const matched = allProduits.filter(p => {
+          // Pour les soldOut, on cherche dans le pool complet (vendus inclus)
+          // limité aux 8 derniers vendus pour l'affichage galerie.
+          const sourceList = item.soldOut ? baseProduits : allProduits
+          const matched = sourceList.filter(p => {
             const nom = norm(p.nom || p.Nom || '')
             const marque = norm(p.marque || '')
             const cat = typeof p.categorie === 'object'
@@ -162,7 +178,17 @@ export default function IconiquesView({
 
             return true
           })
-          produitsData[item.id] = matched
+          // Pour les soldOut, on limite à 8 produits max et on tri par createdAt desc
+          if (item.soldOut) {
+            matched.sort((a, b) => {
+              const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()
+              const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()
+              return tb - ta
+            })
+            produitsData[item.id] = matched.slice(0, 8)
+          } else {
+            produitsData[item.id] = matched
+          }
         }
         setProduits(produitsData)
       } catch (error) {
@@ -341,25 +367,6 @@ export default function IconiquesView({
                       <p className="text-gray-400 text-xs uppercase tracking-wider">{t('Image à venir', 'Image coming soon', lang)}</p>
                     </div>
                   )}
-                  {item.soldOut && (
-                    <div
-                      className="absolute top-1/2 left-1/2 pointer-events-none select-none"
-                      style={{
-                        transform: 'translate(-50%, -50%) rotate(-12deg)',
-                        border: '6px solid #C8102E',
-                        color: '#C8102E',
-                        padding: '12px 36px',
-                        fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
-                        fontSize: 'clamp(28px, 5vw, 56px)',
-                        fontWeight: 900,
-                        letterSpacing: '0.1em',
-                        background: 'rgba(255,255,255,0.92)',
-                        boxShadow: '0 0 0 2px rgba(255,255,255,0.92) inset',
-                      }}
-                    >
-                      SOLD OUT
-                    </div>
-                  )}
                 </div>
 
                 <div className="p-12 md:p-16 lg:p-20 flex flex-col justify-center bg-white relative overflow-hidden">
@@ -472,28 +479,79 @@ export default function IconiquesView({
                 </div>
               </div>
 
-              {item.soldOut ? (
+              {item.soldOut && produits[item.id] && produits[item.id].length > 0 ? (
+                <div style={{ borderTop: '1px solid #000' }}>
+                  <div className="px-6 md:px-12 pt-10 pb-4 flex items-baseline justify-between gap-4 flex-wrap">
+                    <p
+                      className="uppercase tracking-widest font-semibold"
+                      style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
+                    >
+                      {nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
+                    </p>
+                    <p
+                      className="uppercase"
+                      style={{
+                        fontFamily: 'Helvetica Neue, sans-serif',
+                        fontSize: '11px',
+                        letterSpacing: '0.25em',
+                        color: '#000',
+                      }}
+                    >
+                      {t('Back in stock soon', 'Back in stock soon', lang)}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4" style={{ borderTop: '1px solid #000', borderLeft: '1px solid #000' }}>
+                    {produits[item.id].map((p: any) => {
+                      const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
+                      return (
+                        <div
+                          key={p.id}
+                          className="relative bg-white"
+                          style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
+                        >
+                          <div className="aspect-square overflow-hidden relative">
+                            {img && (
+                              <img
+                                src={img}
+                                alt={p.nom || ''}
+                                className="w-full h-full object-cover"
+                                style={{ filter: 'grayscale(40%)', opacity: 0.85 }}
+                              />
+                            )}
+                            <div
+                              className="absolute top-3 left-3 uppercase"
+                              style={{
+                                fontFamily: 'Helvetica Neue, sans-serif',
+                                fontSize: '10px',
+                                letterSpacing: '0.2em',
+                                background: '#000',
+                                color: '#fff',
+                                padding: '4px 8px',
+                              }}
+                            >
+                              {t('Vendu', 'Sold', lang)}
+                            </div>
+                          </div>
+                          <div className="py-3 px-3 text-center">
+                            <p
+                              className="uppercase truncate"
+                              style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px', color: '#666' }}
+                            >
+                              {p.nom || ''}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : item.soldOut ? (
                 <div style={{ borderTop: '1px solid #000' }} className="px-6 md:px-12 py-16 text-center">
                   <p
-                    className="uppercase font-bold mb-2"
-                    style={{
-                      fontFamily: 'Helvetica Neue, sans-serif',
-                      fontSize: '14px',
-                      letterSpacing: '0.25em',
-                      color: '#C8102E',
-                    }}
-                  >
-                    {t('Tout est vendu — restock bientôt', 'All sold out — restock soon', lang)}
-                  </p>
-                  <p
                     className="uppercase tracking-widest"
-                    style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px', color: '#666' }}
+                    style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.25em' }}
                   >
-                    {t(
-                      `Inscris-toi à la newsletter pour être prévenu·e du retour des ${item.nom}`,
-                      `Sign up for the newsletter to be notified when ${item.nomEn || item.nom} are back`,
-                      lang
-                    )}
+                    {t('Back in stock soon', 'Back in stock soon', lang)}
                   </p>
                 </div>
               ) : (
@@ -504,7 +562,7 @@ export default function IconiquesView({
                         className="uppercase tracking-widest font-semibold"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
                       >
-                        {t('Nos', 'Our', lang)} {lang === 'en' && item.nomEn ? item.nomEn : item.nom}
+                        {t('Nos', 'Our', lang)} {nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                       </p>
                     </div>
                     <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />

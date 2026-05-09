@@ -25,9 +25,9 @@ const ICONIQUES = [
     pourquoiMustEn:
       'A vintage watch turned into jewelry — time stops at the neck',
     histoire:
-      "Inès Pineau récupère des montres anciennes — Guess, ovales argent, ornements cœur — et les transforme en colliers statement. Chaque pièce est unique : le cadran fonctionne parfois encore, parfois s'arrête sur une heure choisie. Un objet du passé qui retrouve une seconde vie au creux du décolleté.",
+      "Inès Pineau chine des montres vintage en brocante — Guess, ovales argent, ornements cœur — et les transforme en colliers statement. Chaque pièce est unique : le cadran fonctionne parfois encore, parfois s'arrête sur une heure choisie. Un objet du passé, déniché au hasard d'un déballage, qui retrouve une seconde vie au creux du décolleté.",
     histoireEn:
-      'Inès Pineau salvages vintage watches — Guess, oval silver, heart-shaped — and turns them into statement necklaces. Each piece is one of a kind: the dial sometimes still works, sometimes stops on a chosen hour. An object from the past finds a second life at the neckline.',
+      'Inès Pineau hunts vintage watches at flea markets — Guess, oval silver, heart-shaped — and turns them into statement necklaces. Each piece is one of a kind: the dial sometimes still works, sometimes stops on a chosen hour. An object from the past, found among the stalls, gets a second life at the neckline.',
     images: [
       'https://nouvellerive.b-cdn.net/produits/Fca5wYSB2QCSzjkL6WMw_img0_1770044126781.png',
     ],
@@ -111,9 +111,9 @@ const ICONIQUES = [
     pourquoiMustEn:
       'The sculptural torque — totem animals, solid metal, undeniable presence',
     histoire:
-      "Inès Pineau réinterprète le collier torque — bijou rigide originaire de l'âge du fer — en y greffant des médaillons animaux upcyclés : cheval, chat, panthère. Métal acier inoxydable, finitions chinées dans les stocks dormants de la maroquinerie de luxe. Une pièce non-genrée, conçue pour être portée comme une armure.",
+      "Inès Pineau détourne un porte-couvert ancien — argenterie chinée en brocante — pour en faire le corps du collier torque, qu'elle agrémente de médaillons animaux upcyclés : cheval, chat, panthère. Une pièce non-genrée, conçue pour être portée comme une armure, qui transforme un objet utilitaire en bijou statement.",
     histoireEn:
-      'Inès Pineau reinterprets the torque necklace — a rigid piece of jewelry born in the Iron Age — by grafting upcycled animal medallions onto it: horse, cat, panther. Stainless steel, hardware sourced from dormant stocks of luxury leather goods. A gender-neutral piece, designed to be worn like armor.',
+      'Inès Pineau repurposes an antique cutlery holder — silverware sourced at flea markets — to form the body of her torque necklace, finished with upcycled animal medallions: horse, cat, panther. A gender-neutral piece, designed to be worn like armor, that turns a utilitarian object into a statement jewelry piece.',
     images: [
       'https://nouvellerive.b-cdn.net/produits/83SUV3hV1BzWVUDfclKx_face_1770044088627.png',
     ],
@@ -140,8 +140,8 @@ const ICONIQUES = [
   {
     id: 'chemises-digger-sister',
     ordre: 7,
-    nom: 'Les Chemises',
-    nomEn: 'The Shirts',
+    nom: 'Les Chemises Upcyclées',
+    nomEn: 'The Upcycled Shirts',
     pourquoiMust:
       'La chemise oversize retravaillée — pièce signature de Digger Sister',
     pourquoiMustEn:
