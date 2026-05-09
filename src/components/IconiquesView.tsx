@@ -28,6 +28,13 @@ export type Iconique = {
   images: string[]
   ordre: number
   soldOut?: boolean
+  /** Lien d'achat externe (site de la créatrice) — affiché en bouton sous le bloc texte. */
+  buyLink?: string
+  /** URLs Instagram (reels ou posts) à embedder en bas de l'iconique. */
+  videos?: string[]
+  /** Label optionnel pour la section vidéos (ex: "POUR EN SAVOIR PLUS"). */
+  videosLabel?: string
+  videosLabelEn?: string
 }
 
 type Produit = any
@@ -38,6 +45,21 @@ function nomNoArticle(nom: string, lang: 'fr' | 'en'): string {
   if (!nom) return ''
   if (lang === 'en') return nom.replace(/^the\s+/i, '')
   return nom.replace(/^(les|le|la|l['’])\s*/i, '')
+}
+
+// Transforme une URL Instagram (reel/post) en URL embed compatible iframe.
+// "https://www.instagram.com/reel/DQRAf8rDd8V/?igsh=…" → "https://www.instagram.com/reel/DQRAf8rDd8V/embed/"
+function instagramEmbed(url: string): string | null {
+  if (!url) return null
+  const m = url.match(/instagram\.com\/(reel|p|tv)\/([^/?]+)/i)
+  if (!m) return null
+  return `https://www.instagram.com/${m[1]}/${m[2]}/embed/`
+}
+
+// Extrait l'hôte d'une URL (pour libellé du bouton d'achat).
+// "https://brillanteparis.fr/fr" → "brillanteparis.fr"
+function hostOf(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
 }
 
 type Props = {
@@ -103,6 +125,10 @@ export default function IconiquesView({
             images: docData.images || [],
             ordre: docData.ordre || 0,
             soldOut: docData.soldOut === true,
+            buyLink: docData.buyLink || '',
+            videos: Array.isArray(docData.videos) ? docData.videos : [],
+            videosLabel: docData.videosLabel || '',
+            videosLabelEn: docData.videosLabelEn || '',
           })
         })
 
@@ -478,6 +504,66 @@ export default function IconiquesView({
                   )}
                 </div>
               </div>
+
+              {(item.buyLink || (item.videos && item.videos.length > 0)) && (
+                <div style={{ borderTop: '1px solid #000' }} className="bg-white">
+                  {item.buyLink && (
+                    <div className="px-6 md:px-12 py-8 text-center" style={{ borderBottom: item.videos && item.videos.length > 0 ? '1px solid #000' : 'none' }}>
+                      <a
+                        href={item.buyLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block uppercase hover:bg-black hover:text-white transition-all duration-200"
+                        style={{
+                          fontFamily: 'Helvetica Neue, sans-serif',
+                          fontSize: '12px',
+                          letterSpacing: '0.25em',
+                          padding: '14px 32px',
+                          border: '1px solid #000',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {t('Acheter sur', 'Shop on', lang)} {hostOf(item.buyLink)} →
+                      </a>
+                    </div>
+                  )}
+                  {item.videos && item.videos.length > 0 && (
+                    <div className="px-6 md:px-12 py-10">
+                      {(item.videosLabel || item.videosLabelEn) && (
+                        <p
+                          className="uppercase tracking-widest font-semibold mb-6 text-center"
+                          style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', letterSpacing: '0.25em' }}
+                        >
+                          {lang === 'en' && item.videosLabelEn ? item.videosLabelEn : item.videosLabel}
+                        </p>
+                      )}
+                      <div
+                        className="grid gap-6 mx-auto"
+                        style={{
+                          gridTemplateColumns: `repeat(${Math.min(item.videos.length, 3)}, minmax(0, 1fr))`,
+                          maxWidth: item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
+                        }}
+                      >
+                        {item.videos.map((url) => {
+                          const embed = instagramEmbed(url)
+                          if (!embed) return null
+                          return (
+                            <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                              <iframe
+                                src={embed}
+                                className="w-full h-full"
+                                style={{ border: '1px solid #000', background: '#fafafa' }}
+                                allowFullScreen
+                                allow="encrypted-media"
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {item.soldOut && produits[item.id] && produits[item.id].length > 0 ? (
                 <div style={{ borderTop: '1px solid #000' }}>

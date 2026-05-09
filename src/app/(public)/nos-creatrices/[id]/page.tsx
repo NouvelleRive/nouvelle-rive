@@ -21,6 +21,15 @@ type Creatrice = {
   instagram: string
   imageUrl: string
   stockType: string
+  videos?: string[]
+}
+
+// "https://www.instagram.com/reel/XYZ/?…" → "https://www.instagram.com/reel/XYZ/embed/"
+function instagramEmbed(url: string): string | null {
+  if (!url) return null
+  const m = url.match(/instagram\.com\/(reel|p|tv)\/([^/?]+)/i)
+  if (!m) return null
+  return `https://www.instagram.com/${m[1]}/${m[2]}/embed/`
 }
 
 type Produit = {
@@ -65,6 +74,7 @@ export default function CreateurPage() {
             instagram: data.instagram || '',
             imageUrl: data.imageUrl || '',
             stockType: data.stockType || '',
+            videos: Array.isArray(data.videos) ? data.videos : [],
           })
         }
       } catch (error) {
@@ -356,6 +366,44 @@ export default function CreateurPage() {
           )}
         </div>
       </div>
+
+      {/* Section Vidéos (reels Instagram) */}
+      {creatrice.videos && creatrice.videos.length > 0 && (
+        <div className="px-6 md:px-12 py-12 bg-white" style={{ borderBottom: '1px solid #000' }}>
+          <p
+            className="uppercase tracking-widest font-semibold mb-8 text-center"
+            style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', letterSpacing: '0.25em' }}
+          >
+            {t('En vidéo', 'In video', lang)}
+          </p>
+          <div
+            className="grid gap-6 mx-auto"
+            style={{
+              gridTemplateColumns: `repeat(${Math.min(creatrice.videos.length, 3)}, minmax(0, 1fr))`,
+              maxWidth:
+                creatrice.videos.length === 1 ? '420px'
+                : creatrice.videos.length === 2 ? '880px'
+                : '1280px',
+            }}
+          >
+            {creatrice.videos.map((url) => {
+              const embed = instagramEmbed(url)
+              if (!embed) return null
+              return (
+                <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                  <iframe
+                    src={embed}
+                    className="w-full h-full"
+                    style={{ border: '1px solid #000', background: '#fafafa' }}
+                    allowFullScreen
+                    allow="encrypted-media"
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Section Produits */}
       <div className="py-8 text-center" style={{ borderBottom: '1px solid #000' }}>
