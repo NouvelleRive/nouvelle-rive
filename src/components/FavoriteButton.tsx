@@ -15,7 +15,6 @@ type Props = {
 export default function FavoriteButton({ productId, className = '', size = 24 }: Props) {
   const [isFavorite, setIsFavorite] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
 
   const bleuElectrique = '#0000FF'
 
@@ -45,36 +44,24 @@ export default function FavoriteButton({ productId, className = '', size = 24 }:
       return
     }
 
-    setLoading(true)
+    const wasFavorite = isFavorite
+    setIsFavorite(!wasFavorite) // optimistic UI
 
-    try {
-      const docRef = doc(db, 'favoris', `${userId}_${productId}`)
-      const produitRef = doc(db, 'produits', productId)
+    const docRef = doc(db, 'favoris', `${userId}_${productId}`)
+    const produitRef = doc(db, 'produits', productId)
+    const writes = wasFavorite
+      ? [deleteDoc(docRef), updateDoc(produitRef, { likesCount: increment(-1) })]
+      : [setDoc(docRef, { userId, productId, dateAjout: new Date().toISOString() }), updateDoc(produitRef, { likesCount: increment(1) })]
 
-      if (isFavorite) {
-        await deleteDoc(docRef)
-        await updateDoc(produitRef, { likesCount: increment(-1) })
-        setIsFavorite(false)
-      } else {
-        await setDoc(docRef, {
-          userId,
-          productId,
-          dateAjout: new Date().toISOString()
-        })
-        await updateDoc(produitRef, { likesCount: increment(1) })
-        setIsFavorite(true)
-      }
-    } catch (error) {
+    Promise.all(writes).catch((error) => {
       console.error('Erreur favoris:', error)
-    } finally {
-      setLoading(false)
-    }
+      setIsFavorite(wasFavorite) // rollback si erreur
+    })
   }
   
 return (
   <button
     onClick={toggleFavorite}
-    disabled={loading}
     className={`transition-all duration-200 hover:scale-110 ${isFavorite ? 'is-favorite' : ''} ${className}`}
     title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
   >
