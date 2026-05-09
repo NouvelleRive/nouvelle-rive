@@ -78,10 +78,12 @@ if (finalPos === -1) {
   console.log(`\n✅ ${sku} apparaît en position ${finalPos + 1}/${filtered.length} sur la page ${pageId}`)
 }
 
-// Lister les 10 premiers de la page filtrée pour contexte
-console.log('\nTop 10 visibles sur', pageId, ':')
-filtered.slice(0, 10).forEach((p, i) => {
-  const cd = p.createdAt?.toDate?.()?.toISOString?.()?.slice(0,10) || '?'
-  console.log(`  ${i+1}. [${cd}] ${p.sku} - ${p.nom?.slice(0, 50)}`)
+// Lister les 30 premiers de la page filtrée pour contexte
+console.log('\nTop 30 visibles sur', pageId, ':')
+filtered.slice(0, 30).forEach((p, i) => {
+  const cd = p.createdAt?.toDate?.()?.toISOString?.()?.replace('T', ' ').slice(0,16) || '?'
+  const dr = p.dateRestock?.toDate?.()?.toISOString?.()?.slice(0,10) || ''
+  const tag = dr ? `[restock ${dr}]` : ''
+  console.log(`  ${(i+1).toString().padStart(2)}. [${cd}] ${p.sku.padEnd(12)} - ${(p.nom || '').slice(0, 40)} ${tag}`)
 })
 process.exit(0)
