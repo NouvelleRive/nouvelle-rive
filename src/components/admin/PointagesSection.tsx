@@ -163,6 +163,13 @@ export default function PointagesSection({
 
   const getVendeuseNom = (id: string) => vendeuses.find(v => v.id === id)?.prenom || id
 
+  const startCreate = () => {
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    setNewArrivee(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`)
+    setCreating(true)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -170,7 +177,7 @@ export default function PointagesSection({
         <div className="flex items-center gap-3">
           {!readOnly && !creating && (
             <button
-              onClick={() => setCreating(true)}
+              onClick={startCreate}
               className="flex items-center gap-1 px-3 py-1.5 bg-[#22209C] text-white text-xs rounded-lg font-medium"
             >
               <Plus size={14} /> Créer un pointage
