@@ -659,20 +659,41 @@ export default function IconiquesView({
                 </div>
               ) : (
                 produits[item.id] && produits[item.id].length > 0 && (
-                  <div style={{ borderTop: '1px solid #000' }} className={sideBySide ? 'lg:float-right lg:w-2/3' : ''}>
-                    <div className="px-6 md:px-12 pt-10 pb-4">
-                      <p
-                        className="uppercase tracking-widest font-semibold"
-                        style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
-                      >
-                        {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
-                      </p>
+                  sideBySide ? (
+                    <>
+                      <div style={{ borderTop: '1px solid #000' }} className="lg:float-right lg:w-2/3">
+                        <div className="px-6 md:px-12 pt-10 pb-4">
+                          <p
+                            className="uppercase tracking-widest font-semibold"
+                            style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
+                          >
+                            {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
+                          </p>
+                        </div>
+                        <ProductGrid produits={produits[item.id].slice(0, 6)} columns={3} showFilters={false} />
+                      </div>
+                      <div className="clear-both" />
+                      {produits[item.id].length > 6 && (
+                        <div style={{ borderTop: '1px solid #000' }}>
+                          <ProductGrid produits={produits[item.id].slice(6)} columns={4} showFilters={false} />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ borderTop: '1px solid #000' }}>
+                      <div className="px-6 md:px-12 pt-10 pb-4">
+                        <p
+                          className="uppercase tracking-widest font-semibold"
+                          style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
+                        >
+                          {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
+                        </p>
+                      </div>
+                      <ProductGrid produits={produits[item.id]} columns={4} showFilters={false} />
                     </div>
-                    <ProductGrid produits={produits[item.id]} columns={sideBySide ? 2 : 4} showFilters={false} />
-                  </div>
+                  )
                 )
               )}
-              {sideBySide && <div className="clear-both" />}
             </div>
           )})}
         </div>
