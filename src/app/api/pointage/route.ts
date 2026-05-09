@@ -145,9 +145,11 @@ export async function PATCH(req: NextRequest) {
     if (!await isAdmin(req)) {
       return NextResponse.json({ success: false, error: 'Accès admin requis' }, { status: 403 })
     }
-    const { id, arrivee, depart } = await req.json()
+    const { id, arrivee, depart, vendeuseId, date } = await req.json()
     if (!id) return NextResponse.json({ success: false, error: 'id requis' }, { status: 400 })
     const update: any = {}
+    if (vendeuseId) update.vendeuseId = vendeuseId
+    if (date) update.date = date
     if (arrivee === null) update.arrivee = FieldValue.delete()
     else if (arrivee) update.arrivee = Timestamp.fromDate(new Date(arrivee))
     if (depart === null) update.depart = FieldValue.delete()

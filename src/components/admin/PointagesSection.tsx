@@ -2,8 +2,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Pencil, X, Save } from 'lucide-react'
+import { Pencil, X, Save, Plus } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
+import { pointageDocId } from '@/lib/pointage'
 
 type Vendeuse = { id: string; prenom?: string; nom?: string; couleur?: string; actif?: boolean }
 type Pointage = { id: string; vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
@@ -70,6 +71,10 @@ export default function PointagesSection({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editArrivee, setEditArrivee] = useState('')
   const [editDepart, setEditDepart] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [newVendeuseId, setNewVendeuseId] = useState('')
+  const [newArrivee, setNewArrivee] = useState('')
+  const [newDepart, setNewDepart] = useState('')
 
   const fetchPointages = async () => {
     setLoading(true)
@@ -90,6 +95,39 @@ export default function PointagesSection({
     setEditingId(p.id)
     setEditArrivee(p.arrivee ? p.arrivee.slice(0, 16) : '')
     setEditDepart(p.depart ? p.depart.slice(0, 16) : '')
+  }
+
+  const createPointage = async () => {
+    if (!newVendeuseId || !newArrivee) {
+      alert('Vendeuse et arrivée requises')
+      return
+    }
+    const arriveeDate = new Date(newArrivee)
+    const dateStr = `${arriveeDate.getFullYear()}-${String(arriveeDate.getMonth() + 1).padStart(2, '0')}-${String(arriveeDate.getDate()).padStart(2, '0')}`
+    const id = pointageDocId(arriveeDate, newVendeuseId)
+    const token = await auth.currentUser?.getIdToken()
+    const res = await fetch('/api/pointage', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        id,
+        vendeuseId: newVendeuseId,
+        date: dateStr,
+        arrivee: arriveeDate.toISOString(),
+        depart: newDepart ? new Date(newDepart).toISOString() : null,
+      }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      setCreating(false)
+      setNewVendeuseId('')
+      setNewArrivee('')
+      setNewDepart('')
+      await fetchPointages()
+    } else alert(data.error || 'Erreur')
   }
 
   const saveEdit = async (id: string) => {
@@ -129,8 +167,71 @@ export default function PointagesSection({
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-[#22209C]">Pointages — {monthLabel}</h2>
-        <button onClick={fetchPointages} className="text-xs text-gray-500 underline">Rafraîchir</button>
+        <div className="flex items-center gap-3">
+          {!readOnly && !creating && (
+            <button
+              onClick={() => setCreating(true)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-[#22209C] text-white text-xs rounded-lg font-medium"
+            >
+              <Plus size={14} /> Créer un pointage
+            </button>
+          )}
+          <button onClick={fetchPointages} className="text-xs text-gray-500 underline">Rafraîchir</button>
+        </div>
       </div>
+
+      {!readOnly && creating && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-semibold mb-3">Nouveau pointage</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className="text-xs text-gray-600 block mb-1">Vendeuse</label>
+              <select
+                value={newVendeuseId}
+                onChange={e => setNewVendeuseId(e.target.value)}
+                className="w-full border rounded px-2 py-1 text-sm bg-white"
+              >
+                <option value="">— Choisir —</option>
+                {vendeuses.filter(v => v.actif !== false).map(v => (
+                  <option key={v.id} value={v.id}>{v.prenom || v.nom || v.id}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-600 block mb-1">Arrivée</label>
+              <input
+                type="datetime-local"
+                value={newArrivee}
+                onChange={e => setNewArrivee(e.target.value)}
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-600 block mb-1">Départ (optionnel)</label>
+              <input
+                type="datetime-local"
+                value={newDepart}
+                onChange={e => setNewDepart(e.target.value)}
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={createPointage}
+                className="flex-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded font-medium"
+              >
+                Créer
+              </button>
+              <button
+                onClick={() => { setCreating(false); setNewVendeuseId(''); setNewArrivee(''); setNewDepart('') }}
+                className="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Totaux par vendeuse */}
       <div className="bg-white rounded-lg border p-4 mb-4">
