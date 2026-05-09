@@ -364,7 +364,7 @@ export default function IconiquesView({
             // Si 3 vidéos ou plus → tout en pleine largeur empilé.
             const hasVideos = item.videos && item.videos.length > 0
             const hasProduits = produits[item.id] && produits[item.id].length > 0
-            const sideBySide = !!hasVideos && item.videos!.length < 3 && hasProduits && !item.soldOut
+            const sideBySide = false
             return (
             <div key={item.id} className="min-w-full snap-center">
               <div className="grid grid-cols-1 md:grid-cols-2">
