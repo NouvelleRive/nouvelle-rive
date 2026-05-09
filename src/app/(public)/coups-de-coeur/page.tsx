@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import ProductGrid from '@/components/ProductGrid'
 import { useLang, t } from '@/lib/i18n'
@@ -16,25 +16,14 @@ export default function CoupsDeCoeurPage() {
   useEffect(() => {
     async function load() {
       try {
-        const favSnap = await getDocs(collection(db, 'favoris'))
-        const counts = new Map<string, number>()
-        favSnap.docs.forEach((d) => {
-          const pid = d.data().productId
-          if (!pid) return
-          counts.set(pid, (counts.get(pid) || 0) + 1)
-        })
-
-        const ranked = Array.from(counts.entries())
-          .sort((a, b) => b[1] - a[1])
-          .map(([pid]) => pid)
-
-        const docs = await Promise.all(
-          ranked.map((pid) => getDoc(doc(db, 'produits', pid)))
+        const q = query(
+          collection(db, 'produits'),
+          where('likesCount', '>', 0),
+          orderBy('likesCount', 'desc')
         )
-
+        const snap = await getDocs(q)
         const items: Produit[] = []
-        for (const ds of docs) {
-          if (!ds.exists()) continue
+        for (const ds of snap.docs) {
           const p: any = { id: ds.id, ...ds.data() }
           const quantite = p.quantite ?? 1
           if (quantite <= 0) continue
@@ -47,7 +36,6 @@ export default function CoupsDeCoeurPage() {
           if (!hasImage) continue
           items.push(p)
         }
-
         setProduits(items)
       } catch (err) {
         console.error('Erreur coups-de-coeur:', err)

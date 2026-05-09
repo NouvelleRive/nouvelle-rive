@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore'
+import { doc, setDoc, deleteDoc, getDoc, updateDoc, increment } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
 
@@ -49,18 +49,19 @@ export default function FavoriteButton({ productId, className = '', size = 24 }:
 
     try {
       const docRef = doc(db, 'favoris', `${userId}_${productId}`)
+      const produitRef = doc(db, 'produits', productId)
 
       if (isFavorite) {
-        // Retirer des favoris
         await deleteDoc(docRef)
+        await updateDoc(produitRef, { likesCount: increment(-1) })
         setIsFavorite(false)
       } else {
-        // Ajouter aux favoris
         await setDoc(docRef, {
           userId,
           productId,
           dateAjout: new Date().toISOString()
         })
+        await updateDoc(produitRef, { likesCount: increment(1) })
         setIsFavorite(true)
       }
     } catch (error) {
