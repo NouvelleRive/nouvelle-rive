@@ -544,16 +544,6 @@
         </div>
 
         {/* ======================== */}
-        {/* SECTION POINTAGES        */}
-        {/* ======================== */}
-        <PointagesSection
-          vendeuses={vendeuses}
-          monthKey={monthKey}
-          monthLabel={monthLabel}
-          planningSlots={planningSlots}
-        />
-
-        {/* ======================== */}
         {/* MODAL AJOUT              */}
         {/* ======================== */}
         {showAdd && (
@@ -744,6 +734,16 @@ dailyCA={dailyCA}
             </div>
           )}
           </div>
+
+        {/* ======================== */}
+        {/* SECTION POINTAGES        */}
+        {/* ======================== */}
+        <PointagesSection
+          vendeuses={vendeuses}
+          monthKey={monthKey}
+          monthLabel={monthLabel}
+          planningSlots={planningSlots}
+        />
       </div>
     )
   }
