@@ -93,7 +93,22 @@ export default function PointageWidget() {
         await fetchPointage()
       }
     } catch (e: any) {
-      alert(e?.message || 'Géolocalisation refusée. Active la localisation.')
+      if (e?.code === 1) {
+        alert(
+          'Localisation refusée par Safari.\n\n' +
+          'Pour autoriser :\n\n' +
+          '• Réglages iOS → Safari → Localisation → mettre sur "Demander" ou "Autoriser"\n\n' +
+          'ou\n\n' +
+          '• Réglages iOS → Confidentialité → Service de localisation → vérifier que c\'est activé + que Safari y a accès\n\n' +
+          'Ensuite, ferme l\'onglet et rouvre nouvellerive.eu.'
+        )
+      } else if (e?.code === 3) {
+        alert('La localisation a mis trop de temps. Réessaie en sortant un instant de la boutique pour capter le GPS.')
+      } else if (e?.code === 2) {
+        alert('Localisation indisponible. Vérifie que le GPS est activé sur ton iPhone et réessaie.')
+      } else {
+        alert(e?.message || 'Erreur de localisation. Réessaie.')
+      }
     } finally {
       setLoading(false)
     }

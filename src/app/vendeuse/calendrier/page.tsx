@@ -271,14 +271,8 @@ export default function VendeuseCalendrierPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pointage arrivée / départ</h2>
-          <EnableNotifsButton ownerId="boutique" />
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <PointageWidget />
-        </div>
+      <div className="flex justify-end mb-4">
+        <EnableNotifsButton ownerId="boutique" />
       </div>
       <div className="lg:grid lg:grid-cols-3 lg:gap-6">
         <div className="lg:col-span-2">
@@ -352,6 +346,13 @@ export default function VendeuseCalendrierPage() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Pointage arrivée / départ</h2>
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <PointageWidget />
         </div>
       </div>
 

@@ -134,7 +134,7 @@ export default function PointagesSection({
 
       {/* Totaux par vendeuse */}
       <div className="bg-white rounded-lg border p-4 mb-4">
-        <h3 className="text-sm font-semibold text-gray-600 mb-3">Total heures travaillées (pour la paie)</h3>
+        <h3 className="text-sm font-semibold text-gray-600 mb-3">Total heures travaillées</h3>
         {totalParVendeuse.size === 0 ? (
           <p className="text-gray-400 text-sm">Aucun pointage ce mois-ci.</p>
         ) : (
