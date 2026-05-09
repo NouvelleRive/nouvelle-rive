@@ -329,8 +329,7 @@ export default function DeposanteCalendrierPage() {
       {/* Légende */}
       <div className="flex flex-wrap gap-3 mb-4 justify-center text-xs text-gray-600">
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-white border rounded-sm" /> Disponible</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-amber-50 border border-amber-200 rounded-sm" /> Chineuse en boutique</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-gray-100 border rounded-sm" /> Complet</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-gray-100 border rounded-sm" /> Aucun créneau</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-[#22209C] rounded-sm" /> Votre RDV</span>
       </div>
 
@@ -365,25 +364,23 @@ export default function DeposanteCalendrierPage() {
                 label = <div className="text-[10px] text-white/90 mt-1">Mon RDV {monRdv?.creneau}</div>
                 title = 'Votre RDV — cliquez pour modifier'
                 interactive = true
-              } else if (info.dayHasChineuse) {
-                cellBg = 'bg-amber-50'
-                dayNumColor = isToday ? 'text-amber-700 font-bold' : 'text-amber-600'
-                label = <div className="text-[10px] text-amber-700 mt-1">Chineuse</div>
-                title = 'Chineuse en boutique'
-              } else if (info.fullyBooked) {
+              } else if (info.dayHasChineuse || info.fullyBooked) {
+                // Côté déposante : on ne révèle pas qu'il y a une chineuse,
+                // on affiche juste 0 créneau dispo (comportement identique pour fully booked).
                 cellBg = 'bg-gray-100'
                 dayNumColor = 'text-gray-400'
-                label = <div className="text-[10px] text-gray-400 mt-1">Complet</div>
-                title = 'Complet'
+                label = <div className="text-[10px] text-gray-400 mt-1">0 créneau dispo</div>
+                title = 'Aucun créneau disponible'
               } else {
                 cellBg = isToday ? 'bg-blue-50 hover:bg-[#22209C]/10' : 'bg-white hover:bg-[#22209C]/10'
                 label = (
-                  <div className="text-[10px] text-gray-500 mt-1">
-                    {info.creneauxDispo.length} créneau{info.creneauxDispo.length !== 1 ? 'x' : ''} dispo
-                    {info.isWeekend && <span className="ml-1 text-[#22209C]">WE</span>}
+                  <div className="text-[10px] text-gray-600 mt-1 leading-tight">
+                    {info.creneauxDispo.map((cr, k) => (
+                      <span key={cr}>{cr}{k < info.creneauxDispo.length - 1 ? ' · ' : ''}</span>
+                    ))}
                   </div>
                 )
-                title = `${info.creneauxDispo.length} créneau(x) dispo`
+                title = `Créneaux dispo : ${info.creneauxDispo.join(', ')}`
                 interactive = true
               }
 
