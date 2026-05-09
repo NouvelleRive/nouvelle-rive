@@ -53,7 +53,7 @@ function instagramEmbed(url: string): string | null {
   if (!url) return null
   const m = url.match(/instagram\.com\/(reel|p|tv)\/([^/?]+)/i)
   if (!m) return null
-  return `https://www.instagram.com/${m[1]}/${m[2]}/embed/?autoplay=1&muted=1`
+  return `https://www.instagram.com/${m[1]}/${m[2]}/embed/`
 }
 
 // Extrait l'hôte d'une URL (pour libellé du bouton d'achat).
