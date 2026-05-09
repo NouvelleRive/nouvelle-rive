@@ -56,6 +56,14 @@ export interface FilterConfig {
     value: boolean
     onChange: (value: boolean) => void
   }
+  deposante?: {
+    value: boolean
+    onChange: (value: boolean) => void
+  }
+  prixBaisse?: {
+    value: boolean
+    onChange: (value: boolean) => void
+  }
 }
 
 interface FilterBoxProps {
@@ -262,6 +270,34 @@ export default function FilterBox({
               className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
             />
             <label htmlFor="photoManquante" className="text-sm">Photo manquante</label>
+          </div>
+        )}
+
+        {/* Déposante uniquement */}
+        {filters.deposante && (
+          <div className="flex items-center gap-2" onClick={stopPropagation} onTouchStart={stopPropagation}>
+            <input
+              type="checkbox"
+              id="deposante"
+              checked={filters.deposante.value}
+              onChange={(e) => filters.deposante!.onChange(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+            />
+            <label htmlFor="deposante" className="text-sm">Déposante uniquement</label>
+          </div>
+        )}
+
+        {/* Prix baissé (trié par baisse la plus récente) */}
+        {filters.prixBaisse && (
+          <div className="flex items-center gap-2" onClick={stopPropagation} onTouchStart={stopPropagation}>
+            <input
+              type="checkbox"
+              id="prixBaisse"
+              checked={filters.prixBaisse.value}
+              onChange={(e) => filters.prixBaisse!.onChange(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+            />
+            <label htmlFor="prixBaisse" className="text-sm">Prix baissé (récent en premier)</label>
           </div>
         )}
 

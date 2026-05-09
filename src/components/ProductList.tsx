@@ -81,6 +81,7 @@
       forceDisplay?: boolean
       prixBaisseLe?: Timestamp
       ancienPrix?: number
+      source?: 'chineuse' | 'deposante'
       ebayListingId?: string | null
       ebayOfferId?: string | null
     }
@@ -195,6 +196,8 @@
       const [filtrePrix, setFiltrePrix] = useState('')
       const [tri, setTri] = useState<'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'>('date-desc')
       const [filtrePhotoManquante, setFiltrePhotoManquante] = useState(false)
+      const [filtreDeposanteOnly, setFiltreDeposanteOnly] = useState(false)
+      const [filtrePrixBaisse, setFiltrePrixBaisse] = useState(false)
       
 
       // Sélection interne
@@ -214,7 +217,7 @@
       // Reset quand les filtres changent
       useEffect(() => {
         setVisibleCount(20)
-      }, [recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, tri])
+      }, [recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, filtreDeposanteOnly, filtrePrixBaisse, tri])
 
       // Modals
       const [showForm, setShowForm] = useState(false)
@@ -321,12 +324,24 @@
           if (hasPhoto) return false
         }
 
+        // Source déposante uniquement
+        if (filtreDeposanteOnly && p.source !== 'deposante') return false
+
+        // Prix baissé
+        if (filtrePrixBaisse && !p.prixBaisseLe) return false
+
           return true
         })
-      }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante])
+      }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, filtreDeposanteOnly, filtrePrixBaisse])
 
       const produitsTriés = useMemo(() => {
       return [...produitsFiltres].sort((a, b) => {
+        // Si filtre prix baissé actif → tri par date de baisse desc (plus récente d'abord)
+        if (filtrePrixBaisse) {
+          const ba = a.prixBaisseLe instanceof Timestamp ? a.prixBaisseLe.toDate().getTime() : 0
+          const bb = b.prixBaisseLe instanceof Timestamp ? b.prixBaisseLe.toDate().getTime() : 0
+          return bb - ba
+        }
         if (tri === 'alpha') {
           return (a.nom || '').localeCompare(b.nom || '')
         }
@@ -341,7 +356,7 @@
         const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate().getTime() : 0
         return tri === 'date-asc' ? dateA - dateB : dateB - dateA
       })
-    }, [produitsFiltres, tri])
+    }, [produitsFiltres, tri, filtrePrixBaisse])
 
     useEffect(() => {
   const loader = loaderRef.current
@@ -892,9 +907,11 @@
       setFiltrePrix('')
       setTri('date-desc')
       setFiltrePhotoManquante(false)
+      setFiltreDeposanteOnly(false)
+      setFiltrePrixBaisse(false)
     }
 
-      const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix || filtrePhotoManquante)
+      const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix || filtrePhotoManquante || filtreDeposanteOnly || filtrePrixBaisse)
       const hasChangesToSync = selectedIds.size > 0 || dirtyIds.size > 0
 
       // =====================
@@ -972,6 +989,14 @@
                 photoManquante: {
                   value: filtrePhotoManquante,
                   onChange: setFiltrePhotoManquante,
+                },
+                deposante: {
+                  value: filtreDeposanteOnly,
+                  onChange: setFiltreDeposanteOnly,
+                },
+                prixBaisse: {
+                  value: filtrePrixBaisse,
+                  onChange: setFiltrePrixBaisse,
                 },
               }}
             />

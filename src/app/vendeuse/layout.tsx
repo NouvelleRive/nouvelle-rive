@@ -18,6 +18,7 @@ function VendeuseNavbar() {
   // Compteurs de notifs
   const [depotCount, setDepotCount] = useState(0)
   const [commandesCount, setCommandesCount] = useState(0)
+  const [produitsCount, setProduitsCount] = useState(0)
 
   // Déposantes en attente de validation profil + RDV en attente (3 mois courants)
   useEffect(() => {
@@ -65,13 +66,25 @@ function VendeuseNavbar() {
     return () => unsub()
   }, [])
 
+  // Produits déposante avec prix baissé auto, encore en stock (à pousser)
+  useEffect(() => {
+    const q = query(
+      collection(db, 'produits'),
+      where('source', '==', 'deposante'),
+      where('vendu', '==', false),
+      where('baisse20Done', '==', true),
+    )
+    const unsub = onSnapshot(q, (snap) => setProduitsCount(snap.size))
+    return () => unsub()
+  }, [])
+
   const links = useMemo(() => [
     { href: '/vendeuse/commandes', label: 'Commandes', icon: ShoppingBag, badge: commandesCount },
-    { href: '/vendeuse/produits', label: 'Produits', icon: Shirt, badge: 0 },
+    { href: '/vendeuse/produits', label: 'Produits', icon: Shirt, badge: produitsCount },
     { href: '/vendeuse/calendrier', label: 'Calendrier', icon: Calendar, badge: 0 },
     { href: '/vendeuse/restock', label: 'RE/DEstock', icon: Package, badge: 0 },
     { href: '/vendeuse/demandes-depot', label: 'Dépôt', icon: Inbox, badge: depotCount },
-  ], [commandesCount, depotCount])
+  ], [commandesCount, depotCount, produitsCount])
 
   const isActive = (href: string) => pathname === href
 

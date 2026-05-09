@@ -196,11 +196,12 @@ export default function SalesFilters({
     const lignes = [
       `Je soussigné(e) ${nom},`,
       `certifie avoir confié à la société NR1 SAS (Nouvelle Rive) un lot de pièces`,
-      `vestimentaires de seconde main, et avoir perçu un montant total de`,
+      `de seconde main, et avoir perçu un montant total de`,
       `${ca.toFixed(2).replace('.', ',')} € au titre des ventes réalisées`,
       `au cours du mois de ${periodeTxt}.`,
       '',
-      `Je certifie sur l'honneur l'exactitude de ces informations.`,
+      `Je certifie sur l'honneur l'exactitude de ces informations`,
+      `ainsi que l'authenticité des pièces confiées.`,
     ]
 
     let y = 220

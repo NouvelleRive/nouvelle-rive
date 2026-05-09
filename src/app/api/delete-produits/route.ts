@@ -92,6 +92,19 @@
           }
         }
       }
+      // Idem pour les déposantes (produit avec source='deposante')
+      if (!autorise && data.source === 'deposante') {
+        // Doc déposante : id == uid sinon fallback authUid + email
+        let depSnap = await adminDb.collection('deposante').doc(decoded.uid).get()
+        let depData: any = depSnap.exists ? depSnap.data() : null
+        if (!depData && userEmail) {
+          const fb = await adminDb.collection('deposante').where('email', '==', userEmail).limit(1).get()
+          if (!fb.empty) depData = fb.docs[0].data()
+        }
+        if (depData?.trigramme && data.trigramme && depData.trigramme === data.trigramme) {
+          autorise = true
+        }
+      }
       if (!autorise) {
         return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 403 })
       }

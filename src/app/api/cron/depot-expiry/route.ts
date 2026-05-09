@@ -51,12 +51,19 @@ function buildEmailHtml(prenom: string, items: Produit[]) {
       <p>Bonjour ${prenom || ''},</p>
       <p>Vos articles ci-dessous sont déposés depuis 30 jours et n'ont pas encore trouvé preneur :</p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">${rows}</table>
-      <p>Conformément à l'<strong>article 4 du contrat de dépôt-vente</strong>, vous disposez de <strong>7 jours</strong> pour venir les récupérer en boutique sur rendez-vous.</p>
-      <p>Passé ce délai, leur prix de vente sera <strong>automatiquement réduit de 20 %</strong> pour favoriser leur vente.</p>
+      <p>Conformément à l'<strong>article 4 du contrat de dépôt-vente</strong>, vous disposez de <strong>7 jours</strong> pour venir les récupérer en boutique. Passé ce délai, leur prix de vente sera <strong>automatiquement réduit de 20 %</strong> pour favoriser leur vente.</p>
+
+      <h2 style="color:#22209C;font-size:16px;margin-top:24px;">Comment récupérer vos pièces ?</h2>
+      <ol style="padding-left:20px;line-height:1.6;">
+        <li>Dans <a href="https://www.nouvellerive.eu/deposante/mes-produits" style="color:#22209C;">Mes produits</a>, cliquez sur l'icône <strong>corbeille</strong> 🗑️ de chaque pièce que vous souhaitez récupérer, puis sélectionnez <em>« Produit récupéré »</em>.</li>
+        <li>Prenez <strong>rendez-vous</strong> en boutique via votre <a href="https://www.nouvellerive.eu/deposante/calendrier" style="color:#22209C;">calendrier</a> — vous pouvez en profiter pour déposer de nouvelles pièces si vous le souhaitez.</li>
+      </ol>
+
       <p style="margin-top:24px;">
-        <a href="https://www.nouvellerive.eu/deposante/mes-produits" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mes articles</a>
+        <a href="https://www.nouvellerive.eu/deposante/mes-produits" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;margin-right:8px;margin-bottom:8px;">Mes produits</a>
+        <a href="https://www.nouvellerive.eu/deposante/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;margin-bottom:8px;">Prendre RDV</a>
       </p>
-      <p style="font-size:12px;color:#888;margin-top:32px;">Pour prendre rendez-vous : nouvelleriveparis@gmail.com</p>
+      <p style="font-size:12px;color:#888;margin-top:32px;">Une question ? nouvelleriveparis@gmail.com</p>
     </div>
   `
 }

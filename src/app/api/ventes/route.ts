@@ -325,7 +325,10 @@ export async function PATCH(req: NextRequest) {
     
     if (venteData?.produitId) {
       const produitRef = adminDb.collection('produits').doc(venteData.produitId)
-      await produitRef.update({ prixVenteReel })
+      const produitDoc = await produitRef.get()
+      if (produitDoc.exists) {
+        await produitRef.update({ prixVenteReel })
+      }
     }
 
     console.log(`✅ Prix vente ${venteId} modifié: ${prixVenteReel}€`)
