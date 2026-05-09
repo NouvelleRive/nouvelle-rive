@@ -428,44 +428,84 @@ export default function CreateurPage() {
 
       {/* Grille Produits - GARDE TON DESIGN ORIGINAL */}
       {produits.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3" style={{ borderLeft: '1px solid #000' }}>
-          {produits.slice(0, visibleCount).map((p) => (
-            <Link 
-              key={p.id} 
-              href={'/boutique/' + p.id}
-              className="group"
-              style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
-            >
-              <div className="aspect-square bg-white overflow-hidden">
-                {p.imageUrl ? (
-                  <img
-                    src={p.imageUrl}
-                    alt={p.nom}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    onError={(e: any) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <p className="text-gray-400 text-xs uppercase">{t('Image à venir', 'Image coming soon', lang)}</p>
+        (() => {
+          const sliced = produits.slice(0, visibleCount)
+          const before = sliced.slice(0, 15)
+          const after = sliced.slice(15)
+          const extraVideos = (creatrice.videos || []).slice(3, 6)
+
+          const renderProducts = (list: typeof sliced, key: string) => (
+            <div key={key} className="grid grid-cols-2 sm:grid-cols-3" style={{ borderLeft: '1px solid #000' }}>
+              {list.map((p) => (
+                <Link
+                  key={p.id}
+                  href={'/boutique/' + p.id}
+                  className="group"
+                  style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
+                >
+                  <div className="aspect-square bg-white overflow-hidden">
+                    {p.imageUrl ? (
+                      <img
+                        src={p.imageUrl}
+                        alt={p.nom}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        onError={(e: any) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <p className="text-gray-400 text-xs uppercase">{t('Image à venir', 'Image coming soon', lang)}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="py-4 px-3 text-center bg-white">
+                    <h3 className="uppercase font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
+                      {p.nom}
+                    </h3>
+                    <p className="mt-1 uppercase" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px', color: '#666' }}>
+                      {creatrice.nom}
+                    </p>
+                    <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
+                      {p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )
+
+          const renderVideos = (urls: string[]) => (
+            <div className="px-6 md:px-12 py-12 bg-white" style={{ borderBottom: '1px solid #000' }}>
+              <div className="grid gap-6 mx-auto" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', maxWidth: '1280px' }}>
+                {urls.map((url) => {
+                  if (/\.mp4(\?|$)/i.test(url)) {
+                    return (
+                      <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                        <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
+                      </div>
+                    )
+                  }
+                  const embed = instagramEmbed(url)
+                  if (!embed) return null
+                  return (
+                    <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                      <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                    </div>
+                  )
+                })}
               </div>
-              <div className="py-4 px-3 text-center bg-white">
-                <h3 className="uppercase font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-                  {p.nom}
-                </h3>
-                <p className="mt-1 uppercase" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px', color: '#666' }}>
-                  {creatrice.nom}
-                </p>
-                <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-                  {p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+            </div>
+          )
+
+          return (
+            <>
+              {renderProducts(before, 'pre')}
+              {extraVideos.length > 0 && after.length > 0 && renderVideos(extraVideos)}
+              {after.length > 0 && renderProducts(after, 'post')}
+            </>
+          )
+        })()
       ) : (
         <div className="py-20 text-center" style={{ borderBottom: '1px solid #000' }}>
           <p
