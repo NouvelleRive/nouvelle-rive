@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { adminDb } from '@/lib/firebaseAdmin'
 
 export const metadata: Metadata = {
   title: 'Vintage et upcyclé chinés à Paris',
@@ -23,6 +24,8 @@ export const metadata: Metadata = {
   },
 }
 
+export const revalidate = 300
+
 const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
 const categories = [
@@ -38,7 +41,60 @@ const universes = [
   { label: 'Nos créatrices', href: '/nos-creatrices', subtitle: 'Chineuses indépendantes' },
 ]
 
-export default function HomePage() {
+type FeaturedProduct = {
+  id: string
+  nom: string
+  marque: string
+  prix: number
+  imageUrl: string
+}
+
+async function getFeaturedProducts(): Promise<FeaturedProduct[]> {
+  try {
+    const snap = await adminDb
+      .collection('produits')
+      .where('vendu', '==', false)
+      .limit(60)
+      .get()
+
+    const items = snap.docs
+      .map(d => ({ id: d.id, ...d.data() } as any))
+      .filter(p =>
+        p.statut !== 'supprime' &&
+        p.statut !== 'retour' &&
+        (p.quantite ?? 1) > 0 &&
+        p.prix > 0 &&
+        (p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
+      )
+      .map(p => {
+        const cleanedNom = (p.nom || '').replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '').trim()
+        return {
+          id: p.id,
+          nom: cleanedNom,
+          marque: (p.marque || '').trim(),
+          prix: p.prix,
+          imageUrl: p.photos?.face || p.imageUrls?.[0] || p.imageUrl,
+          likesCount: p.likesCount || 0,
+          createdAtMs: p.createdAt?.toMillis?.() ?? 0,
+        }
+      })
+      .sort((a, b) => {
+        if (b.likesCount !== a.likesCount) return b.likesCount - a.likesCount
+        return b.createdAtMs - a.createdAtMs
+      })
+      .slice(0, 8)
+      .map(({ likesCount: _l, createdAtMs: _c, ...rest }) => rest)
+
+    return items
+  } catch (err) {
+    console.error('[home] getFeaturedProducts error:', err)
+    return []
+  }
+}
+
+export default async function HomePage() {
+  const featured = await getFeaturedProducts()
+
   return (
     <main style={{ fontFamily: fontHelvetica, backgroundColor: '#fff', color: '#000' }}>
       <section style={{ borderBottom: '1px solid #000' }}>
@@ -87,6 +143,69 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {featured.length > 0 && (
+        <section style={{ borderBottom: '1px solid #000' }}>
+          <div className="px-4 md:px-8 pt-12 md:pt-16 pb-6 text-center">
+            <p className="uppercase mb-3" style={{ fontSize: '12px', letterSpacing: '0.2em', color: '#666' }}>
+              Sélection du moment
+            </p>
+            <h2 className="uppercase" style={{ fontSize: 'clamp(24px, 4vw, 36px)', letterSpacing: '0.02em', fontWeight: 700, lineHeight: 1.1 }}>
+              Pièces favorites
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4">
+            {featured.map((p, i) => {
+              const titleAlt = p.marque ? `${p.marque} — ${p.nom}` : p.nom
+              const isLastCol = (i + 1) % 4 === 0
+              const isLastRow = i >= featured.length - (featured.length % 4 || 4)
+              return (
+                <Link
+                  key={p.id}
+                  href={`/boutique/${p.id}`}
+                  className="block group"
+                  style={{
+                    borderRight: !isLastCol ? '1px solid #000' : 'none',
+                    borderTop: '1px solid #000',
+                    borderBottom: !isLastRow ? '1px solid transparent' : 'none',
+                  }}
+                >
+                  <div className="aspect-square overflow-hidden bg-white">
+                    <img
+                      src={p.imageUrl}
+                      alt={titleAlt}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="p-4 md:p-6 text-center">
+                    {p.marque && (
+                      <p className="uppercase mb-1" style={{ fontSize: '13px', letterSpacing: '0.1em', fontWeight: 700 }}>
+                        {p.marque}
+                      </p>
+                    )}
+                    <p className="mb-2 line-clamp-1" style={{ fontSize: '12px', color: '#666', fontWeight: 300 }}>
+                      {p.nom}
+                    </p>
+                    <p style={{ fontSize: '13px', letterSpacing: '0.02em' }}>
+                      {p.prix.toLocaleString('fr-FR')} €
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+          <div className="text-center py-8" style={{ borderTop: '1px solid #000' }}>
+            <Link
+              href="/boutique"
+              className="inline-block py-3 px-8 uppercase transition hover:bg-black hover:text-white"
+              style={{ fontSize: '12px', letterSpacing: '0.2em', border: '1px solid #000' }}
+            >
+              Voir toute la boutique →
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section style={{ borderBottom: '1px solid #000' }}>
         <div className="grid grid-cols-1 md:grid-cols-3">
