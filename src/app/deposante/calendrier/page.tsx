@@ -316,27 +316,23 @@ export default function DeposanteCalendrierPage() {
         </>}
       </div>
 
-      {/* Légende */}
-      <div className="flex flex-wrap gap-3 mb-4 justify-center text-xs text-gray-600">
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-white border rounded-sm" /> Disponible</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-gray-100 border rounded-sm" /> Aucun créneau</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 bg-[#22209C] rounded-sm" /> Votre RDV</span>
-      </div>
-
       <PlanningCalendar
-        mode="deposante-rdv"
+        mode="restock"
+        userType="deposante"
+        userNom={userNom || userTrigramme}
+        participants={userTrigramme ? [{ nom: userNom || userTrigramme, type: 'deposante', trigramme: userTrigramme }] : []}
         currentMonth={currentMonth}
         onNavigate={navMonth}
-        onDayClick={openModal}
-        dayInfo={(ds) => {
+        onRestockSlotPick={(ds, cr, val) => {
+          // Si la déposante choisit son nom dans un créneau → on ouvre la modale
+          // de sélection des pièces au lieu de sauvegarder directement.
+          if (!val) return true // suppression : pass-through
           const info = getDayInfo(ds)
-          return {
-            isPast: info.isPast,
-            creneauxDispo: info.creneauxDispo,
-            reservedByMe: info.reservedByMe,
-            reservedCreneau: monRdv?.dateStr === ds ? monRdv.creneau : undefined,
-            fullyBooked: info.fullyBooked || info.dayHasChineuse,
-          }
+          if (info.isPast) return false
+          setOpenDate(ds)
+          setOpenCreneau(cr)
+          setOpenPieceIds(monRdv?.dateStr === ds && monRdv?.creneau === cr ? (monRdv.slot.pieceIds || []) : [])
+          return false // bypass save par défaut
         }}
       />
 
