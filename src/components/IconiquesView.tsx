@@ -48,12 +48,12 @@ function nomNoArticle(nom: string, lang: 'fr' | 'en'): string {
 }
 
 // Transforme une URL Instagram (reel/post) en URL embed compatible iframe.
-// "https://www.instagram.com/reel/DQRAf8rDd8V/?igsh=…" → "https://www.instagram.com/reel/DQRAf8rDd8V/embed/"
+// "https://www.instagram.com/reel/DQRAf8rDd8V/?igsh=…" → "https://www.instagram.com/reel/DQRAf8rDd8V/embed/?autoplay=1"
 function instagramEmbed(url: string): string | null {
   if (!url) return null
   const m = url.match(/instagram\.com\/(reel|p|tv)\/([^/?]+)/i)
   if (!m) return null
-  return `https://www.instagram.com/${m[1]}/${m[2]}/embed/`
+  return `https://www.instagram.com/${m[1]}/${m[2]}/embed/?autoplay=1&muted=1`
 }
 
 // Extrait l'hôte d'une URL (pour libellé du bouton d'achat).
@@ -529,14 +529,6 @@ export default function IconiquesView({
                   )}
                   {item.videos && item.videos.length > 0 && (
                     <div className="px-6 md:px-12 py-10">
-                      {(item.videosLabel || item.videosLabelEn) && (
-                        <p
-                          className="uppercase tracking-widest font-semibold mb-6 text-center"
-                          style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', letterSpacing: '0.25em' }}
-                        >
-                          {lang === 'en' && item.videosLabelEn ? item.videosLabelEn : item.videosLabel}
-                        </p>
-                      )}
                       <div
                         className="grid gap-6 mx-auto"
                         style={{
@@ -552,9 +544,9 @@ export default function IconiquesView({
                               <iframe
                                 src={embed}
                                 className="w-full h-full"
-                                style={{ border: '1px solid #000', background: '#fafafa' }}
+                                style={{ border: 'none', background: '#fafafa' }}
                                 allowFullScreen
-                                allow="encrypted-media"
+                                allow="autoplay; encrypted-media"
                               />
                             </div>
                           )
