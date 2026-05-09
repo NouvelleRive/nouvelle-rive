@@ -527,13 +527,14 @@ export default function CreateurPage() {
       {creatrice.instagramFeatured && instagramEmbed(creatrice.instagramFeatured) && (
         <div className="bg-white" style={{ borderBottom: '1px solid #000' }}>
           <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', padding: '48px 0' }}>
-            <iframe
-              src={instagramEmbed(creatrice.instagramFeatured)!}
-              className="w-full"
-              style={{ border: 'none', background: '#fafafa', minHeight: '880px' }}
-              allowFullScreen
-              allow="autoplay; encrypted-media"
-            />
+            <div style={{ position: 'relative', width: '100%', height: '880px', overflow: 'hidden' }}>
+              <iframe
+                src={instagramEmbed(creatrice.instagramFeatured)!}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', background: '#fafafa' }}
+                allowFullScreen
+                allow="autoplay; encrypted-media"
+              />
+            </div>
           </div>
         </div>
       )}

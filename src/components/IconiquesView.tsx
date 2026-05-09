@@ -544,35 +544,18 @@ export default function IconiquesView({
                         }}
                       >
                         {item.videos.map((url) => {
-                          // .mp4 → balise HTML5 video avec autoplay garanti (muet)
                           if (/\.mp4(\?|$)/i.test(url)) {
                             return (
                               <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                                <video
-                                  src={url}
-                                  className="w-full h-full object-cover"
-                                  style={{ background: '#000' }}
-                                  autoPlay
-                                  muted
-                                  loop
-                                  playsInline
-                                  controls
-                                />
+                                <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
                               </div>
                             )
                           }
-                          // fallback : URL Instagram → iframe embed
                           const embed = instagramEmbed(url)
                           if (!embed) return null
                           return (
                             <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                              <iframe
-                                src={embed}
-                                className="w-full h-full"
-                                style={{ border: 'none', background: '#fafafa' }}
-                                allowFullScreen
-                                allow="autoplay; encrypted-media"
-                              />
+                              <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
                             </div>
                           )
                         })}
