@@ -664,7 +664,7 @@ export default function IconiquesView({
                         className="uppercase tracking-widest font-semibold"
                         style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
                       >
-                        {t('Nos', 'Our', lang)} {nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
+                        {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                       </p>
                     </div>
                     <ProductGrid produits={produits[item.id]} columns={sideBySide ? 2 : 4} showFilters={false} />
