@@ -184,7 +184,9 @@ export function useFilteredProducts(pageId: string) {
   const [lastDoc, setLastDoc] = useState<any>(null)
 
   useEffect(() => {
-    getFilteredProducts(pageId, { limitCount: 100 })
+    // Charge tout le catalogue d'un coup pour que la recherche couvre l'intégralité.
+    // ~1300 produits × quelques champs = payload OK (~1-2 MB)
+    getFilteredProducts(pageId, { limitCount: 2000 })
       .then(result => {
         setProduits(result.produits)
         setLastDoc(result.lastDoc)
