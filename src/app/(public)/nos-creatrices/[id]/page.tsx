@@ -523,21 +523,9 @@ export default function CreateurPage() {
         </div>
       )}
 
-      {/* Post Instagram featured (pleine largeur) */}
-      {creatrice.instagramFeatured && instagramEmbed(creatrice.instagramFeatured) && (
-        <div className="bg-white" style={{ borderBottom: '1px solid #000' }}>
-          <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', padding: '48px 0' }}>
-            <div style={{ position: 'relative', width: '100%', height: '880px', overflow: 'hidden' }}>
-              <iframe
-                src={instagramEmbed(creatrice.instagramFeatured)!}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', background: '#fafafa' }}
-                allowFullScreen
-                allow="autoplay; encrypted-media"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bloc instagramFeatured retiré : l'iframe Instagram embed
+          buggait (sautait/affichait le chrome Insta). À remplacer par
+          un slider d'images statiques (le user enverra les slides). */}
 
       {/* Retour */}
       <div className="py-12 text-center" style={{ borderBottom: '1px solid #000' }}>
