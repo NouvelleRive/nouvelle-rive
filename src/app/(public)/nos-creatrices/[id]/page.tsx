@@ -7,6 +7,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '@/lib/firebaseConfig'
 import { useLang, t } from '@/lib/i18n'
 import { getCreatriceI18n } from '@/lib/creatricesI18n'
+import FavoriteButton from '@/components/FavoriteButton'
 
 type Creatrice = {
   nom: string
@@ -22,6 +23,7 @@ type Creatrice = {
   imageUrl: string
   stockType: string
   videos?: string[]
+  instagramFeatured?: string
 }
 
 // "https://www.instagram.com/reel/XYZ/?…" → "https://www.instagram.com/reel/XYZ/embed/?autoplay=1&muted=1"
@@ -75,6 +77,7 @@ export default function CreateurPage() {
             imageUrl: data.imageUrl || '',
             stockType: data.stockType || '',
             videos: Array.isArray(data.videos) ? data.videos : [],
+            instagramFeatured: data.instagramFeatured || '',
           })
         }
       } catch (error) {
@@ -443,7 +446,7 @@ export default function CreateurPage() {
                   className="group"
                   style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
                 >
-                  <div className="aspect-square bg-white overflow-hidden">
+                  <div className="aspect-square bg-white overflow-hidden relative">
                     {p.imageUrl ? (
                       <img
                         src={p.imageUrl}
@@ -458,6 +461,9 @@ export default function CreateurPage() {
                         <p className="text-gray-400 text-xs uppercase">{t('Image à venir', 'Image coming soon', lang)}</p>
                       </div>
                     )}
+                    <div className="absolute top-3 right-3 z-10">
+                      <FavoriteButton productId={p.id} size={20} />
+                    </div>
                   </div>
                   <div className="py-4 px-3 text-center bg-white">
                     <h3 className="uppercase font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
@@ -514,6 +520,21 @@ export default function CreateurPage() {
           >
             {t('Produits à venir prochainement', 'Pieces coming soon', lang)}
           </p>
+        </div>
+      )}
+
+      {/* Post Instagram featured (pleine largeur) */}
+      {creatrice.instagramFeatured && instagramEmbed(creatrice.instagramFeatured) && (
+        <div className="bg-white" style={{ borderBottom: '1px solid #000' }}>
+          <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', padding: '48px 0' }}>
+            <iframe
+              src={instagramEmbed(creatrice.instagramFeatured)!}
+              className="w-full"
+              style={{ border: 'none', background: '#fafafa', minHeight: '880px' }}
+              allowFullScreen
+              allow="autoplay; encrypted-media"
+            />
+          </div>
         </div>
       )}
 
