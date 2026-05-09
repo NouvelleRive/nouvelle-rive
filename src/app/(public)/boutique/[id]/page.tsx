@@ -36,6 +36,7 @@ async function getProduit(id: string): Promise<ProduitDoc | null> {
       entretien: raw.entretien,
       vendu: !!raw.vendu,
       videoUrl: raw.videoUrl,
+      videos: Array.isArray(raw.videos) ? raw.videos : undefined,
       chineurUid: raw.chineurUid,
       chineur: raw.chineur,
     }

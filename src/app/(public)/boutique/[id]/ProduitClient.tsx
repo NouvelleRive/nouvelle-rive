@@ -34,6 +34,7 @@ export type Produit = {
   entretien?: string
   vendu: boolean
   videoUrl?: string
+  videos?: string[]
 }
 
 export type ChineuseInfo = {
@@ -140,16 +141,24 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
         {allImages.length > 0 ? (
           <>
             <div className="flex flex-col">
-              {/* Vidéo en premier */}
-              {produit.videoUrl && /\.mp4(\?|$)/i.test(produit.videoUrl) && (
+              {/* 1ère photo en premier */}
+              {allImages[0] && (
                 <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
-                  <video src={produit.videoUrl} className="w-full h-auto" style={{ background: '#000', display: 'block' }} autoPlay muted loop playsInline controls />
+                  <img src={allImages[0]} alt={`${produit.nom} - Photo 1`} className="w-full h-auto object-cover" />
                 </div>
               )}
-              {/* Puis les photos */}
-              {allImages.map((url, index) => (
-                <div key={`img-${index}`} className="w-full" style={{ borderBottom: '1px solid #000' }}>
-                  <img src={url} alt={`${produit.nom} - Photo ${index + 1}`} className="w-full h-auto object-cover" />
+              {/* Puis toutes les vidéos (mp4) */}
+              {(produit.videos && produit.videos.length > 0 ? produit.videos : (produit.videoUrl ? [produit.videoUrl] : []))
+                .filter(u => /\.mp4(\?|$)/i.test(u))
+                .map((url, i) => (
+                  <div key={`vid-${i}`} className="w-full" style={{ borderBottom: '1px solid #000' }}>
+                    <video src={url} className="w-full h-auto" style={{ background: '#000', display: 'block' }} autoPlay muted loop playsInline controls />
+                  </div>
+                ))}
+              {/* Puis le reste des photos */}
+              {allImages.slice(1).map((url, index) => (
+                <div key={`img-${index + 1}`} className="w-full" style={{ borderBottom: '1px solid #000' }}>
+                  <img src={url} alt={`${produit.nom} - Photo ${index + 2}`} className="w-full h-auto object-cover" />
                 </div>
               ))}
             </div>

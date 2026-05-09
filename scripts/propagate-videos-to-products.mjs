@@ -93,11 +93,13 @@ for (const item of iconiques) {
 
   let updated = 0
   for (const p of matched) {
-    if (p.videoUrl === item.videoUrl) continue
+    const sameUrl = p.videoUrl === item.videoUrl
+    const sameVideos = JSON.stringify(p.videos || []) === JSON.stringify(item.videos || [])
+    if (sameUrl && sameVideos) continue
     if (p.videoUrl && p.videoUrl !== item.videoUrl) {
       conflictsBySku[p.id] = (conflictsBySku[p.id] || []).concat([item.id])
     }
-    await p.ref.update({ videoUrl: item.videoUrl })
+    await p.ref.update({ videoUrl: item.videoUrl, videos: item.videos })
     updated++
   }
   totalUpdated += updated
