@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useLang, t } from '@/lib/i18n'
@@ -43,14 +43,31 @@ type Produit = {
 
 export default function CreateurPage() {
   const params = useParams()
+  const router = useRouter()
   const slug = params?.id as string
   const lang = useLang()
 
   const [creatrice, setCreatrice] = useState<Creatrice | null>(null)
+  const [allSlugs, setAllSlugs] = useState<string[]>([])
   const [produits, setProduits] = useState<Produit[]>([])
   const [visibleCount, setVisibleCount] = useState(12)
   const [loading, setLoading] = useState(true)
   const [displayedText, setDisplayedText] = useState('')
+
+  // Charger la liste des slugs (pour navigation prev/next)
+  useEffect(() => {
+    getDocs(collection(db, 'chineuse')).then(snap => {
+      const slugs = snap.docs
+        .map(d => ({ slug: d.id, ordre: d.data().ordre || 0 }))
+        .sort((a, b) => a.ordre - b.ordre)
+        .map(x => x.slug)
+      setAllSlugs(slugs)
+    }).catch(() => {})
+  }, [])
+
+  const currentIdx = allSlugs.indexOf(slug)
+  const prevSlug = currentIdx > 0 ? allSlugs[currentIdx - 1] : null
+  const nextSlug = currentIdx >= 0 && currentIdx < allSlugs.length - 1 ? allSlugs[currentIdx + 1] : null
 
         // Fetch créatrice depuis Firebase
   useEffect(() => {
@@ -258,18 +275,44 @@ export default function CreateurPage() {
       </div>
 
       {/* Title */}
-      <div 
+      <div
         id="creatrice-title"
         className="py-16 md:py-24 text-center relative"
         style={{ borderBottom: '1px solid #000' }}
       >
-        <div 
+        <div
           className="absolute inset-0 opacity-5"
           style={{ background: 'radial-gradient(circle at 50% 50%, #000 0%, transparent 60%)' }}
         />
-        <h1 
+
+        {/* Flèche gauche : créatrice précédente */}
+        {prevSlug && (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${prevSlug}`)}
+            aria-label="Créatrice précédente"
+            className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
+          >
+            <svg className="w-10 h-10 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+        {/* Flèche droite : créatrice suivante */}
+        {nextSlug && (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${nextSlug}`)}
+            aria-label="Créatrice suivante"
+            className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
+          >
+            <svg className="w-10 h-10 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+
+        <h1
           className="font-bold uppercase relative"
-          style={{ 
+          style={{
             fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
             fontSize: 'clamp(40px, 10vw, 120px)',
             letterSpacing: '-0.02em',
@@ -488,11 +531,47 @@ export default function CreateurPage() {
             </div>
           )
 
+          // MOBILE : alternance 1 vidéo / 4 produits
+          const renderMobileAlternated = () => {
+            const vids = (creatrice.videos || []).slice(0, 6)
+            return (
+              <div className="sm:hidden">
+                {vids.map((url, vi) => {
+                  const productSlice = sliced.slice(vi * 4, (vi + 1) * 4)
+                  return (
+                    <div key={`mobile-${vi}`}>
+                      {/\.mp4(\?|$)/i.test(url) ? (
+                        <div className="w-full" style={{ aspectRatio: '9 / 16' }}>
+                          <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
+                        </div>
+                      ) : instagramEmbed(url) ? (
+                        <div className="w-full" style={{ aspectRatio: '9 / 16' }}>
+                          <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                        </div>
+                      ) : null}
+                      {productSlice.length > 0 && renderProducts(productSlice, `mobile-prods-${vi}`)}
+                    </div>
+                  )
+                })}
+                {/* Reste des produits si plus que (vidéos × 4) */}
+                {(() => {
+                  const consumed = vids.length * 4
+                  const rest = sliced.slice(consumed)
+                  return rest.length > 0 ? renderProducts(rest, 'mobile-rest') : null
+                })()}
+              </div>
+            )
+          }
+
           return (
             <>
-              {renderProducts(before, 'pre')}
-              {extraVideos.length > 0 && after.length > 0 && renderVideos(extraVideos)}
-              {after.length > 0 && renderProducts(after, 'post')}
+              {/* DESKTOP : layout actuel (15 prod + 3 vidéos + reste) */}
+              <div className="hidden sm:block">
+                {renderProducts(before, 'pre')}
+                {extraVideos.length > 0 && after.length > 0 && renderVideos(extraVideos)}
+                {after.length > 0 && renderProducts(after, 'post')}
+              </div>
+              {renderMobileAlternated()}
             </>
           )
         })()
