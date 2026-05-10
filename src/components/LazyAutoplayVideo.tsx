@@ -55,7 +55,7 @@ export default function LazyAutoplayVideo({ src, className, style, controls = fa
       loop
       playsInline
       controls={controls}
-      preload={active ? 'auto' : 'metadata'}
+      preload="auto"
       onCanPlay={(e) => {
         if (!active) return
         const v = e.currentTarget

@@ -82,14 +82,15 @@ export default function NosCreateursPage() {
       <div className="px-6 py-20" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
         <h1
           style={{
-            fontSize: 'clamp(40px, 8vw, 120px)',
+            fontSize: 'clamp(28px, 8vw, 120px)',
             fontWeight: 700,
             letterSpacing: '-0.03em',
-            lineHeight: 0.9,
+            lineHeight: 0.95,
             textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
           }}
         >
-          {t('Nos Créatrices', 'Our Designers', lang)}<br />/ {t('Curateurices', 'Curators', lang)}
+          {t('Nos Créatrices /', 'Our Designers /', lang)}<br />{t('Curateurices', 'Curators', lang)}
         </h1>
       </div>
       <div className="w-full border-t border-black" />
