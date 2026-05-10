@@ -69,7 +69,7 @@ export default function NavbarPublic() {
             loop
             playsInline
             preload="metadata"
-            className="w-full h-[45vh] md:h-[65vh] object-cover block"
+            className="w-full h-[45vh] md:h-screen object-cover block"
           />
           <div
             className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10"
