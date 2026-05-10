@@ -480,6 +480,16 @@ const getImageUrl = (p: ProduitPreview) => {
       isAdmin={true}
       loading={loadingProduitsHook}
       onProductUpdated={handleProductUpdated}
+      customDeleteTitle="Retirer de cette page (le produit reste publié)"
+      onCustomDelete={(id) => {
+        // Retire de la vue locale (UX immédiate)
+        setLocalProduits(prev => prev.filter(p => p.id !== id))
+        // Ajoute aux exclus de la config (sauvegardé via le bouton 'Enregistrer')
+        const current = config.produitsManquels || []
+        if (!current.includes(id)) {
+          setConfig({ ...config, produitsManquels: [...current, id] })
+        }
+      }}
     />
   )}
 </div>

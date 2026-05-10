@@ -18,6 +18,8 @@ export type PageConfig = {
   prixMin?: number
   prixMax?: number
   joursRecents?: number
+  /** IDs de produits explicitement exclus de cette page (ne sont pas supprimés) */
+  produitsManquels?: string[]
 }
 
 export type Produit = {
@@ -138,7 +140,12 @@ let q = options?.lastDoc
     email: d.data().email,
   }))
 
+  const exclus = new Set(config.produitsManquels || [])
+
   produits = produits.filter(p => {
+    // Exclus manuellement depuis l'admin pour cette page (sans suppression Firestore)
+    if (exclus.has(p.id)) return false
+
     // Exclure produits vendus (quantité 0) ou retournés/supprimés
     const quantite = (p as any).quantite ?? 1
     if (quantite <= 0) return false

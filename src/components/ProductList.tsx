@@ -102,6 +102,11 @@
   onSearch?: () => void
   showSearchButton?: boolean
   onProductUpdated?: (productId: string, updatedData: Partial<Produit>) => void
+  /** Si fourni, la poubelle appelle cette fonction au lieu de supprimer le produit
+   *  (ex : retirer le produit d'une page admin sans le supprimer de Firestore) */
+  onCustomDelete?: (id: string) => void
+  /** Texte du tooltip de la poubelle quand onCustomDelete est fourni */
+  customDeleteTitle?: string
 }
 
     // =====================
@@ -164,6 +169,8 @@
       onSearch,
       showSearchButton = false,
       onProductUpdated,
+      onCustomDelete,
+      customDeleteTitle,
     }: ProductListProps) {
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
@@ -1183,7 +1190,7 @@
                         return <button onClick={() => openTryonModal(p, wt === 'menswear' ? 'male' : 'female')} disabled={generatingTryonId === p.id} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>
                       })()}
                       <button onClick={() => handleEdit(p)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={16} /></button>
-                      <button onClick={() => handleDelete(p.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                      <button onClick={() => onCustomDelete ? onCustomDelete(p.id) : handleDelete(p.id)} title={onCustomDelete ? (customDeleteTitle || 'Retirer') : 'Supprimer'} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                       <button onClick={() => handleToggleForceDisplay(p)} className={`p-1.5 rounded-lg ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                     </div>
                   </div>
@@ -1264,7 +1271,7 @@
                         return <button onClick={() => openTryonModal(p, wt === 'menswear' ? 'male' : 'female')} disabled={generatingTryonId === p.id} className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs animate-pulse">⏳</span> : <Sparkles size={20} />}</button>
                       })()}
                       <button onClick={() => handleEdit(p)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={20} /></button>
-                      <button onClick={() => handleDelete(p.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={20} /></button>
+                      <button onClick={() => onCustomDelete ? onCustomDelete(p.id) : handleDelete(p.id)} title={onCustomDelete ? (customDeleteTitle || 'Retirer') : 'Supprimer'} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={20} /></button>
                       <button onClick={() => handleToggleForceDisplay(p)} className={`p-2 rounded-lg ${isHidden(p) ? 'text-gray-300 hover:text-gray-500 hover:bg-gray-100' : 'text-green-500 hover:bg-green-50'}`}>{isHidden(p) ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                     </div>
                   </div>
