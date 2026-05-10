@@ -262,7 +262,7 @@ export default function CreateurPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="bg-white">
       {/* Header */}
       <div className="py-4 px-6 text-center" style={{ borderBottom: '1px solid #000' }}>
         <Link
@@ -274,29 +274,16 @@ export default function CreateurPage() {
         </Link>
       </div>
 
-      {/* Title avec flèches navigation à côté du nom */}
+      {/* Title (flèches retirées — navigation prev/next en bas de page) */}
       <div
         id="creatrice-title"
-        className="py-16 md:py-24 px-4 md:px-8 relative flex items-center justify-center gap-4 md:gap-8"
+        className="py-16 md:py-24 px-4 md:px-8 relative"
         style={{ borderBottom: '1px solid #000' }}
       >
         <div
           className="absolute inset-0 opacity-5"
           style={{ background: 'radial-gradient(circle at 50% 50%, #000 0%, transparent 60%)' }}
         />
-
-        {prevSlug ? (
-          <button
-            onClick={() => router.push(`/nos-creatrices/${prevSlug}`)}
-            aria-label="Créatrice précédente"
-            className="relative z-10 flex-shrink-0 hover:opacity-50 transition-opacity"
-          >
-            <svg className="w-8 h-8 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        ) : <span className="w-8 md:w-14 flex-shrink-0" />}
-
         <h1
           className="font-bold uppercase relative text-center"
           style={{
@@ -308,18 +295,6 @@ export default function CreateurPage() {
         >
           {creatrice.nom}
         </h1>
-
-        {nextSlug ? (
-          <button
-            onClick={() => router.push(`/nos-creatrices/${nextSlug}`)}
-            aria-label="Créatrice suivante"
-            className="relative z-10 flex-shrink-0 hover:opacity-50 transition-opacity"
-          >
-            <svg className="w-8 h-8 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        ) : <span className="w-8 md:w-14 flex-shrink-0" />}
       </div>
 
       {/* Content */}
