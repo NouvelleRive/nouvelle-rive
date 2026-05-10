@@ -347,27 +347,27 @@ export default function IconiquesView({
       <div className="w-full border-t border-black" />
 
       <div className="relative" style={{ borderBottom: '1px solid #000' }}>
-        {/* MOBILE : wrapper aligné sur l'image (carrée 100vw × 100vw), flèches centrées dedans */}
-        <div className="md:hidden absolute top-0 left-0 w-full aspect-square pointer-events-none z-20">
-          <button
-            onClick={() => scroll('left')}
-            aria-label="Précédent"
-            className="absolute left-2 top-1/2 -translate-y-1/2 p-3 pointer-events-auto hover:opacity-50 transition-opacity"
-          >
-            <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            aria-label="Suivant"
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-3 pointer-events-auto hover:opacity-50 transition-opacity"
-          >
-            <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+        {/* MOBILE : flèches positionnées sur le titre H2 (juste sous l'image carrée 100vw) */}
+        <button
+          onClick={() => scroll('left')}
+          aria-label="Précédent"
+          className="md:hidden absolute left-2 z-20 p-3 hover:opacity-50 transition-opacity"
+          style={{ top: 'calc(100vw + 110px)', transform: 'translateY(-50%)' }}
+        >
+          <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          onClick={() => scroll('right')}
+          aria-label="Suivant"
+          className="md:hidden absolute right-2 z-20 p-3 hover:opacity-50 transition-opacity"
+          style={{ top: 'calc(100vw + 110px)', transform: 'translateY(-50%)' }}
+        >
+          <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
         {/* DESKTOP : positionnement original 35vh */}
         <button
