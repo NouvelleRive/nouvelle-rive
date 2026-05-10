@@ -351,16 +351,20 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     })
   }
 
-  if (tri === 'prix-asc') {
-    filteredProduits.sort((a, b) => a.prix - b.prix)
-  } else if (tri === 'prix-desc') {
-    filteredProduits.sort((a, b) => b.prix - a.prix)
-  } else if (tri === 'nouveautes') {
-    filteredProduits.sort((a, b) => {
-      const dateA = a.createdAt?.toMillis?.() || 0
-      const dateB = b.createdAt?.toMillis?.() || 0
-      return dateB - dateA
-    })
+  // Si pas de filtres affichés (ex: usage dans IconiquesView), on respecte l'ordre
+  // d'origine passé par le parent (sinon le tri par défaut "nouveautes" écrase l'ordre).
+  if (showFilters) {
+    if (tri === 'prix-asc') {
+      filteredProduits.sort((a, b) => a.prix - b.prix)
+    } else if (tri === 'prix-desc') {
+      filteredProduits.sort((a, b) => b.prix - a.prix)
+    } else if (tri === 'nouveautes') {
+      filteredProduits.sort((a, b) => {
+        const dateA = a.createdAt?.toMillis?.() || 0
+        const dateB = b.createdAt?.toMillis?.() || 0
+        return dateB - dateA
+      })
+    }
   }
 
   // Mobile: 1 ou 2 colonnes selon prop, Desktop: selon prop columns
