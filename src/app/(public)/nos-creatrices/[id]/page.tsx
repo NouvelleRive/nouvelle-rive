@@ -132,17 +132,10 @@ export default function CreateurPage() {
         const isSmallBatch = creatrice.stockType === 'smallBatch'
 
         if (isSmallBatch) {
-          const withLikes = await Promise.all(
-            all.map(async (p: any) => {
-              const fSnap = await getDocs(
-                query(collection(db, 'favoris'), where('productId', '==', p.id))
-              )
-              return { p, likes: fSnap.size }
-            })
-          )
-          withLikes.sort((a, b) => b.likes - a.likes)
+          // Tri par likesCount (champ stocké sur le produit, pas de query par-produit)
+          all.sort((a: any, b: any) => (b.likesCount || 0) - (a.likesCount || 0))
           setProduits(
-            withLikes.map(({ p }) => ({
+            all.map((p: any) => ({
               id: p.id,
               nom: p.nom || 'Produit',
               prix: p.prix || 0,
