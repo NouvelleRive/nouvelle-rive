@@ -257,43 +257,21 @@ export default function CreateurPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Header avec flèches navigation entre créatrices */}
-      <div className="relative py-4 px-6 flex items-center justify-between" style={{ borderBottom: '1px solid #000' }}>
-        {prevSlug ? (
-          <button
-            onClick={() => router.push(`/nos-creatrices/${prevSlug}`)}
-            aria-label="Créatrice précédente"
-            className="hover:opacity-50 transition-opacity flex items-center"
-          >
-            <svg className="w-8 h-8 md:w-10 md:h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        ) : <span className="w-8 md:w-10" />}
+      {/* Header */}
+      <div className="py-4 px-6 text-center" style={{ borderBottom: '1px solid #000' }}>
         <Link
           href="/nos-creatrices"
-          className="uppercase text-xs tracking-widest hover:opacity-50 transition text-center"
+          className="uppercase text-xs tracking-widest hover:opacity-50 transition"
           style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
         >
           {t('Nos Créatrices/Curateurices', 'Our Designers / Curators', lang)}
         </Link>
-        {nextSlug ? (
-          <button
-            onClick={() => router.push(`/nos-creatrices/${nextSlug}`)}
-            aria-label="Créatrice suivante"
-            className="hover:opacity-50 transition-opacity flex items-center"
-          >
-            <svg className="w-8 h-8 md:w-10 md:h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        ) : <span className="w-8 md:w-10" />}
       </div>
 
-      {/* Title */}
+      {/* Title avec flèches navigation à côté du nom */}
       <div
         id="creatrice-title"
-        className="py-16 md:py-24 text-center relative"
+        className="py-16 md:py-24 px-4 md:px-8 relative flex items-center justify-center gap-4 md:gap-8"
         style={{ borderBottom: '1px solid #000' }}
       >
         <div
@@ -301,17 +279,41 @@ export default function CreateurPage() {
           style={{ background: 'radial-gradient(circle at 50% 50%, #000 0%, transparent 60%)' }}
         />
 
+        {prevSlug ? (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${prevSlug}`)}
+            aria-label="Créatrice précédente"
+            className="relative z-10 flex-shrink-0 hover:opacity-50 transition-opacity"
+          >
+            <svg className="w-8 h-8 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        ) : <span className="w-8 md:w-14 flex-shrink-0" />}
+
         <h1
-          className="font-bold uppercase relative"
+          className="font-bold uppercase relative text-center"
           style={{
             fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
-            fontSize: 'clamp(40px, 10vw, 120px)',
+            fontSize: 'clamp(32px, 9vw, 120px)',
             letterSpacing: '-0.02em',
             lineHeight: '0.9',
           }}
         >
           {creatrice.nom}
         </h1>
+
+        {nextSlug ? (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${nextSlug}`)}
+            aria-label="Créatrice suivante"
+            className="relative z-10 flex-shrink-0 hover:opacity-50 transition-opacity"
+          >
+            <svg className="w-8 h-8 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        ) : <span className="w-8 md:w-14 flex-shrink-0" />}
       </div>
 
       {/* Content */}
