@@ -415,11 +415,11 @@ export default function IconiquesView({
           </svg>
         </button>
 
-        {/* DESKTOP : positionnement original 35vh */}
+        {/* DESKTOP : centré verticalement sur la box image (aspect-square = 50vw → centre à 25vw) */}
         <button
           onClick={() => scroll('left')}
           aria-label="Précédent"
-          className="hidden md:block absolute left-6 top-[35vh] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
+          className="hidden md:block absolute left-6 top-[25vw] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
         >
           <svg className="w-14 h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -428,7 +428,7 @@ export default function IconiquesView({
         <button
           onClick={() => scroll('right')}
           aria-label="Suivant"
-          className="hidden md:block absolute right-6 top-[35vh] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
+          className="hidden md:block absolute right-6 top-[25vw] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
         >
           <svg className="w-14 h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
