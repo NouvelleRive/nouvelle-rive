@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: 'Boutique — vintage et upcyclé chinés à Paris',
   description:
     "Toutes les pièces vintage et upcyclées de NOUVELLE RIVE : sacs, robes, vestes, blazers, chemises, accessoires. Sélection chinée et certifiée à Paris, dans notre boutique du Marais.",
-  alternates: { canonical: 'https://www.nouvellerive.eu/boutique' },
+  alternates: { canonical: 'https://www.nouvellerive.eu/' },
   openGraph: {
     title: 'Boutique vintage et upcyclée — NOUVELLE RIVE',
     description: 'Toutes les pièces vintage et upcyclées chinées par NOUVELLE RIVE à Paris.',

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { collection, getDocs, query, orderBy, where } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useLang, t } from '@/lib/i18n'
 
@@ -28,12 +28,11 @@ export default function NosCreateursPage() {
       try {
         const q = query(
           collection(db, 'chineuse'),
-          where('displayOnWebsite', '==', true),
-          orderBy('ordre', 'asc')
+          where('displayOnWebsite', '==', true)
         )
-        
+
         const querySnapshot = await getDocs(q)
-        
+
         const data: Creatrice[] = []
         querySnapshot.forEach((doc) => {
           const docData = doc.data()
@@ -47,7 +46,10 @@ export default function NosCreateursPage() {
             ordre: docData.ordre || 999,
           })
         })
-        
+
+        // Tri alphabétique par nom (insensible aux accents et à la casse)
+        data.sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }))
+
         setCreatrices(data)
       } catch (error) {
         console.error('Erreur lors du fetch des créatrices:', error)
