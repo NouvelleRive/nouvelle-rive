@@ -257,15 +257,37 @@ export default function CreateurPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="py-4 px-6 text-center" style={{ borderBottom: '1px solid #000' }}>
+      {/* Header avec flèches navigation entre créatrices */}
+      <div className="relative py-4 px-6 flex items-center justify-between" style={{ borderBottom: '1px solid #000' }}>
+        {prevSlug ? (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${prevSlug}`)}
+            aria-label="Créatrice précédente"
+            className="hover:opacity-50 transition-opacity flex items-center"
+          >
+            <svg className="w-8 h-8 md:w-10 md:h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        ) : <span className="w-8 md:w-10" />}
         <Link
           href="/nos-creatrices"
-          className="uppercase text-xs tracking-widest hover:opacity-50 transition"
+          className="uppercase text-xs tracking-widest hover:opacity-50 transition text-center"
           style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
         >
           {t('Nos Créatrices/Curateurices', 'Our Designers / Curators', lang)}
         </Link>
+        {nextSlug ? (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${nextSlug}`)}
+            aria-label="Créatrice suivante"
+            className="hover:opacity-50 transition-opacity flex items-center"
+          >
+            <svg className="w-8 h-8 md:w-10 md:h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        ) : <span className="w-8 md:w-10" />}
       </div>
 
       {/* Title */}
