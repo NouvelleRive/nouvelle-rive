@@ -536,13 +536,11 @@ export default function IconiquesView({
                     </div>
                   )}
                   {!sideBySide && item.videos && item.videos.length > 0 && (
-                    <div className="px-6 md:px-12 py-10">
+                    <div className="px-6 md:px-12 py-10 hidden sm:block">
                       <div
-                        className={`grid gap-6 mx-auto grid-cols-1 ${
-                          Math.min(item.videos.length, 3) === 1 ? 'sm:grid-cols-1' :
-                          Math.min(item.videos.length, 3) === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'
-                        }`}
+                        className={`grid gap-6 mx-auto sm:grid-cols-${Math.min(item.videos.length, 3)}`}
                         style={{
+                          gridTemplateColumns: `repeat(${Math.min(item.videos.length, 3)}, minmax(0, 1fr))`,
                           maxWidth: item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
                         }}
                       >
@@ -697,19 +695,55 @@ export default function IconiquesView({
                       )}
                     </>
                   ) : (
-                    <div style={{ borderTop: '1px solid #000' }}>
-                      <div className="px-6 md:px-12 pt-10 pb-4">
-                        <p
-                          className="uppercase tracking-widest font-semibold"
-                          style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
-                        >
-                          {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
-                        </p>
+                    <>
+                      {/* DESKTOP : tous les produits dans une grande grille */}
+                      <div style={{ borderTop: '1px solid #000' }} className="hidden sm:block">
+                        <div className="px-6 md:px-12 pt-10 pb-4">
+                          <p
+                            className="uppercase tracking-widest font-semibold"
+                            style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}
+                          >
+                            {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
+                          </p>
+                        </div>
+                        <div style={{ maxWidth: produits[item.id].length === 1 ? '320px' : produits[item.id].length === 2 ? '640px' : 'none', margin: '0 auto' }}>
+                          <ProductGrid produits={produits[item.id]} columns={Math.max(2, Math.min(produits[item.id].length, 4)) as 2 | 3 | 4} showFilters={false} />
+                        </div>
                       </div>
-                      <div style={{ maxWidth: produits[item.id].length === 1 ? '320px' : produits[item.id].length === 2 ? '640px' : 'none', margin: '0 auto' }}>
-                        <ProductGrid produits={produits[item.id]} columns={Math.max(2, Math.min(produits[item.id].length, 4)) as 2 | 3 | 4} showFilters={false} />
+                      {/* MOBILE : alternance 1 vidéo / 4 produits */}
+                      <div className="sm:hidden" style={{ borderTop: '1px solid #000' }}>
+                        <div className="px-6 pt-10 pb-4">
+                          <p className="uppercase tracking-widest font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}>
+                            {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
+                          </p>
+                        </div>
+                        {(item.videos || []).slice(0, 3).map((videoUrl, vi) => {
+                          const productSlice = produits[item.id].slice(vi * 4, (vi + 1) * 4)
+                          return (
+                            <div key={`mobile-${vi}`}>
+                              {/\.mp4(\?|$)/i.test(videoUrl) ? (
+                                <div className="w-full" style={{ aspectRatio: '9 / 16', borderTop: '1px solid #000' }}>
+                                  <video src={videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
+                                </div>
+                              ) : instagramEmbed(videoUrl) ? (
+                                <div className="w-full" style={{ aspectRatio: '9 / 16', borderTop: '1px solid #000' }}>
+                                  <iframe src={instagramEmbed(videoUrl)!} className="w-full h-full" style={{ border: 'none' }} allowFullScreen allow="autoplay; encrypted-media" />
+                                </div>
+                              ) : null}
+                              {productSlice.length > 0 && (
+                                <ProductGrid produits={productSlice} columns={2} showFilters={false} />
+                              )}
+                            </div>
+                          )
+                        })}
+                        {/* Reste des produits si plus que (videos × 4) */}
+                        {(() => {
+                          const consumed = ((item.videos || []).length) * 4
+                          const rest = produits[item.id].slice(Math.min(consumed, produits[item.id].length))
+                          return rest.length > 0 ? <ProductGrid produits={rest} columns={2} showFilters={false} /> : null
+                        })()}
                       </div>
-                    </div>
+                    </>
                   )
                 )
               )}
