@@ -19,16 +19,25 @@ export default function NavbarPublic() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const showVideo = pathname === '/'
 
-  const Burger = ({ onClick }: { onClick: () => void }) => (
+  // Burger : hauteur calée sur celle du logo pour rester aligné visuellement.
+  // Le clamp `height` est passé en prop pour matcher le logo de la page sur laquelle
+  // il est rendu (homepage = petit, autres pages = grand).
+  const Burger = ({ onClick, color = '#000', height, width }: { onClick: () => void; color?: string; height: string; width: string }) => (
     <button
       onClick={onClick}
       aria-label="Menu"
-      className="flex flex-col justify-center gap-[5px] p-2 cursor-pointer"
-      style={{ background: 'transparent', border: 'none' }}
+      className="flex flex-col justify-between cursor-pointer shrink-0"
+      style={{
+        background: 'transparent',
+        border: 'none',
+        padding: 0,
+        height,
+        width,
+      }}
     >
-      <span style={{ width: 22, height: 2, background: '#000', display: 'block' }} />
-      <span style={{ width: 22, height: 2, background: '#000', display: 'block' }} />
-      <span style={{ width: 22, height: 2, background: '#000', display: 'block' }} />
+      <span style={{ width: '100%', height: '12%', background: color, display: 'block' }} />
+      <span style={{ width: '100%', height: '12%', background: color, display: 'block' }} />
+      <span style={{ width: '100%', height: '12%', background: color, display: 'block' }} />
     </button>
   )
 
@@ -90,16 +99,12 @@ export default function NavbarPublic() {
             className="absolute top-4 left-4 md:top-6 md:left-6 z-10 flex items-center gap-2"
             style={{ fontFamily: fontHelvetica }}
           >
-            <button
+            <Burger
               onClick={() => setNavOpen((v) => !v)}
-              aria-label="Menu"
-              className="flex flex-col justify-center gap-[5px] p-2 cursor-pointer"
-              style={{ background: 'transparent', border: 'none' }}
-            >
-              <span style={{ width: 22, height: 2, background: '#fff', display: 'block' }} />
-              <span style={{ width: 22, height: 2, background: '#fff', display: 'block' }} />
-              <span style={{ width: 22, height: 2, background: '#fff', display: 'block' }} />
-            </button>
+              color="#fff"
+              height="clamp(16px, 3vw, 28px)"
+              width="clamp(20px, 3vw, 32px)"
+            />
             <h1
               className="uppercase whitespace-nowrap"
               style={{
@@ -155,7 +160,11 @@ export default function NavbarPublic() {
           {!showVideo && (
             <div className="flex justify-between items-center gap-3">
               <div className="flex items-center gap-2 md:gap-3">
-                <Burger onClick={() => setNavOpen((v) => !v)} />
+                <Burger
+                  onClick={() => setNavOpen((v) => !v)}
+                  height="clamp(20px, 6vw, 72px)"
+                  width="clamp(22px, 5.5vw, 60px)"
+                />
                 <h1
                   className="uppercase whitespace-nowrap"
                   style={{
