@@ -755,7 +755,7 @@ export default function IconiquesView({
                                 ))}
                               </div>
                               {productSlice.length > 0 && (
-                                <ProductGrid produits={productSlice} columns={2} showFilters={false} />
+                                <ProductGrid produits={productSlice} columns={1} showFilters={false} />
                               )}
                             </div>
                           )
@@ -765,7 +765,7 @@ export default function IconiquesView({
                           const chunks = Math.ceil((item.videos?.length || 0) / 2)
                           const consumed = chunks * 4
                           const rest = produits[item.id].slice(Math.min(consumed, produits[item.id].length))
-                          return rest.length > 0 ? <ProductGrid produits={rest} columns={2} showFilters={false} /> : null
+                          return rest.length > 0 ? <ProductGrid produits={rest} columns={1} showFilters={false} /> : null
                         })()}
                       </div>
                     </>
