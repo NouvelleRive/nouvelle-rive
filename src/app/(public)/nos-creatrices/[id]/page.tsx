@@ -462,7 +462,7 @@ export default function CreateurPage() {
                 <Link
                   key={p.id}
                   href={'/boutique/' + p.id}
-                  className="group"
+                  className="group flex flex-col h-full"
                   style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
                 >
                   <div className="aspect-square bg-white overflow-hidden relative">
@@ -484,7 +484,7 @@ export default function CreateurPage() {
                       <FavoriteButton productId={p.id} size={20} />
                     </div>
                   </div>
-                  <div className="py-4 px-3 text-center bg-white">
+                  <div className="py-4 px-3 text-center bg-white flex-grow">
                     <h3 className="uppercase font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
                       {p.nom}
                     </h3>
