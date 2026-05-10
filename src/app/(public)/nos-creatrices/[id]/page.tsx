@@ -285,31 +285,6 @@ export default function CreateurPage() {
           style={{ background: 'radial-gradient(circle at 50% 50%, #000 0%, transparent 60%)' }}
         />
 
-        {/* Flèche gauche : créatrice précédente */}
-        {prevSlug && (
-          <button
-            onClick={() => router.push(`/nos-creatrices/${prevSlug}`)}
-            aria-label="Créatrice précédente"
-            className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
-          >
-            <svg className="w-10 h-10 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-        {/* Flèche droite : créatrice suivante */}
-        {nextSlug && (
-          <button
-            onClick={() => router.push(`/nos-creatrices/${nextSlug}`)}
-            aria-label="Créatrice suivante"
-            className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
-          >
-            <svg className="w-10 h-10 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-
         <h1
           className="font-bold uppercase relative"
           style={{
@@ -594,15 +569,39 @@ export default function CreateurPage() {
           buggait (sautait/affichait le chrome Insta). À remplacer par
           un slider d'images statiques (le user enverra les slides). */}
 
-      {/* Retour */}
-      <div className="py-12 text-center" style={{ borderBottom: '1px solid #000' }}>
+      {/* Navigation prev/next + retour */}
+      <div className="py-8 flex items-center justify-between px-6 md:px-12" style={{ borderBottom: '1px solid #000' }}>
+        {prevSlug ? (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${prevSlug}`)}
+            aria-label="Créatrice précédente"
+            className="flex items-center gap-2 hover:opacity-50 transition-opacity"
+          >
+            <svg className="w-8 h-8 md:w-10 md:h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="uppercase text-xs tracking-widest hidden md:inline">{t('Précédente', 'Previous', lang)}</span>
+          </button>
+        ) : <span />}
         <Link
           href="/nos-creatrices"
-          className="uppercase text-xs tracking-widest hover:opacity-50"
+          className="uppercase text-xs tracking-widest hover:opacity-50 text-center"
           style={{ fontFamily: 'Helvetica Neue, sans-serif' }}
         >
           {t('Toutes nos Créatrices/Curateurices', 'All our Designers / Curators', lang)}
         </Link>
+        {nextSlug ? (
+          <button
+            onClick={() => router.push(`/nos-creatrices/${nextSlug}`)}
+            aria-label="Créatrice suivante"
+            className="flex items-center gap-2 hover:opacity-50 transition-opacity"
+          >
+            <span className="uppercase text-xs tracking-widest hidden md:inline">{t('Suivante', 'Next', lang)}</span>
+            <svg className="w-8 h-8 md:w-10 md:h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        ) : <span />}
       </div>
     </main>
   )
