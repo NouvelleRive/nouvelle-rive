@@ -400,6 +400,7 @@ export default function CreateurPage() {
               src={creatrice.imageUrl}
               alt={creatrice.nom}
               className="w-full h-full object-cover"
+              style={{ objectPosition: (creatrice as any).imagePosition || '50% 50%' }}
               onError={(e: any) => {
                 e.currentTarget.style.display = 'none'
               }}
