@@ -550,7 +550,7 @@ export default function IconiquesView({
                           if (/\.mp4(\?|$)/i.test(url)) {
                             return (
                               <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                                <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
+                                <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
                               </div>
                             )
                           }
@@ -662,7 +662,7 @@ export default function IconiquesView({
                             {(() => {
                               const url = item.videos![0]
                               if (/\.mp4(\?|$)/i.test(url)) {
-                                return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
+                                return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls preload="metadata" />
                               }
                               const embed = instagramEmbed(url)
                               if (!embed) return null
@@ -719,28 +719,33 @@ export default function IconiquesView({
                             {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                           </p>
                         </div>
-                        {(item.videos || []).slice(0, 3).map((videoUrl, vi) => {
-                          const productSlice = produits[item.id].slice(vi * 4, (vi + 1) * 4)
+                        {/* Alternance 2 vidéos côte à côte / 4 produits */}
+                        {Array.from({ length: Math.ceil((item.videos?.length || 0) / 2) }).map((_, bi) => {
+                          const videoSlice = (item.videos || []).slice(bi * 2, bi * 2 + 2)
+                          const productSlice = produits[item.id].slice(bi * 4, bi * 4 + 4)
                           return (
-                            <div key={`mobile-${vi}`}>
-                              {/\.mp4(\?|$)/i.test(videoUrl) ? (
-                                <div className="w-full" style={{ aspectRatio: '9 / 16', borderTop: '1px solid #000' }}>
-                                  <video src={videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
-                                </div>
-                              ) : instagramEmbed(videoUrl) ? (
-                                <div className="w-full" style={{ aspectRatio: '9 / 16', borderTop: '1px solid #000' }}>
-                                  <iframe src={instagramEmbed(videoUrl)!} className="w-full h-full" style={{ border: 'none' }} allowFullScreen allow="autoplay; encrypted-media" />
-                                </div>
-                              ) : null}
+                            <div key={`mobile-${bi}`}>
+                              <div className="grid grid-cols-2" style={{ borderTop: '1px solid #000' }}>
+                                {videoSlice.map((videoUrl, vi) => (
+                                  <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
+                                    {/\.mp4(\?|$)/i.test(videoUrl) ? (
+                                      <video src={videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls preload="metadata" />
+                                    ) : instagramEmbed(videoUrl) ? (
+                                      <iframe src={instagramEmbed(videoUrl)!} className="w-full h-full" style={{ border: 'none' }} allowFullScreen allow="autoplay; encrypted-media" />
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
                               {productSlice.length > 0 && (
                                 <ProductGrid produits={productSlice} columns={2} showFilters={false} />
                               )}
                             </div>
                           )
                         })}
-                        {/* Reste des produits si plus que (videos × 4) */}
+                        {/* Reste des produits si plus que (chunks × 4) */}
                         {(() => {
-                          const consumed = ((item.videos || []).length) * 4
+                          const chunks = Math.ceil((item.videos?.length || 0) / 2)
+                          const consumed = chunks * 4
                           const rest = produits[item.id].slice(Math.min(consumed, produits[item.id].length))
                           return rest.length > 0 ? <ProductGrid produits={rest} columns={2} showFilters={false} /> : null
                         })()}

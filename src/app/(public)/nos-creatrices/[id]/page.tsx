@@ -531,31 +531,35 @@ export default function CreateurPage() {
             </div>
           )
 
-          // MOBILE : alternance 1 vidéo / 4 produits
+          // MOBILE : alternance 2 vidéos côte à côte / 4 produits
           const renderMobileAlternated = () => {
             const vids = (creatrice.videos || []).slice(0, 6)
+            const chunks = Math.ceil(vids.length / 2)
             return (
               <div className="sm:hidden">
-                {vids.map((url, vi) => {
-                  const productSlice = sliced.slice(vi * 4, (vi + 1) * 4)
+                {Array.from({ length: chunks }).map((_, bi) => {
+                  const videoSlice = vids.slice(bi * 2, bi * 2 + 2)
+                  const productSlice = sliced.slice(bi * 4, bi * 4 + 4)
                   return (
-                    <div key={`mobile-${vi}`}>
-                      {/\.mp4(\?|$)/i.test(url) ? (
-                        <div className="w-full" style={{ aspectRatio: '9 / 16' }}>
-                          <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
-                        </div>
-                      ) : instagramEmbed(url) ? (
-                        <div className="w-full" style={{ aspectRatio: '9 / 16' }}>
-                          <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
-                        </div>
-                      ) : null}
-                      {productSlice.length > 0 && renderProducts(productSlice, `mobile-prods-${vi}`)}
+                    <div key={`mobile-${bi}`}>
+                      <div className="grid grid-cols-2" style={{ borderTop: '1px solid #000' }}>
+                        {videoSlice.map((url, vi) => (
+                          <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
+                            {/\.mp4(\?|$)/i.test(url) ? (
+                              <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
+                            ) : instagramEmbed(url) ? (
+                              <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                      {productSlice.length > 0 && renderProducts(productSlice, `mobile-prods-${bi}`)}
                     </div>
                   )
                 })}
-                {/* Reste des produits si plus que (vidéos × 4) */}
+                {/* Reste des produits si plus que (chunks × 4) */}
                 {(() => {
-                  const consumed = vids.length * 4
+                  const consumed = chunks * 4
                   const rest = sliced.slice(consumed)
                   return rest.length > 0 ? renderProducts(rest, 'mobile-rest') : null
                 })()}
