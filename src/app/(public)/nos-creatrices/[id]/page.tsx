@@ -396,7 +396,7 @@ export default function CreateurPage() {
               if (/\.mp4(\?|$)/i.test(url)) {
                 return (
                   <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                    <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
+                    <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
                   </div>
                 )
               }
@@ -490,7 +490,7 @@ export default function CreateurPage() {
                   if (/\.mp4(\?|$)/i.test(url)) {
                     return (
                       <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                        <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
+                        <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
                       </div>
                     )
                   }
@@ -521,7 +521,7 @@ export default function CreateurPage() {
                         {videoSlice.map((url, vi) => (
                           <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
                             {/\.mp4(\?|$)/i.test(url) ? (
-                              <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
+                              <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
                             ) : instagramEmbed(url) ? (
                               <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
                             ) : null}

@@ -567,7 +567,7 @@ export default function IconiquesView({
                           if (/\.mp4(\?|$)/i.test(url)) {
                             return (
                               <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                                <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
+                                <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
                               </div>
                             )
                           }
@@ -679,7 +679,7 @@ export default function IconiquesView({
                             {(() => {
                               const url = item.videos![0]
                               if (/\.mp4(\?|$)/i.test(url)) {
-                                return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls preload="metadata" />
+                                return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
                               }
                               const embed = instagramEmbed(url)
                               if (!embed) return null
@@ -746,7 +746,7 @@ export default function IconiquesView({
                                 {videoSlice.map((videoUrl, vi) => (
                                   <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
                                     {/\.mp4(\?|$)/i.test(videoUrl) ? (
-                                      <video src={videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls preload="metadata" />
+                                      <video src={videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
                                     ) : instagramEmbed(videoUrl) ? (
                                       <iframe src={instagramEmbed(videoUrl)!} className="w-full h-full" style={{ border: 'none' }} allowFullScreen allow="autoplay; encrypted-media" />
                                     ) : null}
