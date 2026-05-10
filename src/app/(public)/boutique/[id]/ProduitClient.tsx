@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
 import { useCart } from '@/lib/cart'
+import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { useLang, t, translateCategory, translateMaterial, translateColor } from '@/lib/i18n'
 
 export type Produit = {
