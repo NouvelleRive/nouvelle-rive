@@ -226,7 +226,7 @@ export default function PlanningCalendar({
               style={{ backgroundColor: v ? v.couleur + '20' : 'transparent', color: v ? v.couleur : '#9ca3af' }}
               title={cr}
             >
-              <option value="">{cr}</option>
+              <option value="">{v ? '— Retirer —' : cr}</option>
               {activeVendeuses.map(av => <option key={av.id} value={av.id}>{av.prenom}</option>)}
             </select>
           </div>
