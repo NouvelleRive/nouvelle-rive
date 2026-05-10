@@ -370,43 +370,23 @@ export default function CreateurPage() {
         </div>
       </div>
 
-      {/* Section Vidéos (reels Instagram) */}
+      {/* Section Vidéos (reels Instagram) — DESKTOP : 3 cols en haut */}
       {creatrice.videos && creatrice.videos.length > 0 && (
-        <div className="px-6 md:px-12 py-12 bg-white" style={{ borderBottom: '1px solid #000' }}>
-          <div
-            className="grid gap-6 mx-auto grid-cols-1 sm:grid-cols-3"
-            style={{ maxWidth: '1280px' }}
-          >
+        <div className="px-6 md:px-12 py-12 bg-white hidden sm:block" style={{ borderBottom: '1px solid #000' }}>
+          <div className="grid gap-6 mx-auto grid-cols-3" style={{ maxWidth: '1280px' }}>
             {creatrice.videos.slice(0, 3).map((url) => {
-              // .mp4 → HTML5 video avec autoplay
               if (/\.mp4(\?|$)/i.test(url)) {
                 return (
                   <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                    <video
-                      src={url}
-                      className="w-full h-full object-cover"
-                      style={{ background: '#000' }}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      controls
-                    />
+                    <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
                   </div>
                 )
               }
-              // fallback : URL Instagram → iframe
               const embed = instagramEmbed(url)
               if (!embed) return null
               return (
                 <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                  <iframe
-                    src={embed}
-                    className="w-full h-full"
-                    style={{ border: 'none', background: '#fafafa' }}
-                    allowFullScreen
-                    allow="autoplay; encrypted-media"
-                  />
+                  <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
                 </div>
               )
             })}
