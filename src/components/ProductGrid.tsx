@@ -155,40 +155,6 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     return () => { alive = false }
   }, [])
 
-  const chineuseLookup = useMemo(() => {
-    const byUid = new Map<string, ChineuseLite>()
-    const byEmail = new Map<string, ChineuseLite>()
-    const byTrigramme = new Map<string, ChineuseLite>()
-    for (const c of chineuses) {
-      byUid.set(c.uid, c)
-      if (c.email) byEmail.set(c.email.toLowerCase(), c)
-      for (const e of c.emails) if (e) byEmail.set(e.toLowerCase(), c)
-      if (c.trigramme) byTrigramme.set(c.trigramme, c)
-    }
-    return { byUid, byEmail, byTrigramme }
-  }, [chineuses])
-
-  const findChineuseForProduct = (p: Produit): ChineuseLite | null => {
-    const anyP = p as any
-    if (anyP.chineurUid) {
-      const c = chineuseLookup.byUid.get(anyP.chineurUid)
-      if (c) return c
-    }
-    if (anyP.chineur) {
-      const c = chineuseLookup.byEmail.get(String(anyP.chineur).toLowerCase())
-      if (c) return c
-    }
-    const sku: string = (anyP.sku || '').toUpperCase()
-    if (sku) {
-      for (const [tri, c] of chineuseLookup.byTrigramme) {
-        if (sku.startsWith(tri) && (sku.length === tri.length || /\d/.test(sku[tri.length]))) {
-          return c
-        }
-      }
-    }
-    return null
-  }
-  
   const [filters, setFilters] = useState({
     promotion: false,
     marque: '',
@@ -388,39 +354,42 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
   const displayItems: DisplayItem[] = useMemo(() => {
     const items: DisplayItem[] = []
-    const videoCounter = new Map<string, number>()
     // Whitelist optionnelle de trigrammes (utilisée sur /luxe pour ne garder que PS/SOI/PRI)
     const whitelist = videoTrigrammeWhitelist && videoTrigrammeWhitelist.length > 0
       ? new Set(videoTrigrammeWhitelist.map(t => t.toUpperCase()))
       : null
-    const isAllowed = (c: ChineuseLite) => !whitelist || whitelist.has((c.trigramme || '').toUpperCase())
-    // Pool global de chineuses qui ont au moins une vidéo (pour le fallback ultime)
-    const chineusesAvecVideos = chineuses.filter(c => c.videos.length > 0 && isAllowed(c))
-    let globalFallbackIdx = 0
+    const allowed = chineuses.filter(c =>
+      c.videos.length > 0 &&
+      (!whitelist || whitelist.has((c.trigramme || '').toUpperCase()))
+    )
+
+    // Séquence aplatie en round-robin : on prend le 1er video de chaque chineuse,
+    // puis le 2e de chaque, etc. Ça interleave les chineuses tout en garantissant
+    // qu'aucune vidéo ne se répète avant d'avoir fait le tour complet (PS:8 + SOI:3 + PRI:7 = 18
+    // sur /luxe, donc PS.v0 ne revient qu'au bout de 18 slots, soit ~144 produits).
+    const flatVideos: { url: string; chineuseSlug: string; uid: string }[] = []
+    if (allowed.length > 0) {
+      const maxLen = Math.max(...allowed.map(c => c.videos.length))
+      for (let i = 0; i < maxLen; i++) {
+        for (const c of allowed) {
+          if (i < c.videos.length) {
+            flatVideos.push({ url: c.videos[i], chineuseSlug: c.slug, uid: c.uid })
+          }
+        }
+      }
+    }
+
+    let videoIdx = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
       const isBoundary = (i + 1) % 8 === 0
-      if (!isBoundary) continue
-      // 1) Essayer la chineuse de la 8e pièce, puis 7e, 6e... jusqu'à la 1ère du groupe
-      let chosen: ChineuseLite | null = null
-      const groupStart = i - 7
-      for (let j = i; j >= groupStart; j--) {
-        const c = findChineuseForProduct(filteredProduits[j])
-        if (c && c.videos.length > 0 && isAllowed(c)) { chosen = c; break }
-      }
-      // 2) Fallback global : aucune chineuse du groupe n'a de vidéo, on rotate sur le pool global
-      if (!chosen && chineusesAvecVideos.length > 0) {
-        chosen = chineusesAvecVideos[globalFallbackIdx % chineusesAvecVideos.length]
-        globalFallbackIdx++
-      }
-      if (!chosen) continue
-      const used = videoCounter.get(chosen.uid) || 0
-      const url = chosen.videos[used % chosen.videos.length]
-      videoCounter.set(chosen.uid, used + 1)
-      items.push({ type: 'video', key: `v-${i}-${chosen.uid}`, videoUrl: url, chineuseSlug: chosen.slug })
+      if (!isBoundary || flatVideos.length === 0) continue
+      const v = flatVideos[videoIdx % flatVideos.length]
+      items.push({ type: 'video', key: `v-${i}-${v.uid}-${videoIdx}`, videoUrl: v.url, chineuseSlug: v.chineuseSlug })
+      videoIdx++
     }
     return items
-  }, [filteredProduits, chineuses, chineuseLookup, videoTrigrammeWhitelist])
+  }, [filteredProduits, chineuses, videoTrigrammeWhitelist])
 
   const resetFilters = () => {
     setFilters({
