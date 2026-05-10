@@ -72,9 +72,15 @@ export default function CreateurPage() {
 
         // Fetch créatrice depuis Firebase
   useEffect(() => {
+    // Reset des états quand on navigue d'une chineuse à une autre
+    setCreatrice(null)
+    setProduits([])
+    setVisibleCount(12)
+    setLoading(true)
+
     async function fetchCreatrice() {
       if (!slug) return
-      
+
       try {
         const docRef = doc(db, 'chineuse', slug)
         const docSnap = await getDoc(docRef)
