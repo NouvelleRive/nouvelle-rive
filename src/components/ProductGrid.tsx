@@ -126,6 +126,64 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       })
     }
   }, [])
+
+  // Chineuses (avec leurs videos) — pour intercaler une vidéo toutes les 8 pièces.
+  const [chineuses, setChineuses] = useState<ChineuseLite[]>([])
+  useEffect(() => {
+    let alive = true
+    getDocs(collection(db, 'chineuse'))
+      .then(snap => {
+        if (!alive) return
+        const list: ChineuseLite[] = snap.docs.map(d => {
+          const data = d.data() as any
+          return {
+            uid: d.id,
+            slug: data.slug || d.id,
+            trigramme: (data.trigramme || '').toUpperCase(),
+            email: data.email || '',
+            emails: Array.isArray(data.emails) ? data.emails : [],
+            videos: Array.isArray(data.videos) ? data.videos.filter((u: any) => typeof u === 'string' && /\.mp4(\?|$)/i.test(u)) : [],
+          }
+        })
+        setChineuses(list)
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const chineuseLookup = useMemo(() => {
+    const byUid = new Map<string, ChineuseLite>()
+    const byEmail = new Map<string, ChineuseLite>()
+    const byTrigramme = new Map<string, ChineuseLite>()
+    for (const c of chineuses) {
+      byUid.set(c.uid, c)
+      if (c.email) byEmail.set(c.email.toLowerCase(), c)
+      for (const e of c.emails) if (e) byEmail.set(e.toLowerCase(), c)
+      if (c.trigramme) byTrigramme.set(c.trigramme, c)
+    }
+    return { byUid, byEmail, byTrigramme }
+  }, [chineuses])
+
+  const findChineuseForProduct = (p: Produit): ChineuseLite | null => {
+    const anyP = p as any
+    if (anyP.chineurUid) {
+      const c = chineuseLookup.byUid.get(anyP.chineurUid)
+      if (c) return c
+    }
+    if (anyP.chineur) {
+      const c = chineuseLookup.byEmail.get(String(anyP.chineur).toLowerCase())
+      if (c) return c
+    }
+    const sku: string = (anyP.sku || '').toUpperCase()
+    if (sku) {
+      for (const [tri, c] of chineuseLookup.byTrigramme) {
+        if (sku.startsWith(tri) && (sku.length === tri.length || /\d/.test(sku[tri.length]))) {
+          return c
+        }
+      }
+    }
+    return null
+  }
   
   const [filters, setFilters] = useState({
     promotion: false,
@@ -313,6 +371,41 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     4: 'grid-cols-2 lg:grid-cols-4',
   }
 
+  const colSpanFull = {
+    1: 'col-span-1',
+    2: 'col-span-2',
+    3: 'col-span-2 lg:col-span-3',
+    4: 'col-span-2 lg:col-span-4',
+  }
+
+  // Toutes les 8 pièces, on intercale une vidéo de la chineuse de la 8e pièce.
+  // Si elle n'a pas de vidéo, on remonte à la 7e, 6e... jusqu'à en trouver une.
+  // On rotate par chineuse pour ne pas remettre toujours la même vidéo.
+  type DisplayItem =
+    | { type: 'product'; data: Produit }
+    | { type: 'video'; key: string; videoUrl: string; chineuseSlug: string }
+
+  const displayItems: DisplayItem[] = useMemo(() => {
+    const items: DisplayItem[] = []
+    const videoCounter = new Map<string, number>()
+    for (let i = 0; i < filteredProduits.length; i++) {
+      items.push({ type: 'product', data: filteredProduits[i] })
+      const isBoundary = (i + 1) % 8 === 0
+      if (!isBoundary) continue
+      const groupStart = i - 7
+      for (let j = i; j >= groupStart; j--) {
+        const c = findChineuseForProduct(filteredProduits[j])
+        if (!c || c.videos.length === 0) continue
+        const used = videoCounter.get(c.uid) || 0
+        const url = c.videos[used % c.videos.length]
+        videoCounter.set(c.uid, used + 1)
+        items.push({ type: 'video', key: `v-${i}-${c.uid}`, videoUrl: url, chineuseSlug: c.slug })
+        break
+      }
+    }
+    return items
+  }, [filteredProduits, chineuseLookup])
+
   const resetFilters = () => {
     setFilters({
       promotion: false,
@@ -406,7 +499,23 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
       {/* Grille produits */}
       <div className={`grid ${gridCols[columns]}`} style={{ borderLeft: '1px solid #000' }}>
-        {filteredProduits.map((produit) => (
+        {displayItems.map((item) => {
+          if (item.type === 'video') {
+            return (
+              <Link
+                key={item.key}
+                href={`/nos-creatrices/${item.chineuseSlug}`}
+                className={`${colSpanFull[columns]} block bg-black`}
+                style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
+              >
+                <div className="w-full mx-auto" style={{ aspectRatio: '9 / 16', maxWidth: '720px' }}>
+                  <LazyAutoplayVideo src={item.videoUrl} className="w-full h-full object-cover" style={{ background: '#000' }} />
+                </div>
+              </Link>
+            )
+          }
+          const produit = item.data
+          return (
           <div
             key={produit.id}
             className="relative group"
@@ -439,7 +548,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                   </div>
                 )}
               </div>
-              
+
               <div className="py-2 md:py-3 px-1 md:px-2 text-center bg-white">
                 {emphasizeBrand && produit.marque ? (
                   <>
@@ -495,7 +604,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                 )}
                 <p
                   className="mt-1"
-                  style={{ 
+                  style={{
                     fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                     fontSize: '11px',
                     color: '#000'
@@ -511,7 +620,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               <FavoriteButton productId={produit.id} size={20} className="md:!w-6 md:!h-6" />
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Panel Filtres - PLEIN ÉCRAN - MOITIÉ DROITE */}

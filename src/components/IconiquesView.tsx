@@ -26,6 +26,8 @@ export type Iconique = {
   marque?: string
   chineuseTrigrammes?: string[]
   categoriesIn?: string[]
+  /** Ordre de tri par catégorie (ex: ['collier', 'bague', 'broche']) — produits matchant la 1ère catégorie en premier, etc. */
+  categoriesOrder?: string[]
   materialContient?: string
   images: string[]
   ordre: number
@@ -34,6 +36,8 @@ export type Iconique = {
   buyLink?: string
   /** URLs Instagram (reels ou posts) à embedder en bas de l'iconique. */
   videos?: string[]
+  nomPluriel?: string
+  nomPlurielEn?: string
   /** Label optionnel pour la section vidéos (ex: "POUR EN SAVOIR PLUS"). */
   videosLabel?: string
   videosLabelEn?: string
@@ -231,6 +235,19 @@ export default function IconiquesView({
             })
             produitsData[item.id] = matched.slice(0, 8)
           } else {
+            // Tri custom par catégorie si configuré (ex: ['collier', 'bague', 'broche'])
+            if (item.categoriesOrder && item.categoriesOrder.length > 0) {
+              const order = item.categoriesOrder.map(c => norm(c))
+              matched.sort((a, b) => {
+                const catA = typeof a.categorie === 'object' ? norm(a.categorie?.label || '') : norm(a.categorie || '')
+                const catB = typeof b.categorie === 'object' ? norm(b.categorie?.label || '') : norm(b.categorie || '')
+                const idxA = order.findIndex(o => catA.includes(o))
+                const idxB = order.findIndex(o => catB.includes(o))
+                const fa = idxA === -1 ? 999 : idxA
+                const fb = idxB === -1 ? 999 : idxB
+                return fa - fb
+              })
+            }
             produitsData[item.id] = matched
           }
         }
@@ -347,24 +364,24 @@ export default function IconiquesView({
       <div className="w-full border-t border-black" />
 
       <div className="relative" style={{ borderBottom: '1px solid #000' }}>
-        {/* MOBILE : flèches centrées sur le bloc titre+sous-titre, marge latérale */}
+        {/* MOBILE : flèches dans la marge blanche, taille réduite pour ne pas toucher le texte */}
         <button
           onClick={() => scroll('left')}
           aria-label="Précédent"
-          className="md:hidden absolute left-5 z-20 p-3 hover:opacity-50 transition-opacity"
+          className="md:hidden absolute left-1 z-20 p-2 hover:opacity-50 transition-opacity"
           style={{ top: 'calc(100vw + 160px)', transform: 'translateY(-50%)' }}
         >
-          <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+          <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <button
           onClick={() => scroll('right')}
           aria-label="Suivant"
-          className="md:hidden absolute right-5 z-20 p-3 hover:opacity-50 transition-opacity"
+          className="md:hidden absolute right-1 z-20 p-2 hover:opacity-50 transition-opacity"
           style={{ top: 'calc(100vw + 160px)', transform: 'translateY(-50%)' }}
         >
-          <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+          <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -765,7 +782,8 @@ export default function IconiquesView({
                           const blocks: Array<{ videoSlice: string[]; productSlice: any[]; bi: number }> = []
                           let videoIdx = 0
                           let bi = 0
-                          while (bi * 6 < allProds.length) {
+                          // On boucle tant qu'il reste des vidéos OU des produits à placer
+                          while (videoIdx < vids.length || bi * 6 < allProds.length) {
                             const count = bi % 2 === 0 ? 2 : 1 // pair → 2 vidéos, impair → 1 vidéo full
                             const videoSlice = vids.slice(videoIdx, videoIdx + count)
                             videoIdx += videoSlice.length
