@@ -13,7 +13,7 @@ type Props = {
  * Vidéo qui ne se charge et ne se lance qu'une fois visible (Intersection Observer).
  * Avantage mobile : les vidéos hors écran ne plombent pas le chargement initial.
  */
-export default function LazyAutoplayVideo({ src, className, style, controls = true }: Props) {
+export default function LazyAutoplayVideo({ src, className, style, controls = false }: Props) {
   const ref = useRef<HTMLVideoElement | null>(null)
   const [shouldLoad, setShouldLoad] = useState(false)
 
