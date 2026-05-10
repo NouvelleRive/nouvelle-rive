@@ -39,8 +39,7 @@ export default function LazyAutoplayVideo({ src, className, style, controls = tr
   return (
     <video
       ref={ref}
-      src={shouldLoad ? src : undefined}
-      data-src={src}
+      src={src}
       className={className}
       style={style}
       autoPlay
@@ -48,7 +47,7 @@ export default function LazyAutoplayVideo({ src, className, style, controls = tr
       loop
       playsInline
       controls={controls}
-      preload="metadata"
+      preload={shouldLoad ? 'auto' : 'metadata'}
     />
   )
 }
