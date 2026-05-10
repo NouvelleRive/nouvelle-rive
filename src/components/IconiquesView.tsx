@@ -752,42 +752,51 @@ export default function IconiquesView({
                           <ProductGrid produits={produits[item.id]} columns={Math.max(2, Math.min(produits[item.id].length, 4)) as 2 | 3 | 4} showFilters={false} />
                         </div>
                       </div>
-                      {/* MOBILE : alternance 1 vidéo / 4 produits */}
+                      {/* MOBILE : pattern identique à /nos-creatrices — alternance 2 vidéos / 1 vidéo full, 6 produits par bloc */}
                       <div className="sm:hidden" style={{ borderTop: '1px solid #000' }}>
                         <div className="px-6 pt-10 pb-4">
                           <p className="uppercase tracking-widest font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}>
                             {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
                           </p>
                         </div>
-                        {/* Alternance 2 vidéos côte à côte / 4 produits */}
-                        {Array.from({ length: Math.ceil((item.videos?.length || 0) / 2) }).map((_, bi) => {
-                          const videoSlice = (item.videos || []).slice(bi * 2, bi * 2 + 2)
-                          const productSlice = produits[item.id].slice(bi * 4, bi * 4 + 4)
-                          return (
-                            <div key={`mobile-${bi}`}>
-                              <div className="grid grid-cols-2" style={{ borderTop: '1px solid #000' }}>
-                                {videoSlice.map((videoUrl, vi) => (
-                                  <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
-                                    {/\.mp4(\?|$)/i.test(videoUrl) ? (
-                                      <LazyAutoplayVideo src={videoUrl} className="w-full h-full object-cover" />
-                                    ) : instagramEmbed(videoUrl) ? (
-                                      <iframe src={instagramEmbed(videoUrl)!} className="w-full h-full" style={{ border: 'none' }} allowFullScreen allow="autoplay; encrypted-media" />
-                                    ) : null}
-                                  </div>
-                                ))}
-                              </div>
-                              {productSlice.length > 0 && (
-                                <ProductGrid produits={productSlice} columns={1} showFilters={false} />
-                              )}
-                            </div>
-                          )
-                        })}
-                        {/* Reste des produits si plus que (chunks × 4) */}
                         {(() => {
-                          const chunks = Math.ceil((item.videos?.length || 0) / 2)
-                          const consumed = chunks * 4
-                          const rest = produits[item.id].slice(Math.min(consumed, produits[item.id].length))
-                          return rest.length > 0 ? <ProductGrid produits={rest} columns={1} showFilters={false} /> : null
+                          const vids = item.videos || []
+                          const allProds = produits[item.id] || []
+                          const blocks: Array<{ videoSlice: string[]; productSlice: any[]; bi: number }> = []
+                          let videoIdx = 0
+                          let bi = 0
+                          while (bi * 6 < allProds.length) {
+                            const count = bi % 2 === 0 ? 2 : 1 // pair → 2 vidéos, impair → 1 vidéo full
+                            const videoSlice = vids.slice(videoIdx, videoIdx + count)
+                            videoIdx += videoSlice.length
+                            const productSlice = allProds.slice(bi * 6, bi * 6 + 6)
+                            if (videoSlice.length === 0 && productSlice.length === 0) break
+                            blocks.push({ videoSlice, productSlice, bi })
+                            bi++
+                          }
+                          return blocks.map(({ videoSlice, productSlice, bi }) => {
+                            const isPair = videoSlice.length === 2
+                            return (
+                              <div key={`mobile-${bi}`}>
+                                {videoSlice.length > 0 && (
+                                  <div className={isPair ? 'grid grid-cols-2' : 'block'} style={{ borderTop: '1px solid #000' }}>
+                                    {videoSlice.map((url, vi) => (
+                                      <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: isPair && vi === 0 ? '1px solid #000' : 'none' }}>
+                                        {/\.mp4(\?|$)/i.test(url) ? (
+                                          <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
+                                        ) : instagramEmbed(url) ? (
+                                          <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                                        ) : null}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {productSlice.length > 0 && (
+                                  <ProductGrid produits={productSlice} columns={1} showFilters={false} />
+                                )}
+                              </div>
+                            )
+                          })
                         })()}
                       </div>
                     </>
