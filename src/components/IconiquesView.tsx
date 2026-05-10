@@ -89,21 +89,22 @@ export default function IconiquesView({
   const lang = useLang()
   const [iconiques, setIconiques] = useState<Iconique[]>([])
   const [produits, setProduits] = useState<{ [key: string]: Produit[] }>({})
-  const [loading, setLoading] = useState(true)
+  const [loadingIcons, setLoadingIcons] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [imageIndices, setImageIndices] = useState<{ [key: string]: number }>({})
   const sliderRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    async function fetchIconiques() {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'iconiques'))
-        const data: Iconique[] = []
+    let cancelled = false
 
-        querySnapshot.forEach((doc) => {
+    async function load() {
+      try {
+        // 1) Iconiques (24 docs ~ instantané) → on libère le rendu dès que prêt.
+        const iconSnap = await getDocs(collection(db, 'iconiques'))
+        const data: Iconique[] = []
+        iconSnap.forEach((doc) => {
           const docData = doc.data()
           if (docData.displayOnWebsite === false) return
-          // Filtre par type : absence de type = vintage (rétro-compat).
           const docType = docData.type || 'vintage'
           if (docType !== typeFilter) return
           data.push({
@@ -132,29 +133,46 @@ export default function IconiquesView({
             videosLabelEn: docData.videosLabelEn || '',
           })
         })
-
         data.sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+        if (cancelled) return
         setIconiques(data)
-
         const initialIndices: { [key: string]: number } = {}
         data.forEach(item => { initialIndices[item.id] = 0 })
         setImageIndices(initialIndices)
+        setLoadingIcons(false) // ← la page se rend ici, le grid produits chargera ensuite
 
-        // Pour les iconiques soldOut on a besoin des vendus aussi → on fetch tout
-        // puis on partitionne ensuite.
-        const hasSoldOut = data.some(d => d.soldOut)
-        const allProduitsSnapshot = hasSoldOut
-          ? await getDocs(collection(db, 'produits'))
-          : await getDocs(query(collection(db, 'produits'), where('vendu', '==', false)))
-        const baseProduits = allProduitsSnapshot.docs
+        // 2) Produits actifs (vendu==false) en background.
+        const activeSnap = await getDocs(query(collection(db, 'produits'), where('vendu', '==', false)))
+        if (cancelled) return
+        const activeProduits = activeSnap.docs
           .map(d => ({ id: d.id, ...d.data() } as any))
           .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
-          .filter(p => {
-            const firstImg = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
-            return !!firstImg
-          })
-        // En stock pour iconiques normaux : non vendu + qte>0
-        const allProduits = baseProduits.filter(p => p.vendu !== true && (p.quantite ?? 1) > 0)
+          .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
+          .filter(p => (p.quantite ?? 1) > 0)
+
+        // 3) Pour chaque iconique soldOut, query ciblée vendu==true par trigramme
+        //    (au lieu de fetch tous les 4096 produits).
+        const soldOutItems = data.filter(d => d.soldOut)
+        const soldOutPool: any[] = []
+        if (soldOutItems.length > 0) {
+          const allTrigs = Array.from(new Set(
+            soldOutItems.flatMap(i => i.chineuseTrigrammes || []).map(t => t.toUpperCase())
+          )).filter(Boolean)
+          if (allTrigs.length > 0) {
+            // Firestore `in` accepte jusqu'à 30 valeurs.
+            const soldSnap = await getDocs(query(
+              collection(db, 'produits'),
+              where('vendu', '==', true),
+              where('trigramme', 'in', allTrigs.slice(0, 30)),
+            ))
+            if (cancelled) return
+            soldOutPool.push(...soldSnap.docs
+              .map(d => ({ id: d.id, ...d.data() } as any))
+              .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
+              .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
+            )
+          }
+        }
 
         const produitsData: { [key: string]: Produit[] } = {}
         const norm = (s: string) =>
@@ -175,9 +193,7 @@ export default function IconiquesView({
             continue
           }
 
-          // Pour les soldOut, on cherche dans le pool complet (vendus inclus)
-          // limité aux 8 derniers vendus pour l'affichage galerie.
-          const sourceList = item.soldOut ? baseProduits : allProduits
+          const sourceList = item.soldOut ? soldOutPool : activeProduits
           const matched = sourceList.filter(p => {
             const nom = norm(p.nom || p.Nom || '')
             const marque = norm(p.marque || '')
@@ -205,7 +221,7 @@ export default function IconiquesView({
 
             return true
           })
-          // Pour les soldOut, on limite à 8 produits max et on tri par createdAt desc
+
           if (item.soldOut) {
             matched.sort((a, b) => {
               const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()
@@ -217,15 +233,16 @@ export default function IconiquesView({
             produitsData[item.id] = matched
           }
         }
+        if (cancelled) return
         setProduits(produitsData)
       } catch (error) {
         console.error('Erreur lors du fetch des iconiques:', error)
-      } finally {
-        setLoading(false)
+        if (!cancelled) setLoadingIcons(false)
       }
     }
 
-    fetchIconiques()
+    load()
+    return () => { cancelled = true }
   }, [typeFilter])
 
   const scroll = (direction: 'left' | 'right') => {
@@ -284,7 +301,7 @@ export default function IconiquesView({
     setImageIndices(prev => ({ ...prev, [itemId]: 0 }))
   }
 
-  if (loading) {
+  if (loadingIcons) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
