@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, CSSProperties } from 'react'
+import { useEffect, useRef, useState, CSSProperties } from 'react'
 
 type Props = {
   src: string
@@ -10,42 +10,37 @@ type Props = {
 }
 
 /**
- * Vidéo autoplay mobile-friendly :
- * - src + autoplay + muted + playsInline + preload="auto" dès le mount
- * - Force .play() à plusieurs hooks (onLoadedMetadata, onCanPlay) car iOS
- *   Safari ignore parfois l'attribut autoplay seul
- * - Pause/play au scroll via Intersection Observer (économise CPU)
+ * Vidéo autoplay économe en bande passante :
+ * - preload="metadata" par défaut (~30KB par vidéo, léger même sur 4G)
+ * - Quand la vidéo entre dans le viewport (Intersection Observer), on
+ *   passe preload="auto" + .load() + .play() → la vidéo se télécharge
+ *   et démarre.
+ * - Hors viewport : pause + retour à preload léger.
+ * - autoplay/muted/playsInline pour la compat iOS.
  */
 export default function LazyAutoplayVideo({ src, className, style, controls = false }: Props) {
   const ref = useRef<HTMLVideoElement | null>(null)
+  const [active, setActive] = useState(false)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
 
-    const tryPlay = () => {
-      const promise = el.play()
-      if (promise && typeof promise.catch === 'function') promise.catch(() => {})
-    }
-
-    // Sécurité : tente play à intervalles réguliers la 1ère seconde
-    tryPlay()
-    const t1 = setTimeout(tryPlay, 100)
-    const t2 = setTimeout(tryPlay, 500)
-    const t3 = setTimeout(tryPlay, 1000)
-
     const obs = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
-        if (e.isIntersecting) tryPlay()
-        else el.pause()
+        if (e.isIntersecting) {
+          setActive(true)
+          el.muted = true
+          const p = el.play()
+          if (p && typeof p.catch === 'function') p.catch(() => {})
+        } else {
+          el.pause()
+        }
       })
-    }, { threshold: 0.1, rootMargin: '100px' })
+    }, { threshold: 0.25, rootMargin: '200px' })
 
     obs.observe(el)
-    return () => {
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3)
-      obs.disconnect()
-    }
+    return () => obs.disconnect()
   }, [src])
 
   return (
@@ -60,14 +55,9 @@ export default function LazyAutoplayVideo({ src, className, style, controls = fa
       loop
       playsInline
       controls={controls}
-      preload="auto"
-      onLoadedMetadata={(e) => {
-        const v = e.currentTarget
-        v.muted = true
-        const p = v.play()
-        if (p && typeof p.catch === 'function') p.catch(() => {})
-      }}
+      preload={active ? 'auto' : 'metadata'}
       onCanPlay={(e) => {
+        if (!active) return
         const v = e.currentTarget
         v.muted = true
         const p = v.play()
