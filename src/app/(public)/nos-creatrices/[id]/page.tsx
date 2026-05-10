@@ -521,39 +521,44 @@ export default function CreateurPage() {
             </div>
           )
 
-          // MOBILE : alternance 2 vidéos côte à côte / 6 produits (3 lignes × 2 cols)
+          // MOBILE : pattern alterné 2 vidéos côte à côte / 1 vidéo pleine largeur, 6 produits 2x2 entre
           const renderMobileAlternated = () => {
-            const vids = (creatrice.videos || []).slice(0, 6)
-            const chunks = Math.ceil(vids.length / 2)
+            const vids = creatrice.videos || []
+            const blocks: Array<{ videoSlice: string[], productSlice: typeof sliced, bi: number }> = []
+            let videoIdx = 0
+            let bi = 0
+            while (videoIdx < vids.length || bi * 6 < sliced.length) {
+              const count = bi % 2 === 0 ? 2 : 1 // pair → 2 vidéos, impair → 1
+              const videoSlice = vids.slice(videoIdx, videoIdx + count)
+              videoIdx += videoSlice.length
+              const productSlice = sliced.slice(bi * 6, bi * 6 + 6)
+              if (videoSlice.length === 0 && productSlice.length === 0) break
+              blocks.push({ videoSlice, productSlice, bi })
+              bi++
+            }
             return (
               <div className="sm:hidden">
-                {Array.from({ length: chunks }).map((_, bi) => {
-                  const videoSlice = vids.slice(bi * 2, bi * 2 + 2)
-                  const productSlice = sliced.slice(bi * 6, bi * 6 + 6)
+                {blocks.map(({ videoSlice, productSlice, bi }) => {
                   const isPair = videoSlice.length === 2
                   return (
                     <div key={`mobile-${bi}`}>
-                      <div className={isPair ? 'grid grid-cols-2' : 'block'} style={{ borderTop: '1px solid #000' }}>
-                        {videoSlice.map((url, vi) => (
-                          <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: isPair && vi === 0 ? '1px solid #000' : 'none' }}>
-                            {/\.mp4(\?|$)/i.test(url) ? (
-                              <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
-                            ) : instagramEmbed(url) ? (
-                              <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
+                      {videoSlice.length > 0 && (
+                        <div className={isPair ? 'grid grid-cols-2' : 'block'} style={{ borderTop: '1px solid #000' }}>
+                          {videoSlice.map((url, vi) => (
+                            <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: isPair && vi === 0 ? '1px solid #000' : 'none' }}>
+                              {/\.mp4(\?|$)/i.test(url) ? (
+                                <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
+                              ) : instagramEmbed(url) ? (
+                                <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {productSlice.length > 0 && renderProducts(productSlice, `mobile-prods-${bi}`)}
                     </div>
                   )
                 })}
-                {/* Reste des produits si plus que (chunks × 6) */}
-                {(() => {
-                  const consumed = chunks * 6
-                  const rest = sliced.slice(consumed)
-                  return rest.length > 0 ? renderProducts(rest, 'mobile-rest') : null
-                })()}
               </div>
             )
           }
