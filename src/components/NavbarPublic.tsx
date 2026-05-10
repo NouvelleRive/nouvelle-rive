@@ -16,7 +16,7 @@ export default function NavbarPublic() {
   const [compteHref, setCompteHref] = useState('/client/login')
   const { count, hydrated } = useCart()
   const videoRef = useRef<HTMLVideoElement>(null)
-  const showVideo = pathname === '/boutique'
+  const showVideo = pathname === '/' || pathname === '/boutique'
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = 0.25
