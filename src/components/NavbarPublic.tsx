@@ -16,7 +16,7 @@ export default function NavbarPublic() {
   const [compteHref, setCompteHref] = useState('/client/login')
   const { count, hydrated } = useCart()
   const videoRef = useRef<HTMLVideoElement>(null)
-  const showVideo = pathname === '/' || pathname === '/boutique'
+  const showVideo = pathname === '/'
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = 0.25
@@ -33,7 +33,7 @@ export default function NavbarPublic() {
   }, [])
 
   const boutiqueLinks = [
-    { href: '/boutique', label: t('TOUT VOIR', 'SEE ALL', lang) },
+    { href: '/', label: t('TOUT VOIR', 'SEE ALL', lang) },
     { href: '/nous-rencontrer', label: t('IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES', 'IRL: OUR BOUTIQUE — 8 RUE DES ECOUFFES', lang) },
     { href: '/ete', label: t('ÉTÉ', 'SUMMER', lang) },
     { href: '/soiree', label: t('SOIRÉE', 'EVENING', lang) },

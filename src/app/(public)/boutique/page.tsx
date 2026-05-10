@@ -1,5 +1,5 @@
-import BoutiqueListing from '@/components/BoutiqueListing'
+import { permanentRedirect } from 'next/navigation'
 
-export default function BoutiquePage() {
-  return <BoutiqueListing />
+export default function BoutiqueRedirect() {
+  permanentRedirect('/')
 }
