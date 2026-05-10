@@ -66,6 +66,7 @@ export default function CoupsDeCoeurPage() {
     <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       <div className="px-6 py-20">
         <h1
+          id="titre"
           style={{
             fontSize: 'clamp(40px, 8vw, 120px)',
             fontWeight: 700,

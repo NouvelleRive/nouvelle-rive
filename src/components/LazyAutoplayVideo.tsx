@@ -37,7 +37,7 @@ export default function LazyAutoplayVideo({ src, className, style, controls = fa
           el.pause()
         }
       })
-    }, { threshold: 0.25, rootMargin: '200px' })
+    }, { threshold: 0.01, rootMargin: '600px' })
 
     obs.observe(el)
     return () => obs.disconnect()

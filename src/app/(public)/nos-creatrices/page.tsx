@@ -83,6 +83,7 @@ export default function NosCreateursPage() {
       {/* Header */}
       <div className="px-6 py-20" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
         <h1
+          id="titre"
           style={{
             fontSize: 'clamp(28px, 8vw, 120px)',
             fontWeight: 700,

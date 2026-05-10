@@ -150,6 +150,7 @@ export default function AteliersPage() {
       <div className="border-b border-black">
         <div className="max-w-4xl mx-auto px-6 py-16">
           <h1
+            id="titre"
             className="text-4xl md:text-6xl font-bold tracking-tight mb-8"
             style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
           >

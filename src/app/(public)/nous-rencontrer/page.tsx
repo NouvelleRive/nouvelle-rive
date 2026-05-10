@@ -70,6 +70,7 @@ export default function NousRencontrerPage() {
         {/* Hero */}
         <div className="px-6 py-20">
           <h1
+            id="titre"
             style={{
               fontSize: 'clamp(40px, 8vw, 120px)',
               fontWeight: '700',

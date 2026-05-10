@@ -542,19 +542,26 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                   <img
                     src={getCloudinaryUrl(produit.imageUrls[0])}
                     alt={produit.nom}
-                    className={`w-full h-full object-cover transition duration-500 ${produit.imageUrls[1] ? 'group-hover:opacity-0' : 'group-hover:scale-105'}`}
+                    className={`w-full h-full object-cover transition duration-500 ${produit.vendu ? 'opacity-50' : ''} ${produit.imageUrls[1] ? 'group-hover:opacity-0' : 'group-hover:scale-105'}`}
                   />
                   {produit.imageUrls[1] && (
                     <img
                       src={getCloudinaryUrl(produit.imageUrls[1])}
                       alt={`${produit.nom} 2`}
-                      className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition duration-500"
+                      className={`absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition duration-500 ${produit.vendu ? 'group-hover:opacity-50' : ''}`}
                     />
                   )}
                 </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300">
                     {t("Pas d'image", 'No image', lang)}
+                  </div>
+                )}
+                {produit.vendu && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="bg-black text-white text-[10px] md:text-xs font-bold uppercase tracking-widest px-3 py-1.5" style={{ letterSpacing: '0.2em' }}>
+                      {t('Vendu', 'Sold out', lang)}
+                    </span>
                   </div>
                 )}
               </div>
