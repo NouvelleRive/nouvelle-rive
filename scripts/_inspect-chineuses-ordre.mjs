@@ -1,7 +1,7 @@
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { config } from 'dotenv'
-config({ path: '/Users/salomekassabi/Desktop/nouvelle-rive/.env.local' })
+config({ path: new URL('../.env.local', import.meta.url).pathname })
 
 if (!getApps().length) {
   initializeApp({

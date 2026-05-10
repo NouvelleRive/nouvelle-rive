@@ -21,9 +21,10 @@ async function upload(localPath, bunnyPath) {
 }
 
 const ts = Date.now()
-const bagueVoiture = await upload('/Users/salomekassabi/Desktop/IMG_4557.jpg', `iconiques/bague-voiture-3-${ts}.jpg`)
-const collierMontre1 = await upload('/Users/salomekassabi/Desktop/IMG_4558.jpg', `iconiques/collier-montre-2-${ts}.jpg`)
-const collierMontre2 = await upload('/Users/salomekassabi/Desktop/IMG_4559.jpg', `iconiques/collier-montre-3-${ts}.jpg`)
+const HOME = process.env.HOME
+const bagueVoiture = await upload(`${HOME}/Desktop/IMG_4557.jpg`, `iconiques/bague-voiture-3-${ts}.jpg`)
+const collierMontre1 = await upload(`${HOME}/Desktop/IMG_4558.jpg`, `iconiques/collier-montre-2-${ts}.jpg`)
+const collierMontre2 = await upload(`${HOME}/Desktop/IMG_4559.jpg`, `iconiques/collier-montre-3-${ts}.jpg`)
 console.log('Uploaded:')
 console.log('  bague voiture:', bagueVoiture)
 console.log('  collier montre dos:', collierMontre1)

@@ -43,7 +43,7 @@ for (const v of luckies) {
   console.log(`  [${date}] ${sku.padEnd(12)} ${prix}€  - ${nom.slice(0, 50)}`)
 }
 
-writeFileSync('/Users/salomekassabi/Desktop/luckies-ventes-avril-mai-2026.csv', rows.join('\n'))
+writeFileSync(`${process.env.HOME}/Desktop/luckies-ventes-avril-mai-2026.csv`, rows.join('\n'))
 console.log(`\n💰 Total CA Luckies avril+mai : ${totalCA.toLocaleString('fr-FR')}€`)
 console.log('📄 CSV : ~/Desktop/luckies-ventes-avril-mai-2026.csv')
 process.exit(0)
