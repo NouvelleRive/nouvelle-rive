@@ -58,7 +58,7 @@ export default function Page() {
         </h1>
       </div>
       <div className="w-full border-t border-black" />
-      <ProductGrid produits={produitsMixes} columns={3} emphasizeBrand />
+      <ProductGrid produits={produitsMixes} columns={3} emphasizeBrand videoTrigrammeWhitelist={['PS', 'SOI', 'PRI']} />
       {loadingMore && (
         <div className="py-8 text-center">
           <p className="text-gray-500 text-sm">{t('Chargement...', 'Loading...', lang)}</p>

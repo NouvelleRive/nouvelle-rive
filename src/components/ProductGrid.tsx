@@ -87,6 +87,10 @@ interface ProductGridProps {
   columns?: 1 | 2 | 3 | 4
   showFilters?: boolean
   emphasizeBrand?: boolean
+  /** Si défini, seules les chineuses dont le trigramme est dans cette liste peuvent
+   *  fournir une vidéo intercalée dans la grille. Utilisé sur /luxe pour ne montrer
+   *  que les vidéos PS / SOI / PRI. */
+  videoTrigrammeWhitelist?: string[]
 }
 
 function getCloudinaryUrl(url: string, size: number = 800): string {
@@ -103,7 +107,7 @@ function getCloudinaryUrl(url: string, size: number = 800): string {
   return url.replace('/upload/', `/upload/${transformations}/`)
 }
 
-export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false }: ProductGridProps) {
+export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist }: ProductGridProps) {
   const lang = useLang()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
@@ -385,8 +389,13 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   const displayItems: DisplayItem[] = useMemo(() => {
     const items: DisplayItem[] = []
     const videoCounter = new Map<string, number>()
+    // Whitelist optionnelle de trigrammes (utilisée sur /luxe pour ne garder que PS/SOI/PRI)
+    const whitelist = videoTrigrammeWhitelist && videoTrigrammeWhitelist.length > 0
+      ? new Set(videoTrigrammeWhitelist.map(t => t.toUpperCase()))
+      : null
+    const isAllowed = (c: ChineuseLite) => !whitelist || whitelist.has((c.trigramme || '').toUpperCase())
     // Pool global de chineuses qui ont au moins une vidéo (pour le fallback ultime)
-    const chineusesAvecVideos = chineuses.filter(c => c.videos.length > 0)
+    const chineusesAvecVideos = chineuses.filter(c => c.videos.length > 0 && isAllowed(c))
     let globalFallbackIdx = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
@@ -397,7 +406,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       const groupStart = i - 7
       for (let j = i; j >= groupStart; j--) {
         const c = findChineuseForProduct(filteredProduits[j])
-        if (c && c.videos.length > 0) { chosen = c; break }
+        if (c && c.videos.length > 0 && isAllowed(c)) { chosen = c; break }
       }
       // 2) Fallback global : aucune chineuse du groupe n'a de vidéo, on rotate sur le pool global
       if (!chosen && chineusesAvecVideos.length > 0) {
@@ -411,7 +420,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       items.push({ type: 'video', key: `v-${i}-${chosen.uid}`, videoUrl: url, chineuseSlug: chosen.slug })
     }
     return items
-  }, [filteredProduits, chineuses, chineuseLookup])
+  }, [filteredProduits, chineuses, chineuseLookup, videoTrigrammeWhitelist])
 
   const resetFilters = () => {
     setFilters({
