@@ -43,11 +43,12 @@ export default function LazyAutoplayVideo({ src, className, style, controls = tr
       data-src={src}
       className={className}
       style={style}
+      autoPlay
       muted
       loop
       playsInline
       controls={controls}
-      preload="none"
+      preload="metadata"
     />
   )
 }
