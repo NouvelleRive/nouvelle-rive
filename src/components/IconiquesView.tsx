@@ -79,6 +79,8 @@ type Props = {
   emptyEn?: string
   /** Affiche "VALEUR NEUF" + "TENDANCE MARCHÉ" (utile pour vintage, pas pour upcy). */
   showMarketBlock?: boolean
+  /** Si défini, le slider s'ouvre directement sur l'iconique correspondant à ce slug. */
+  initialSlug?: string
 }
 
 export default function IconiquesView({
@@ -90,6 +92,7 @@ export default function IconiquesView({
   emptyFr = 'Aucun produit iconique pour le moment',
   emptyEn = 'No iconic pieces yet',
   showMarketBlock = true,
+  initialSlug,
 }: Props) {
   const lang = useLang()
   const [iconiques, setIconiques] = useState<Iconique[]>([])
@@ -147,6 +150,19 @@ export default function IconiquesView({
         const initialIndices: { [key: string]: number } = {}
         data.forEach(item => { initialIndices[item.id] = 0 })
         setImageIndices(initialIndices)
+        // Si un slug initial est fourni, ouvrir directement sur cet iconique.
+        if (initialSlug) {
+          const idx = data.findIndex(i => i.slug === initialSlug)
+          if (idx > 0) {
+            setCurrentIndex(idx)
+            // Scroll au prochain tick une fois le DOM rendu.
+            requestAnimationFrame(() => {
+              if (sliderRef.current) {
+                sliderRef.current.scrollTo({ left: idx * sliderRef.current.offsetWidth, behavior: 'auto' })
+              }
+            })
+          }
+        }
         setLoadingIcons(false) // ← la page se rend ici, le grid produits chargera ensuite
 
         // 2) Produits actifs (vendu==false) en background.
