@@ -85,12 +85,21 @@ export default function NavbarPublic() {
             preload="metadata"
             className="w-full h-[45vh] md:h-screen object-cover block"
           />
-          {/* Burger + Logo top-left sur fond blanc */}
+          {/* Burger + Logo top-left — homepage : pas de fond blanc, texte blanc sur la vidéo */}
           <div
-            className="absolute top-4 left-4 md:top-6 md:left-6 bg-white px-2 md:px-3 py-1 z-10 flex items-center gap-2"
+            className="absolute top-4 left-4 md:top-6 md:left-6 z-10 flex items-center gap-2"
             style={{ fontFamily: fontHelvetica }}
           >
-            <Burger onClick={() => setNavOpen((v) => !v)} />
+            <button
+              onClick={() => setNavOpen((v) => !v)}
+              aria-label="Menu"
+              className="flex flex-col justify-center gap-[5px] p-2 cursor-pointer"
+              style={{ background: 'transparent', border: 'none' }}
+            >
+              <span style={{ width: 22, height: 2, background: '#fff', display: 'block' }} />
+              <span style={{ width: 22, height: 2, background: '#fff', display: 'block' }} />
+              <span style={{ width: 22, height: 2, background: '#fff', display: 'block' }} />
+            </button>
             <h1
               className="uppercase whitespace-nowrap"
               style={{
@@ -98,21 +107,21 @@ export default function NavbarPublic() {
                 fontWeight: '700',
                 letterSpacing: '-0.01em',
                 lineHeight: '1',
-                color: '#000',
+                color: '#fff',
               }}
             >
               NOUVELLE RIVE
             </h1>
           </div>
-          {/* Boutons top-right sur fond blanc */}
+          {/* Boutons top-right — homepage : pas de fond blanc, contours et texte blancs */}
           <div
-            className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10 bg-white px-3 py-2"
-            style={{ fontFamily: fontHelvetica }}
+            className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10"
+            style={{ fontFamily: fontHelvetica, color: '#fff' }}
           >
-            <LanguageSwitcher />
+            <LanguageSwitcher whiteOnVideo />
             <Link
               href="/panier"
-              className="relative px-3 md:px-4 py-2 border border-black text-black hover:bg-black hover:text-white transition-all duration-200"
+              className="relative px-3 md:px-4 py-2 border border-white text-white hover:bg-white hover:text-black transition-all duration-200"
               style={{
                 fontSize: '9px',
                 letterSpacing: '0.1em',
@@ -124,7 +133,7 @@ export default function NavbarPublic() {
             </Link>
             <Link
               href={compteHref}
-              className="px-3 md:px-4 py-2 border border-black text-black hover:bg-black hover:text-white transition-all duration-200"
+              className="px-3 md:px-4 py-2 border border-white text-white hover:bg-white hover:text-black transition-all duration-200"
               style={{
                 fontSize: '9px',
                 letterSpacing: '0.1em',
@@ -139,7 +148,7 @@ export default function NavbarPublic() {
       )}
 
       <nav
-        className="bg-transparent relative"
+        className={`relative ${showVideo ? 'bg-transparent' : 'bg-white'}`}
         style={{ fontFamily: fontHelvetica, zIndex: 10 }}
       >
         <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex flex-col gap-2`}>

@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { getStoredLang, setStoredLang, type Lang } from '@/lib/i18n'
 
-export default function LanguageSwitcher() {
+export default function LanguageSwitcher({ whiteOnVideo = false }: { whiteOnVideo?: boolean } = {}) {
   const [lang, setLang] = useState<Lang>('fr')
+  const color = whiteOnVideo ? '#fff' : '#000'
 
   useEffect(() => {
     setLang(getStoredLang())
@@ -31,7 +32,7 @@ export default function LanguageSwitcher() {
         fontSize: '9px',
         letterSpacing: '0.1em',
         fontWeight: 600,
-        color: '#000',
+        color,
       }}
     >
       <button
@@ -40,21 +41,21 @@ export default function LanguageSwitcher() {
         aria-pressed={lang === 'fr'}
         className="px-1 transition-opacity"
         style={{
-          color: '#000',
+          color,
           opacity: lang === 'fr' ? 1 : 0.45,
           textDecoration: lang === 'fr' ? 'underline' : 'none',
         }}
       >
         FR
       </button>
-      <span style={{ color: '#000', opacity: 0.45 }}>/</span>
+      <span style={{ color, opacity: 0.45 }}>/</span>
       <button
         type="button"
         onClick={() => choose('en')}
         aria-pressed={lang === 'en'}
         className="px-1 transition-opacity"
         style={{
-          color: '#000',
+          color,
           opacity: lang === 'en' ? 1 : 0.45,
           textDecoration: lang === 'en' ? 'underline' : 'none',
         }}
