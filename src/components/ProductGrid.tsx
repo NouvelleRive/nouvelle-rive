@@ -375,13 +375,6 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     4: 'grid-cols-2 lg:grid-cols-4',
   }
 
-  const colSpanFull = {
-    1: 'col-span-1',
-    2: 'col-span-2',
-    3: 'col-span-2 lg:col-span-3',
-    4: 'col-span-2 lg:col-span-4',
-  }
-
   // Toutes les 8 pièces, on intercale une vidéo de la chineuse de la 8e pièce.
   // Si elle n'a pas de vidéo, on remonte à la 7e, 6e... jusqu'à en trouver une.
   // On rotate par chineuse pour ne pas remettre toujours la même vidéo.
@@ -519,10 +512,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               <Link
                 key={item.key}
                 href={`/nos-creatrices/${item.chineuseSlug}`}
-                className={`${colSpanFull[columns]} block`}
+                className="col-span-2 lg:col-span-1 block"
                 style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
               >
-                <div className="w-full" style={{ aspectRatio: '9 / 16' }}>
+                <div className="w-full aspect-[9/16] lg:aspect-square">
                   <LazyAutoplayVideo src={item.videoUrl} className="w-full h-full object-cover" />
                 </div>
               </Link>
