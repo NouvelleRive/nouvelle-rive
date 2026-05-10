@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const baseDesc =
       accroche ||
       (description ? description.split(/[.!?]/)[0].trim() : '') ||
-      `${nom} — créatrice et chineuse vintage chez Nouvelle Rive. Sa sélection de pièces vintage et upcyclées à Paris, chinées avec amour.`
+      `${nom} — créatrice et chineuse vintage chez NOUVELLE RIVE. Sa sélection de pièces vintage et upcyclées à Paris, chinées avec amour.`
     const cleanDesc = baseDesc.length > 155 ? baseDesc.slice(0, 152).trim() + '…' : baseDesc
 
     const url = `${BASE_URL}/nos-creatrices/${id}`
@@ -36,17 +36,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description: cleanDesc,
       alternates: { canonical: url },
       openGraph: {
-        title: `${nom} — Nouvelle Rive`,
+        title: `${nom} — NOUVELLE RIVE`,
         description: cleanDesc,
         url,
         type: 'profile',
-        siteName: 'Nouvelle Rive',
-        images: [{ url: image, alt: `${nom} — créatrice Nouvelle Rive` }],
+        siteName: 'NOUVELLE RIVE',
+        images: [{ url: image, alt: `${nom} — créatrice NOUVELLE RIVE` }],
         locale: 'fr_FR',
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${nom} — Nouvelle Rive`,
+        title: `${nom} — NOUVELLE RIVE`,
         description: cleanDesc,
         images: [image],
       },

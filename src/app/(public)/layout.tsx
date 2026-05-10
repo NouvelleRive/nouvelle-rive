@@ -5,8 +5,8 @@ const localBusinessJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ClothingStore',
   '@id': 'https://www.nouvellerive.eu/#store',
-  name: 'Nouvelle Rive',
-  alternateName: 'Nouvelle Rive Paris',
+  name: 'NOUVELLE RIVE',
+  alternateName: 'NOUVELLE RIVE Paris',
   description:
     "Boutique vintage et upcyclée au cœur du Marais à Paris. Pièces uniques chinées par des créatrices indépendantes — vintage de luxe, upcycling, créateurs.",
   url: 'https://www.nouvellerive.eu',
@@ -52,7 +52,7 @@ const websiteJsonLd = {
   '@type': 'WebSite',
   '@id': 'https://www.nouvellerive.eu/#website',
   url: 'https://www.nouvellerive.eu',
-  name: 'Nouvelle Rive',
+  name: 'NOUVELLE RIVE',
   description: 'Boutique vintage et upcyclée au cœur du Marais à Paris.',
   inLanguage: 'fr-FR',
   potentialAction: {

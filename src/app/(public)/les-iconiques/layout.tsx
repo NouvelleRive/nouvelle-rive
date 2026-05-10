@@ -3,21 +3,21 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Les iconiques du vintage',
   description:
-    "Les pièces iconiques du vintage, sélectionnées par Nouvelle Rive : Levi's 501, sacs Hermès, perfectos, Burberry, blazers ÂGE Paris… Les essentiels intemporels chinés à Paris, dans notre boutique du Marais.",
+    "Les pièces iconiques du vintage, sélectionnées par NOUVELLE RIVE : Levi's 501, sacs Hermès, perfectos, Burberry, blazers ÂGE Paris… Les essentiels intemporels chinés à Paris, dans notre boutique du Marais.",
   alternates: { canonical: 'https://www.nouvellerive.eu/les-iconiques' },
   openGraph: {
-    title: 'Les iconiques du vintage — Nouvelle Rive',
+    title: 'Les iconiques du vintage — NOUVELLE RIVE',
     description:
-      "Les pièces iconiques du vintage chez Nouvelle Rive : les essentiels intemporels chinés à Paris.",
+      "Les pièces iconiques du vintage chez NOUVELLE RIVE : les essentiels intemporels chinés à Paris.",
     url: 'https://www.nouvellerive.eu/les-iconiques',
     type: 'website',
-    siteName: 'Nouvelle Rive',
-    images: [{ url: '/facade%20paysage.jpg', width: 1200, height: 630, alt: 'Les iconiques du vintage — Nouvelle Rive' }],
+    siteName: 'NOUVELLE RIVE',
+    images: [{ url: '/facade%20paysage.jpg', width: 1200, height: 630, alt: 'Les iconiques du vintage — NOUVELLE RIVE' }],
     locale: 'fr_FR',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Les iconiques du vintage — Nouvelle Rive',
+    title: 'Les iconiques du vintage — NOUVELLE RIVE',
     description: "Les essentiels intemporels du vintage chinés à Paris.",
     images: ['/facade%20paysage.jpg'],
   },

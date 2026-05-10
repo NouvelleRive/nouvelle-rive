@@ -8,17 +8,17 @@ export const metadata: Metadata = {
     "Boutique vintage et upcyclée au cœur du Marais à Paris. Pièces uniques chinées par des créatrices indépendantes — vintage de luxe, upcycling, créateurs. 8 rue des Ecouffes, 75004 Paris.",
   alternates: { canonical: 'https://www.nouvellerive.eu/' },
   openGraph: {
-    title: 'Nouvelle Rive — Vintage et upcyclé chinés à Paris',
+    title: 'NOUVELLE RIVE — Vintage et upcyclé chinés à Paris',
     description: "Boutique vintage et upcyclée au cœur du Marais à Paris.",
     url: 'https://www.nouvellerive.eu',
     type: 'website',
-    siteName: 'Nouvelle Rive',
-    images: [{ url: '/facade%20paysage.jpg', width: 1200, height: 630, alt: 'Nouvelle Rive — Boutique 8 rue des Ecouffes, Le Marais' }],
+    siteName: 'NOUVELLE RIVE',
+    images: [{ url: '/facade%20paysage.jpg', width: 1200, height: 630, alt: 'NOUVELLE RIVE — Boutique 8 rue des Ecouffes, Le Marais' }],
     locale: 'fr_FR',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Nouvelle Rive — Vintage et upcyclé chinés à Paris',
+    title: 'NOUVELLE RIVE — Vintage et upcyclé chinés à Paris',
     description: "Boutique vintage et upcyclée au cœur du Marais à Paris.",
     images: ['/facade%20paysage.jpg'],
   },
@@ -103,7 +103,7 @@ export default async function HomePage() {
             className="uppercase mb-6"
             style={{ fontSize: 'clamp(48px, 12vw, 120px)', fontWeight: 700, lineHeight: 0.95, letterSpacing: '-0.01em' }}
           >
-            Nouvelle Rive
+            NOUVELLE RIVE
           </h1>
           <p
             className="uppercase mb-10"
@@ -253,7 +253,7 @@ export default async function HomePage() {
         <div className="overflow-hidden" style={{ minHeight: '320px' }}>
           <img
             src="/facade%20paysage.jpg"
-            alt="Boutique Nouvelle Rive — 8 rue des Ecouffes, Le Marais Paris"
+            alt="Boutique NOUVELLE RIVE — 8 rue des Ecouffes, Le Marais Paris"
             className="w-full h-full object-cover"
             style={{ minHeight: '320px' }}
           />

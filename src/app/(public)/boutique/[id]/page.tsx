@@ -96,12 +96,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 
   const titleBase = buildTitle(produit)
-  const baseDescription = produit.description?.trim() || `${titleBase} — pièce vintage chinée à Paris, sélectionnée par Nouvelle Rive.`
+  const baseDescription = produit.description?.trim() || `${titleBase} — pièce vintage chinée à Paris, sélectionnée par NOUVELLE RIVE.`
   const description = baseDescription.length > 155 ? `${baseDescription.slice(0, 152).trim()}…` : baseDescription
 
   const image = produit.imageUrls?.[0] || produit.photos?.face || `${BASE_URL}/icon-512.png`
   const url = `${BASE_URL}/boutique/${produit.id}`
-  const ogTitle = `${titleBase} — Nouvelle Rive`
+  const ogTitle = `${titleBase} — NOUVELLE RIVE`
 
   return {
     title: titleBase,
@@ -112,7 +112,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description,
       url,
       type: 'website',
-      siteName: 'Nouvelle Rive',
+      siteName: 'NOUVELLE RIVE',
       images: [{ url: image, alt: titleBase }],
       locale: 'fr_FR',
     },
@@ -150,7 +150,7 @@ export default async function ProduitPage({ params }: { params: Promise<{ id: st
       price: produit.prix,
       availability: produit.vendu ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
       itemCondition: 'https://schema.org/UsedCondition',
-      seller: { '@type': 'Organization', name: 'Nouvelle Rive' },
+      seller: { '@type': 'Organization', name: 'NOUVELLE RIVE' },
     },
   }
   if (image) jsonLd.image = [image]

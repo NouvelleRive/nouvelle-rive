@@ -3,20 +3,20 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Vintage homme — vestes, chemises, costumes',
   description:
-    "Pièces vintage et upcyclées homme chez Nouvelle Rive : vestes, chemises, costumes, denim, accessoires. Une sélection chinée à Paris, dans notre boutique du Marais.",
+    "Pièces vintage et upcyclées homme chez NOUVELLE RIVE : vestes, chemises, costumes, denim, accessoires. Une sélection chinée à Paris, dans notre boutique du Marais.",
   alternates: { canonical: 'https://www.nouvellerive.eu/homme' },
   openGraph: {
-    title: 'Vintage homme — Nouvelle Rive',
+    title: 'Vintage homme — NOUVELLE RIVE',
     description: 'Pièces vintage et upcyclées homme chinées à Paris.',
     url: 'https://www.nouvellerive.eu/homme',
     type: 'website',
-    siteName: 'Nouvelle Rive',
-    images: [{ url: '/facade%20paysage.jpg', width: 1200, height: 630, alt: 'Vintage homme — Nouvelle Rive' }],
+    siteName: 'NOUVELLE RIVE',
+    images: [{ url: '/facade%20paysage.jpg', width: 1200, height: 630, alt: 'Vintage homme — NOUVELLE RIVE' }],
     locale: 'fr_FR',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vintage homme — Nouvelle Rive',
+    title: 'Vintage homme — NOUVELLE RIVE',
     description: 'Pièces vintage et upcyclées homme chinées à Paris.',
     images: ['/facade%20paysage.jpg'],
   },
