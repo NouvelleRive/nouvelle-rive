@@ -74,8 +74,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
-      <body className="font-sans bg-white text-black antialiased">
+    <html lang="fr" className="overflow-x-hidden">
+      <body className="font-sans bg-white text-black antialiased overflow-x-hidden">
         <ConditionalBackground />
         <RegisterSW />
         <div className="relative" style={{ zIndex: 10 }}>
