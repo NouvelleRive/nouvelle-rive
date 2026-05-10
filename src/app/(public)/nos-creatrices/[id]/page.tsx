@@ -544,6 +544,7 @@ export default function CreateurPage() {
                   const isPair = videoSlice.length === 2
                   return (
                     <div key={`mobile-${bi}`}>
+                      {productSlice.length > 0 && renderProducts(productSlice, `mobile-prods-${bi}`)}
                       {videoSlice.length > 0 && (
                         <div className={isPair ? 'grid grid-cols-2' : 'block'} style={{ borderTop: '1px solid #000' }}>
                           {videoSlice.map((url, vi) => (
@@ -557,7 +558,6 @@ export default function CreateurPage() {
                           ))}
                         </div>
                       )}
-                      {productSlice.length > 0 && renderProducts(productSlice, `mobile-prods-${bi}`)}
                     </div>
                   )
                 })}
