@@ -2,14 +2,26 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '@/lib/firebaseConfig'
 import FavoriteButton from '@/components/FavoriteButton'
+import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { COLOR_PALETTE } from '@/lib/couleurs'
 import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
+
+type ChineuseLite = {
+  uid: string
+  slug: string
+  trigramme: string
+  email: string
+  emails: string[]
+  videos: string[]
+}
 
 function formatDisplayTitle(produit: Produit, lang: Lang = 'fr'): string {
   // Si traduction Firestore dispo en EN, on l'utilise direct (priorité absolue)

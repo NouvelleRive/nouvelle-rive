@@ -350,7 +350,7 @@ export default function IconiquesView({
         <button
           onClick={() => scroll('left')}
           aria-label="Précédent"
-          className="absolute left-2 md:left-6 top-[28vw] md:top-[35vh] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
+          className="absolute left-2 md:left-6 top-[50vw] md:top-[35vh] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
         >
           <svg className="w-10 h-10 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -360,7 +360,7 @@ export default function IconiquesView({
         <button
           onClick={() => scroll('right')}
           aria-label="Suivant"
-          className="absolute right-2 md:right-6 top-[28vw] md:top-[35vh] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
+          className="absolute right-2 md:right-6 top-[50vw] md:top-[35vh] -translate-y-1/2 z-20 p-3 hover:opacity-50 transition-opacity"
         >
           <svg className="w-10 h-10 md:w-14 md:h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
