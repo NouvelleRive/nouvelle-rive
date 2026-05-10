@@ -286,6 +286,29 @@ export default function IconiquesView({
     setCurrentIndex(newIndex)
   }
 
+  // Au chargement (une fois iconiques chargées), restaure la position depuis le hash URL (#N).
+  useEffect(() => {
+    if (iconiques.length === 0 || !sliderRef.current) return
+    const h = window.location.hash.replace('#', '')
+    const n = parseInt(h, 10)
+    if (!isNaN(n) && n >= 1 && n <= iconiques.length) {
+      const idx = n - 1
+      const cardWidth = sliderRef.current.offsetWidth
+      sliderRef.current.scrollTo({ left: idx * cardWidth, behavior: 'auto' })
+      setCurrentIndex(idx)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iconiques.length])
+
+  // À chaque changement d'iconique courante, met à jour le hash URL sans recharger.
+  useEffect(() => {
+    if (iconiques.length === 0) return
+    const newHash = `#${currentIndex + 1}`
+    if (window.location.hash !== newHash) {
+      history.replaceState(null, '', window.location.pathname + window.location.search + newHash)
+    }
+  }, [currentIndex, iconiques.length])
+
   useEffect(() => {
     if (iconiques.length === 0) return
 
