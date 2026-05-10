@@ -500,29 +500,35 @@ export default function CreateurPage() {
             </div>
           )
 
-          // MOBILE : alternance 1 vidéo (pleine largeur) / 6 produits (3 lignes × 2 cols)
+          // MOBILE : alternance 2 vidéos côte à côte / 6 produits (3 lignes × 2 cols)
           const renderMobileAlternated = () => {
             const vids = (creatrice.videos || []).slice(0, 6)
+            const chunks = Math.ceil(vids.length / 2)
             return (
               <div className="sm:hidden">
-                {vids.map((url, bi) => {
+                {Array.from({ length: chunks }).map((_, bi) => {
+                  const videoSlice = vids.slice(bi * 2, bi * 2 + 2)
                   const productSlice = sliced.slice(bi * 6, bi * 6 + 6)
                   return (
                     <div key={`mobile-${bi}`}>
-                      <div className="w-full" style={{ aspectRatio: '9 / 16', borderTop: '1px solid #000' }}>
-                        {/\.mp4(\?|$)/i.test(url) ? (
-                          <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
-                        ) : instagramEmbed(url) ? (
-                          <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
-                        ) : null}
+                      <div className="grid grid-cols-2" style={{ borderTop: '1px solid #000' }}>
+                        {videoSlice.map((url, vi) => (
+                          <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
+                            {/\.mp4(\?|$)/i.test(url) ? (
+                              <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
+                            ) : instagramEmbed(url) ? (
+                              <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                            ) : null}
+                          </div>
+                        ))}
                       </div>
                       {productSlice.length > 0 && renderProducts(productSlice, `mobile-prods-${bi}`)}
                     </div>
                   )
                 })}
-                {/* Reste des produits si plus que (vidéos × 6) */}
+                {/* Reste des produits si plus que (chunks × 6) */}
                 {(() => {
-                  const consumed = vids.length * 6
+                  const consumed = chunks * 6
                   const rest = sliced.slice(consumed)
                   return rest.length > 0 ? renderProducts(rest, 'mobile-rest') : null
                 })()}
