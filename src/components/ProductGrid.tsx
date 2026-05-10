@@ -490,10 +490,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               <Link
                 key={item.key}
                 href={`/nos-creatrices/${item.chineuseSlug}`}
-                className="col-span-2 lg:col-span-1 block"
+                className="col-span-2 lg:col-span-1 block lg:h-full"
                 style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
               >
-                <div className="w-full aspect-[9/16] lg:aspect-square">
+                {/* Mobile : ratio 9:16. Desktop : remplit toute la cellule (image+label des produits voisins) pour éviter la bande blanche en bas. */}
+                <div className="w-full aspect-[9/16] lg:aspect-auto lg:h-full">
                   <LazyAutoplayVideo src={item.videoUrl} className="w-full h-full object-cover" />
                 </div>
               </Link>
