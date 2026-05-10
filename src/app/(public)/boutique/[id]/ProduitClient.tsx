@@ -152,7 +152,7 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
                 .filter(u => /\.mp4(\?|$)/i.test(u))
                 .map((url, i) => (
                   <div key={`vid-${i}`} className="w-full" style={{ borderBottom: '1px solid #000' }}>
-                    <video src={url} className="w-full h-auto" style={{ background: '#000', display: 'block' }} autoPlay muted loop playsInline controls />
+                    <LazyAutoplayVideo src={url} className="w-full h-auto" style={{ background: '#000', display: 'block' }} />
                   </div>
                 ))}
               {/* Puis le reste des photos */}

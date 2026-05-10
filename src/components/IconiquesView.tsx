@@ -6,6 +6,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import ProductGrid from '@/components/ProductGrid'
 import FavoriteButton from '@/components/FavoriteButton'
+import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { useLang, t } from '@/lib/i18n'
 
@@ -567,7 +568,7 @@ export default function IconiquesView({
                           if (/\.mp4(\?|$)/i.test(url)) {
                             return (
                               <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                                <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
+                                <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
                               </div>
                             )
                           }
@@ -679,7 +680,7 @@ export default function IconiquesView({
                             {(() => {
                               const url = item.videos![0]
                               if (/\.mp4(\?|$)/i.test(url)) {
-                                return <video src={url} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
+                                return <LazyAutoplayVideo src={url} className="w-full h-full object-cover" />
                               }
                               const embed = instagramEmbed(url)
                               if (!embed) return null
@@ -746,7 +747,7 @@ export default function IconiquesView({
                                 {videoSlice.map((videoUrl, vi) => (
                                   <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
                                     {/\.mp4(\?|$)/i.test(videoUrl) ? (
-                                      <video src={videoUrl} className="w-full h-full object-cover" autoPlay muted loop playsInline controls />
+                                      <LazyAutoplayVideo src={videoUrl} className="w-full h-full object-cover" />
                                     ) : instagramEmbed(videoUrl) ? (
                                       <iframe src={instagramEmbed(videoUrl)!} className="w-full h-full" style={{ border: 'none' }} allowFullScreen allow="autoplay; encrypted-media" />
                                     ) : null}
