@@ -108,28 +108,25 @@ export default function NavbarPublic() {
         className="bg-transparent relative"
         style={{ fontFamily: fontHelvetica, zIndex: 10 }}
       >
-        <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex flex-col gap-3 md:flex-row md:justify-between md:items-start md:gap-0`}>
+        <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex flex-col gap-2`}>
           {!showVideo && (
-            <h1
-              className="uppercase whitespace-nowrap"
-              style={{
-                fontSize: 'clamp(28px, 9vw, 72px)',
-                fontWeight: '700',
-                letterSpacing: '-0.01em',
-                lineHeight: '1',
-                color: '#000'
-              }}
-            >
-              NOUVELLE RIVE
-            </h1>
-          )}
-
-          {!showVideo && (
-            <div className="flex flex-col items-end gap-2 self-end md:flex-row md:items-center md:gap-3 md:mt-2 md:self-auto">
-              <div className="flex items-center gap-2 md:gap-3 md:order-2">
+            <div className="flex justify-between items-center gap-3">
+              <h1
+                className="uppercase whitespace-nowrap"
+                style={{
+                  fontSize: 'clamp(20px, 6vw, 72px)',
+                  fontWeight: '700',
+                  letterSpacing: '-0.01em',
+                  lineHeight: '1',
+                  color: '#000'
+                }}
+              >
+                NOUVELLE RIVE
+              </h1>
+              <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <Link
                   href="/panier"
-                  className="relative px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+                  className="relative px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
                   style={{
                     fontSize: '9px',
                     letterSpacing: '0.1em',
@@ -141,7 +138,7 @@ export default function NavbarPublic() {
                 </Link>
                 <Link
                   href={compteHref}
-                  className="px-3 md:px-4 py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+                  className="px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
                   style={{
                     fontSize: '9px',
                     letterSpacing: '0.1em',
@@ -152,9 +149,12 @@ export default function NavbarPublic() {
                   {accountLabel}
                 </Link>
               </div>
-              <div className="md:order-1">
-                <LanguageSwitcher />
-              </div>
+            </div>
+          )}
+
+          {!showVideo && (
+            <div className="flex justify-end">
+              <LanguageSwitcher />
             </div>
           )}
         </div>
