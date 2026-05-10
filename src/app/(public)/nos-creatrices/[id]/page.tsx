@@ -533,11 +533,12 @@ export default function CreateurPage() {
                 {Array.from({ length: chunks }).map((_, bi) => {
                   const videoSlice = vids.slice(bi * 2, bi * 2 + 2)
                   const productSlice = sliced.slice(bi * 6, bi * 6 + 6)
+                  const isPair = videoSlice.length === 2
                   return (
                     <div key={`mobile-${bi}`}>
-                      <div className="grid grid-cols-2" style={{ borderTop: '1px solid #000' }}>
+                      <div className={isPair ? 'grid grid-cols-2' : 'block'} style={{ borderTop: '1px solid #000' }}>
                         {videoSlice.map((url, vi) => (
-                          <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vi === 0 ? '1px solid #000' : 'none' }}>
+                          <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: isPair && vi === 0 ? '1px solid #000' : 'none' }}>
                             {/\.mp4(\?|$)/i.test(url) ? (
                               <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
                             ) : instagramEmbed(url) ? (
