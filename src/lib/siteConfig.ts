@@ -213,15 +213,23 @@ export function useFilteredProducts(pageId: string) {
   }, [pageId, loadingMore, hasMore, lastDoc])
 
   useEffect(() => {
+    if (!hasMore) return
+
+    let ticking = false
     const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
-        loadMore()
-      }
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
+          loadMore()
+        }
+        ticking = false
+      })
     }
-    
-    window.addEventListener('scroll', handleScroll)
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [loadMore])
+  }, [loadMore, hasMore])
 
   return { produits, loading, loadingMore }
 }
