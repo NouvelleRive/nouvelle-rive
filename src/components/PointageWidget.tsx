@@ -10,6 +10,7 @@ type Vendeuse = { id: string; prenom?: string; nom?: string; actif?: boolean }
 type Pointage = { vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
 
 const STORAGE_KEY = 'nouvelle-rive-vendeuse-id'
+const BOUTIQUE_TOKEN_KEY = 'nr_boutique_token'
 
 function fmt(iso: string | null) {
   if (!iso) return '—'
@@ -37,6 +38,21 @@ export default function PointageWidget() {
   useEffect(() => {
     const t = setInterval(() => setTick(x => x + 1), 30000)
     return () => clearInterval(t)
+  }, [])
+
+  // Détecte ?setup=... dans l'URL → enregistre le device comme tel boutique
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const setup = params.get('setup')
+    if (setup) {
+      localStorage.setItem(BOUTIQUE_TOKEN_KEY, setup)
+      params.delete('setup')
+      const newSearch = params.toString()
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash
+      window.history.replaceState({}, '', newUrl)
+      alert('Ce téléphone est enregistré comme tel de la boutique.')
+    }
   }, [])
 
   // Charger les vendeuses actives
@@ -70,21 +86,17 @@ export default function PointageWidget() {
 
   const pointer = async (action: 'arrivee' | 'depart') => {
     if (!vendeuseId) return
+    const boutiqueToken = typeof window !== 'undefined' ? localStorage.getItem(BOUTIQUE_TOKEN_KEY) : null
+    if (!boutiqueToken) {
+      alert('Tu dois pointer depuis le téléphone de la boutique 💙')
+      return
+    }
     setLoading(true)
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-        if (!navigator.geolocation) return reject(new Error('Géolocalisation non disponible'))
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
-      })
       const res = await fetch('/api/pointage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vendeuseId,
-          action,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        }),
+        body: JSON.stringify({ vendeuseId, action, boutiqueToken }),
       })
       const data = await res.json()
       if (!data.success) {
@@ -104,22 +116,7 @@ export default function PointageWidget() {
         }
       }
     } catch (e: any) {
-      if (e?.code === 1) {
-        alert(
-          'Localisation refusée par Safari.\n\n' +
-          'Pour autoriser :\n\n' +
-          '• Réglages iOS → Safari → Localisation → mettre sur "Demander" ou "Autoriser"\n\n' +
-          'ou\n\n' +
-          '• Réglages iOS → Confidentialité → Service de localisation → vérifier que c\'est activé + que Safari y a accès\n\n' +
-          'Ensuite, ferme l\'onglet et rouvre nouvellerive.eu.'
-        )
-      } else if (e?.code === 3) {
-        alert('La localisation a mis trop de temps. Réessaie en sortant un instant de la boutique pour capter le GPS.')
-      } else if (e?.code === 2) {
-        alert('Localisation indisponible. Vérifie que le GPS est activé sur ton iPhone et réessaie.')
-      } else {
-        alert(e?.message || 'Erreur de localisation. Réessaie.')
-      }
+      alert(e?.message || 'Erreur de pointage. Réessaie.')
     } finally {
       setLoading(false)
     }

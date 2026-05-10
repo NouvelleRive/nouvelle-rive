@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
-import { isAtBoutique, pointageDocId } from '@/lib/pointage'
+import { pointageDocId } from '@/lib/pointage'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -73,22 +73,23 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST { vendeuseId, action: 'arrivee' | 'depart', lat, lng }
+// POST { vendeuseId, action: 'arrivee' | 'depart', boutiqueToken }
 export async function POST(req: NextRequest) {
   try {
-    const { vendeuseId, action, lat, lng } = await req.json()
+    const { vendeuseId, action, boutiqueToken } = await req.json()
     if (!vendeuseId || !action) {
       return NextResponse.json({ success: false, error: 'vendeuseId et action requis' }, { status: 400 })
     }
     if (action !== 'arrivee' && action !== 'depart') {
       return NextResponse.json({ success: false, error: 'action invalide' }, { status: 400 })
     }
-    if (typeof lat !== 'number' || typeof lng !== 'number') {
-      return NextResponse.json({ success: false, error: 'coordonnées GPS requises' }, { status: 400 })
+    const expectedToken = process.env.BOUTIQUE_DEVICE_TOKEN
+    if (!expectedToken) {
+      return NextResponse.json({ success: false, error: 'BOUTIQUE_DEVICE_TOKEN non configuré' }, { status: 500 })
     }
-    if (!isAtBoutique(lat, lng)) {
+    if (boutiqueToken !== expectedToken) {
       return NextResponse.json(
-        { success: false, error: 'Tu n\'es pas à la boutique. Réessaie depuis le 8 rue des Écouffes.' },
+        { success: false, error: 'Tu dois pointer depuis le téléphone de la boutique 💙' },
         { status: 403 }
       )
     }
@@ -108,7 +109,6 @@ export async function POST(req: NextRequest) {
         vendeuseId,
         date: dateStr,
         arrivee: Timestamp.fromDate(now),
-        arriveeGps: { lat, lng },
         createdAt: existing?.createdAt || Timestamp.fromDate(now),
       }, { merge: true })
       // Détecte les pointages passés sans départ pour rappel à la vendeuse
@@ -130,7 +130,6 @@ export async function POST(req: NextRequest) {
     }
     await ref.update({
       depart: Timestamp.fromDate(now),
-      departGps: { lat, lng },
     })
     return NextResponse.json({ success: true, action: 'depart', at: now.toISOString() })
   } catch (err: any) {
