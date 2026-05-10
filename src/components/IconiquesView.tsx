@@ -538,9 +538,11 @@ export default function IconiquesView({
                   {!sideBySide && item.videos && item.videos.length > 0 && (
                     <div className="px-6 md:px-12 py-10">
                       <div
-                        className="grid gap-6 mx-auto"
+                        className={`grid gap-6 mx-auto grid-cols-1 ${
+                          Math.min(item.videos.length, 3) === 1 ? 'sm:grid-cols-1' :
+                          Math.min(item.videos.length, 3) === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'
+                        }`}
                         style={{
-                          gridTemplateColumns: `repeat(${Math.min(item.videos.length, 3)}, minmax(0, 1fr))`,
                           maxWidth: item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
                         }}
                       >
