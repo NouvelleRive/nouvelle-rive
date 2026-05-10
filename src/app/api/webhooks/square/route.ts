@@ -143,7 +143,7 @@ async function traiterProduit(opts: {
     }
   }
 
-  // eBay
+  // Retrait eBay (Square déjà supprimé en direct au-dessus → excludeChannel='square')
   if (nouvelleQuantite === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
     try {
       await removeFromAllChannels(
@@ -153,7 +153,7 @@ async function traiterProduit(opts: {
           ebayOfferId: produitData.ebayOfferId,
           ebayListingId: produitData.ebayListingId,
         },
-        'site'
+        'square'
       )
       console.log('✅ Produit retiré d\'eBay')
     } catch (ebayError: any) {
@@ -441,13 +441,14 @@ export async function POST(request: Request) {
           console.log(`✅ Produit mis à jour: ${sku} → quantité ${newQty}`)
 
           // Vente caisse → produit épuisé : retirer aussi d'eBay s'il y était listé
+          // (Square déjà géré au-dessus pour la 1re branche, ici on est sur le path manual sale)
           if (newQty === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
             await removeFromAllChannels({
               id: produitDoc.id,
               sku: produitData.sku,
               ebayOfferId: produitData.ebayOfferId,
               ebayListingId: produitData.ebayListingId,
-            }, 'site').catch(e => console.error('⚠️ Retrait eBay (vente caisse) KO:', e?.message))
+            }, 'square').catch(e => console.error('⚠️ Retrait eBay (vente caisse) KO:', e?.message))
           }
         }
       }

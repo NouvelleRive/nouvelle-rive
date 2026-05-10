@@ -234,7 +234,7 @@ export async function POST(request: Request) {
         await produitDoc.ref.update(updateData)
         console.log(`✅ [POS] Produit mis à jour: ${produitId}`)
 
-        // Retirer d'eBay si stock à 0
+        // Retirer d'eBay si stock à 0 (Square caisse → excludeChannel='square' car la vente vient de Square)
         if (nouvelleQuantite === 0 && (produitData.ebayListingId || produitData.ebayOfferId)) {
           try {
             console.log('🇺🇸 Retrait du produit d\'eBay...')
@@ -245,7 +245,7 @@ export async function POST(request: Request) {
                 ebayOfferId: produitData.ebayOfferId,
                 ebayListingId: produitData.ebayListingId,
               },
-              'site'
+              'square'
             )
             console.log('✅ Produit retiré d\'eBay')
           } catch (ebayError: any) {

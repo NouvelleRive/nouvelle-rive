@@ -5,8 +5,104 @@
  * Utilisé quand quantite = 0 (produit vendu)
  */
 
+import { Client, Environment } from 'square'
 import { removeFromEbay, isEbayConfigured } from '@/lib/ebay'
 import { adminDb } from '@/lib/firebaseAdmin'
+
+const squareClient = new Client({
+  accessToken: process.env.SQUARE_ACCESS_TOKEN || '',
+  environment: process.env.SQUARE_ENV === 'production' ? Environment.Production : Environment.Sandbox,
+})
+
+/**
+ * Supprime variation + item du catalogue Square. Si le delete de l'item échoue,
+ * tente un archivage (isArchived=true) comme fallback. Idempotent : ignore les
+ * 404 (l'objet a déjà été supprimé).
+ */
+export async function removeProductFromSquare(
+  produit: { id: string; variationId?: string; catalogObjectId?: string; itemId?: string; sku?: string }
+): Promise<boolean> {
+  if (!process.env.SQUARE_ACCESS_TOKEN) {
+    console.log('⏭️ SQUARE_ACCESS_TOKEN absent, skip retrait Square')
+    return false
+  }
+
+  // Si les IDs ne sont pas passés, on les récupère depuis Firestore pour éviter
+  // de devoir mettre à jour chaque caller.
+  let variationId = produit.variationId || produit.catalogObjectId
+  let itemId = produit.itemId
+  if (!variationId && !itemId) {
+    try {
+      const snap = await adminDb.collection('produits').doc(produit.id).get()
+      const data = snap.data() || {}
+      variationId = (data.variationId || data.catalogObjectId) as string | undefined
+      itemId = data.itemId as string | undefined
+    } catch (err: any) {
+      console.warn(`⚠️ Lecture Firestore pour IDs Square échouée: ${err?.message}`)
+    }
+  }
+  if (!variationId && !itemId) {
+    console.log(`⏭️ Pas d'IDs Square pour ${produit.id} — skip`)
+    return false
+  }
+
+  let ok = true
+  if (variationId) {
+    try {
+      await squareClient.catalogApi.deleteCatalogObject(variationId)
+      console.log(`✅ Variation Square supprimée: ${variationId}`)
+    } catch (err: any) {
+      const status = err?.statusCode
+      if (status === 404) {
+        console.log(`ℹ️ Variation Square déjà absente: ${variationId}`)
+      } else {
+        console.warn(`⚠️ Suppression variation Square échouée: ${err?.message}`)
+        ok = false
+      }
+    }
+  }
+  if (itemId) {
+    try {
+      await squareClient.catalogApi.deleteCatalogObject(itemId)
+      console.log(`✅ Item Square supprimé: ${itemId}`)
+    } catch (err: any) {
+      const status = err?.statusCode
+      if (status === 404) {
+        console.log(`ℹ️ Item Square déjà absent: ${itemId}`)
+      } else {
+        console.warn(`⚠️ Suppression item Square échouée: ${err?.message} — tentative d'archivage`)
+        try {
+          const { result } = await squareClient.catalogApi.retrieveCatalogObject(itemId)
+          const item = result.object
+          if (item?.itemData) {
+            await squareClient.catalogApi.upsertCatalogObject({
+              idempotencyKey: `archive-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              object: {
+                id: itemId,
+                type: 'ITEM',
+                version: item.version,
+                presentAtAllLocations: false,
+                itemData: {
+                  name: item.itemData.name || 'Archived',
+                  description: item.itemData.description,
+                  categoryId: item.itemData.categoryId,
+                  variations: item.itemData.variations,
+                  productType: item.itemData.productType,
+                  isArchived: true,
+                },
+              },
+            })
+            console.log(`✅ Item Square archivé: ${itemId}`)
+          }
+        } catch (archiveErr: any) {
+          console.error(`❌ Archivage Square échoué: ${archiveErr?.message}`)
+          ok = false
+        }
+      }
+    }
+  }
+  return ok
+}
 
 /**
  * Retire un produit d'eBay et nettoie ebayListingId/ebayOfferId dans Firestore
@@ -69,6 +165,9 @@ export async function removeFromAllChannels(
     id: string
     sku?: string
     squareId?: string
+    variationId?: string
+    catalogObjectId?: string
+    itemId?: string
     ebayOfferId?: string
     ebayListingId?: string
   },
@@ -85,9 +184,13 @@ export async function removeFromAllChannels(
     )
   }
 
-  // Note: Le retrait Square est géré par les fonctions existantes
-  // (archiveOrDeleteByVariation dans tes webhooks actuels)
-  // On ne le duplique pas ici
+  // Retrait Square (sauf si vente vient de Square caisse, où le webhook a déjà supprimé l'objet).
+  // Si les IDs Square ne sont pas passés, removeProductFromSquare les lit depuis Firestore.
+  if (excludeChannel !== 'square') {
+    promises.push(
+      removeProductFromSquare(produit).then(() => undefined)
+    )
+  }
 
   await Promise.all(promises)
 
