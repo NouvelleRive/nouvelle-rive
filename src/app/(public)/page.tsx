@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import BoutiquePage from './boutique/page'
+import BoutiqueListing from '@/components/BoutiqueListing'
 
 export const metadata: Metadata = {
   title: 'Vintage et upcyclé chinés à Paris',
@@ -24,5 +24,5 @@ export const metadata: Metadata = {
 }
 
 export default function HomePage() {
-  return <BoutiquePage />
+  return <BoutiqueListing />
 }
