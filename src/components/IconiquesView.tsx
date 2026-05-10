@@ -490,7 +490,7 @@ export default function IconiquesView({
                   )}
                 </div>
 
-                <div className="p-12 md:p-16 lg:p-20 flex flex-col justify-center bg-white relative overflow-hidden">
+                <div className="px-6 pt-8 pb-6 md:p-16 lg:p-20 flex flex-col justify-center bg-white relative overflow-hidden">
                   <div
                     className="absolute pointer-events-none select-none"
                     style={{
@@ -602,7 +602,7 @@ export default function IconiquesView({
               </div>
 
               {(item.buyLink || (!sideBySide && item.videos && item.videos.length > 0)) && (
-                <div style={{ borderTop: '1px solid #000' }} className="bg-white">
+                <div style={{ borderTop: '1px solid #000' }} className={`bg-white ${item.buyLink ? '' : 'hidden sm:block'}`}>
                   {item.buyLink && (
                     <div className="px-6 md:px-12 py-8 text-center" style={{ borderBottom: !sideBySide && item.videos && item.videos.length > 0 ? '1px solid #000' : 'none' }}>
                       <a
