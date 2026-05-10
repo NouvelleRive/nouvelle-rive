@@ -527,7 +527,9 @@ export default function CreateurPage() {
             const blocks: Array<{ videoSlice: string[], productSlice: typeof sliced, bi: number }> = []
             let videoIdx = 0
             let bi = 0
-            while (videoIdx < vids.length || bi * 6 < sliced.length) {
+            // On rend des blocs tant qu'il y a DES PRODUITS à afficher (sinon on aurait des
+            // vidéos d'affilée sans rien entre, à cause du scroll infini sur les produits).
+            while (bi * 6 < sliced.length) {
               const count = bi % 2 === 0 ? 2 : 1 // pair → 2 vidéos, impair → 1
               const videoSlice = vids.slice(videoIdx, videoIdx + count)
               videoIdx += videoSlice.length
