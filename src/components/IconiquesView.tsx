@@ -347,12 +347,12 @@ export default function IconiquesView({
       <div className="w-full border-t border-black" />
 
       <div className="relative" style={{ borderBottom: '1px solid #000' }}>
-        {/* MOBILE : flèches positionnées sur le titre H2 (juste sous l'image carrée 100vw) */}
+        {/* MOBILE : flèches centrées sur le bloc titre+sous-titre, marge latérale */}
         <button
           onClick={() => scroll('left')}
           aria-label="Précédent"
-          className="md:hidden absolute left-2 z-20 p-3 hover:opacity-50 transition-opacity"
-          style={{ top: 'calc(100vw + 110px)', transform: 'translateY(-50%)' }}
+          className="md:hidden absolute left-5 z-20 p-3 hover:opacity-50 transition-opacity"
+          style={{ top: 'calc(100vw + 160px)', transform: 'translateY(-50%)' }}
         >
           <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -361,8 +361,8 @@ export default function IconiquesView({
         <button
           onClick={() => scroll('right')}
           aria-label="Suivant"
-          className="md:hidden absolute right-2 z-20 p-3 hover:opacity-50 transition-opacity"
-          style={{ top: 'calc(100vw + 110px)', transform: 'translateY(-50%)' }}
+          className="md:hidden absolute right-5 z-20 p-3 hover:opacity-50 transition-opacity"
+          style={{ top: 'calc(100vw + 160px)', transform: 'translateY(-50%)' }}
         >
           <svg className="w-10 h-10 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
