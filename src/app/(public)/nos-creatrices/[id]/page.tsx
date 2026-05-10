@@ -451,10 +451,7 @@ export default function CreateurPage() {
           const extraVideos = (creatrice.videos || []).slice(3, 6)
 
           const renderProducts = (list: typeof sliced, key: string) => {
-            const fewItems = list.length < 3
-            const wrapperStyle: any = fewItems
-              ? { maxWidth: `${list.length * 33.33}%`, margin: '0 auto', borderLeft: '1px solid #000' }
-              : { borderLeft: '1px solid #000' }
+            const wrapperStyle: any = { borderLeft: '1px solid #000' }
             const cols = list.length === 1 ? 'grid-cols-1' : list.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
             return (
             <div key={key} className={`grid ${cols}`} style={wrapperStyle}>
