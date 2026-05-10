@@ -158,28 +158,26 @@ export default function IconiquesView({
           .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
           .filter(p => (p.quantite ?? 1) > 0)
 
-        // 3) Pour chaque iconique soldOut, query ciblée vendu==true par trigramme
-        //    (au lieu de fetch tous les 4096 produits).
-        const soldOutItems = data.filter(d => d.soldOut)
+        // 3) Pool sold out — pour TOUTES les iconiques (pas seulement celles marquées soldOut),
+        //    on fetch aussi les pièces vendu==true des trigrammes concernés afin de pouvoir
+        //    afficher les sold-out à la fin de chaque iconique.
         const soldOutPool: any[] = []
-        if (soldOutItems.length > 0) {
-          const allTrigs = Array.from(new Set(
-            soldOutItems.flatMap(i => i.chineuseTrigrammes || []).map(t => t.toUpperCase())
-          )).filter(Boolean)
-          if (allTrigs.length > 0) {
-            // Firestore `in` accepte jusqu'à 30 valeurs.
-            const soldSnap = await getDocs(query(
-              collection(db, 'produits'),
-              where('vendu', '==', true),
-              where('trigramme', 'in', allTrigs.slice(0, 30)),
-            ))
-            if (cancelled) return
-            soldOutPool.push(...soldSnap.docs
-              .map(d => ({ id: d.id, ...d.data() } as any))
-              .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
-              .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
-            )
-          }
+        const allTrigs = Array.from(new Set(
+          data.flatMap(i => i.chineuseTrigrammes || []).map(t => t.toUpperCase())
+        )).filter(Boolean)
+        for (let i = 0; i < allTrigs.length; i += 30) {
+          const batch = allTrigs.slice(i, i + 30)
+          const soldSnap = await getDocs(query(
+            collection(db, 'produits'),
+            where('vendu', '==', true),
+            where('trigramme', 'in', batch),
+          ))
+          if (cancelled) return
+          soldOutPool.push(...soldSnap.docs
+            .map(d => ({ id: d.id, ...d.data() } as any))
+            .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
+            .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
+          )
         }
 
         const produitsData: { [key: string]: Produit[] } = {}
@@ -201,8 +199,7 @@ export default function IconiquesView({
             continue
           }
 
-          const sourceList = item.soldOut ? soldOutPool : activeProduits
-          const matched = sourceList.filter(p => {
+          const matchPredicate = (p: any) => {
             const nom = norm(p.nom || p.Nom || '')
             const marque = norm(p.marque || '')
             const cat = typeof p.categorie === 'object'
@@ -222,26 +219,28 @@ export default function IconiquesView({
             }
 
             if (trigs.length > 0 && !trigs.includes(trigramme)) return false
-
             if (catsIn.length > 0 && !catsIn.some(c => cat.includes(c))) return false
-
             if (needleMaterial && !material.includes(needleMaterial)) return false
 
             return true
-          })
+          }
+
+          const matchedActive = activeProduits.filter(matchPredicate)
+          const matchedSold = soldOutPool.filter(matchPredicate)
 
           if (item.soldOut) {
-            matched.sort((a, b) => {
+            // Iconique flagué soldOut → uniquement les sold-out, top 8 récents
+            matchedSold.sort((a, b) => {
               const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()
               const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()
               return tb - ta
             })
-            produitsData[item.id] = matched.slice(0, 8)
+            produitsData[item.id] = matchedSold.slice(0, 8)
           } else {
-            // Tri custom par catégorie si configuré (ex: ['collier', 'bague', 'broche'])
+            // Tri custom par catégorie sur les actives si configuré
             if (item.categoriesOrder && item.categoriesOrder.length > 0) {
               const order = item.categoriesOrder.map(c => norm(c))
-              matched.sort((a, b) => {
+              const sortByOrder = (a: any, b: any) => {
                 const catA = typeof a.categorie === 'object' ? norm(a.categorie?.label || '') : norm(a.categorie || '')
                 const catB = typeof b.categorie === 'object' ? norm(b.categorie?.label || '') : norm(b.categorie || '')
                 const idxA = order.findIndex(o => catA.includes(o))
@@ -249,9 +248,12 @@ export default function IconiquesView({
                 const fa = idxA === -1 ? 999 : idxA
                 const fb = idxB === -1 ? 999 : idxB
                 return fa - fb
-              })
+              }
+              matchedActive.sort(sortByOrder)
+              matchedSold.sort(sortByOrder)
             }
-            produitsData[item.id] = matched
+            // Sold-out à la fin (priorité aux actives)
+            produitsData[item.id] = [...matchedActive, ...matchedSold]
           }
         }
         if (cancelled) return
