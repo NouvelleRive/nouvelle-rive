@@ -374,11 +374,8 @@ export default function CreateurPage() {
       {creatrice.videos && creatrice.videos.length > 0 && (
         <div className="px-6 md:px-12 py-12 bg-white" style={{ borderBottom: '1px solid #000' }}>
           <div
-            className="grid gap-6 mx-auto"
-            style={{
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              maxWidth: '1280px',
-            }}
+            className="grid gap-6 mx-auto grid-cols-1 sm:grid-cols-3"
+            style={{ maxWidth: '1280px' }}
           >
             {creatrice.videos.slice(0, 3).map((url) => {
               // .mp4 → HTML5 video avec autoplay
@@ -490,12 +487,12 @@ export default function CreateurPage() {
 
           const renderVideos = (urls: string[]) => (
             <div className="px-6 md:px-12 py-12 bg-white" style={{ borderBottom: '1px solid #000' }}>
-              <div className="grid gap-6 mx-auto" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', maxWidth: '1280px' }}>
+              <div className="grid gap-6 mx-auto grid-cols-1 sm:grid-cols-3" style={{ maxWidth: '1280px' }}>
                 {urls.map((url) => {
                   if (/\.mp4(\?|$)/i.test(url)) {
                     return (
                       <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
-                        <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls />
+                        <video src={url} className="w-full h-full object-cover" style={{ background: '#000' }} autoPlay muted loop playsInline controls preload="metadata" />
                       </div>
                     )
                   }
