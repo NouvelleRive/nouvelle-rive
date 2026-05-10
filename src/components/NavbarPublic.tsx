@@ -14,9 +14,23 @@ export default function NavbarPublic() {
   const pathname = usePathname()
   const lang = useLang()
   const [compteHref, setCompteHref] = useState('/client/login')
+  const [navOpen, setNavOpen] = useState(false)
   const { count, hydrated } = useCart()
   const videoRef = useRef<HTMLVideoElement>(null)
   const showVideo = pathname === '/'
+
+  const Burger = ({ onClick }: { onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      aria-label="Menu"
+      className="flex flex-col justify-center gap-[5px] p-2 cursor-pointer"
+      style={{ background: 'transparent', border: 'none' }}
+    >
+      <span style={{ width: 22, height: 2, background: '#000', display: 'block' }} />
+      <span style={{ width: 22, height: 2, background: '#000', display: 'block' }} />
+      <span style={{ width: 22, height: 2, background: '#000', display: 'block' }} />
+    </button>
+  )
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = 0.25
@@ -71,14 +85,34 @@ export default function NavbarPublic() {
             preload="metadata"
             className="w-full h-[45vh] md:h-screen object-cover block"
           />
+          {/* Burger + Logo top-left sur fond blanc */}
           <div
-            className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10"
+            className="absolute top-4 left-4 md:top-6 md:left-6 bg-white px-2 md:px-3 py-1 z-10 flex items-center gap-2"
+            style={{ fontFamily: fontHelvetica }}
+          >
+            <Burger onClick={() => setNavOpen((v) => !v)} />
+            <h1
+              className="uppercase whitespace-nowrap"
+              style={{
+                fontSize: 'clamp(16px, 3vw, 28px)',
+                fontWeight: '700',
+                letterSpacing: '-0.01em',
+                lineHeight: '1',
+                color: '#000',
+              }}
+            >
+              NOUVELLE RIVE
+            </h1>
+          </div>
+          {/* Boutons top-right sur fond blanc */}
+          <div
+            className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10 bg-white px-3 py-2"
             style={{ fontFamily: fontHelvetica }}
           >
             <LanguageSwitcher />
             <Link
               href="/panier"
-              className="relative px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+              className="relative px-3 md:px-4 py-2 border border-black text-black hover:bg-black hover:text-white transition-all duration-200"
               style={{
                 fontSize: '9px',
                 letterSpacing: '0.1em',
@@ -90,7 +124,7 @@ export default function NavbarPublic() {
             </Link>
             <Link
               href={compteHref}
-              className="px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+              className="px-3 md:px-4 py-2 border border-black text-black hover:bg-black hover:text-white transition-all duration-200"
               style={{
                 fontSize: '9px',
                 letterSpacing: '0.1em',
@@ -111,18 +145,21 @@ export default function NavbarPublic() {
         <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex flex-col gap-2`}>
           {!showVideo && (
             <div className="flex justify-between items-center gap-3">
-              <h1
-                className="uppercase whitespace-nowrap"
-                style={{
-                  fontSize: 'clamp(20px, 6vw, 72px)',
-                  fontWeight: '700',
-                  letterSpacing: '-0.01em',
-                  lineHeight: '1',
-                  color: '#000'
-                }}
-              >
-                NOUVELLE RIVE
-              </h1>
+              <div className="flex items-center gap-2 md:gap-3">
+                <Burger onClick={() => setNavOpen((v) => !v)} />
+                <h1
+                  className="uppercase whitespace-nowrap"
+                  style={{
+                    fontSize: 'clamp(20px, 6vw, 72px)',
+                    fontWeight: '700',
+                    letterSpacing: '-0.01em',
+                    lineHeight: '1',
+                    color: '#000'
+                  }}
+                >
+                  NOUVELLE RIVE
+                </h1>
+              </div>
               <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <Link
                   href="/panier"
@@ -159,31 +196,35 @@ export default function NavbarPublic() {
           )}
         </div>
 
-        <div style={{ borderBottom: '1px solid #000' }} />
-
-        <div className="px-4 md:px-6 py-4 flex">
-          <div className="flex flex-col gap-0.5">
-            {boutiqueLinks.map((link) => {
-              const active = pathname === link.href
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="nav-link transition-colors duration-200"
-                  style={{
-                    fontSize: '11px',
-                    letterSpacing: '0.2em',
-                    color: active ? bleuElectrique : '#000',
-                    fontWeight: active ? '600' : '400',
-                    lineHeight: '1.8'
-                  }}
-                >
-                  {link.label}
-                </Link>
-              )
-            })}
-          </div>
-        </div>
+        {navOpen && (
+          <>
+            <div style={{ borderBottom: '1px solid #000' }} />
+            <div className="px-4 md:px-6 py-4 flex">
+              <div className="flex flex-col gap-0.5">
+                {boutiqueLinks.map((link) => {
+                  const active = pathname === link.href
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setNavOpen(false)}
+                      className="nav-link transition-colors duration-200"
+                      style={{
+                        fontSize: '11px',
+                        letterSpacing: '0.2em',
+                        color: active ? bleuElectrique : '#000',
+                        fontWeight: active ? '600' : '400',
+                        lineHeight: '1.8'
+                      }}
+                    >
+                      {link.label}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          </>
+        )}
 
         <div style={{ borderBottom: '1px solid #000' }} />
 
