@@ -166,6 +166,24 @@ let q = options?.lastDoc
     return config.regles.some(regle => matchRegle(p, regle, chineuses))
   })
 
+  // Tri produits : 1) plus de likes en premier, 2) avec photo portée (faceOnModel/dosOnModel),
+  // 3) plus récents en dernier critère.
+  produits.sort((a, b) => {
+    const likesA = (a as any).likesCount || 0
+    const likesB = (b as any).likesCount || 0
+    if (likesB !== likesA) return likesB - likesA
+
+    const photosA = (a as any).photos
+    const photosB = (b as any).photos
+    const wornA = !!(photosA?.faceOnModel || photosA?.dosOnModel)
+    const wornB = !!(photosB?.faceOnModel || photosB?.dosOnModel)
+    if (wornA !== wornB) return wornB ? 1 : -1
+
+    const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : 0
+    const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : 0
+    return dateB - dateA
+  })
+
   if (options) {
     const lastDocResult = snapshot.docs[snapshot.docs.length - 1] || null
     return { 
