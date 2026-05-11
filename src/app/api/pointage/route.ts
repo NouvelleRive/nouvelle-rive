@@ -73,10 +73,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST { vendeuseId, action: 'arrivee' | 'depart', boutiqueToken }
+// POST { vendeuseId, action: 'arrivee' | 'depart' } — cookie `nr_boutique` requis
 export async function POST(req: NextRequest) {
   try {
-    const { vendeuseId, action, boutiqueToken } = await req.json()
+    const { vendeuseId, action } = await req.json()
     if (!vendeuseId || !action) {
       return NextResponse.json({ success: false, error: 'vendeuseId et action requis' }, { status: 400 })
     }
@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
     if (!expectedToken) {
       return NextResponse.json({ success: false, error: 'BOUTIQUE_DEVICE_TOKEN non configuré' }, { status: 500 })
     }
+    const boutiqueToken = req.cookies.get('nr_boutique')?.value
     if (boutiqueToken !== expectedToken) {
       return NextResponse.json(
         { success: false, error: 'Tu dois pointer depuis le téléphone de la boutique 💙' },

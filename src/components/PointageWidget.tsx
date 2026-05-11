@@ -10,7 +10,6 @@ type Vendeuse = { id: string; prenom?: string; nom?: string; actif?: boolean }
 type Pointage = { vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
 
 const STORAGE_KEY = 'nouvelle-rive-vendeuse-id'
-const BOUTIQUE_TOKEN_KEY = 'nr_boutique_token'
 
 function fmt(iso: string | null) {
   if (!iso) return '—'
@@ -40,19 +39,29 @@ export default function PointageWidget() {
     return () => clearInterval(t)
   }, [])
 
-  // Détecte ?setup=... dans l'URL → enregistre le device comme tel boutique
+  // Détecte ?setup=... dans l'URL → enregistre le device comme tel boutique (cookie serveur)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     const setup = params.get('setup')
-    if (setup) {
-      localStorage.setItem(BOUTIQUE_TOKEN_KEY, setup)
-      params.delete('setup')
-      const newSearch = params.toString()
-      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash
-      window.history.replaceState({}, '', newUrl)
-      alert('Ce téléphone est enregistré comme tel de la boutique.')
-    }
+    if (!setup) return
+    params.delete('setup')
+    const newSearch = params.toString()
+    const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash
+    window.history.replaceState({}, '', newUrl)
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/pointage/setup?token=${encodeURIComponent(setup)}`)
+        const data = await res.json()
+        if (data.success) {
+          alert('Ce téléphone est enregistré comme tel de la boutique.')
+        } else {
+          alert(data.error || 'Erreur : token invalide.')
+        }
+      } catch {
+        alert('Erreur : impossible d\'enregistrer le téléphone.')
+      }
+    })()
   }, [])
 
   // Charger les vendeuses actives
@@ -86,17 +95,12 @@ export default function PointageWidget() {
 
   const pointer = async (action: 'arrivee' | 'depart') => {
     if (!vendeuseId) return
-    const boutiqueToken = typeof window !== 'undefined' ? localStorage.getItem(BOUTIQUE_TOKEN_KEY) : null
-    if (!boutiqueToken) {
-      alert('Tu dois pointer depuis le téléphone de la boutique 💙')
-      return
-    }
     setLoading(true)
     try {
       const res = await fetch('/api/pointage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vendeuseId, action, boutiqueToken }),
+        body: JSON.stringify({ vendeuseId, action }),
       })
       const data = await res.json()
       if (!data.success) {
