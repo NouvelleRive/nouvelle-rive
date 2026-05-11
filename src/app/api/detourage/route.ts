@@ -118,15 +118,15 @@
         const currentH = meta.height || 1200
 
         if (zoom > 1) {
-          // Zoom in: cropper le centre
+          // Zoom in: cropper le centre puis remonter à 1200x1200
           const cropW = Math.round(currentW / zoom)
           const cropH = Math.round(currentH / zoom)
           const left = Math.round((currentW - cropW) / 2)
           const top = Math.round((currentH - cropH) / 2)
-          
+
           processedBuffer = await sharp(processedBuffer)
             .extract({ left, top, width: cropW, height: cropH })
-            .resize(960, 960, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+            .resize(1200, 1200, { fit: 'fill' })
             .toBuffer()
         } else if (zoom < 1) {
           // Zoom out: réduire et ajouter du blanc
