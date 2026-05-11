@@ -14,35 +14,23 @@ export default function NavbarPublic() {
   const pathname = usePathname()
   const lang = useLang()
   const [compteHref, setCompteHref] = useState('/client/login')
-  const [navOpen, setNavOpen] = useState(false)
   const { count, hydrated } = useCart()
   const videoRef = useRef<HTMLVideoElement>(null)
   const showVideo = pathname === '/'
 
-  // Burger : hauteur calée sur celle du logo pour rester aligné visuellement.
-  // Le clamp `height` est passé en prop pour matcher le logo de la page sur laquelle
-  // il est rendu (homepage = petit, autres pages = grand).
-  const Burger = ({ onClick, color = '#000', height, width }: { onClick: () => void; color?: string; height: string; width: string }) => (
-    <button
-      onClick={onClick}
-      aria-label="Menu"
-      className="flex flex-col justify-between cursor-pointer shrink-0"
-      style={{
-        background: 'transparent',
-        border: 'none',
-        padding: 0,
-        height,
-        width,
-      }}
-    >
-      <span style={{ width: '100%', height: '12%', background: color, display: 'block' }} />
-      <span style={{ width: '100%', height: '12%', background: color, display: 'block' }} />
-      <span style={{ width: '100%', height: '12%', background: color, display: 'block' }} />
-    </button>
-  )
-
+  // Force playback rate + relance .play() au cas où autoplay aurait été bloqué
+  // (iOS mode éco, etc.).
   useEffect(() => {
-    if (videoRef.current) videoRef.current.playbackRate = 0.25
+    const v = videoRef.current
+    if (!v) return
+    v.playbackRate = 0.25
+    const tryPlay = () => {
+      v.muted = true
+      v.play().catch(() => {})
+    }
+    tryPlay()
+    v.addEventListener('canplay', tryPlay)
+    return () => v.removeEventListener('canplay', tryPlay)
   }, [showVideo])
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
@@ -91,20 +79,14 @@ export default function NavbarPublic() {
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="auto"
             className="w-full h-[45vh] md:h-screen object-cover block"
           />
-          {/* Burger + Logo top-left — homepage : pas de fond blanc, texte blanc sur la vidéo */}
+          {/* Logo top-left blanc sur la vidéo (homepage : pas de fond blanc) */}
           <div
-            className="absolute top-4 left-4 md:top-6 md:left-6 z-10 flex items-center gap-2"
+            className="absolute top-4 left-4 md:top-6 md:left-6 z-10 flex items-center"
             style={{ fontFamily: fontHelvetica }}
           >
-            <Burger
-              onClick={() => setNavOpen((v) => !v)}
-              color="#fff"
-              height="clamp(16px, 3vw, 28px)"
-              width="clamp(20px, 3vw, 32px)"
-            />
             <h1
               className="uppercase whitespace-nowrap"
               style={{
@@ -118,10 +100,10 @@ export default function NavbarPublic() {
               NOUVELLE RIVE
             </h1>
           </div>
-          {/* Boutons top-right — homepage : pas de fond blanc, contours et texte blancs */}
+          {/* Boutons top-right blancs sur la vidéo */}
           <div
             className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10"
-            style={{ fontFamily: fontHelvetica, color: '#fff' }}
+            style={{ fontFamily: fontHelvetica }}
           >
             <LanguageSwitcher whiteOnVideo />
             <Link
@@ -159,25 +141,18 @@ export default function NavbarPublic() {
         <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex flex-col gap-2`}>
           {!showVideo && (
             <div className="flex justify-between items-center gap-3">
-              <div className="flex items-center gap-2 md:gap-3">
-                <Burger
-                  onClick={() => setNavOpen((v) => !v)}
-                  height="clamp(20px, 6vw, 72px)"
-                  width="clamp(22px, 5.5vw, 60px)"
-                />
-                <h1
-                  className="uppercase whitespace-nowrap"
-                  style={{
-                    fontSize: 'clamp(20px, 6vw, 72px)',
-                    fontWeight: '700',
-                    letterSpacing: '-0.01em',
-                    lineHeight: '1',
-                    color: '#000'
-                  }}
-                >
-                  NOUVELLE RIVE
-                </h1>
-              </div>
+              <h1
+                className="uppercase whitespace-nowrap"
+                style={{
+                  fontSize: 'clamp(20px, 6vw, 72px)',
+                  fontWeight: '700',
+                  letterSpacing: '-0.01em',
+                  lineHeight: '1',
+                  color: '#000'
+                }}
+              >
+                NOUVELLE RIVE
+              </h1>
               <div className="flex items-center gap-2 md:gap-3 shrink-0">
                 <Link
                   href="/panier"
@@ -214,35 +189,32 @@ export default function NavbarPublic() {
           )}
         </div>
 
-        {navOpen && (
-          <>
-            <div style={{ borderBottom: '1px solid #000' }} />
-            <div className="px-4 md:px-6 py-4 flex">
-              <div className="flex flex-col gap-0.5">
-                {boutiqueLinks.map((link) => {
-                  const active = pathname === link.href
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setNavOpen(false)}
-                      className="nav-link transition-colors duration-200"
-                      style={{
-                        fontSize: '11px',
-                        letterSpacing: '0.2em',
-                        color: active ? bleuElectrique : '#000',
-                        fontWeight: active ? '600' : '400',
-                        lineHeight: '1.8'
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          </>
-        )}
+        <div style={{ borderBottom: '1px solid #000' }} />
+
+        {/* Onglets toujours visibles (liste verticale, comme avant) */}
+        <div className="px-4 md:px-6 py-4 flex">
+          <div className="flex flex-col gap-0.5">
+            {boutiqueLinks.map((link) => {
+              const active = pathname === link.href
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="nav-link transition-colors duration-200"
+                  style={{
+                    fontSize: '11px',
+                    letterSpacing: '0.2em',
+                    color: active ? bleuElectrique : '#000',
+                    fontWeight: active ? '600' : '400',
+                    lineHeight: '1.8'
+                  }}
+                >
+                  {link.label}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
 
         <div style={{ borderBottom: '1px solid #000' }} />
 
