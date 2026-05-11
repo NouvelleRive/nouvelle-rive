@@ -162,9 +162,6 @@ export default function NavbarPublic() {
                 NOUVELLE RIVE
               </h1>
               <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                <div className="hidden md:flex">
-                  <LanguageSwitcher />
-                </div>
                 <Link
                   href="/panier"
                   className="relative px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
@@ -194,7 +191,7 @@ export default function NavbarPublic() {
           )}
 
           {!showVideo && (
-            <div className="flex justify-end md:hidden">
+            <div className="flex justify-end">
               <LanguageSwitcher />
             </div>
           )}
