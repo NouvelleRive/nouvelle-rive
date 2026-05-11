@@ -448,10 +448,20 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
       return [...parts, ...parts.flatMap(p => getAllParts(p))]
     }
 
-    // Candidats où la ref peut apparaître : nom de PJ, sujet, snippet (cas Drive sans PJ)
+    // Candidats où la ref peut apparaître : nom de PJ, sujet, snippet, corps complet (cas Drive sans PJ)
     const candidates = []
-    for (const part of getAllParts(msgData.payload)) {
-      if (part.filename) candidates.push({ source: 'PJ', text: part.filename })
+    const allParts = [msgData.payload, ...getAllParts(msgData.payload)]
+    for (const part of allParts) {
+      if (part?.filename) candidates.push({ source: 'PJ', text: part.filename })
+      // Décode le corps texte/html (body.data en base64url)
+      const mime = part?.mimeType || ''
+      const data = part?.body?.data
+      if (data && (mime.startsWith('text/') || mime === '')) {
+        try {
+          const decoded = Buffer.from(data, 'base64').toString('utf8')
+          if (decoded) candidates.push({ source: mime || 'body', text: decoded })
+        } catch (e) { /* ignore decode error */ }
+      }
     }
     const subject = (msgData.payload?.headers || []).find(h => (h.name || '').toLowerCase() === 'subject')?.value || ''
     if (subject) candidates.push({ source: 'sujet', text: subject })
