@@ -49,20 +49,23 @@ export default function NavbarPublic() {
     return () => unsubscribe()
   }, [])
 
+  // Hash #titre : chaque page de destination a un id="titre" sur son h1 principal.
+  // Le navigateur (et Next.js) scrollent automatiquement à cet ancrage à l'arrivée,
+  // ce qui place le titre de la page en haut du viewport (la navbar passe au-dessus).
   const boutiqueLinks = [
     { href: '/', label: t('TOUT VOIR', 'SEE ALL', lang) },
-    { href: '/nous-rencontrer', label: t('IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES', 'IRL: OUR BOUTIQUE — 8 RUE DES ECOUFFES', lang) },
-    { href: '/ete', label: t('ÉTÉ', 'SUMMER', lang) },
-    { href: '/soiree', label: t('SOIRÉE', 'EVENING', lang) },
-    { href: '/les-iconiques', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONICS', lang) },
-    { href: '/iconiques-upcy', label: t('NOS PIÈCES UPCY FAVORITES', 'FAVORITE UPCYCLED PIECES', lang) },
-    { href: '/luxe', label: t('LE LUXE', 'LUXURY', lang) },
-    { href: '/coups-de-coeur', label: t('NOS PIÈCES PRÉFÉRÉES', 'OUR FAVORITE GEMS', lang) },
-    { href: '/nos-creatrices', label: t('NOS CRÉATRICES/CURATEURICES', 'OUR DESIGNERS / CURATORS', lang) },
-    { href: '/femme', label: t('(PLUTÔT) FEMME', '(SO-CALLED) WOMEN', lang) },
-    { href: '/homme', label: t('(PLUTÔT) HOMME', '(SO-CALLED) MEN', lang) },
-    { href: '/accessoires', label: t('ACCESSOIRES', 'ACCESSORIES', lang) },
-    { href: '/ateliers', label: t('ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE', 'UPCYCLED JEWELRY WORKSHOP WITH A DESIGNER', lang) },
+    { href: '/nous-rencontrer#titre', label: t('IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES', 'IRL: OUR BOUTIQUE — 8 RUE DES ECOUFFES', lang) },
+    { href: '/ete#titre', label: t('ÉTÉ', 'SUMMER', lang) },
+    { href: '/soiree#titre', label: t('SOIRÉE', 'EVENING', lang) },
+    { href: '/les-iconiques#titre', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONICS', lang) },
+    { href: '/iconiques-upcy#titre', label: t('NOS PIÈCES UPCY FAVORITES', 'FAVORITE UPCYCLED PIECES', lang) },
+    { href: '/luxe#titre', label: t('LE LUXE', 'LUXURY', lang) },
+    { href: '/coups-de-coeur#titre', label: t('NOS PIÈCES PRÉFÉRÉES', 'OUR FAVORITE GEMS', lang) },
+    { href: '/nos-creatrices#titre', label: t('NOS CRÉATRICES/CURATEURICES', 'OUR DESIGNERS / CURATORS', lang) },
+    { href: '/femme#titre', label: t('(PLUTÔT) FEMME', '(SO-CALLED) WOMEN', lang) },
+    { href: '/homme#titre', label: t('(PLUTÔT) HOMME', '(SO-CALLED) MEN', lang) },
+    { href: '/accessoires#titre', label: t('ACCESSOIRES', 'ACCESSORIES', lang) },
+    { href: '/ateliers#titre', label: t('ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE', 'UPCYCLED JEWELRY WORKSHOP WITH A DESIGNER', lang) },
   ]
 
   const cartLabel = t('PANIER', 'CART', lang)
@@ -203,7 +206,8 @@ export default function NavbarPublic() {
         <div className="px-4 md:px-6 py-4 flex">
           <div className="flex flex-col gap-0.5">
             {boutiqueLinks.map((link) => {
-              const active = pathname === link.href
+              const linkPath = link.href.split('#')[0]
+              const active = pathname === linkPath
               return (
                 <Link
                   key={link.href}
