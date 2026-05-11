@@ -114,6 +114,16 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   const [searchQuery, setSearchQuery] = useState('')
   const triRef = useRef<HTMLDivElement>(null)
 
+  // Fréquence d'intercalation des vidéos : 5 en desktop, 8 en mobile.
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)')
+    const update = () => setIsDesktop(mql.matches)
+    update()
+    mql.addEventListener('change', update)
+    return () => mql.removeEventListener('change', update)
+  }, [])
+
   // Restaurer la position de scroll au retour d'une page produit
   useEffect(() => {
     const saved = sessionStorage.getItem('productGrid_scrollY')
@@ -345,12 +355,13 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     4: 'grid-cols-2 lg:grid-cols-4',
   }
 
-  // Toutes les 5 pièces, on intercale une vidéo de la chineuse de la 5e pièce.
-  // Si elle n'a pas de vidéo, on remonte à la 4e, 3e... jusqu'à en trouver une.
-  // On rotate par chineuse pour ne pas remettre toujours la même vidéo.
+  // Toutes les N pièces (5 desktop / 8 mobile), on intercale une vidéo de la chineuse
+  // de la Ne pièce. Si elle n'a pas de vidéo, on remonte en arrière (max N-1 pièces du
+  // bloc) jusqu'à en trouver une. On rotate par chineuse pour ne pas remettre toujours
+  // la même vidéo.
   type DisplayItem =
     | { type: 'product'; data: Produit }
-    | { type: 'video'; key: string; videoUrl: string; chineuseSlug: string }
+    | { type: 'video'; key: string; videoUrl: string; chineuseSlug: string; mobileSpan: 1 | 2 }
 
   const displayItems: DisplayItem[] = useMemo(() => {
     const items: DisplayItem[] = []
@@ -378,35 +389,58 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       return m ? m[1].toUpperCase() : null
     }
 
+    const blockSize = isDesktop ? 5 : 8
+    let boundaryCount = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
-      const isBoundary = (i + 1) % 5 === 0
+      const isBoundary = (i + 1) % blockSize === 0
       if (!isBoundary || chineuseByTrigramme.size === 0) continue
 
-      // Cherche la chineuse de la pièce courante, puis remonte en arrière (max 4 pièces dans le bloc)
-      let chosen: ChineuseLite | null = null
-      for (let j = i; j >= Math.max(0, i - 4); j--) {
+      // Mobile : alterne 1 vidéo full-width (col-span-2) → 2 vidéos demi-largeur (col-span-1 chacune).
+      // Desktop : toujours 1 vidéo par cellule.
+      const wantPair = !isDesktop && (boundaryCount % 2 === 1)
+
+      // Cherche les chineuses des pièces du bloc, du plus récent au plus ancien, sans doublons.
+      const uniqueChineuses: ChineuseLite[] = []
+      const seenTrigs = new Set<string>()
+      for (let j = i; j >= Math.max(0, i - (blockSize - 1)); j--) {
         const trig = extractTrigramme(filteredProduits[j])
-        if (!trig) continue
+        if (!trig || seenTrigs.has(trig)) continue
         const c = chineuseByTrigramme.get(trig)
-        if (c) { chosen = c; break }
+        if (!c) continue
+        seenTrigs.add(trig)
+        uniqueChineuses.push(c)
+        if (uniqueChineuses.length >= 2) break
       }
-      if (!chosen) continue
+      if (uniqueChineuses.length === 0) continue
 
-      const trig = chosen.trigramme.toUpperCase()
-      const idx = videoIdxByTrigramme.get(trig) || 0
-      const videoUrl = chosen.videos[idx % chosen.videos.length]
-      videoIdxByTrigramme.set(trig, idx + 1)
+      // Construit la liste des vidéos voulues (1 ou 2).
+      const picks: { c: ChineuseLite; videoUrl: string; idx: number }[] = []
+      const wanted = wantPair ? 2 : 1
+      for (let k = 0; k < wanted; k++) {
+        const c = uniqueChineuses[k % uniqueChineuses.length]
+        // Si on retombe sur la même chineuse et qu'elle n'a qu'une vidéo, on ne peut pas faire la paire.
+        if (k === 1 && c === picks[0].c && c.videos.length < 2) break
+        const idx = videoIdxByTrigramme.get(c.trigramme) || 0
+        videoIdxByTrigramme.set(c.trigramme, idx + 1)
+        picks.push({ c, videoUrl: c.videos[idx % c.videos.length], idx })
+      }
 
-      items.push({
-        type: 'video',
-        key: `v-${i}-${chosen.uid}-${idx}`,
-        videoUrl,
-        chineuseSlug: chosen.slug,
-      })
+      const mobileSpan: 1 | 2 = picks.length === 2 ? 1 : 2
+      for (let k = 0; k < picks.length; k++) {
+        const p = picks[k]
+        items.push({
+          type: 'video',
+          key: `v-${i}-${p.c.uid}-${p.idx}-${k}`,
+          videoUrl: p.videoUrl,
+          chineuseSlug: p.c.slug,
+          mobileSpan,
+        })
+      }
+      boundaryCount++
     }
     return items
-  }, [filteredProduits, chineuses, videoTrigrammeWhitelist])
+  }, [filteredProduits, chineuses, videoTrigrammeWhitelist, isDesktop])
 
   const resetFilters = () => {
     setFilters({
@@ -503,11 +537,12 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       <div className={`grid ${gridCols[columns]}`} style={{ borderLeft: '1px solid #000' }}>
         {displayItems.map((item) => {
           if (item.type === 'video') {
+            const mobileSpanCls = item.mobileSpan === 1 ? 'col-span-1' : 'col-span-2'
             return (
               <Link
                 key={item.key}
                 href={`/nos-creatrices/${item.chineuseSlug}`}
-                className="col-span-2 lg:col-span-1 block lg:relative"
+                className={`${mobileSpanCls} lg:col-span-1 block lg:relative`}
                 style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
               >
                 {/* Desktop : placeholder fantôme (aspect-square + faux label) pour matcher la hauteur d'une annonce produit ; la vidéo passe en absolute par-dessus pour remplir image + label sans bande blanche. */}
