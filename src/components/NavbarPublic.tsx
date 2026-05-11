@@ -111,36 +111,38 @@ export default function NavbarPublic() {
           </div>
           {/* Boutons top-right blancs sur la vidéo */}
           <div
-            className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10"
+            className="absolute top-4 right-4 md:top-6 md:right-6 flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3 z-10"
             style={{ fontFamily: fontHelvetica }}
           >
-            <div className="px-2 py-1 bg-black/30 backdrop-blur-sm">
+            <div className="order-1 md:order-2 flex items-center gap-3">
+              <Link
+                href="/panier"
+                className="relative px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+                style={{
+                  fontSize: '9px',
+                  letterSpacing: '0.1em',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {cartLabel} {hydrated && count > 0 ? `(${count})` : ''}
+              </Link>
+              <Link
+                href={compteHref}
+                className="px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+                style={{
+                  fontSize: '9px',
+                  letterSpacing: '0.1em',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {accountLabel}
+              </Link>
+            </div>
+            <div className="order-2 md:order-1 md:px-2 md:py-1 md:bg-black/30 md:backdrop-blur-sm">
               <LanguageSwitcher whiteOnVideo />
             </div>
-            <Link
-              href="/panier"
-              className="relative px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
-              style={{
-                fontSize: '9px',
-                letterSpacing: '0.1em',
-                fontWeight: '600',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {cartLabel} {hydrated && count > 0 ? `(${count})` : ''}
-            </Link>
-            <Link
-              href={compteHref}
-              className="px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
-              style={{
-                fontSize: '9px',
-                letterSpacing: '0.1em',
-                fontWeight: '600',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {accountLabel}
-            </Link>
           </div>
         </div>
       )}
