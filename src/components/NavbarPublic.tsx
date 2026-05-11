@@ -302,6 +302,15 @@ export default function NavbarPublic() {
         .nav-link:hover {
           color: #0000FF !important;
         }
+        /* Marge respirable au-dessus du titre quand on arrive via #titre */
+        #titre {
+          scroll-margin-top: 40px;
+        }
+        @media (min-width: 768px) {
+          #titre {
+            scroll-margin-top: 80px;
+          }
+        }
       `}</style>
     </>
   )
