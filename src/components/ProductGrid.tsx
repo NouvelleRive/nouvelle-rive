@@ -490,35 +490,39 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               <Link
                 key={item.key}
                 href={`/nos-creatrices/${item.chineuseSlug}`}
-                className="col-span-2 lg:col-span-1 block"
+                className="col-span-2 lg:col-span-1 block lg:relative"
                 style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
               >
-                {/* Mobile : ratio 9:16. Desktop : carré comme un produit + label invisible pour matcher la hauteur d'une annonce. */}
-                <div className="w-full aspect-[9/16] lg:aspect-square bg-white overflow-hidden">
-                  <LazyAutoplayVideo src={item.videoUrl} className="w-full h-full object-cover" />
+                {/* Desktop : placeholder fantôme (aspect-square + faux label) pour matcher la hauteur d'une annonce produit ; la vidéo passe en absolute par-dessus pour remplir image + label sans bande blanche. */}
+                <div className="hidden lg:block invisible" aria-hidden="true">
+                  <div className="aspect-square" />
+                  <div className="py-2 md:py-3 px-1 md:px-2 text-center">
+                    <h3
+                      className="uppercase font-semibold line-clamp-2"
+                      style={{
+                        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                        fontSize: '10px',
+                        letterSpacing: '0.03em'
+                      }}
+                    >
+                      &nbsp;
+                      <br />
+                      &nbsp;
+                    </h3>
+                    <p
+                      className="mt-1"
+                      style={{
+                        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                        fontSize: '11px'
+                      }}
+                    >
+                      &nbsp;
+                    </p>
+                  </div>
                 </div>
-                <div className="hidden lg:block py-2 md:py-3 px-1 md:px-2 text-center bg-white" aria-hidden="true">
-                  <h3
-                    className="uppercase font-semibold line-clamp-2 invisible"
-                    style={{
-                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                      fontSize: '10px',
-                      letterSpacing: '0.03em'
-                    }}
-                  >
-                    &nbsp;
-                    <br />
-                    &nbsp;
-                  </h3>
-                  <p
-                    className="mt-1 invisible"
-                    style={{
-                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                      fontSize: '11px'
-                    }}
-                  >
-                    &nbsp;
-                  </p>
+                {/* Mobile : flow normal en 9:16. Desktop : absolute pour couvrir TOUTE la cellule (image + label). */}
+                <div className="w-full aspect-[9/16] lg:aspect-auto lg:absolute lg:inset-0 bg-white overflow-hidden">
+                  <LazyAutoplayVideo src={item.videoUrl} className="w-full h-full object-cover" />
                 </div>
               </Link>
             )
