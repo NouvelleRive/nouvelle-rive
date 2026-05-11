@@ -139,6 +139,23 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// DELETE (admin) — supprimer un pointage
+export async function DELETE(req: NextRequest) {
+  try {
+    if (!await isAdmin(req)) {
+      return NextResponse.json({ success: false, error: 'Accès admin requis' }, { status: 403 })
+    }
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ success: false, error: 'id requis' }, { status: 400 })
+    await adminDb.collection('pointages').doc(id).delete()
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    console.error('[API POINTAGE DELETE]', err)
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 })
+  }
+}
+
 // PATCH (admin) — corriger un pointage
 export async function PATCH(req: NextRequest) {
   try {

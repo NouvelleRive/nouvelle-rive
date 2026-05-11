@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Pencil, X, Save, Plus } from 'lucide-react'
+import { Pencil, X, Save, Plus, Trash2 } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
 import { pointageDocId } from '@/lib/pointage'
 
@@ -149,6 +149,23 @@ export default function PointagesSection({
         arrivee: editArrivee ? new Date(editArrivee).toISOString() : null,
         depart: editDepart ? new Date(editDepart).toISOString() : null,
       }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      setEditingId(null)
+      await fetchPointages()
+    } else alert(data.error || 'Erreur')
+  }
+
+  const deletePointage = async (p: Pointage) => {
+    const nom = getVendeuseNom(p.vendeuseId)
+    if (!confirm(`Supprimer le pointage de ${nom} le ${p.date} ?`)) return
+    const token = await auth.currentUser?.getIdToken()
+    const res = await fetch(`/api/pointage?id=${encodeURIComponent(p.id)}`, {
+      method: 'DELETE',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
     })
     const data = await res.json()
     if (data.success) {
@@ -320,8 +337,9 @@ export default function PointagesSection({
                       <td className="px-3 py-2 text-right">
                         {isEdit ? (
                           <div className="flex gap-1 justify-end">
-                            <button onClick={() => saveEdit(p.id)} className="text-green-600 hover:bg-green-50 p-1 rounded"><Save size={14} /></button>
-                            <button onClick={() => setEditingId(null)} className="text-gray-400 hover:bg-gray-100 p-1 rounded"><X size={14} /></button>
+                            <button onClick={() => saveEdit(p.id)} className="text-green-600 hover:bg-green-50 p-1 rounded" title="Enregistrer"><Save size={14} /></button>
+                            <button onClick={() => deletePointage(p)} className="text-red-600 hover:bg-red-50 p-1 rounded" title="Supprimer"><Trash2 size={14} /></button>
+                            <button onClick={() => setEditingId(null)} className="text-gray-400 hover:bg-gray-100 p-1 rounded" title="Annuler"><X size={14} /></button>
                           </div>
                         ) : (
                           <button onClick={() => startEdit(p)} className="text-gray-500 hover:text-[#22209C]"><Pencil size={14} /></button>
