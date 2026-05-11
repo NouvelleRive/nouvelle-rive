@@ -49,6 +49,30 @@ export default function NavbarPublic() {
     return () => unsubscribe()
   }, [])
 
+  // Sur mobile, les pages catégorie affichent un loader pendant le fetch des produits,
+  // donc #titre n'existe pas encore quand le navigateur tente de scroller au hash.
+  // On retente jusqu'à ce que l'élément apparaisse (max ~2s). scrollIntoView() respecte
+  // le scroll-margin-top défini en CSS global plus bas.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const hash = window.location.hash
+    if (!hash) return
+    let cancelled = false
+    let tries = 0
+    const tick = () => {
+      if (cancelled) return
+      const el = document.getElementById(hash.slice(1))
+      if (el) {
+        el.scrollIntoView({ block: 'start' })
+        return
+      }
+      tries++
+      if (tries < 40) setTimeout(tick, 50)
+    }
+    tick()
+    return () => { cancelled = true }
+  }, [pathname])
+
   // Hash #titre : chaque page de destination a un id="titre" sur son h1 principal.
   // Le navigateur (et Next.js) scrollent automatiquement à cet ancrage à l'arrivée,
   // ce qui place le titre de la page en haut du viewport (la navbar passe au-dessus).
@@ -197,7 +221,9 @@ export default function NavbarPublic() {
 
           {!showVideo && (
             <div className="flex justify-end">
-              <LanguageSwitcher />
+              <div className="scale-75 md:scale-100 origin-top-right">
+                <LanguageSwitcher />
+              </div>
             </div>
           )}
         </div>
