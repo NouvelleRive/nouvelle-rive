@@ -112,7 +112,7 @@ export default function LoginPage() {
     try {
       if (isSignupPro) await createUserWithEmailAndPassword(auth, emailPro, passwordPro)
       else await signInWithEmailAndPassword(auth, emailPro, passwordPro)
-      router.push('/chineuse/formulaire')
+      router.push('/chineuse/performance')
     } catch {
       setError(errLogin)
     } finally { setLoadingPro(false) }

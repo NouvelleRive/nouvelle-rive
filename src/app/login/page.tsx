@@ -32,7 +32,7 @@ export default function LoginPage() {
     } else if (userEmail === VENDEUSE_EMAIL) {
       router.push('/vendeuse/calendrier')
     } else {
-      router.push('/chineuse/formulaire')
+      router.push('/chineuse/performance')
     }
   }
 

@@ -7,6 +7,7 @@
   import { auth } from '@/lib/firebaseConfig'
   import { AdminProvider, useAdmin } from '@/lib/admin/context'
   import Link from 'next/link'
+  import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -228,7 +229,7 @@
         }
         // Vérifier si admin
         if (u.email !== ADMIN_EMAIL) {
-          router.push('/')
+          router.push('/chineuse/performance')
           return
         }
         setUser(u)
@@ -249,6 +250,7 @@
 
     return (
       <div className="min-h-screen bg-gray-50">
+        <NotifsAutoSubscribe ownerId="boutique" />
         <AdminNavbar />
         <main className="max-w-7xl mx-auto p-4 lg:p-6">
           {children}

@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
+import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
@@ -173,8 +174,11 @@ export default function ChineuseLayout({ children }: { children: React.ReactNode
 
   if (!user) return null
 
+  const notifsOwnerId = user.email === ADMIN_EMAIL ? 'boutique' : user.uid
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <NotifsAutoSubscribe ownerId={notifsOwnerId} />
       <ChineuseNavbar />
       <main className="max-w-6xl mx-auto p-4 md:p-6">
         {children}

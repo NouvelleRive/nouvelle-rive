@@ -36,3 +36,33 @@ self.addEventListener('notificationclick', (event) => {
     if (self.clients.openWindow) return self.clients.openWindow(url)
   })())
 })
+
+// Quand iOS/le navigateur révoque/renouvelle la subscription, on re-souscrit
+// automatiquement en arrière-plan et on envoie le nouvel endpoint au serveur
+// qui migre l'ancien doc Firestore vers le nouveau.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const oldEndpoint = event.oldSubscription?.endpoint || null
+      const options = event.oldSubscription?.options || event.newSubscription?.options
+      let newSub = event.newSubscription
+      if (!newSub && options) {
+        newSub = await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: options.applicationServerKey,
+        })
+      }
+      if (!newSub) return
+      await fetch('/api/push/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldEndpoint,
+          subscription: newSub.toJSON(),
+        }),
+      })
+    } catch (e) {
+      // best-effort, le client re-souscrira à la prochaine ouverture
+    }
+  })())
+})

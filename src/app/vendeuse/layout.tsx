@@ -8,6 +8,7 @@ import { auth, db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import Link from 'next/link'
 import { ClipboardList, Package, ShoppingBag, Shirt, Calendar, Inbox } from 'lucide-react'
+import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
 
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -180,7 +181,7 @@ export default function VendeuseLayout({ children }: { children: React.ReactNode
         return
       }
       if (u.email !== VENDEUSE_EMAIL && u.email !== ADMIN_EMAIL) {
-        router.push('/chineuse/mes-produits')
+        router.push('/chineuse/performance')
         return
       }
       setUser(u)
@@ -201,6 +202,7 @@ export default function VendeuseLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <NotifsAutoSubscribe ownerId="boutique" />
       <VendeuseNavbar />
       <main>
         {children}
