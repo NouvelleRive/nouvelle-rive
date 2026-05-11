@@ -131,7 +131,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     }
   }, [])
 
-  // Chineuses (avec leurs videos) — pour intercaler une vidéo toutes les 8 pièces.
+  // Chineuses (avec leurs videos) — pour intercaler une vidéo toutes les 5 pièces.
   const [chineuses, setChineuses] = useState<ChineuseLite[]>([])
   useEffect(() => {
     let alive = true
@@ -382,7 +382,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     let videoIdx = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
-      const isBoundary = (i + 1) % 8 === 0
+      const isBoundary = (i + 1) % 5 === 0
       if (!isBoundary || flatVideos.length === 0) continue
       const v = flatVideos[videoIdx % flatVideos.length]
       items.push({ type: 'video', key: `v-${i}-${v.uid}-${videoIdx}`, videoUrl: v.url, chineuseSlug: v.chineuseSlug })
