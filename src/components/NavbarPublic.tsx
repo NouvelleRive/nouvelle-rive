@@ -18,19 +18,25 @@ export default function NavbarPublic() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const showVideo = pathname === '/'
 
-  // Force playback rate + relance .play() au cas où autoplay aurait été bloqué
-  // (iOS mode éco, etc.).
+  // Force ralenti 0.25× + relance .play() au cas où autoplay aurait été bloqué
+  // (iOS mode éco, etc.). On REapplique playbackRate à chaque event car certains
+  // navigateurs (Safari iOS) le remettent à 1 sur play()/loadedmetadata.
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
-    v.playbackRate = 0.25
-    const tryPlay = () => {
+    const apply = () => {
+      v.playbackRate = 0.25
       v.muted = true
       v.play().catch(() => {})
     }
-    tryPlay()
-    v.addEventListener('canplay', tryPlay)
-    return () => v.removeEventListener('canplay', tryPlay)
+    apply()
+    v.addEventListener('loadedmetadata', apply)
+    v.addEventListener('canplay', apply)
+    v.addEventListener('play', () => { v.playbackRate = 0.25 })
+    return () => {
+      v.removeEventListener('loadedmetadata', apply)
+      v.removeEventListener('canplay', apply)
+    }
   }, [showVideo])
 
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
