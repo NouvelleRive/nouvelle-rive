@@ -105,10 +105,12 @@ export default function NavbarPublic() {
             className="absolute top-4 right-4 md:top-6 md:right-6 flex items-center gap-3 z-10"
             style={{ fontFamily: fontHelvetica }}
           >
-            <LanguageSwitcher whiteOnVideo />
+            <div className="px-2 py-1 bg-black/30 backdrop-blur-sm">
+              <LanguageSwitcher whiteOnVideo />
+            </div>
             <Link
               href="/panier"
-              className="relative px-3 md:px-4 py-2 border border-white text-white hover:bg-white hover:text-black transition-all duration-200"
+              className="relative px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
               style={{
                 fontSize: '9px',
                 letterSpacing: '0.1em',
@@ -120,7 +122,7 @@ export default function NavbarPublic() {
             </Link>
             <Link
               href={compteHref}
-              className="px-3 md:px-4 py-2 border border-white text-white hover:bg-white hover:text-black transition-all duration-200"
+              className="px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
               style={{
                 fontSize: '9px',
                 letterSpacing: '0.1em',
