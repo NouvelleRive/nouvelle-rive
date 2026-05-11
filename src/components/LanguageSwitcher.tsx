@@ -5,7 +5,7 @@ import { getStoredLang, setStoredLang, type Lang } from '@/lib/i18n'
 
 export default function LanguageSwitcher({ whiteOnVideo = false }: { whiteOnVideo?: boolean } = {}) {
   const [lang, setLang] = useState<Lang>('fr')
-  const color = whiteOnVideo ? '#fff' : '#000'
+  const color = whiteOnVideo ? '#fff' : '#999'
 
   useEffect(() => {
     setLang(getStoredLang())
