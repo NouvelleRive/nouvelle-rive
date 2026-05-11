@@ -345,8 +345,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     4: 'grid-cols-2 lg:grid-cols-4',
   }
 
-  // Toutes les 8 pièces, on intercale une vidéo de la chineuse de la 8e pièce.
-  // Si elle n'a pas de vidéo, on remonte à la 7e, 6e... jusqu'à en trouver une.
+  // Toutes les 5 pièces, on intercale une vidéo de la chineuse de la 5e pièce.
+  // Si elle n'a pas de vidéo, on remonte à la 4e, 3e... jusqu'à en trouver une.
   // On rotate par chineuse pour ne pas remettre toujours la même vidéo.
   type DisplayItem =
     | { type: 'product'; data: Produit }
@@ -358,35 +358,52 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     const whitelist = videoTrigrammeWhitelist && videoTrigrammeWhitelist.length > 0
       ? new Set(videoTrigrammeWhitelist.map(t => t.toUpperCase()))
       : null
-    const allowed = chineuses.filter(c =>
-      c.videos.length > 0 &&
-      (!whitelist || whitelist.has((c.trigramme || '').toUpperCase()))
-    )
 
-    // Séquence aplatie en round-robin : on prend le 1er video de chaque chineuse,
-    // puis le 2e de chaque, etc. Ça interleave les chineuses tout en garantissant
-    // qu'aucune vidéo ne se répète avant d'avoir fait le tour complet (PS:8 + SOI:3 + PRI:7 = 18
-    // sur /luxe, donc PS.v0 ne revient qu'au bout de 18 slots, soit ~144 produits).
-    const flatVideos: { url: string; chineuseSlug: string; uid: string }[] = []
-    if (allowed.length > 0) {
-      const maxLen = Math.max(...allowed.map(c => c.videos.length))
-      for (let i = 0; i < maxLen; i++) {
-        for (const c of allowed) {
-          if (i < c.videos.length) {
-            flatVideos.push({ url: c.videos[i], chineuseSlug: c.slug, uid: c.uid })
-          }
-        }
-      }
+    // Index chineuses par trigramme (en respectant la whitelist + uniquement celles qui ont des vidéos)
+    const chineuseByTrigramme = new Map<string, ChineuseLite>()
+    for (const c of chineuses) {
+      const trig = (c.trigramme || '').toUpperCase()
+      if (!trig || c.videos.length === 0) continue
+      if (whitelist && !whitelist.has(trig)) continue
+      chineuseByTrigramme.set(trig, c)
     }
 
-    let videoIdx = 0
+    // Compteur de vidéo par chineuse pour rotation (évite de remettre toujours la même)
+    const videoIdxByTrigramme = new Map<string, number>()
+
+    // Extrait le trigramme à partir du SKU (préfixe alphabétique du nom : "NAN264", "PS123"…)
+    const extractTrigramme = (p: Produit): string | null => {
+      const src = p.nom || p.id || ''
+      const m = src.match(/^([A-Z]+)\d+/i)
+      return m ? m[1].toUpperCase() : null
+    }
+
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
       const isBoundary = (i + 1) % 5 === 0
-      if (!isBoundary || flatVideos.length === 0) continue
-      const v = flatVideos[videoIdx % flatVideos.length]
-      items.push({ type: 'video', key: `v-${i}-${v.uid}-${videoIdx}`, videoUrl: v.url, chineuseSlug: v.chineuseSlug })
-      videoIdx++
+      if (!isBoundary || chineuseByTrigramme.size === 0) continue
+
+      // Cherche la chineuse de la pièce courante, puis remonte en arrière (max 4 pièces dans le bloc)
+      let chosen: ChineuseLite | null = null
+      for (let j = i; j >= Math.max(0, i - 4); j--) {
+        const trig = extractTrigramme(filteredProduits[j])
+        if (!trig) continue
+        const c = chineuseByTrigramme.get(trig)
+        if (c) { chosen = c; break }
+      }
+      if (!chosen) continue
+
+      const trig = chosen.trigramme.toUpperCase()
+      const idx = videoIdxByTrigramme.get(trig) || 0
+      const videoUrl = chosen.videos[idx % chosen.videos.length]
+      videoIdxByTrigramme.set(trig, idx + 1)
+
+      items.push({
+        type: 'video',
+        key: `v-${i}-${chosen.uid}-${idx}`,
+        videoUrl,
+        chineuseSlug: chosen.slug,
+      })
     }
     return items
   }, [filteredProduits, chineuses, videoTrigrammeWhitelist])
