@@ -80,7 +80,7 @@ export default function NavbarPublic() {
         <div className="relative w-full overflow-hidden bg-black">
           <video
             ref={videoRef}
-            src="/banner.mp4"
+            src="/banner.mp4?v=2"
             autoPlay
             muted
             loop
