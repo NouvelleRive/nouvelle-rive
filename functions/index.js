@@ -448,11 +448,20 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
       return [...parts, ...parts.flatMap(p => getAllParts(p))]
     }
 
+    // Candidats où la ref peut apparaître : nom de PJ, sujet, snippet (cas Drive sans PJ)
+    const candidates = []
     for (const part of getAllParts(msgData.payload)) {
-      const filename = (part.filename || '').toUpperCase().trim()
-      if (!filename) continue
+      if (part.filename) candidates.push({ source: 'PJ', text: part.filename })
+    }
+    const subject = (msgData.payload?.headers || []).find(h => (h.name || '').toLowerCase() === 'subject')?.value || ''
+    if (subject) candidates.push({ source: 'sujet', text: subject })
+    if (msgData.snippet) candidates.push({ source: 'snippet', text: msgData.snippet })
 
-      const refMatch = filename.match(/NR(\d{2})(\d{2})-([A-Z]+)/)
+    let alreadyMarked = false
+    for (const cand of candidates) {
+      if (alreadyMarked) break
+      const text = cand.text.toUpperCase().trim()
+      const refMatch = text.match(/NR(\d{2})(\d{2})-([A-Z]+)/)
       if (!refMatch) continue
 
       const refM = refMatch[1]
@@ -469,11 +478,11 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
       }
 
       if (refTrigramme !== trigramme) {
-        console.log(`⚠️ Trigramme PJ (${refTrigramme}) ≠ chineuse (${trigramme}), skip`)
+        console.log(`⚠️ Trigramme ${cand.source} (${refTrigramme}) ≠ chineuse (${trigramme}), skip`)
         continue
       }
 
-      console.log(`📎 Match: ${filename} → ${ref} (${refMois})`)
+      console.log(`📎 Match ${cand.source}: ${text} → ${ref} (${refMois})`)
 
       const statutRef = db.collection('paiements').doc(refMois).collection('statuts').doc(ch.id)
       const existing = await statutRef.get()
@@ -481,6 +490,7 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
         await statutRef.set({ factureRecue: true }, { merge: true })
         console.log(`✅ Facture reçue: ${ref} → ${ch.email} (${refMois})`)
       }
+      alreadyMarked = true
     }
   }
 }
