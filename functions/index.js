@@ -467,40 +467,33 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
     if (subject) candidates.push({ source: 'sujet', text: subject })
     if (msgData.snippet) candidates.push({ source: 'snippet', text: msgData.snippet })
 
-    let alreadyMarked = false
+    // Accepte plusieurs mois dans un seul mail (cas Sergio : mars + avril en PJ groupées)
+    const processedMois = new Set()
+    const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     for (const cand of candidates) {
-      if (alreadyMarked) break
-      const text = cand.text.toUpperCase().trim()
-      const refMatch = text.match(/NR(\d{2})(\d{2})-([A-Z]+)/)
-      if (!refMatch) continue
+      const text = cand.text.toUpperCase()
+      for (const refMatch of text.matchAll(/NR(\d{2})(\d{2})-([A-Z]+)/g)) {
+        const refM = refMatch[1]
+        const refY = "20" + refMatch[2]
+        const refTrigramme = refMatch[3]
+        const refMois = `${refM}-${refY}`
+        const ref = `NR${refM}${refMatch[2]}-${refTrigramme}`
 
-      const refM = refMatch[1]
-      const refY = "20" + refMatch[2]
-      const refTrigramme = refMatch[3]
-      const refMois = `${refM}-${refY}`
-      const ref = `NR${refM}${refMatch[2]}-${refTrigramme}`
+        // Refuse les mois futurs (current month autorisé)
+        const refDate = new Date(parseInt(refY), parseInt(refM) - 1, 1)
+        if (refDate > curMonthStart) continue
+        if (refTrigramme !== trigramme) continue
+        if (processedMois.has(refMois)) continue
+        processedMois.add(refMois)
 
-      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const prevMois = `${String(prevDate.getMonth() + 1).padStart(2, '0')}-${prevDate.getFullYear()}`
-      if (refMois !== prevMois) {
-        console.log(`⏭️ Facture ignorée: ${ref} (${refMois} ≠ ${prevMois}), skip`)
-        continue
+        console.log(`📎 Match ${cand.source}: ${ref} (${refMois})`)
+        const statutRef = db.collection('paiements').doc(refMois).collection('statuts').doc(ch.id)
+        const existing = await statutRef.get()
+        if (!existing.exists || !existing.data().factureRecue) {
+          await statutRef.set({ factureRecue: true }, { merge: true })
+          console.log(`✅ Facture reçue: ${ref} → ${ch.email} (${refMois})`)
+        }
       }
-
-      if (refTrigramme !== trigramme) {
-        console.log(`⚠️ Trigramme ${cand.source} (${refTrigramme}) ≠ chineuse (${trigramme}), skip`)
-        continue
-      }
-
-      console.log(`📎 Match ${cand.source}: ${text} → ${ref} (${refMois})`)
-
-      const statutRef = db.collection('paiements').doc(refMois).collection('statuts').doc(ch.id)
-      const existing = await statutRef.get()
-      if (!existing.exists || !existing.data().factureRecue) {
-        await statutRef.set({ factureRecue: true }, { merge: true })
-        console.log(`✅ Facture reçue: ${ref} → ${ch.email} (${refMois})`)
-      }
-      alreadyMarked = true
     }
   }
 }
