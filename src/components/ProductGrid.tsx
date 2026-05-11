@@ -490,12 +490,35 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               <Link
                 key={item.key}
                 href={`/nos-creatrices/${item.chineuseSlug}`}
-                className="col-span-2 lg:col-span-1 block lg:h-full"
+                className="col-span-2 lg:col-span-1 block"
                 style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
               >
-                {/* Mobile : ratio 9:16. Desktop : remplit toute la cellule (image+label des produits voisins) pour éviter la bande blanche en bas. */}
-                <div className="w-full aspect-[9/16] lg:aspect-auto lg:h-full">
+                {/* Mobile : ratio 9:16. Desktop : carré comme un produit + label invisible pour matcher la hauteur d'une annonce. */}
+                <div className="w-full aspect-[9/16] lg:aspect-square bg-white overflow-hidden">
                   <LazyAutoplayVideo src={item.videoUrl} className="w-full h-full object-cover" />
+                </div>
+                <div className="hidden lg:block py-2 md:py-3 px-1 md:px-2 text-center bg-white" aria-hidden="true">
+                  <h3
+                    className="uppercase font-semibold line-clamp-2 invisible"
+                    style={{
+                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                      fontSize: '10px',
+                      letterSpacing: '0.03em'
+                    }}
+                  >
+                    &nbsp;
+                    <br />
+                    &nbsp;
+                  </h3>
+                  <p
+                    className="mt-1 invisible"
+                    style={{
+                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                      fontSize: '11px'
+                    }}
+                  >
+                    &nbsp;
+                  </p>
                 </div>
               </Link>
             )
