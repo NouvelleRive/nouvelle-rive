@@ -136,14 +136,12 @@ export default function PointageWidget() {
       if (!data.success) {
         if (res.status === 403) {
           setNeedsSetup(true)
-          const msg =
-            'Tu dois pointer depuis le téléphone de la boutique 💙\n\n' +
-            'Si c\'est bien le tel boutique, clique OK pour le ré-enregistrer.\n' +
-            'Sinon, ouvre ce lien sur le tel de la boutique :\n' +
-            'https://www.nouvellerive.eu/vendeuse/calendrier?setup=NR-BOUTIQUE-K7H2X-9PLM'
-          if (confirm(msg)) {
-            await reSetup()
+          const onBoutiquePhone = confirm('Es-tu sur le téléphone de la boutique ?')
+          if (onBoutiquePhone) {
+            window.location.href = '/vendeuse/calendrier?setup=NR-BOUTIQUE-K7H2X-9PLM'
+            return
           }
+          alert('Va sur le téléphone de la boutique pour pointer 💙')
         } else {
           alert(data.error || 'Erreur de pointage')
         }
