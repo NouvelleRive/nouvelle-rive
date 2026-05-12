@@ -32,6 +32,7 @@ export default function PointageWidget() {
   const [vendeuseId, setVendeuseId] = useState<string>('')
   const [pointage, setPointage] = useState<Pointage | null>(null)
   const [loading, setLoading] = useState(false)
+  const [needsSetup, setNeedsSetup] = useState(false)
   const [, setTick] = useState(0)
 
   // Tick pour rafraîchir la durée affichée
@@ -95,6 +96,24 @@ export default function PointageWidget() {
     } catch {}
   }
 
+  const reSetup = async () => {
+    const token = window.prompt('Colle le code d\'enregistrement du tel boutique :')?.trim()
+    if (!token) return
+    try {
+      const res = await fetch(`/api/pointage/setup?token=${encodeURIComponent(token)}`)
+      const data = await res.json()
+      if (data.success) {
+        try { localStorage.setItem(BOUTIQUE_TOKEN_KEY, token) } catch {}
+        setNeedsSetup(false)
+        alert('Ce téléphone est enregistré. Tu peux pointer 💙')
+      } else {
+        alert(data.error || 'Code invalide.')
+      }
+    } catch {
+      alert('Erreur réseau. Réessaie.')
+    }
+  }
+
   const pointer = async (action: 'arrivee' | 'depart') => {
     if (!vendeuseId) return
     setLoading(true)
@@ -111,8 +130,10 @@ export default function PointageWidget() {
       })
       const data = await res.json()
       if (!data.success) {
+        if (res.status === 403) setNeedsSetup(true)
         alert(data.error || 'Erreur de pointage')
       } else {
+        setNeedsSetup(false)
         await fetchPointage()
         if (action === 'arrivee' && Array.isArray(data.missingDeparts) && data.missingDeparts.length > 0) {
           const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
@@ -161,6 +182,15 @@ export default function PointageWidget() {
             <span className="text-sm text-gray-500">Pas encore pointée</span>
           )}
         </div>
+
+        {needsSetup && (
+          <button
+            onClick={reSetup}
+            className="text-xs text-[#22209C] underline hover:no-underline self-start sm:self-center"
+          >
+            Tel pas reconnu ? Ré-enregistrer ce tel
+          </button>
+        )}
 
         {vendeuseId && (
           <div className="flex items-center gap-2">
