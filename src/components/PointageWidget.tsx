@@ -130,8 +130,14 @@ export default function PointageWidget() {
       })
       const data = await res.json()
       if (!data.success) {
-        if (res.status === 403) setNeedsSetup(true)
-        alert(data.error || 'Erreur de pointage')
+        if (res.status === 403) {
+          setNeedsSetup(true)
+          if (confirm('Tu dois pointer depuis le téléphone de la boutique 💙\n\nSi c\'est bien le tel boutique, clique OK pour le ré-enregistrer.')) {
+            await reSetup()
+          }
+        } else {
+          alert(data.error || 'Erreur de pointage')
+        }
       } else {
         setNeedsSetup(false)
         await fetchPointage()
