@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
+import { db, auth } from '@/lib/firebaseConfig'
 import { Clock, MapPin, CheckCircle2 } from 'lucide-react'
 
 type Vendeuse = { id: string; prenom?: string; nom?: string; actif?: boolean }
@@ -123,6 +123,10 @@ export default function PointageWidget() {
         const storedToken = localStorage.getItem(BOUTIQUE_TOKEN_KEY)
         if (storedToken) headers['x-boutique-token'] = storedToken
       } catch {}
+      try {
+        const idToken = await auth.currentUser?.getIdToken()
+        if (idToken) headers['Authorization'] = `Bearer ${idToken}`
+      } catch {}
       const res = await fetch('/api/pointage', {
         method: 'POST',
         headers,
@@ -132,7 +136,12 @@ export default function PointageWidget() {
       if (!data.success) {
         if (res.status === 403) {
           setNeedsSetup(true)
-          if (confirm('Tu dois pointer depuis le téléphone de la boutique 💙\n\nSi c\'est bien le tel boutique, clique OK pour le ré-enregistrer.')) {
+          const msg =
+            'Tu dois pointer depuis le téléphone de la boutique 💙\n\n' +
+            'Si c\'est bien le tel boutique, clique OK pour le ré-enregistrer.\n' +
+            'Sinon, ouvre ce lien sur le tel de la boutique :\n' +
+            'https://www.nouvellerive.eu/vendeuse/calendrier?setup=NR-BOUTIQUE-K7H2X-9PLM'
+          if (confirm(msg)) {
             await reSetup()
           }
         } else {

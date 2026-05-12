@@ -7,6 +7,8 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { pointageDocId } from '@/lib/pointage'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
+const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
+const BOUTIQUE_EMAILS = new Set([ADMIN_EMAIL, VENDEUSE_EMAIL])
 
 async function isAdmin(req: NextRequest): Promise<boolean> {
   const authHeader = req.headers.get('authorization') || ''
@@ -15,6 +17,18 @@ async function isAdmin(req: NextRequest): Promise<boolean> {
   try {
     const decoded = await adminAuth.verifyIdToken(token)
     return decoded?.email === ADMIN_EMAIL
+  } catch {
+    return false
+  }
+}
+
+async function isBoutiqueAccount(req: NextRequest): Promise<boolean> {
+  const authHeader = req.headers.get('authorization') || ''
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) return false
+  try {
+    const decoded = await adminAuth.verifyIdToken(token)
+    return !!decoded?.email && BOUTIQUE_EMAILS.has(decoded.email)
   } catch {
     return false
   }
@@ -90,7 +104,9 @@ export async function POST(req: NextRequest) {
     const cookieToken = req.cookies.get('nr_boutique')?.value
     const headerToken = req.headers.get('x-boutique-token') || undefined
     const boutiqueToken = cookieToken || headerToken
-    if (boutiqueToken !== expectedToken) {
+    const tokenOk = boutiqueToken === expectedToken
+    const accountOk = !tokenOk && await isBoutiqueAccount(req)
+    if (!tokenOk && !accountOk) {
       return NextResponse.json(
         { success: false, error: 'Tu dois pointer depuis le téléphone de la boutique 💙' },
         { status: 403 }
