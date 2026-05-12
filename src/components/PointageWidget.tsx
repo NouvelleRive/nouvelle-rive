@@ -141,7 +141,7 @@ export default function PointageWidget() {
             window.location.href = '/vendeuse/calendrier?setup=NR-BOUTIQUE-K7H2X-9PLM'
             return
           }
-          alert('Va sur le téléphone de la boutique pour pointer 💙')
+          alert('Pointage autorisé seulement depuis le téléphone de la boutique 💙')
         } else {
           alert(data.error || 'Erreur de pointage')
         }
