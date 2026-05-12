@@ -87,12 +87,26 @@ export async function POST(req: NextRequest) {
     if (!expectedToken) {
       return NextResponse.json({ success: false, error: 'BOUTIQUE_DEVICE_TOKEN non configuré' }, { status: 500 })
     }
-    const boutiqueToken = req.cookies.get('nr_boutique')?.value
+    const cookieToken = req.cookies.get('nr_boutique')?.value
+    const headerToken = req.headers.get('x-boutique-token') || undefined
+    const boutiqueToken = cookieToken || headerToken
     if (boutiqueToken !== expectedToken) {
       return NextResponse.json(
         { success: false, error: 'Tu dois pointer depuis le téléphone de la boutique 💙' },
         { status: 403 }
       )
+    }
+
+    const withBoutiqueCookie = (data: any, init?: ResponseInit) => {
+      const res = NextResponse.json(data, init)
+      res.cookies.set('nr_boutique', expectedToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365 * 2,
+      })
+      return res
     }
 
     const now = new Date()
@@ -104,7 +118,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'arrivee') {
       if (existing?.arrivee) {
-        return NextResponse.json({ success: false, error: 'Tu as déjà pointé ton arrivée aujourd\'hui.' }, { status: 400 })
+        return withBoutiqueCookie({ success: false, error: 'Tu as déjà pointé ton arrivée aujourd\'hui.' }, { status: 400 })
       }
       await ref.set({
         vendeuseId,
@@ -119,20 +133,20 @@ export async function POST(req: NextRequest) {
         .filter(x => x.date < dateStr && x.arrivee && !x.depart)
         .map(x => x.date)
         .sort()
-      return NextResponse.json({ success: true, action: 'arrivee', at: now.toISOString(), missingDeparts })
+      return withBoutiqueCookie({ success: true, action: 'arrivee', at: now.toISOString(), missingDeparts })
     }
 
     // action === 'depart'
     if (!existing?.arrivee) {
-      return NextResponse.json({ success: false, error: 'Tu n\'as pas pointé ton arrivée aujourd\'hui.' }, { status: 400 })
+      return withBoutiqueCookie({ success: false, error: 'Tu n\'as pas pointé ton arrivée aujourd\'hui.' }, { status: 400 })
     }
     if (existing.depart) {
-      return NextResponse.json({ success: false, error: 'Tu as déjà pointé ton départ aujourd\'hui.' }, { status: 400 })
+      return withBoutiqueCookie({ success: false, error: 'Tu as déjà pointé ton départ aujourd\'hui.' }, { status: 400 })
     }
     await ref.update({
       depart: Timestamp.fromDate(now),
     })
-    return NextResponse.json({ success: true, action: 'depart', at: now.toISOString() })
+    return withBoutiqueCookie({ success: true, action: 'depart', at: now.toISOString() })
   } catch (err: any) {
     console.error('[API POINTAGE POST]', err)
     return NextResponse.json({ success: false, error: err?.message }, { status: 500 })

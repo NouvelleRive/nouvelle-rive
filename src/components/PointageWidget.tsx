@@ -10,6 +10,7 @@ type Vendeuse = { id: string; prenom?: string; nom?: string; actif?: boolean }
 type Pointage = { vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
 
 const STORAGE_KEY = 'nouvelle-rive-vendeuse-id'
+const BOUTIQUE_TOKEN_KEY = 'nr_boutique_token'
 
 function fmt(iso: string | null) {
   if (!iso) return '—'
@@ -54,6 +55,7 @@ export default function PointageWidget() {
         const res = await fetch(`/api/pointage/setup?token=${encodeURIComponent(setup)}`)
         const data = await res.json()
         if (data.success) {
+          try { localStorage.setItem(BOUTIQUE_TOKEN_KEY, setup) } catch {}
           alert('Ce téléphone est enregistré comme tel de la boutique.')
         } else {
           alert(data.error || 'Erreur : token invalide.')
@@ -97,9 +99,14 @@ export default function PointageWidget() {
     if (!vendeuseId) return
     setLoading(true)
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      try {
+        const storedToken = localStorage.getItem(BOUTIQUE_TOKEN_KEY)
+        if (storedToken) headers['x-boutique-token'] = storedToken
+      } catch {}
       const res = await fetch('/api/pointage', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ vendeuseId, action }),
       })
       const data = await res.json()
