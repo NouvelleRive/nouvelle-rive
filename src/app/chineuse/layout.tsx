@@ -7,6 +7,7 @@ import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
+import LogoutButton from '@/components/LogoutButton'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
@@ -69,10 +70,13 @@ function ChineuseNavbar() {
   return (
     <nav className="bg-white border-b sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/chineuse/mes-produits" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
-          Nouvelle Rive
-        </Link>
+        {/* Logo + Logout */}
+        <div className="flex items-center gap-3">
+          <Link href="/chineuse/mes-produits" className="text-lg font-bold text-[#22209C] uppercase tracking-wider">
+            Nouvelle Rive
+          </Link>
+          <LogoutButton />
+        </div>
 
         {/* Desktop links */}
         <div className="hidden md:flex space-x-6">

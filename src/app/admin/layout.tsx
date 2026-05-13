@@ -8,6 +8,7 @@
   import { AdminProvider, useAdmin } from '@/lib/admin/context'
   import Link from 'next/link'
   import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
+  import LogoutButton from '@/components/LogoutButton'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -85,6 +86,7 @@
                     </option>
                   ))}
                 </select>
+                <LogoutButton />
               </div>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
@@ -153,6 +155,7 @@
                     </option>
                   ))}
                 </select>
+                <LogoutButton />
               </div>
 
               {/* Tabs Mobile */}

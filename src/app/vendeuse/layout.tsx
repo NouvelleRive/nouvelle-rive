@@ -9,6 +9,7 @@ import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import Link from 'next/link'
 import { ClipboardList, Package, ShoppingBag, Shirt, Calendar, Inbox } from 'lucide-react'
 import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
+import LogoutButton from '@/components/LogoutButton'
 
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -101,6 +102,7 @@ function VendeuseNavbar() {
               <ClipboardList size={12} />
               Inventaire
             </Link>
+            <LogoutButton />
           </div>
           <div className="flex space-x-6">
             {links.map((link) => (
@@ -136,6 +138,7 @@ function VendeuseNavbar() {
               <ClipboardList size={12} />
               Inventaire
             </Link>
+            <LogoutButton />
           </div>
           <div className="flex justify-around">
             {links.map((link) => {
