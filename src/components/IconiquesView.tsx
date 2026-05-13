@@ -100,6 +100,7 @@ export default function IconiquesView({
   const [loadingIcons, setLoadingIcons] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [imageIndices, setImageIndices] = useState<{ [key: string]: number }>({})
+  const [expandedMobile, setExpandedMobile] = useState<{ [key: string]: boolean }>({})
   const sliderRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -409,24 +410,24 @@ export default function IconiquesView({
       <div className="w-full border-t border-black" />
 
       <div className="relative" style={{ borderBottom: '1px solid #000' }}>
-        {/* MOBILE : flèches dans la marge blanche, taille réduite pour ne pas toucher le texte */}
+        {/* MOBILE : grosses flèches à l'intersection image / titre (bas de l'image carrée) */}
         <button
           onClick={() => scroll('left')}
           aria-label="Précédent"
-          className="md:hidden absolute left-1 z-20 p-2 hover:opacity-50 transition-opacity"
-          style={{ top: 'calc(100vw + 160px)', transform: 'translateY(-50%)' }}
+          className="md:hidden absolute left-2 z-20 p-1 hover:opacity-60 transition-opacity"
+          style={{ top: '100vw', transform: 'translateY(-50%)' }}
         >
-          <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+          <svg className="w-20 h-20 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.25}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <button
           onClick={() => scroll('right')}
           aria-label="Suivant"
-          className="md:hidden absolute right-1 z-20 p-2 hover:opacity-50 transition-opacity"
-          style={{ top: 'calc(100vw + 160px)', transform: 'translateY(-50%)' }}
+          className="md:hidden absolute right-2 z-20 p-1 hover:opacity-60 transition-opacity"
+          style={{ top: '100vw', transform: 'translateY(-50%)' }}
         >
-          <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+          <svg className="w-20 h-20 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.25}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -814,54 +815,109 @@ export default function IconiquesView({
                           <ProductGrid produits={produits[item.id]} columns={Math.max(2, Math.min(produits[item.id].length, 4)) as 2 | 3 | 4} showFilters={false} />
                         </div>
                       </div>
-                      {/* MOBILE : pattern identique à /nos-creatrices — alternance 2 vidéos / 1 vidéo full, 6 produits par bloc */}
-                      <div className="sm:hidden" style={{ borderTop: '1px solid #000' }}>
-                        <div className="px-6 pt-10 pb-4">
-                          <p className="uppercase tracking-widest font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}>
-                            {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
-                          </p>
-                        </div>
-                        {(() => {
-                          const vids = item.videos || []
-                          const allProds = produits[item.id] || []
-                          const blocks: Array<{ videoSlice: string[]; productSlice: any[]; bi: number }> = []
-                          let videoIdx = 0
-                          let bi = 0
-                          // On boucle tant qu'il reste des vidéos OU des produits à placer
-                          while (videoIdx < vids.length || bi * 6 < allProds.length) {
-                            const count = bi % 2 === 0 ? 2 : 1 // pair → 2 vidéos, impair → 1 vidéo full
-                            const videoSlice = vids.slice(videoIdx, videoIdx + count)
-                            videoIdx += videoSlice.length
-                            const productSlice = allProds.slice(bi * 6, bi * 6 + 6)
-                            if (videoSlice.length === 0 && productSlice.length === 0) break
-                            blocks.push({ videoSlice, productSlice, bi })
-                            bi++
-                          }
-                          return blocks.map(({ videoSlice, productSlice, bi }) => {
-                            const isPair = videoSlice.length === 2
-                            return (
-                              <div key={`mobile-${bi}`}>
-                                {videoSlice.length > 0 && (
-                                  <div className={isPair ? 'grid grid-cols-2' : 'block'} style={{ borderTop: '1px solid #000' }}>
-                                    {videoSlice.map((url, vi) => (
-                                      <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: isPair && vi === 0 ? '1px solid #000' : 'none' }}>
-                                        {/\.mp4(\?|$)/i.test(url) ? (
-                                          <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
-                                        ) : instagramEmbed(url) ? (
-                                          <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
-                                        ) : null}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {productSlice.length > 0 && (
-                                  <ProductGrid produits={productSlice} columns={1} showFilters={false} />
-                                )}
+                      {/* MOBILE : 1 vidéo full → 2 produits → 2 vidéos → 1 produit full → CTA */}
+                      {(() => {
+                        const vids = item.videos || []
+                        const allProds = produits[item.id] || []
+                        const vid0 = vids[0]
+                        const vid1 = vids[1]
+                        const vid2 = vids[2]
+                        const p0 = allProds[0]
+                        const p1 = allProds[1]
+                        const p2 = allProds[2]
+                        const rest = allProds.slice(3)
+                        const isExpanded = !!expandedMobile[item.id]
+                        const renderVideo = (url: string) => (
+                          /\.mp4(\?|$)/i.test(url) ? (
+                            <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
+                          ) : instagramEmbed(url) ? (
+                            <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
+                          ) : null
+                        )
+                        const renderProduct = (p: any) => {
+                          const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
+                          return (
+                            <div className="relative flex flex-col bg-white h-full">
+                              <Link href={`/boutique/${p.id}`} className="flex flex-col flex-grow group">
+                                <div className="aspect-square overflow-hidden bg-white">
+                                  {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
+                                </div>
+                                <div className="py-3 px-3 text-center bg-white">
+                                  <h3 className="uppercase font-semibold line-clamp-2" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px' }}>{p.nom}</h3>
+                                  {p.marque && <p className="mt-1 uppercase" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px', color: '#666' }}>{p.marque}</p>}
+                                  <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>{(p.prix ?? 0).toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
+                                </div>
+                              </Link>
+                              <div className="absolute top-2 right-2 z-10"><FavoriteButton productId={p.id} size={20} /></div>
+                            </div>
+                          )
+                        }
+                        return (
+                          <div className="sm:hidden" style={{ borderTop: '1px solid #000' }}>
+                            <div className="px-6 pt-10 pb-4">
+                              <p className="uppercase tracking-widest font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '13px', letterSpacing: '0.2em' }}>
+                                {t('Nos', 'Our', lang)} {(lang === 'en' ? item.nomPlurielEn : item.nomPluriel) || nomNoArticle(lang === 'en' && item.nomEn ? item.nomEn : item.nom, lang)}
+                              </p>
+                            </div>
+
+                            {vid0 && (
+                              <div className="w-full" style={{ aspectRatio: '9 / 16', borderTop: '1px solid #000' }}>
+                                {renderVideo(vid0)}
                               </div>
-                            )
-                          })
-                        })()}
-                      </div>
+                            )}
+
+                            {(p0 || p1) && (
+                              <div className="grid grid-cols-2" style={{ borderTop: '1px solid #000' }}>
+                                <div style={{ borderRight: p1 ? '1px solid #000' : 'none' }}>{p0 && renderProduct(p0)}</div>
+                                <div>{p1 && renderProduct(p1)}</div>
+                              </div>
+                            )}
+
+                            {(vid1 || vid2) && (
+                              <div className="grid grid-cols-2" style={{ borderTop: '1px solid #000' }}>
+                                <div className="w-full" style={{ aspectRatio: '9 / 16', borderRight: vid2 ? '1px solid #000' : 'none' }}>{vid1 && renderVideo(vid1)}</div>
+                                <div className="w-full" style={{ aspectRatio: '9 / 16' }}>{vid2 && renderVideo(vid2)}</div>
+                              </div>
+                            )}
+
+                            {p2 && (
+                              <div style={{ borderTop: '1px solid #000' }}>
+                                <ProductGrid produits={[p2]} columns={1} showFilters={false} />
+                              </div>
+                            )}
+
+                            {isExpanded && rest.length > 0 && (
+                              <div style={{ borderTop: '1px solid #000' }}>
+                                <ProductGrid produits={rest} columns={1} showFilters={false} />
+                              </div>
+                            )}
+
+                            {rest.length > 0 && !isExpanded && (
+                              <div className="px-6 py-10 text-center" style={{ borderTop: '1px solid #000' }}>
+                                <button
+                                  onClick={() => setExpandedMobile(prev => ({ ...prev, [item.id]: true }))}
+                                  className="inline-block uppercase hover:bg-black hover:text-white transition-all duration-200"
+                                  style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', letterSpacing: '0.25em', padding: '14px 32px', border: '1px solid #000', fontWeight: 600 }}
+                                >
+                                  {t('Voir toute la collection', 'See full collection', lang)} →
+                                </button>
+                              </div>
+                            )}
+
+                            {currentIndex < iconiques.length - 1 && (
+                              <div className="px-6 pt-2 pb-10 text-center">
+                                <button
+                                  onClick={() => scroll('right')}
+                                  className="inline-block uppercase hover:bg-black hover:text-white transition-all duration-200"
+                                  style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', letterSpacing: '0.25em', padding: '14px 32px', border: '1px solid #000', fontWeight: 600 }}
+                                >
+                                  {t('Favori suivant', 'Next favorite', lang)} →
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </>
                   )
                 )
