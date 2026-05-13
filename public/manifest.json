@@ -2,7 +2,7 @@
   "name": "Nouvelle Rive",
   "short_name": "Nouvelle Rive",
   "description": "Espace vendeur·euse",
-  "start_url": "/chineuse/performance",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#22209C",
   "theme_color": "#22209C",

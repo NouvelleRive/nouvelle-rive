@@ -229,7 +229,7 @@
         }
         // Vérifier si admin
         if (u.email !== ADMIN_EMAIL) {
-          router.push('/chineuse/performance')
+          router.push('/app')
           return
         }
         setUser(u)

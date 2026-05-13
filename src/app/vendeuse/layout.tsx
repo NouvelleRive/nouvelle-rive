@@ -181,7 +181,7 @@ export default function VendeuseLayout({ children }: { children: React.ReactNode
         return
       }
       if (u.email !== VENDEUSE_EMAIL && u.email !== ADMIN_EMAIL) {
-        router.push('/chineuse/performance')
+        router.push('/app')
         return
       }
       setUser(u)
