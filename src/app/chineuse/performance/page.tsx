@@ -8,6 +8,9 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
 import PerformanceContent from '@/components/PerformanceContent'
 
+const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
+const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
+
 export default function ChineusePerformancePage() {
   const router = useRouter()
   const [trigramme, setTrigramme] = useState<string | null>(null)
@@ -17,6 +20,14 @@ export default function ChineusePerformancePage() {
     const unsub = onAuthStateChanged(auth, async (u: User | null) => {
       if (!u) {
         router.push('/login')
+        return
+      }
+      if (u.email === ADMIN_EMAIL) {
+        router.replace('/admin/performance')
+        return
+      }
+      if (u.email === VENDEUSE_EMAIL) {
+        router.replace('/vendeuse/restock')
         return
       }
       try {
