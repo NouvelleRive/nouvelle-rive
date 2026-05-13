@@ -356,9 +356,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   }
 
   // Toutes les N pièces (5 desktop / 8 mobile), on intercale une vidéo de la chineuse
-  // de la Ne pièce. Si elle n'a pas de vidéo, on remonte en arrière (max N-1 pièces du
-  // bloc) jusqu'à en trouver une. On rotate par chineuse pour ne pas remettre toujours
-  // la même vidéo.
+  // de la pièce précédente. Si elle n'a pas de vidéo, on prend l'article encore avant
+  // (i-1, i-2…) jusqu'à en trouver une — dans la limite du bloc.
+  // On rotate par chineuse pour ne pas remettre toujours la même vidéo.
   type DisplayItem =
     | { type: 'product'; data: Produit }
     | { type: 'video'; key: string; videoUrl: string; chineuseSlug: string; mobileSpan: 1 | 2 }
