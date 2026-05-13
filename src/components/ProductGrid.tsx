@@ -356,9 +356,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   }
 
   // Toutes les N pièces (5 desktop / 8 mobile), on intercale une vidéo de la chineuse
-  // de la Ne pièce. Si elle n'a pas de vidéo, on remonte en arrière (max N-1 pièces du
-  // bloc) jusqu'à en trouver une. On rotate par chineuse pour ne pas remettre toujours
-  // la même vidéo.
+  // de la Ne pièce. Si elle n'a pas de vidéo, on remonte en arrière pièce par pièce
+  // (sans limite de bloc) jusqu'à en trouver une. On rotate par chineuse pour ne pas
+  // remettre toujours la même vidéo.
   type DisplayItem =
     | { type: 'product'; data: Produit }
     | { type: 'video'; key: string; videoUrl: string; chineuseSlug: string; mobileSpan: 1 | 2 }
@@ -400,10 +400,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       // Desktop : toujours 1 vidéo par cellule.
       const wantPair = !isDesktop && (boundaryCount % 2 === 1)
 
-      // Cherche les chineuses des pièces du bloc, du plus récent au plus ancien, sans doublons.
+      // Cherche les chineuses en remontant pièce par pièce (sans limite de bloc), sans doublons.
       const uniqueChineuses: ChineuseLite[] = []
       const seenTrigs = new Set<string>()
-      for (let j = i; j >= Math.max(0, i - (blockSize - 1)); j--) {
+      for (let j = i; j >= 0; j--) {
         const trig = extractTrigramme(filteredProduits[j])
         if (!trig || seenTrigs.has(trig)) continue
         const c = chineuseByTrigramme.get(trig)
