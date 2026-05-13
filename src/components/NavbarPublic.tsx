@@ -164,7 +164,7 @@ export default function NavbarPublic() {
                 {accountLabel}
               </Link>
             </div>
-            <div className="order-2 md:order-1 scale-75 md:scale-100 origin-top-right md:px-2 md:py-1 md:bg-black/30 md:backdrop-blur-sm">
+            <div className="order-2 md:order-1 scale-75 md:scale-100 origin-top-right">
               <LanguageSwitcher whiteOnVideo />
             </div>
           </div>
