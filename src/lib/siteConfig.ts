@@ -1,7 +1,7 @@
 // lib/siteConfig.ts
 import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy, limit, startAfter, DocumentSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -205,56 +205,42 @@ export function useFilteredProducts(pageId: string) {
   const [produits, setProduits] = useState<Produit[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [lastDoc, setLastDoc] = useState<any>(null)
 
   useEffect(() => {
-    // Charge tout le catalogue d'un coup pour que la recherche couvre l'intégralité.
-    // ~1300 produits × quelques champs = payload OK (~1-2 MB)
-    getFilteredProducts(pageId, { limitCount: 2000 })
-      .then(result => {
-        setProduits(result.produits)
-        setLastDoc(result.lastDoc)
-        setHasMore(result.hasMore)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    // Stratégie : premier batch rapide (150 docs) pour afficher la page tout de suite,
+    // puis on continue à charger le reste du catalogue en background par batches de 300.
+    // Pendant le background, loadingMore=true → le "Chargement…" reste visible en bas
+    // et la recherche/filtres voient les nouveaux produits apparaître dynamiquement.
+    let cancelled = false
+    setProduits([])
+    setLoading(true)
+    setLoadingMore(false)
+
+    const loadAll = async () => {
+      const first = await getFilteredProducts(pageId, { limitCount: 150 })
+      if (cancelled) return
+      setProduits(first.produits)
+      setLoading(false)
+
+      if (!first.hasMore) return
+
+      setLoadingMore(true)
+      let lastDoc = first.lastDoc
+      let hasMore = first.hasMore
+      while (hasMore && !cancelled) {
+        const next = await getFilteredProducts(pageId, { lastDoc, limitCount: 300 })
+        if (cancelled) return
+        setProduits(prev => [...prev, ...next.produits])
+        lastDoc = next.lastDoc
+        hasMore = next.hasMore
+      }
+      if (!cancelled) setLoadingMore(false)
+    }
+
+    loadAll().catch(console.error)
+
+    return () => { cancelled = true }
   }, [pageId])
-
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore || !lastDoc) return
-    
-    setLoadingMore(true)
-    try {
-      const result = await getFilteredProducts(pageId, { lastDoc, limitCount: 100 })
-      setProduits(prev => [...prev, ...result.produits])
-      setLastDoc(result.lastDoc)
-      setHasMore(result.hasMore)
-    } catch (error) {
-      console.error('Erreur:', error)
-    } finally {
-      setLoadingMore(false)
-    }
-  }, [pageId, loadingMore, hasMore, lastDoc])
-
-  useEffect(() => {
-    if (!hasMore) return
-
-    let ticking = false
-    const handleScroll = () => {
-      if (ticking) return
-      ticking = true
-      requestAnimationFrame(() => {
-        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
-          loadMore()
-        }
-        ticking = false
-      })
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [loadMore, hasMore])
 
   return { produits, loading, loadingMore }
 }
