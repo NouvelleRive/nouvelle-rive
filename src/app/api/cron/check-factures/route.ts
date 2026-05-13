@@ -112,26 +112,45 @@ export async function GET(req: NextRequest) {
       // Accepte plusieurs mois dans un seul mail (cas Sergio : mars + avril en PJ groupées)
       const processedMois = new Set<string>()
       const curMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+      const moisFr: Record<string, string> = {
+        JANVIER: '01', FEVRIER: '02', FÉVRIER: '02', MARS: '03', AVRIL: '04',
+        MAI: '05', JUIN: '06', JUILLET: '07', AOUT: '08', AOÛT: '08',
+        SEPTEMBRE: '09', OCTOBRE: '10', NOVEMBRE: '11', DECEMBRE: '12', DÉCEMBRE: '12',
+      }
+      const moisFrAlt = Object.keys(moisFr).join('|')
+
+      async function markRef(refM: string, refYY: string, refTrig: string, src: string) {
+        const refY = '20' + refYY
+        const refMois = `${refM}-${refY}`
+        const ref = `NR${refM}${refYY}-${refTrig}`
+        const refDate = new Date(parseInt(refY), parseInt(refM) - 1, 1)
+        if (refDate > curMonthStart) return
+        if (refTrig !== trigramme) return
+        if (processedMois.has(refMois)) return
+        processedMois.add(refMois)
+        const statutRef = adminDb.collection('paiements').doc(refMois).collection('statuts').doc(ch.id)
+        const existing = await statutRef.get()
+        if (!existing.exists || !existing.data()?.factureRecue) {
+          await statutRef.set({ factureRecue: true }, { merge: true })
+          matched.push(`${ref}:${ch.email}:${src}`)
+        }
+      }
+
       for (const cand of candidates) {
         const text = cand.text.toUpperCase()
+        // Format strict : NRMMYY-TRIGRAMME
         for (const refMatch of text.matchAll(/NR(\d{2})(\d{2})-([A-Z]+)/g)) {
-          const refM = refMatch[1]
-          const refY = '20' + refMatch[2]
-          const refTrigramme = refMatch[3]
-          const refMois = `${refM}-${refY}`
-          const ref = `NR${refM}${refMatch[2]}-${refTrigramme}`
-
-          const refDate = new Date(parseInt(refY), parseInt(refM) - 1, 1)
-          if (refDate > curMonthStart) continue
-          if (refTrigramme !== trigramme) continue
-          if (processedMois.has(refMois)) continue
-          processedMois.add(refMois)
-
-          const statutRef = adminDb.collection('paiements').doc(refMois).collection('statuts').doc(ch.id)
-          const existing = await statutRef.get()
-          if (!existing.exists || !existing.data()?.factureRecue) {
-            await statutRef.set({ factureRecue: true }, { merge: true })
-            matched.push(`${ref}:${ch.email}`)
+          await markRef(refMatch[1], refMatch[2], refMatch[3], cand.source)
+        }
+        // Format libre dans le nom de PJ ou sujet : "facture <mois_fr> <année>"
+        // (mail venant déjà de la chineuse via filtre Gmail from:, donc trigramme = celui de la chineuse)
+        if (cand.source.startsWith('PJ') || cand.source === 'sujet') {
+          const re = new RegExp(`FACTURE\\s+(${moisFrAlt})\\s+(\\d{4})`, 'g')
+          for (const m of text.matchAll(re)) {
+            const refM = moisFr[m[1]]
+            const refYY = m[2].slice(-2)
+            if (refM) await markRef(refM, refYY, trigramme, cand.source)
           }
         }
       }
