@@ -15,7 +15,7 @@
     },
     {
       "path": "/api/cron/check-factures",
-      "schedule": "0 8 * * *"
+      "schedule": "0 19 9 * *"
     }
   ]
 }
