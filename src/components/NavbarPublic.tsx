@@ -165,7 +165,7 @@ export default function NavbarPublic() {
               </Link>
             </div>
             <div className="order-2 md:order-1 scale-75 md:scale-100 origin-top-right">
-              <LanguageSwitcher whiteOnVideo />
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
