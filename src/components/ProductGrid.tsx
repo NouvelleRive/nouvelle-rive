@@ -80,6 +80,7 @@ type Produit = {
   vendu: boolean
   promotion?: boolean
   createdAt?: any
+  sku?: string
 }
 
 interface ProductGridProps {
@@ -323,7 +324,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       const description = (p as { description?: string }).description
       const descriptionEn = (p as { descriptionEn?: string }).descriptionEn
       const text = stripAccents(
-        [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn]
+        [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn, p.sku]
           .filter(Boolean)
           .join(' ')
       )
