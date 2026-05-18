@@ -49,10 +49,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         (p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
       )
       .map(p => {
-        const ts = p.updatedAt?.toDate?.() ?? p.createdAt?.toDate?.() ?? now
         return {
           url: `${BASE_URL}/boutique/${p.id}`,
-          lastModified: ts instanceof Date ? ts : now,
+          lastModified: now,
           changeFrequency: 'weekly' as const,
           priority: 0.7,
         }
