@@ -136,6 +136,17 @@ export default function PlanningCalendar({
     } else {
       await setDoc(ref, { slots: newSlots })
     }
+    // Notif admin : uniquement quand une chineuse crée/modifie un slot (les déposantes
+    // passent par /api/deposante/rdv-demande qui envoie déjà sa propre push).
+    if (nom && userType === 'chineuse') {
+      try {
+        await fetch('/api/notif/annonce-restock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dateStr, creneau, nom, type: 'chineuse' }),
+        })
+      } catch {}
+    }
   }
 
   const handleRestockChange = (ds: string, cr: string, val: string) => {

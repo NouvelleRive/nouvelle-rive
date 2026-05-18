@@ -6,6 +6,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { Resend } from 'resend'
+import { sendPushToOwner } from '@/lib/webpush'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -103,6 +104,17 @@ export async function POST(req: NextRequest) {
       console.error('Email demande RDV échoué:', e?.message)
       return NextResponse.json({ success: false, error: 'Email non envoyé' }, { status: 500 })
     }
+
+    // Push notif admin (best-effort)
+    try {
+      const nbPieces = (slot.pieceIds || []).length
+      await sendPushToOwner('boutique', {
+        title: `📦 RDV restock demandé — ${dep.prenom || dep.trigramme || 'déposante'}`,
+        body: `${jour} à ${creneau}${nbPieces ? ` · ${nbPieces} pièce${nbPieces > 1 ? 's' : ''}` : ''}`,
+        url: '/admin/selectionneuses',
+        tag: `rdv-${monthKey}-${slotKey}`,
+      })
+    } catch (e) { console.warn('Push RDV restock failed:', e) }
 
     return NextResponse.json({ success: true })
   } catch (e: any) {

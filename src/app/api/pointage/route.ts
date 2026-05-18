@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { pointageDocId } from '@/lib/pointage'
+import { sendPushToOwner } from '@/lib/webpush'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
@@ -132,6 +133,14 @@ export async function POST(req: NextRequest) {
     const snap = await ref.get()
     const existing = snap.exists ? snap.data()! : null
 
+    // Lookup prénom de la vendeuse pour la notif admin (best-effort)
+    let prenom = vendeuseId
+    try {
+      const vSnap = await adminDb.collection('vendeuses').doc(vendeuseId).get()
+      if (vSnap.exists) prenom = vSnap.data()?.prenom || vendeuseId
+    } catch {}
+    const heureFR = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
+
     if (action === 'arrivee') {
       if (existing?.arrivee) {
         return withBoutiqueCookie({ success: false, error: 'Tu as déjà pointé ton arrivée aujourd\'hui.' }, { status: 400 })
@@ -142,6 +151,15 @@ export async function POST(req: NextRequest) {
         arrivee: Timestamp.fromDate(now),
         createdAt: existing?.createdAt || Timestamp.fromDate(now),
       }, { merge: true })
+      // Notif admin (best-effort, n'interrompt jamais le flow)
+      try {
+        await sendPushToOwner('boutique', {
+          title: `🟢 ${prenom} arrivée ${heureFR}`,
+          body: 'Pointage arrivée enregistré',
+          url: '/admin/vendeuses',
+          tag: `pointage-${dateStr}-${vendeuseId}-arrivee`,
+        })
+      } catch (e) { console.warn('Push pointage arrivée failed:', e) }
       // Détecte les pointages passés sans départ pour rappel à la vendeuse
       const pastSnap = await adminDb.collection('pointages').where('vendeuseId', '==', vendeuseId).get()
       const missingDeparts = pastSnap.docs
@@ -162,6 +180,14 @@ export async function POST(req: NextRequest) {
     await ref.update({
       depart: Timestamp.fromDate(now),
     })
+    try {
+      await sendPushToOwner('boutique', {
+        title: `🔴 ${prenom} partie ${heureFR}`,
+        body: 'Pointage départ enregistré',
+        url: '/admin/vendeuses',
+        tag: `pointage-${dateStr}-${vendeuseId}-depart`,
+      })
+    } catch (e) { console.warn('Push pointage départ failed:', e) }
     return withBoutiqueCookie({ success: true, action: 'depart', at: now.toISOString() })
   } catch (err: any) {
     console.error('[API POINTAGE POST]', err)
