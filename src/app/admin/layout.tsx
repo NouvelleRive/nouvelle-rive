@@ -10,6 +10,7 @@
   import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
   import LogoutButton from '@/components/LogoutButton'
   import ResetNotifsButton from '@/components/ResetNotifsButton'
+  import EnableNotifsButton from '@/components/EnableNotifsButton'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -258,6 +259,9 @@
       <div className="min-h-screen bg-gray-50">
         <NotifsAutoSubscribe ownerId="boutique" />
         <AdminNavbar />
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-3">
+          <EnableNotifsButton ownerId="boutique" label="Activer les notifications" />
+        </div>
         <main className="max-w-7xl mx-auto p-4 lg:p-6">
           {children}
         </main>
