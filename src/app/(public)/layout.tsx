@@ -45,6 +45,13 @@ const localBusinessJsonLd = {
   areaServed: { '@type': 'City', name: 'Paris' },
   paymentAccepted: 'Carte bancaire, Apple Pay, Google Pay',
   currenciesAccepted: 'EUR',
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.9',
+    reviewCount: '61',
+    bestRating: '5',
+    worstRating: '1',
+  },
 }
 
 const websiteJsonLd = {
