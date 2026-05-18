@@ -115,7 +115,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   const [searchQuery, setSearchQuery] = useState('')
   const triRef = useRef<HTMLDivElement>(null)
 
-  // Fréquence d'intercalation des vidéos : 8 partout (desktop + mobile).
+  // Fréquence d'intercalation des vidéos : 7 partout (desktop + mobile).
   const [isDesktop, setIsDesktop] = useState(false)
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 1024px)')
@@ -142,7 +142,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     }
   }, [])
 
-  // Chineuses (avec leurs videos) — pour intercaler une vidéo toutes les 8 pièces.
+  // Chineuses (avec leurs videos) — pour intercaler une vidéo toutes les 7 pièces.
   const [chineuses, setChineuses] = useState<ChineuseLite[]>([])
   useEffect(() => {
     let alive = true
@@ -356,7 +356,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     4: 'grid-cols-2 lg:grid-cols-4',
   }
 
-  // Toutes les 8 pièces (desktop + mobile), on intercale une vidéo de la chineuse
+  // Toutes les 7 pièces (desktop + mobile), on intercale une vidéo de la chineuse
   // de la pièce précédente. Si elle n'a pas de vidéo, on prend l'article encore avant
   // (i-1, i-2…) jusqu'à en trouver une — dans la limite du bloc.
   // On rotate par chineuse pour ne pas remettre toujours la même vidéo.
@@ -390,7 +390,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       return m ? m[1].toUpperCase() : null
     }
 
-    const blockSize = 8
+    const blockSize = 7
     let boundaryCount = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
