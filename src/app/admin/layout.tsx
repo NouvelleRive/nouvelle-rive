@@ -9,6 +9,7 @@
   import Link from 'next/link'
   import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
   import LogoutButton from '@/components/LogoutButton'
+  import ResetNotifsButton from '@/components/ResetNotifsButton'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -86,6 +87,7 @@
                     </option>
                   ))}
                 </select>
+                <ResetNotifsButton ownerId="boutique" />
                 <LogoutButton />
               </div>
               <button
@@ -155,6 +157,7 @@
                     </option>
                   ))}
                 </select>
+                <ResetNotifsButton ownerId="boutique" />
                 <LogoutButton />
               </div>
 
