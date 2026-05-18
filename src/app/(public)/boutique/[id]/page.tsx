@@ -2,8 +2,63 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebaseAdmin'
 import ProduitClient, { type Produit, type ChineuseInfo } from './ProduitClient'
+import {
+  SEUIL_LIVRAISON_OFFERTE,
+  FRAIS_LIVRAISON_FR,
+  FRAIS_LIVRAISON_EU,
+  FRAIS_LIVRAISON_INTL,
+  PAYS_LIVRAISON,
+} from '@/lib/shipping'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
+
+const PAYS_RETOURS_GRATUITS = PAYS_LIVRAISON
+  .filter(p => p.zone === 'FR' || p.zone === 'EU')
+  .map(p => p.code)
+
+function buildShippingDetails(prix: number) {
+  const fraisFR = prix >= SEUIL_LIVRAISON_OFFERTE ? 0 : FRAIS_LIVRAISON_FR
+  const mkDelivery = (transitMin: number, transitMax: number) => ({
+    '@type': 'ShippingDeliveryTime',
+    handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+    transitTime: { '@type': 'QuantitativeValue', minValue: transitMin, maxValue: transitMax, unitCode: 'DAY' },
+  })
+  return [
+    {
+      '@type': 'OfferShippingDetails',
+      shippingRate: { '@type': 'MonetaryAmount', value: fraisFR, currency: 'EUR' },
+      shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'FR' },
+      deliveryTime: mkDelivery(2, 3),
+    },
+    {
+      '@type': 'OfferShippingDetails',
+      shippingRate: { '@type': 'MonetaryAmount', value: FRAIS_LIVRAISON_EU, currency: 'EUR' },
+      shippingDestination: {
+        '@type': 'DefinedRegion',
+        addressCountry: PAYS_LIVRAISON.filter(p => p.zone === 'EU').map(p => p.code),
+      },
+      deliveryTime: mkDelivery(3, 5),
+    },
+    {
+      '@type': 'OfferShippingDetails',
+      shippingRate: { '@type': 'MonetaryAmount', value: FRAIS_LIVRAISON_INTL, currency: 'EUR' },
+      shippingDestination: {
+        '@type': 'DefinedRegion',
+        addressCountry: PAYS_LIVRAISON.filter(p => p.zone === 'INTL').map(p => p.code),
+      },
+      deliveryTime: mkDelivery(5, 10),
+    },
+  ]
+}
+
+const RETURN_POLICY = {
+  '@type': 'MerchantReturnPolicy',
+  applicableCountry: PAYS_RETOURS_GRATUITS,
+  returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+  merchantReturnDays: 14,
+  returnMethod: 'https://schema.org/ReturnByMail',
+  returnFees: 'https://schema.org/FreeReturn',
+}
 
 export const revalidate = 60
 
@@ -151,6 +206,8 @@ export default async function ProduitPage({ params }: { params: Promise<{ id: st
       availability: produit.vendu ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
       itemCondition: 'https://schema.org/UsedCondition',
       seller: { '@type': 'Organization', name: 'NOUVELLE RIVE' },
+      hasMerchantReturnPolicy: RETURN_POLICY,
+      shippingDetails: buildShippingDetails(produit.prix || 0),
     },
   }
   if (image) jsonLd.image = [image]
