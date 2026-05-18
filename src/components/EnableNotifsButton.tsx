@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bell, BellOff, BellRing } from 'lucide-react'
+import { Bell, BellOff } from 'lucide-react'
 
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
 
@@ -113,11 +113,7 @@ export default function EnableNotifsButton({
     )
   }
   if (status === 'subscribed') {
-    return (
-      <div className="flex items-center gap-2 text-xs text-green-700">
-        <BellRing size={14} /> Notifications activées
-      </div>
-    )
+    return null
   }
   return (
     <button
