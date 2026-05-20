@@ -18,6 +18,7 @@ import { Resend } from 'resend'
 import { ebayApiCall, isEbayConfigured, convertEURtoUSD } from '@/lib/ebay'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { sendPushToOwner } from '@/lib/webpush'
+import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 
 if (!getApps().length) {
   initializeApp({
@@ -130,7 +131,10 @@ async function syncEbayOrders(daysBack: number = 14) {
         }
       }
 
-      const trigramme = (produitData?.sku || sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
+      const trigramme =
+        (produitData?.trigramme || '').toString().toUpperCase() ||
+        (await resolveTrigrammeFromSku(adminDb, produitData?.sku || sku)) ||
+        null
       let chineurEmail = produitData?.chineur || null
       let chineurUid = produitData?.chineurUid || null
 

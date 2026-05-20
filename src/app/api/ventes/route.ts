@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { Timestamp } from 'firebase-admin/firestore'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
+import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -133,7 +134,8 @@ export async function POST(req: NextRequest) {
     const updateData: any = { quantite: newQty }
     if (newQty === 0) {
       // Check smallBatch pour ne pas mettre vendu=true sur les pièces avec stock multiple
-      const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+      const tri = (p.trigramme || '').toString().toUpperCase()
+        || await resolveTrigrammeFromSku(adminDb, p.sku)
       let isSmallBatch = false
       if (tri) {
         const chSnap = await adminDb.collection('chineuse').where('trigramme', '==', tri).limit(1).get()
@@ -294,7 +296,8 @@ export async function PUT(req: NextRequest) {
     const updateData: any = { quantite: newQty }
     if (newQty === 0) {
       // Check smallBatch pour ne pas mettre vendu=true sur les pièces avec stock multiple
-      const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+      const tri = (p.trigramme || '').toString().toUpperCase()
+        || await resolveTrigrammeFromSku(adminDb, p.sku)
       let isSmallBatch = false
       if (tri) {
         const chSnap = await adminDb.collection('chineuse').where('trigramme', '==', tri).limit(1).get()

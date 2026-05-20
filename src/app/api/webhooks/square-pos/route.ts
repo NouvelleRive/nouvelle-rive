@@ -10,6 +10,7 @@ import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { Client, Environment } from 'square'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { sendPushToOwner } from '@/lib/webpush'
+import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 
 // Initialiser Firebase Admin
 if (!getApps().length) {
@@ -204,7 +205,8 @@ export async function POST(request: Request) {
 
         if (nouvelleQuantite === 0) {
           // Vérifier si la chineuse est en petite série
-          const tri = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+          const tri = (produitData.trigramme || '').toString().toUpperCase()
+            || await resolveTrigrammeFromSku(adminDb, produitData.sku)
           let isSmallBatch = false
           if (tri) {
             const chineuseSnap = await adminDb.collection('chineuse')

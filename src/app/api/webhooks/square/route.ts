@@ -8,6 +8,7 @@ import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { Client, Environment } from 'square'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { sendPushToOwner } from '@/lib/webpush'
+import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 
 if (!getApps().length) {
   initializeApp({
@@ -64,7 +65,8 @@ async function traiterProduit(opts: {
   const quantiteActuelle = produitData.quantite || 1
   const nouvelleQuantite = Math.max(0, quantiteActuelle - 1)
 
-  const tri = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+  const tri = (produitData.trigramme || '').toString().toUpperCase()
+    || await resolveTrigrammeFromSku(adminDb, produitData.sku)
   let isSmallBatch = false
   if (tri && nouvelleQuantite === 0) {
     const chineuseSnap = await adminDb.collection('chineuse')
@@ -189,8 +191,11 @@ async function traiterProduit(opts: {
   const commandeId = commandeRef.id
   console.log('✅ Commande créée:', commandeId)
 
-  // Création de la vente
-  const trigramme = (produitData.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
+  // Création de la vente — priorité au trigramme du produit (MAK) plutôt qu'au préfixe SKU (MAKCHA, MAKDIO…)
+  const trigramme =
+    (produitData.trigramme || '').toString().toUpperCase() ||
+    (await resolveTrigrammeFromSku(adminDb, produitData.sku)) ||
+    null
   let chineurEmail = produitData.chineur || null
   let chineurUid = produitData.chineurUid || null
 
@@ -362,7 +367,10 @@ export async function POST(request: Request) {
           if (produitDoc) produitData = produitDoc.data()
         }
 
-        const trigramme = sku?.match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || null
+        const trigramme =
+          (produitData?.trigramme || '').toString().toUpperCase() ||
+          (await resolveTrigrammeFromSku(adminDb, produitData?.sku || sku)) ||
+          null
         let chineurEmail = produitData?.chineur || null
         let chineurUid = produitData?.chineurUid || null
 

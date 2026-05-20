@@ -2,6 +2,7 @@
 import { Client, Environment } from 'square'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { Timestamp } from 'firebase-admin/firestore'
+import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 
 const client = new Client({
   accessToken: process.env.SQUARE_ACCESS_TOKEN!,
@@ -428,7 +429,8 @@ export async function syncVentesDepuisSquare(
         const updateData: any = { quantite: newQty }
         if (newQty === 0) {
           // Vérifier si la chineuse est en petite série
-          const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+          const tri = (p.trigramme || '').toString().toUpperCase()
+            || await resolveTrigrammeFromSku(adminDb, p.sku)
           let isSmallBatch = false
           if (tri) {
             const chineuseSnap = await adminDb.collection('chineuse')

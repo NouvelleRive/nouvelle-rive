@@ -64,7 +64,9 @@ export async function GET() {
       // Google : titre max 150 caractères
       if (fullTitle.length > 150) fullTitle = fullTitle.slice(0, 147) + '...'
 
-      const tri = (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase() || ''
+      const tri = ((p.trigramme || '').toString().toUpperCase())
+        || (p.sku || '').match(/^[A-Za-z]+/)?.[0]?.toUpperCase()
+        || ''
       const wearType = chineuseMap[tri] || 'womenswear'
       const gender = wearType === 'menswear' ? 'male' : wearType === 'unisex' ? 'unisex' : 'female'
 
