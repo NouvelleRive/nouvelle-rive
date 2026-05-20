@@ -276,10 +276,11 @@ export default function PlanningCalendar({
           const slotColors = isDeposante
             ? 'text-orange-700 bg-orange-50'
             : 'text-gray-700 bg-gray-50'
-          // User non-admin : on n'affiche RIEN pour les créneaux pris par quelqu'un d'autre.
-          // Seul son propre RDV et les créneaux libres sont visibles.
+          // Chineuses : voient tous les slots (les leurs éditables, les autres en lecture
+          // seule) pour pouvoir s'organiser entre elles. Déposantes : seul leur propre RDV
+          // et les créneaux libres sont visibles.
           const isOtherSlot = userType !== 'admin' && slot && !isMine
-          if (isOtherSlot) return null
+          if (isOtherSlot && userType === 'deposante') return null
           return (
             <div key={cr} className="mb-0.5">
               {editable && options.length > 0 ? (
