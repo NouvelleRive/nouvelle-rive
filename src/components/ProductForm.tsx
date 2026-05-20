@@ -804,13 +804,15 @@ async function compressImage(file: File): Promise<string> {
     setGeneratingTryon(true)
     try {
       const requests: Promise<void>[] = []
+      // Seed partagé pour avoir le même mannequin face + dos
+      const sharedSeed = Math.floor(Math.random() * 1_000_000)
 
       // Porté face
       requests.push(
         fetch('/api/generate-tryon', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: faceUrl, productName: formData.nom, view: 'front' }),
+          body: JSON.stringify({ imageUrl: faceUrl, productName: formData.nom, categorie: formData.categorie, matiere: formData.material, view: 'front', seed: sharedSeed }),
         })
           .then(r => r.json())
           .then(data => {
@@ -830,7 +832,7 @@ async function compressImage(file: File): Promise<string> {
           fetch('/api/generate-tryon', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageUrl: dosUrl, productName: formData.nom, view: 'back' }),
+            body: JSON.stringify({ imageUrl: dosUrl, productName: formData.nom, categorie: formData.categorie, matiere: formData.material, view: 'back', seed: sharedSeed }),
           })
             .then(r => r.json())
             .then(data => {
