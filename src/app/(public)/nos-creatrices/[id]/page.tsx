@@ -35,6 +35,19 @@ function instagramEmbed(url: string): string | null {
   return `https://www.instagram.com/${m[1]}/${m[2]}/embed/`
 }
 
+// Desktop only : si la dernière ligne (de 3) n'est pas complète, on rajoute
+// la 1ère vidéo (et la 2ème si besoin) pour aligner à 3.
+function padRowToThree(urls: string[], allVideos: string[]): string[] {
+  if (urls.length === 0 || urls.length % 3 === 0) return urls
+  if (allVideos.length === 0) return urls
+  const missing = 3 - (urls.length % 3)
+  const padding: string[] = []
+  for (let i = 0; i < missing; i++) {
+    padding.push(allVideos[i % allVideos.length])
+  }
+  return [...urls, ...padding]
+}
+
 type Produit = {
   id: string
   nom: string
@@ -392,10 +405,10 @@ export default function CreateurPage() {
       {creatrice.videos && creatrice.videos.length > 0 && (
         <div className="px-6 md:px-12 py-12 bg-white hidden sm:block" style={{ borderBottom: '1px solid #000' }}>
           <div className="grid gap-6 mx-auto grid-cols-3" style={{ maxWidth: '1280px' }}>
-            {creatrice.videos.slice(0, 3).map((url) => {
+            {padRowToThree(creatrice.videos.slice(0, 3), creatrice.videos).map((url, i) => {
               if (/\.mp4(\?|$)/i.test(url)) {
                 return (
-                  <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                  <div key={`v-top-${i}`} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
                     <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
                   </div>
                 )
@@ -403,7 +416,7 @@ export default function CreateurPage() {
               const embed = instagramEmbed(url)
               if (!embed) return null
               return (
-                <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                <div key={`v-top-${i}`} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
                   <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
                 </div>
               )
@@ -480,13 +493,15 @@ export default function CreateurPage() {
             )
           }
 
-          const renderVideos = (urls: string[]) => (
+          const renderVideos = (urls: string[]) => {
+            const padded = padRowToThree(urls, creatrice.videos || [])
+            return (
             <div className="px-6 md:px-12 py-12 bg-white" style={{ borderBottom: '1px solid #000' }}>
               <div className="grid gap-6 mx-auto grid-cols-1 sm:grid-cols-3" style={{ maxWidth: '1280px' }}>
-                {urls.map((url) => {
+                {padded.map((url, i) => {
                   if (/\.mp4(\?|$)/i.test(url)) {
                     return (
-                      <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                      <div key={`v-extra-${i}`} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
                         <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
                       </div>
                     )
@@ -494,14 +509,15 @@ export default function CreateurPage() {
                   const embed = instagramEmbed(url)
                   if (!embed) return null
                   return (
-                    <div key={url} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
+                    <div key={`v-extra-${i}`} className="w-full" style={{ aspectRatio: '9 / 16', minHeight: '500px' }}>
                       <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
                     </div>
                   )
                 })}
               </div>
             </div>
-          )
+            )
+          }
 
           // MOBILE : pattern alterné 2 vidéos côte à côte / 1 vidéo pleine largeur, 6 produits 2x2 entre
           const renderMobileAlternated = () => {
