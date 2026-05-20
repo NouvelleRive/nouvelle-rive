@@ -145,6 +145,7 @@ export default function CreateurPage() {
             if (p.statut === 'retour' || p.statut === 'supprime') return false
             if (p.hidden === true) return false
             if (p.forceDisplay === false) return false
+            if (p.recu === false) return false
             const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
             return !!hasImage
           })
@@ -382,7 +383,7 @@ export default function CreateurPage() {
         </div>
 
         {/* Image */}
-        <div className="aspect-square md:aspect-auto md:min-h-[500px] bg-white overflow-hidden order-1 md:order-2">
+        <div className="aspect-square bg-white overflow-hidden order-1 md:order-2">
           {creatrice.imageUrl ? (
             <img
               src={creatrice.imageUrl}
