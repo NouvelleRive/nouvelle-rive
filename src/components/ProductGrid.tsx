@@ -323,8 +323,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       const cat = typeof p.categorie === 'object' ? (p.categorie as any)?.label : p.categorie
       const description = (p as { description?: string }).description
       const descriptionEn = (p as { descriptionEn?: string }).descriptionEn
+      const trigramme = (p as { trigramme?: string }).trigramme
       const text = stripAccents(
-        [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn, p.sku]
+        [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn, p.sku, trigramme]
           .filter(Boolean)
           .join(' ')
       )
