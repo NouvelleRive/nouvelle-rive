@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       const errorText = await fashnResponse.text()
       console.error('❌ Erreur FASHN.ai:', fashnResponse.status, errorText)
       return NextResponse.json(
-        { success: false, error: `FA${fashnResponse.status}: ${errorText.slice(0, 300)}` },
+        { success: false, error: `FA${fashnResponse.status}` },
         { status: 500 }
       )
     }
