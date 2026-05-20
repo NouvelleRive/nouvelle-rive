@@ -1,16 +1,18 @@
-import { redirect } from 'next/navigation'
-import { adminDb } from '@/lib/firebaseAdmin'
+'use client'
 
-export const dynamic = 'force-dynamic'
+import IconiquesView from '@/components/IconiquesView'
 
-export default async function IconiquesUpcyPage() {
-  const snap = await adminDb.collection('iconiques').get()
-  const items = snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as any) }))
-    .filter((d) => d.displayOnWebsite !== false && (d.type || 'vintage') === 'upcy')
-    .sort((a, b) => (a.ordre || 999) - (b.ordre || 999))
-
-  const first = items[0]
-  if (!first) redirect('/')
-  redirect(`/iconiques-upcy/${first.slug || first.id}`)
+export default function IconiquesUpcyPage() {
+  return (
+    <IconiquesView
+      typeFilter="upcy"
+      titleFr={<>NOS PIÈCES UPCY<br />FAVORITES</>}
+      titleEn={<>OUR FAVORITE<br />UPCYCLED PIECES</>}
+      loadingFr="Chargement des pièces upcyclées..."
+      loadingEn="Loading upcycled pieces..."
+      emptyFr="Aucune pièce upcyclée pour le moment"
+      emptyEn="No upcycled pieces yet"
+      showMarketBlock={false}
+    />
+  )
 }

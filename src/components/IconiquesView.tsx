@@ -164,117 +164,7 @@ export default function IconiquesView({
             })
           }
         }
-        setLoadingIcons(false) // ← la page se rend ici, le grid produits chargera ensuite
-
-        // 2) Produits actifs (vendu==false) en background.
-        const activeSnap = await getDocs(query(collection(db, 'produits'), where('vendu', '==', false)))
-        if (cancelled) return
-        const activeProduits = activeSnap.docs
-          .map(d => ({ id: d.id, ...d.data() } as any))
-          .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
-          .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
-          .filter(p => (p.quantite ?? 1) > 0)
-
-        // 3) Pool sold out — pour TOUTES les iconiques (pas seulement celles marquées soldOut),
-        //    on fetch aussi les pièces vendu==true des trigrammes concernés afin de pouvoir
-        //    afficher les sold-out à la fin de chaque iconique.
-        const soldOutPool: any[] = []
-        const allTrigs = Array.from(new Set(
-          data.flatMap(i => i.chineuseTrigrammes || []).map(t => t.toUpperCase())
-        )).filter(Boolean)
-        for (let i = 0; i < allTrigs.length; i += 30) {
-          const batch = allTrigs.slice(i, i + 30)
-          const soldSnap = await getDocs(query(
-            collection(db, 'produits'),
-            where('vendu', '==', true),
-            where('trigramme', 'in', batch),
-          ))
-          if (cancelled) return
-          soldOutPool.push(...soldSnap.docs
-            .map(d => ({ id: d.id, ...d.data() } as any))
-            .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
-            .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
-          )
-        }
-
-        const produitsData: { [key: string]: Produit[] } = {}
-        const norm = (s: string) =>
-          s.toLowerCase()
-            .normalize('NFD').replace(/[̀-ͯ]/g, '')
-            .replace(/['’\-_.\s]+/g, '')
-
-        for (const item of data) {
-          const needleNom = norm(item.categorieRecherche || '')
-          const needleMarque = norm(item.marque || '')
-          const needleMarqueRaw = (item.marque || '').toLowerCase().trim()
-          const needleMaterial = norm(item.materialContient || '')
-          const trigs = (item.chineuseTrigrammes || []).map(t => t.toUpperCase())
-          const catsIn = (item.categoriesIn || []).map(c => norm(c))
-
-          if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0) {
-            produitsData[item.id] = []
-            continue
-          }
-
-          const matchPredicate = (p: any) => {
-            const nom = norm(p.nom || p.Nom || '')
-            const marque = norm(p.marque || '')
-            const cat = typeof p.categorie === 'object'
-              ? norm(p.categorie?.label || '')
-              : norm(p.categorie || '')
-            const material = norm(p.material || '')
-            const trigramme = (p.trigramme || '').toUpperCase()
-
-            if (needleNom && !nom.includes(needleNom) && !cat.includes(needleNom)) return false
-
-            if (needleMarque) {
-              if (needleMarqueRaw === 'luxe') {
-                if (!LUXURY_BRANDS.some(b => marque.includes(norm(b)))) return false
-              } else {
-                if (!marque.includes(needleMarque)) return false
-              }
-            }
-
-            if (trigs.length > 0 && !trigs.includes(trigramme)) return false
-            if (catsIn.length > 0 && !catsIn.some(c => cat.includes(c))) return false
-            if (needleMaterial && !material.includes(needleMaterial)) return false
-
-            return true
-          }
-
-          const matchedActive = activeProduits.filter(matchPredicate)
-          const matchedSold = soldOutPool.filter(matchPredicate)
-
-          if (item.soldOut) {
-            // Iconique flagué soldOut → uniquement les sold-out, top 8 récents
-            matchedSold.sort((a, b) => {
-              const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()
-              const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()
-              return tb - ta
-            })
-            produitsData[item.id] = matchedSold.slice(0, 8)
-          } else {
-            // Tri custom par catégorie sur les actives si configuré
-            if (item.categoriesOrder && item.categoriesOrder.length > 0) {
-              const order = item.categoriesOrder.map(c => norm(c))
-              const sortByOrder = (a: any, b: any) => {
-                const catA = typeof a.categorie === 'object' ? norm(a.categorie?.label || '') : norm(a.categorie || '')
-                const catB = typeof b.categorie === 'object' ? norm(b.categorie?.label || '') : norm(b.categorie || '')
-                const idxA = order.findIndex(o => catA.includes(o))
-                const idxB = order.findIndex(o => catB.includes(o))
-                const fa = idxA === -1 ? 999 : idxA
-                const fb = idxB === -1 ? 999 : idxB
-                return fa - fb
-              }
-              matchedActive.sort(sortByOrder)
-              matchedSold.sort(sortByOrder)
-            }
-            // Sold-out à la fin (priorité aux actives)
-            produitsData[item.id] = [...matchedActive, ...matchedSold]
-          }
-        }
-        if (cancelled) return
-        setProduits(produitsData)
+        setLoadingIcons(false) // ← la page se rend ici, les produits sont chargés à la demande par iconique
       } catch (error) {
         console.error('Erreur lors du fetch des iconiques:', error)
         if (!cancelled) setLoadingIcons(false)
@@ -284,6 +174,144 @@ export default function IconiquesView({
     load()
     return () => { cancelled = true }
   }, [typeFilter])
+
+  // Fetch des produits pour l'iconique courant uniquement (lazy + filtré côté serveur par trigramme).
+  // Avant : fetch global de TOUS les produits actifs (potentiellement des milliers) → trop lent.
+  // Maintenant : fetch seulement ceux qui matchent les trigrammes de l'iconique courante, à la demande.
+  useEffect(() => {
+    if (iconiques.length === 0) return
+    const current = iconiques[currentIndex]
+    if (!current) return
+    if (produits[current.id]) return // déjà chargé
+
+    let cancelled = false
+
+    async function fetchForCurrent() {
+      const norm = (s: string) =>
+        s.toLowerCase()
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/['’\-_.\s]+/g, '')
+
+      const needleNom = norm(current.categorieRecherche || '')
+      const needleMarque = norm(current.marque || '')
+      const needleMarqueRaw = (current.marque || '').toLowerCase().trim()
+      const needleMaterial = norm(current.materialContient || '')
+      const trigs = (current.chineuseTrigrammes || []).map(t => t.toUpperCase())
+      const catsIn = (current.categoriesIn || []).map(c => norm(c))
+
+      if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0) {
+        setProduits(prev => ({ ...prev, [current.id]: [] }))
+        return
+      }
+
+      const matchPredicate = (p: any) => {
+        const nom = norm(p.nom || p.Nom || '')
+        const marque = norm(p.marque || '')
+        const cat = typeof p.categorie === 'object'
+          ? norm(p.categorie?.label || '')
+          : norm(p.categorie || '')
+        const material = norm(p.material || '')
+        const trigramme = (p.trigramme || '').toUpperCase()
+
+        if (needleNom && !nom.includes(needleNom) && !cat.includes(needleNom)) return false
+
+        if (needleMarque) {
+          if (needleMarqueRaw === 'luxe') {
+            if (!LUXURY_BRANDS.some(b => marque.includes(norm(b)))) return false
+          } else {
+            if (!marque.includes(needleMarque)) return false
+          }
+        }
+
+        if (trigs.length > 0 && !trigs.includes(trigramme)) return false
+        if (catsIn.length > 0 && !catsIn.some(c => cat.includes(c))) return false
+        if (needleMaterial && !material.includes(needleMaterial)) return false
+
+        return true
+      }
+
+      try {
+        let activeRaw: any[] = []
+        let soldRaw: any[] = []
+
+        if (trigs.length > 0) {
+          // Fast path : filtre serveur par trigramme (batches de 30, limite Firestore `in`).
+          const batches: string[][] = []
+          for (let i = 0; i < trigs.length; i += 30) batches.push(trigs.slice(i, i + 30))
+
+          const [activeSnaps, soldSnaps] = await Promise.all([
+            Promise.all(batches.map(b => getDocs(query(
+              collection(db, 'produits'),
+              where('vendu', '==', false),
+              where('trigramme', 'in', b),
+            )))),
+            Promise.all(batches.map(b => getDocs(query(
+              collection(db, 'produits'),
+              where('vendu', '==', true),
+              where('trigramme', 'in', b),
+            )))),
+          ])
+          activeRaw = activeSnaps.flatMap(s => s.docs.map(d => ({ id: d.id, ...d.data() } as any)))
+          soldRaw = soldSnaps.flatMap(s => s.docs.map(d => ({ id: d.id, ...d.data() } as any)))
+        } else {
+          // Slow path : pas de trigramme → on est obligé de tout fetch (iconique luxe etc.).
+          const [activeSnap, soldSnap] = await Promise.all([
+            getDocs(query(collection(db, 'produits'), where('vendu', '==', false))),
+            getDocs(query(collection(db, 'produits'), where('vendu', '==', true))),
+          ])
+          activeRaw = activeSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
+          soldRaw = soldSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
+        }
+
+        if (cancelled) return
+
+        const matchedActive = activeRaw
+          .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
+          .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
+          .filter(p => (p.quantite ?? 1) > 0)
+          .filter(matchPredicate)
+
+        const matchedSold = soldRaw
+          .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
+          .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
+          .filter(matchPredicate)
+
+        let result: any[]
+        if (current.soldOut) {
+          matchedSold.sort((a, b) => {
+            const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()
+            const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()
+            return tb - ta
+          })
+          result = matchedSold.slice(0, 8)
+        } else {
+          if (current.categoriesOrder && current.categoriesOrder.length > 0) {
+            const order = current.categoriesOrder.map(c => norm(c))
+            const sortByOrder = (a: any, b: any) => {
+              const catA = typeof a.categorie === 'object' ? norm(a.categorie?.label || '') : norm(a.categorie || '')
+              const catB = typeof b.categorie === 'object' ? norm(b.categorie?.label || '') : norm(b.categorie || '')
+              const idxA = order.findIndex(o => catA.includes(o))
+              const idxB = order.findIndex(o => catB.includes(o))
+              const fa = idxA === -1 ? 999 : idxA
+              const fb = idxB === -1 ? 999 : idxB
+              return fa - fb
+            }
+            matchedActive.sort(sortByOrder)
+            matchedSold.sort(sortByOrder)
+          }
+          result = [...matchedActive, ...matchedSold]
+        }
+
+        if (cancelled) return
+        setProduits(prev => ({ ...prev, [current.id]: result }))
+      } catch (err) {
+        console.error('Erreur fetch produits iconique', current.id, err)
+      }
+    }
+
+    fetchForCurrent()
+    return () => { cancelled = true }
+  }, [currentIndex, iconiques, produits])
 
   const scroll = (direction: 'left' | 'right') => {
     if (!sliderRef.current) return
@@ -392,7 +420,7 @@ export default function IconiquesView({
   }
 
   return (
-    <main className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <main className="bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       <div className="px-6 py-20">
         <h1
           id="titre"
@@ -464,14 +492,17 @@ export default function IconiquesView({
             setCurrentIndex(newIndex)
           }}
         >
-          {iconiques.map((item) => {
+          {iconiques.map((item, idx) => {
             // Layout : si 1-2 vidéos + produits matchés + pas soldOut → side-by-side desktop (vidéos gauche / produits droite).
             // Si 3 vidéos ou plus → tout en pleine largeur empilé.
             const hasVideos = item.videos && item.videos.length > 0
             const hasProduits = produits[item.id] && produits[item.id].length > 0
             const sideBySide = false
+            // On cache les slides non-actives (mobile + desktop) pour que la hauteur du slider
+            // s'adapte à la slide visible (sinon flex prend la hauteur du plus grand → blanc en bas).
+            const hiddenIfInactive = idx !== currentIndex ? 'hidden' : ''
             return (
-            <div key={item.id} className="min-w-full snap-center">
+            <div key={item.id} className={`min-w-full snap-center ${hiddenIfInactive}`}>
               <div className="grid grid-cols-1 md:grid-cols-2">
                 <div
                   className="aspect-square bg-gray-50 overflow-hidden relative cursor-crosshair"
@@ -616,6 +647,26 @@ export default function IconiquesView({
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* MOBILE : points de progression — combien d'iconiques avant/après */}
+              <div
+                className="sm:hidden flex justify-center items-center gap-2 py-4 flex-wrap px-4"
+                style={{ borderTop: '1px solid #000' }}
+              >
+                {iconiques.map((_, di) => (
+                  <button
+                    key={di}
+                    onClick={() => setCurrentIndex(di)}
+                    aria-label={`${di + 1} / ${iconiques.length}`}
+                    className="rounded-full transition-all"
+                    style={{
+                      width: di === idx ? 10 : 6,
+                      height: di === idx ? 10 : 6,
+                      background: di === idx ? '#000' : '#bbb',
+                    }}
+                  />
+                ))}
               </div>
 
               {(item.buyLink || (!sideBySide && item.videos && item.videos.length > 0)) && (
@@ -926,7 +977,7 @@ export default function IconiquesView({
           )})}
         </div>
 
-        <div className="flex justify-center gap-2 py-6">
+        <div className="hidden md:flex justify-center gap-2 py-6">
           {iconiques.map((_, idx) => (
             <button
               key={idx}

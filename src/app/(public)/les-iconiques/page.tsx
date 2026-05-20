@@ -1,16 +1,17 @@
-import { redirect } from 'next/navigation'
-import { adminDb } from '@/lib/firebaseAdmin'
+'use client'
 
-export const dynamic = 'force-dynamic'
+import IconiquesView from '@/components/IconiquesView'
 
-export default async function LesIconiquesPage() {
-  const snap = await adminDb.collection('iconiques').get()
-  const items = snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as any) }))
-    .filter((d) => d.displayOnWebsite !== false && (d.type || 'vintage') === 'vintage')
-    .sort((a, b) => (a.ordre || 999) - (b.ordre || 999))
-
-  const first = items[0]
-  if (!first) redirect('/')
-  redirect(`/les-iconiques/${first.slug || first.id}`)
+export default function LesIconiquesPage() {
+  return (
+    <IconiquesView
+      typeFilter="vintage"
+      titleFr={<>LES ICONIQUES<br />DU VINTAGE</>}
+      titleEn={<>VINTAGE<br />ICONICS</>}
+      loadingFr="Chargement des iconiques..."
+      loadingEn="Loading icons..."
+      emptyFr="Aucun produit iconique pour le moment"
+      emptyEn="No iconic pieces yet"
+    />
+  )
 }
