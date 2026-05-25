@@ -16,6 +16,7 @@ export default function RestockPage() {
   const [activeTab, setActiveTab] = useState<Tab>('restock')
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
+  const [acceptedDeposantePieceIds, setAcceptedDeposantePieceIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
   const [vendeusesListe, setVendeusesListe] = useState<string[]>([])
@@ -50,18 +51,45 @@ export default function RestockPage() {
     return () => unsub()
   }, [])
 
+  // RDV déposante acceptés → pieceIds débloqués pour Réception
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'restocks'), (snap) => {
+      const ids = new Set<string>()
+      snap.docs.forEach(d => {
+        const data = d.data() as any
+        const slots = data?.slots || data
+        Object.values(slots).forEach((slot: any) => {
+          if (slot?.type === 'deposante' && slot?.acceptee === true && Array.isArray(slot?.pieceIds)) {
+            slot.pieceIds.forEach((pid: string) => ids.add(pid))
+          }
+        })
+      })
+      setAcceptedDeposantePieceIds(ids)
+    })
+    return () => unsub()
+  }, [])
+
+  const produitsFiltres = useMemo(() => {
+    return produits.filter(p => {
+      if ((p as any).source !== 'deposante') return true
+      // Déposante : visible si déjà reçue (déstock/historique) ou si son RDV est accepté
+      if (p.recu === true) return true
+      return acceptedDeposantePieceIds.has(p.id)
+    })
+  }, [produits, acceptedDeposantePieceIds])
+
   const counts = useMemo(() => {
-    const nonRecus = produits.filter(
+    const nonRecus = produitsFiltres.filter(
       (p) => p.recu === false && p.statut !== 'supprime'
     ).length
-    const aRecuperer = produits.filter(
+    const aRecuperer = produitsFiltres.filter(
       (p) => (p.statutRecuperation === 'aRecuperer' || (p as any).statutDestock === 'enAttente') && p.statut !== 'supprime'
     ).length
-    const restockEnAttente = produits.filter(
+    const restockEnAttente = produitsFiltres.filter(
       (p) => (p as any).statutRestock === 'enAttente' && p.statut !== 'supprime'
     ).length
     return { nonRecus, aRecuperer, restockEnAttente }
-  }, [produits])
+  }, [produitsFiltres])
 
   if (showVendeuseModal) {
     return (
@@ -133,7 +161,7 @@ export default function RestockPage() {
       {activeTab === 'restock' && (
         <InventaireList
           mode="reception"
-          produits={produits}
+          produits={produitsFiltres}
           deposants={deposants}
           vendeusePrenom={vendeusePrenom}
           loading={loading}
@@ -143,7 +171,7 @@ export default function RestockPage() {
       {activeTab === 'destock' && (
         <InventaireList
           mode="destock"
-          produits={produits}
+          produits={produitsFiltres}
           deposants={deposants}
           vendeusePrenom={vendeusePrenom}
           loading={loading}
