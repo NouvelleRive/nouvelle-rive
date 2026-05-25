@@ -218,6 +218,32 @@ export async function GET(req: NextRequest) {
       const creneau = key.slice(tomorrowStr.length + 1)
       const piecesIds: string[] = Array.isArray(slot?.pieceIds) ? slot.pieceIds : []
       const dateFr = new Date(tomorrowStr + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+      const piecesData: { sku: string; nom: string; imageUrl: string; categorie: string }[] = []
+      for (const pid of piecesIds) {
+        try {
+          const ps = await adminDb.collection('produits').doc(pid).get()
+          if (!ps.exists) continue
+          const pd = ps.data() as any
+          piecesData.push({
+            sku: pd.sku || '',
+            nom: (pd.nom || '').replace(`${pd.sku || ''} - `, ''),
+            imageUrl: pd.imageUrl || pd.photos?.face || '',
+            categorie: (pd.categorie || '').replace('DEP - ', ''),
+          })
+        } catch {}
+      }
+
+      const piecesHtml = piecesData.length > 0
+        ? `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${piecesData.map(p => `
+            <td style="padding:6px;vertical-align:top;text-align:center;width:120px;">
+              ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" width="100" height="100" style="display:block;object-fit:cover;border:1px solid #eee;border-radius:6px;margin:0 auto 6px;" />` : ''}
+              <div style="font-size:11px;font-weight:bold;color:#22209C;">${p.sku}</div>
+              <div style="font-size:11px;color:#444;">${p.nom}</div>
+              <div style="font-size:10px;color:#888;">${p.categorie}</div>
+            </td>`).join('')}</tr></table>`
+        : ''
+
       try {
         await resend.emails.send({
           from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
@@ -229,11 +255,9 @@ export async function GET(req: NextRequest) {
               <h1 style="color:#22209C;">À demain 💙</h1>
               <p>Bonjour ${dep.prenom || ''},</p>
               <p>Petit rappel : votre rendez-vous de dépôt est confirmé pour <strong>${dateFr} à ${creneau}</strong>, en boutique au 8 rue des Écouffes, 75004 Paris.</p>
-              <p><strong>Pensez à apporter :</strong></p>
-              <ul>
-                <li>🪪 Votre pièce d'identité</li>
-                <li>👗 Vos ${piecesIds.length} pièce${piecesIds.length > 1 ? 's' : ''} à déposer</li>
-              </ul>
+              <p style="margin-top:16px;"><strong>🪪 Pensez à apporter votre pièce d'identité.</strong></p>
+              <p style="margin-top:16px;"><strong>Vos ${piecesData.length} pièce${piecesData.length > 1 ? 's' : ''} à déposer :</strong></p>
+              ${piecesHtml}
               <p style="margin-top:24px;">
                 <a href="https://www.nouvellerive.eu/deposante/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mon RDV</a>
               </p>
