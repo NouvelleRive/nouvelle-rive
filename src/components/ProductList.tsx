@@ -77,6 +77,7 @@
       itemId?: string
       trigramme?: string
       recu?: boolean
+      dateReception?: Timestamp
       statutRecuperation?: 'aRecuperer' | 'vole' | null
       forceDisplay?: boolean
       prixBaisseLe?: Timestamp
@@ -1167,6 +1168,9 @@
                       <h3 className="font-semibold text-gray-900 text-sm leading-tight">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente</span>}
+                      {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
+                      )}
                       {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                       {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1"><RefreshCw size={12} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
                       {getPriceBadgeStatus(p) === 'orange' && (
@@ -1231,6 +1235,9 @@
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
                       {isAdmin && <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>}
                       {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente de réception</span>}
+                      {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
+                      )}
                       {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1"><RefreshCw size={12} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
                     {getPriceBadgeStatus(p) === 'orange' && (
