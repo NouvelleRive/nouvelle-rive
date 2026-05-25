@@ -185,6 +185,15 @@ export default function PlanningCalendar({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   }, [])
 
+  const currentHour = useMemo(() => new Date().getHours(), [])
+
+  const isCreneauPast = (ds: string, cr: string) => {
+    if (ds < today) return true
+    if (ds > today) return false
+    const h = parseInt(cr.replace(/h.*$/, ''), 10)
+    return Number.isFinite(h) && currentHour >= h
+  }
+
   const tasksForDay = useMemo(() => {
     const result: Record<string, (Task & { originalDate: string; isRolled: boolean })[]> = {}
     const lastDay = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
@@ -269,7 +278,8 @@ export default function PlanningCalendar({
         {creneaux.map(cr => {
           const key = `${ds}_${cr}`
           const slot = restockSlots[key]
-          const editable = canEditRestock(slot)
+          const past = isCreneauPast(ds, cr)
+          const editable = canEditRestock(slot) && !(past && userType !== 'admin')
           const options = getRestockOptions(slot)
           const isDeposante = slot?.type === 'deposante'
           const isMine = slot && userNom && slot.nom === userNom
@@ -281,6 +291,8 @@ export default function PlanningCalendar({
           // et les créneaux libres sont visibles.
           const isOtherSlot = userType !== 'admin' && slot && !isMine
           if (isOtherSlot && userType === 'deposante') return null
+          // Pour les déposantes/chineuses, les créneaux passés vides sont cachés
+          if (past && userType !== 'admin' && !slot) return null
           return (
             <div key={cr} className="mb-0.5">
               {editable && options.length > 0 ? (
@@ -298,7 +310,7 @@ export default function PlanningCalendar({
                   {options.map((p, i) => <option key={i} value={p.nom}>{p.nom}</option>)}
                 </select>
               ) : (
-                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}` : cr}>
+                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${past ? 'text-gray-300 bg-gray-50 line-through opacity-60' : slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}${past ? ' — passé' : ''}` : cr}>
                   {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">{cr}</span>}
                 </div>
               )}

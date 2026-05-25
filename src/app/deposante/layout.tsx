@@ -64,7 +64,7 @@ function DeposanteNavbar() {
     { href: '/deposante/mes-produits', label: 'Mes pièces', locked: false },
     { href: '/deposante/mes-ventes', label: 'Mes ventes', locked: false },
     { href: '/deposante/profil', label: 'Mon profil', locked: false },
-    { href: '/deposante/calendrier', label: 'Calendrier', locked: !etapes.pieces },
+    { href: '/deposante/calendrier', label: 'Calendrier', locked: !etapes.validee || !etapes.pieces },
   ]
 
   const isActive = (href: string) => pathname === href
