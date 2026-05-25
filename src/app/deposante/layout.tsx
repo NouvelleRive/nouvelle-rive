@@ -9,8 +9,8 @@ import { db } from '@/lib/firebaseConfig'
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc } from 'firebase/firestore'
 
 type Etapes = { profil: boolean; contrat: boolean; validee: boolean; pieces: boolean; rdv: boolean }
-type EtapesContextType = Etapes & { refreshEtapes: () => void; setEtape: (key: keyof Etapes, value: boolean) => void }
-export const EtapesContext = createContext<EtapesContextType>({ profil: false, contrat: false, validee: false, pieces: false, rdv: false, refreshEtapes: () => {}, setEtape: () => {} })
+type EtapesContextType = Etapes & { refreshEtapes: () => void; setEtape: (key: keyof Etapes, value: boolean) => void; hasFirstReceived: boolean }
+export const EtapesContext = createContext<EtapesContextType>({ profil: false, contrat: false, validee: false, pieces: false, rdv: false, refreshEtapes: () => {}, setEtape: () => {}, hasFirstReceived: false })
 export const useEtapes = () => useContext(EtapesContext)
 
 function ProgressBar({ etapes }: { etapes: Etapes }) {
@@ -141,6 +141,7 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [etapes, setEtapes] = useState<Etapes>({ profil: false, contrat: false, validee: false, pieces: false, rdv: false })
+  const [hasFirstReceived, setHasFirstReceived] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
 
   const loadEtapes = async (u: User) => {
@@ -167,6 +168,12 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
             if (slot?.nom === (d.trigramme || '').toUpperCase()) rdvOk = true
           })
         })
+        const receivedSnap = await getDocs(query(
+          collection(db, 'produits'),
+          where('trigramme', '==', d.trigramme || ''),
+          where('recu', '==', true)
+        ))
+        setHasFirstReceived(receivedSnap.size > 0)
         setEtapes({ profil: profilOk, contrat: contratOk, validee: valideeOk, pieces: piecesOk, rdv: rdvOk })
         if (!d.hasSeenWelcome) setShowWelcome(true)
       } else {
@@ -229,10 +236,10 @@ export default function DeposanteLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <EtapesContext.Provider value={{ ...etapes, refreshEtapes, setEtape }}>
+    <EtapesContext.Provider value={{ ...etapes, refreshEtapes, setEtape, hasFirstReceived }}>
     <div className="min-h-screen bg-gray-50">
       <DeposanteNavbar />
-      <ProgressBar etapes={etapes} />
+      {!hasFirstReceived && <ProgressBar etapes={etapes} />}
       {showWelcome && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white max-w-sm w-full p-8" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>

@@ -25,6 +25,7 @@ function formatDateStr(year: number, month: number, day: number) {
 
 export default function DeposanteCalendrierPage() {
   const etapes = useEtapes()
+  const { refreshEtapes } = etapes
   const [userUid, setUserUid] = useState<string>('')
   const [userTrigramme, setUserTrigramme] = useState<string>('')
   const [userNom, setUserNom] = useState<string>('')
@@ -270,6 +271,8 @@ export default function DeposanteCalendrierPage() {
       } else {
         await setDoc(ref, { slots })
       }
+
+      refreshEtapes()
 
       // Email "demande de RDV reçue, en attente de validation par l'équipe"
       try {

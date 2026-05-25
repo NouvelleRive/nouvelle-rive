@@ -289,15 +289,31 @@ export default function DemandesDepotPage() {
                   </div>
                   {rdvPieces.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                      {rdvPieces.map(p => (
-                        <div key={p.id} className="border rounded p-2 text-xs">
-                          {p.imageUrl && <img src={p.imageUrl} alt="" className="w-full aspect-square object-cover rounded mb-1" />}
-                          <div className="font-semibold">{p.sku}</div>
-                          {p.marque && <div className="font-medium uppercase tracking-wide">{p.marque}</div>}
-                          <div className="truncate">{(p.nom || '').replace(`${p.sku} - `, '')}</div>
-                          <div className="text-gray-500">{(p.categorie || '').replace('DEP - ', '')} · {p.prix} €</div>
-                        </div>
-                      ))}
+                      {rdvPieces.map(p => {
+                        const photos = (p.photos || {}) as { face?: string; dos?: string; details?: string[] }
+                        const thumbs: { url: string; label: string }[] = []
+                        if (photos.face || p.imageUrl) thumbs.push({ url: photos.face || p.imageUrl, label: 'Face' })
+                        if (photos.dos) thumbs.push({ url: photos.dos, label: 'Dos' })
+                        if (Array.isArray(photos.details)) photos.details.forEach((url, i) => { if (url) thumbs.push({ url, label: `Détail ${i + 1}` }) })
+                        return (
+                          <div key={p.id} className="border rounded p-2 text-xs">
+                            {thumbs[0] && <img src={thumbs[0].url} alt="" className="w-full aspect-square object-cover rounded mb-1" />}
+                            {thumbs.length > 1 && (
+                              <div className="flex gap-1 mb-1 overflow-x-auto">
+                                {thumbs.slice(1).map((t, i) => (
+                                  <a key={i} href={t.url} target="_blank" rel="noopener noreferrer" title={t.label} className="flex-shrink-0 block w-12 h-12 border rounded overflow-hidden hover:opacity-80">
+                                    <img src={t.url} alt={t.label} className="w-full h-full object-cover" />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            <div className="font-semibold">{p.sku}</div>
+                            {p.marque && <div className="font-medium uppercase tracking-wide">{p.marque}</div>}
+                            <div className="truncate">{(p.nom || '').replace(`${p.sku} - `, '')}</div>
+                            <div className="text-gray-500">{(p.categorie || '').replace('DEP - ', '')} · {p.prix} €</div>
+                          </div>
+                        )
+                      })}
                     </div>
                   ) : (
                     <p className="text-xs text-gray-400 italic">Aucune pièce sélectionnée.</p>
