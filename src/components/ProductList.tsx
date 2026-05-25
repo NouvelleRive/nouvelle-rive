@@ -1491,7 +1491,7 @@
               >
                 <div className="font-medium text-gray-900">❌ Erreur de saisie</div>
                 <div className="text-sm text-gray-500 mt-1">
-                  Le produit sera supprimé définitivement (Firestore + Square)
+                  Le produit sera supprimé définitivement
                 </div>
               </button>
 

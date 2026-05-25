@@ -1245,7 +1245,7 @@ async function compressImage(file: File): Promise<string> {
               
               const catMatch = displayCategories.find(c => c.label.toLowerCase().trim() === categorie.toLowerCase().trim())
               if (!catMatch?.idsquare) {
-                erreurs.push(`Ligne ${rowNum}: Catégorie "${categorie}" non configurée dans Square`)
+                erreurs.push(`Ligne ${rowNum}: Catégorie "${categorie}" non configurée`)
                 continue
               }
               
@@ -1392,7 +1392,7 @@ async function compressImage(file: File): Promise<string> {
       if (mode === 'create' && requireSquareCategory) {
         const match = displayCategories.find((c) => c?.label === formData.categorie)
         if (!match?.idsquare) {
-          alert('❌ Catégorie non définie dans Square.\n\nContactez NOUVELLE RIVE pour configurer cette catégorie.')
+          alert('❌ Catégorie non configurée.\n\nContactez NOUVELLE RIVE pour configurer cette catégorie.')
           return
         }
       }

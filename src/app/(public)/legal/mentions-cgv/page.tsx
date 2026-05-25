@@ -62,7 +62,7 @@ export default function MentionsCGVPage() {
                 <p><strong>1. Purpose</strong><br />These T&Cs govern the sale of vintage clothing and accessories offered on nouvellerive.eu by NR1 SAS.</p>
                 <p><strong>2. Products</strong><br />Each item is unique, second-hand, sold as-is as described and photographed. Photos form part of the contract.</p>
                 <p><strong>3. Pricing</strong><br />Prices are listed in euros, taxes included. NR1 SAS reserves the right to change prices at any time.</p>
-                <p><strong>4. Order</strong><br />The order is confirmed after full payment via Square. A confirmation email is sent automatically.</p>
+                <p><strong>4. Order</strong><br />The order is confirmed after full payment. A confirmation email is sent automatically.</p>
                 <p><strong>5. Delivery</strong><br />Free in-store pickup (8 rue des Écouffes, 75004 Paris) or home delivery. Times and rates are stated at checkout.</p>
                 <p><strong>6. Right of withdrawal</strong><br />Under European law, customers based in France and the EU have a 14-day withdrawal period. Return shipping is covered by NR1 SAS.</p>
                 <p><strong>7. Intellectual property</strong><br />All site content (photos, texts, logos) is the property of NR1 SAS and may not be reproduced without authorization.</p>
@@ -73,7 +73,7 @@ export default function MentionsCGVPage() {
                 <p><strong>1. Objet</strong><br />Les présentes CGV régissent les ventes de vêtements et accessoires vintage proposés sur nouvellerive.eu par NR1 SAS.</p>
                 <p><strong>2. Produits</strong><br />Chaque article est unique, d&apos;occasion, vendu en l&apos;état tel que décrit et photographié. Les photos sont contractuelles.</p>
                 <p><strong>3. Prix</strong><br />Les prix sont indiqués en euros TTC. NR1 SAS se réserve le droit de modifier ses prix à tout moment.</p>
-                <p><strong>4. Commande</strong><br />La commande est validée après paiement complet via Square. Un email de confirmation est envoyé automatiquement.</p>
+                <p><strong>4. Commande</strong><br />La commande est validée après paiement complet. Un email de confirmation est envoyé automatiquement.</p>
                 <p><strong>5. Livraison</strong><br />Retrait gratuit en boutique (8 rue des Écouffes, 75004 Paris) ou livraison à domicile. Délais et tarifs indiqués au moment de la commande.</p>
                 <p><strong>6. Droit de rétractation</strong><br />Conformément à la législation européenne, les clients résidant en France et dans l&apos;UE disposent d&apos;un délai de 14 jours pour exercer leur droit de rétractation. Les frais de retour sont pris en charge par NR1 SAS.</p>
                 <p><strong>7. Propriété intellectuelle</strong><br />L&apos;ensemble du contenu du site (photos, textes, logos) est la propriété de NR1 SAS et ne peut être reproduit sans autorisation.</p>

@@ -34,7 +34,7 @@ export default function ConfidentialitePage() {
                 <p><strong>Data collected</strong><br />We only collect the data needed to process your orders: first name, last name, email, phone, shipping address.</p>
                 <p><strong>Purpose</strong><br />This data is used exclusively to process and track your orders, and to contact you when needed.</p>
                 <p><strong>Retention</strong><br />Your data is kept for 3 years from your last order, in accordance with French law.</p>
-                <p><strong>Data sharing</strong><br />Your data is never sold to third parties. It is shared only with our payment (Square) and shipping providers, strictly to process your order.</p>
+                <p><strong>Data sharing</strong><br />Your data is never sold to third parties. It is shared only with our payment and shipping providers, strictly to process your order.</p>
                 <p><strong>Your rights</strong><br />Under the GDPR, you have rights of access, rectification, deletion and portability of your data. To exercise these rights, contact us at <a href="mailto:nouvelleriveparis@gmail.com" style={{ color: bleuElectrique }}>nouvelleriveparis@gmail.com</a>.</p>
                 <p><strong>Cookies</strong><br />The site uses technical cookies necessary for its operation. No advertising cookies are placed without your consent.</p>
               </>
@@ -44,7 +44,7 @@ export default function ConfidentialitePage() {
                 <p><strong>Données collectées</strong><br />Nous collectons uniquement les données nécessaires au traitement de vos commandes : nom, prénom, email, téléphone, adresse de livraison.</p>
                 <p><strong>Finalités</strong><br />Ces données sont utilisées exclusivement pour le traitement et le suivi de vos commandes, et pour vous contacter en cas de besoin.</p>
                 <p><strong>Conservation</strong><br />Vos données sont conservées 3 ans à compter de votre dernière commande, conformément à la législation française.</p>
-                <p><strong>Partage des données</strong><br />Vos données ne sont jamais vendues à des tiers. Elles sont partagées uniquement avec nos prestataires de paiement (Square) et de livraison, dans le strict cadre du traitement de votre commande.</p>
+                <p><strong>Partage des données</strong><br />Vos données ne sont jamais vendues à des tiers. Elles sont partagées uniquement avec nos prestataires de paiement et de livraison, dans le strict cadre du traitement de votre commande.</p>
                 <p><strong>Vos droits</strong><br />Conformément au RGPD, vous disposez d&apos;un droit d&apos;accès, de rectification, de suppression et de portabilité de vos données. Pour exercer ces droits, contactez-nous à <a href="mailto:nouvelleriveparis@gmail.com" style={{ color: bleuElectrique }}>nouvelleriveparis@gmail.com</a>.</p>
                 <p><strong>Cookies</strong><br />Le site utilise des cookies techniques nécessaires à son fonctionnement. Aucun cookie publicitaire n&apos;est déposé sans votre consentement.</p>
               </>

@@ -1127,7 +1127,7 @@
                           type="text"
                           value={cat.idsquare}
                           onChange={(e) => updateCategorieIdsquare(cat.label, e.target.value)}
-                          placeholder="ID Square"
+                          placeholder="ID caisse"
                           className={`w-48 border rounded px-2 py-1 text-xs font-mono ${!cat.idsquare ? 'border-orange-300 bg-orange-50' : ''}`}
                         />
                         {!cat.idsquare && <span className="text-orange-400 text-xs">⚠️</span>}
@@ -1151,7 +1151,7 @@
                       type="text"
                       value={newCategorieIdsquare}
                       onChange={(e) => setNewCategorieIdsquare(e.target.value)}
-                      placeholder="ID Square"
+                      placeholder="ID caisse"
                       className="w-48 border rounded px-3 py-2 text-sm font-mono"
                     />
                     <button onClick={addCategorie} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
@@ -1160,10 +1160,10 @@
                   </div>
                 </div>
 
-                {/* CATÉGORIE DE RAPPORT (SQUARE) */}
+                {/* CATÉGORIE DE RAPPORT */}
                 <div className="border-t pt-6">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                    Catégorie de rapport (Square)
+                    Catégorie de rapport
                     {fieldStatus(formData.categorieRapportLabel)}
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1178,7 +1178,7 @@
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">ID Square</label>
+                      <label className="block text-xs text-gray-500 mb-1">ID caisse</label>
                       <input
                         type="text"
                         value={formData.categorieRapportIdsquare}

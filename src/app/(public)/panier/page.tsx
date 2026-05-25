@@ -199,7 +199,7 @@ export default function PanierPage() {
           </Link>
 
           <p className="text-center" style={{ fontSize: '10px', color: '#999' }}>
-            {t('Paiement sécurisé via Square', 'Secure payment via Square', lang)}
+            {t('Paiement 100% sécurisé', '100% secure payment', lang)}
           </p>
         </div>
       </div>

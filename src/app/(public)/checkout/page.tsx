@@ -278,7 +278,7 @@ function CheckoutContent() {
                   : `${t('PAYER', 'PAY', lang)} ${total.toFixed(2)} €`}
               </button>
               <p className="text-center mt-4" style={{ fontSize: '10px', color: '#999' }}>
-                {t('Paiement sécurisé via Square', 'Secure payment via Square', lang)}
+                {t('Paiement 100% sécurisé', '100% secure payment', lang)}
               </p>
             </div>
           </div>
