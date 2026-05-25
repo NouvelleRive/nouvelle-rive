@@ -293,6 +293,7 @@ export default function DemandesDepotPage() {
                         <div key={p.id} className="border rounded p-2 text-xs">
                           {p.imageUrl && <img src={p.imageUrl} alt="" className="w-full aspect-square object-cover rounded mb-1" />}
                           <div className="font-semibold">{p.sku}</div>
+                          {p.marque && <div className="font-medium uppercase tracking-wide">{p.marque}</div>}
                           <div className="truncate">{(p.nom || '').replace(`${p.sku} - `, '')}</div>
                           <div className="text-gray-500">{(p.categorie || '').replace('DEP - ', '')} · {p.prix} €</div>
                         </div>

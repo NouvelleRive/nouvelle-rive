@@ -52,11 +52,33 @@ if (!etapes.profil) return <div className="p-12 text-center text-gray-500">Compl
   if (!etapes.validee) return <div className="p-12 text-center text-gray-500">Profil en cours de validation 💙 — vous recevrez un email dès que c'est bon.</div>
 
   return (
-    <ProductList
-      titre="MES PIÈCES EN DÉPÔT"
-      produits={produits}
-      isAdmin={false}
-      loading={loading}
-    />
+    <div>
+      <ProductList
+        titre="MES PIÈCES EN DÉPÔT"
+        produits={produits}
+        isAdmin={false}
+        isDeposante
+        loading={loading}
+      />
+      <div className="flex justify-center px-4 pb-12">
+        <a
+          href="/deposante/calendrier"
+          style={{
+            display: 'inline-block',
+            backgroundColor: '#0000FF',
+            color: '#fff',
+            padding: '18px 40px',
+            fontSize: '14px',
+            letterSpacing: '0.2em',
+            fontWeight: 700,
+            textDecoration: 'none',
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            boxShadow: '0 4px 12px rgba(0,0,255,0.25)',
+          }}
+        >
+          PRENDRE MON RDV DE DÉPÔT →
+        </a>
+      </div>
+    </div>
   )
 }

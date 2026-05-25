@@ -73,6 +73,8 @@ export default function ProfilDeposantePage() {
   const [showContratModal, setShowContratModal] = useState(false)
   const [contratSigne, setContratSigne] = useState(false)
   const [contratUrl, setContratUrl] = useState('')
+  const [validee, setValidee] = useState(false)
+  const [valideeAt, setValideeAt] = useState<Date | null>(null)
   const [submittingContrat, setSubmittingContrat] = useState(false)
   const [showVerifiedPopup, setShowVerifiedPopup] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -135,6 +137,8 @@ export default function ProfilDeposantePage() {
           setTrigramme(d.trigramme || '')
           setContratSigne(!!d.contratSigne)
           setContratUrl(d.contratUrl || '')
+          setValidee(!!d.validee)
+          setValideeAt(d.valideeAt?.toDate ? d.valideeAt.toDate() : (d.valideeAt instanceof Date ? d.valideeAt : null))
         }
       } catch (e) {
         console.error('Erreur chargement profil deposante', e)
@@ -510,7 +514,9 @@ ctx.lineTo((touch.clientX - rect.left) * scaleX, (touch.clientY - rect.top) * sc
               <p style={{ fontSize: '14px', color: '#000', marginBottom: '16px' }}>✅ Votre contrat est signé et enregistré.</p>
               <div style={{ backgroundColor: '#f5f5ff', border: `1px solid ${bleu}`, padding: '16px 20px', marginBottom: '16px' }}>
                 <p style={{ fontSize: '13px', lineHeight: 1.6, margin: 0 }}>
-                  Vos informations vont être vérifiées par notre équipe. Si des éléments sont erronés ou manquants, nous ne pourrons pas prendre votre dépôt.
+                  {validee
+                    ? `✅ Compte validé${valideeAt ? ` le ${format(valideeAt, 'd MMMM yyyy', { locale: fr })}` : ''}.`
+                    : 'Vos informations vont être vérifiées par notre équipe. Si des éléments sont erronés ou manquants, nous ne pourrons pas prendre votre dépôt.'}
                 </p>
               </div>
               {contratUrl && (

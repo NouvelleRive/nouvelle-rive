@@ -98,6 +98,7 @@
   produits: Produit[]
   deposants?: Deposant[]
   isAdmin?: boolean
+  isDeposante?: boolean
   loading?: boolean
   onSearch?: () => void
   showSearchButton?: boolean
@@ -165,6 +166,7 @@
       produits,
       deposants = [],
       isAdmin = false,
+      isDeposante = false,
       loading = false,
       onSearch,
       showSearchButton = false,
@@ -942,7 +944,7 @@
           {/* Filtres - UTILISE FILTERBOX */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             <FilterBox
-              className="lg:col-span-2"
+              className={isDeposante ? 'lg:col-span-3' : 'lg:col-span-2'}
               hasActiveFilters={hasActiveFilters}
               onReset={resetFilters}
               onSearch={onSearch}
@@ -961,21 +963,23 @@
                     label: format(new Date(m + '-01'), 'MMM yyyy', { locale: fr })
                   }))
                 },
-                chineuse: {
-                  value: filtreDeposant,
-                  onChange: (v) => {
-                    setFiltreDeposant(v)
-                    setFiltreCategorie('')
+                ...(isDeposante ? {} : {
+                  chineuse: {
+                    value: filtreDeposant,
+                    onChange: (v: string) => {
+                      setFiltreDeposant(v)
+                      setFiltreCategorie('')
+                    },
+                    options: chineusesList
+                      .filter(c => c.nom)
+                      .map(c => ({
+                        value: (c as any).trigramme || '',
+                        label: c.nom.toUpperCase()
+                      }))
+                      .filter(c => c.value)
+                      .sort((a, b) => a.label.localeCompare(b.label))
                   },
-                  options: chineusesList
-                    .filter(c => c.nom)
-                    .map(c => ({
-                      value: (c as any).trigramme || '',
-                      label: c.nom.toUpperCase()
-                    }))
-                    .filter(c => c.value)
-                    .sort((a, b) => a.label.localeCompare(b.label))
-                },
+                }),
                 categorie: {
                   value: filtreCategorie,
                   onChange: setFiltreCategorie,
@@ -997,10 +1001,12 @@
                   value: filtrePhotoManquante,
                   onChange: setFiltrePhotoManquante,
                 },
-                deposante: {
-                  value: filtreDeposanteOnly,
-                  onChange: setFiltreDeposanteOnly,
-                },
+                ...(isDeposante ? {} : {
+                  deposante: {
+                    value: filtreDeposanteOnly,
+                    onChange: setFiltreDeposanteOnly,
+                  },
+                }),
                 prixBaisse: {
                   value: filtrePrixBaisse,
                   onChange: setFiltrePrixBaisse,
@@ -1009,17 +1015,19 @@
             />
 
             {/* Exporter - hidden on mobile */}
-            <div className="hidden lg:block bg-white border rounded-xl p-4 shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">Exporter</h2>
-              <div className="flex flex-col gap-3">
-                <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
-                  <FileSpreadsheet size={14} /> Excel
-                </button>
-                <button onClick={exportToPDF} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors">
-                  <Download size={14} /> PDF
-                </button>
+            {!isDeposante && (
+              <div className="hidden lg:block bg-white border rounded-xl p-4 shadow-sm">
+                <h2 className="text-lg font-semibold mb-4">Exporter</h2>
+                <div className="flex flex-col gap-3">
+                  <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
+                    <FileSpreadsheet size={14} /> Excel
+                  </button>
+                  <button onClick={exportToPDF} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors">
+                    <Download size={14} /> PDF
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Message si pas encore cherché */}
