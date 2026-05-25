@@ -321,20 +321,57 @@ export default function DeposanteCalendrierPage() {
     <div className="max-w-5xl mx-auto p-4 md:p-6">
       <h1 className="text-2xl font-bold text-[#22209C] mb-4">Prendre rendez-vous</h1>
 
-      {monRdv && !(monRdv.slot as any).acceptee && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-[#22209C]">
-          Dépôt en cours de validation 💙 — notre équipe revoit votre RDV et vos pièces, vous recevrez un email dès que c'est confirmé.
-        </div>
-      )}
+      {monRdv && (() => {
+        const accepte = !!(monRdv.slot as any).acceptee
+        const piecesRdv = (monRdv.slot.pieceIds || []).map(id => pieces.find(p => p.id === id)).filter(Boolean) as Piece[]
+        const [y, m, d] = monRdv.dateStr.split('-').map(Number)
+        const dateFr = new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+        return (
+          <div className="mb-6 border-2 border-[#22209C] bg-white">
+            <div className="bg-[#22209C] text-white px-5 py-3 flex items-center justify-between">
+              <span className="text-xs font-semibold tracking-[0.2em]">MON RENDEZ-VOUS DE DÉPÔT</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest">
+                {accepte ? '✓ Confirmé' : '· En attente'}
+              </span>
+            </div>
+            <div className="p-5">
+              <div className="text-xl font-bold text-[#22209C] capitalize mb-1">{dateFr} · {monRdv.creneau}</div>
+              <div className="text-sm text-gray-600 mb-4">
+                {piecesRdv.length} pièce{piecesRdv.length > 1 ? 's' : ''} à déposer en boutique — 8 rue des Écouffes, 75004 Paris
+              </div>
+
+              {piecesRdv.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-4">
+                  {piecesRdv.map(p => (
+                    <div key={p.id} className="border rounded p-2 text-xs">
+                      {(p as any).imageUrl && <img src={(p as any).imageUrl} alt="" className="w-full aspect-square object-cover rounded mb-1" />}
+                      <div className="font-semibold text-[#22209C]">{p.sku}</div>
+                      <div className="truncate text-gray-700">{(p.nom || '').replace(`${p.sku} - `, '')}</div>
+                      <div className="text-gray-500">{(p.categorie || '').replace('DEP - ', '')}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-[#22209C] flex items-start gap-2">
+                <span className="text-base leading-none">🪪</span>
+                <span><strong>Pensez à apporter votre pièce d'identité</strong> ainsi que les pièces à déposer.</span>
+              </div>
+
+              {!accepte && (
+                <p className="mt-3 text-xs text-gray-500 italic">
+                  Notre équipe valide votre RDV et vos pièces — vous recevrez un email dès que c'est confirmé.
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="mb-4 p-3 bg-gray-50 border rounded text-xs flex flex-wrap gap-3">
         <span><span className={`font-medium ${placesDisponibles.pap === 0 ? 'text-orange-500' : 'text-gray-700'}`}>PAP : {placesDisponibles.pap} place{placesDisponibles.pap !== 1 ? 's' : ''}</span></span>
         <span className="text-gray-300">·</span>
         <span><span className={`font-medium ${placesDisponibles.maro === 0 ? 'text-orange-500' : 'text-gray-700'}`}>MARO : {placesDisponibles.maro} place{placesDisponibles.maro !== 1 ? 's' : ''}</span></span>
-        {monRdv && <>
-          <span className="text-gray-300">·</span>
-          <span className="font-medium text-[#22209C]">Votre RDV : {monRdv.dateStr} à {monRdv.creneau} ({monRdv.slot.pieceIds?.length || 0} pièce{(monRdv.slot.pieceIds?.length || 0) !== 1 ? 's' : ''}){(monRdv.slot as any).acceptee ? ' ✓ confirmé' : ' · en attente'}</span>
-        </>}
       </div>
 
       <PlanningCalendar

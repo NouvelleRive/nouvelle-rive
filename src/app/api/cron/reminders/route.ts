@@ -9,8 +9,10 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { sendPushToOwner } from '@/lib/webpush'
+import { Resend } from 'resend'
 
 const CRON_SECRET = process.env.CRON_SECRET
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Renvoie {h, m} en heure de Paris (gère CET/CEST automatiquement)
 function parisHM(): { h: number; m: number; dateStr: string } {
@@ -186,6 +188,70 @@ export async function GET(req: NextRequest) {
         tag: `restock-${dateStr}-${r.slot}`,
       })
       actions.push(`restock-${r.slot}`)
+    }
+  }
+
+  // 18h00 — rappel J-1 aux déposantes dont le RDV est confirmé pour demain
+  if (inWindow(h, m, 18, 0)) {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(tomorrow)
+    const tomorrowMonthKey = tomorrowStr.slice(0, 7)
+    const restockSnap = await adminDb.collection('restocks').doc(tomorrowMonthKey).get()
+    const slots = restockSnap.exists ? (restockSnap.data()?.slots || {}) : {}
+    const sentSnap = await adminDb.collection('rdvReminders').doc(tomorrowStr).get()
+    const alreadySent = new Set<string>(sentSnap.exists ? (sentSnap.data()?.uids || []) : [])
+    const newlySent: string[] = []
+
+    for (const [key, slot] of Object.entries(slots as Record<string, any>)) {
+      if (!key.startsWith(tomorrowStr + '_')) continue
+      if (slot?.type !== 'deposante') continue
+      if (slot?.acceptee !== true) continue
+      const trigramme = (slot?.trigramme || '').toUpperCase()
+      if (!trigramme) continue
+      const depSnap = await adminDb.collection('deposante').where('trigramme', '==', trigramme).limit(1).get()
+      if (depSnap.empty) continue
+      const depDoc = depSnap.docs[0]
+      const dep = depDoc.data() as any
+      if (alreadySent.has(depDoc.id)) continue
+      if (!dep.email) continue
+      const creneau = key.slice(tomorrowStr.length + 1)
+      const piecesIds: string[] = Array.isArray(slot?.pieceIds) ? slot.pieceIds : []
+      const dateFr = new Date(tomorrowStr + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      try {
+        await resend.emails.send({
+          from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+          to: dep.email,
+          bcc: 'nouvelleriveparis@gmail.com',
+          subject: `Rappel — votre dépôt demain à ${creneau} 💙`,
+          html: `
+            <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+              <h1 style="color:#22209C;">À demain 💙</h1>
+              <p>Bonjour ${dep.prenom || ''},</p>
+              <p>Petit rappel : votre rendez-vous de dépôt est confirmé pour <strong>${dateFr} à ${creneau}</strong>, en boutique au 8 rue des Écouffes, 75004 Paris.</p>
+              <p><strong>Pensez à apporter :</strong></p>
+              <ul>
+                <li>🪪 Votre pièce d'identité</li>
+                <li>👗 Vos ${piecesIds.length} pièce${piecesIds.length > 1 ? 's' : ''} à déposer</li>
+              </ul>
+              <p style="margin-top:24px;">
+                <a href="https://www.nouvellerive.eu/deposante/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mon RDV</a>
+              </p>
+              <p style="font-size:12px;color:#888;margin-top:32px;">À demain en boutique 🌊</p>
+            </div>
+          `,
+        })
+        newlySent.push(depDoc.id)
+      } catch (e: any) {
+        console.error(`[cron/reminders] rappel déposante échoué ${depDoc.id}:`, e?.message)
+      }
+    }
+
+    if (newlySent.length > 0) {
+      await adminDb.collection('rdvReminders').doc(tomorrowStr).set({
+        uids: Array.from(new Set([...Array.from(alreadySent), ...newlySent])),
+      }, { merge: true })
+      actions.push(`rappel-deposantes-${newlySent.length}`)
     }
   }
 
