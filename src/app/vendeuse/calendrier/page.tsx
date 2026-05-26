@@ -20,9 +20,12 @@ type Produit = { id: string; chineur?: string; chineurUid?: string; createdAt?: 
 type Deposante = { id: string; nom?: string; trigramme?: string; email?: string }
 type Task = { id: string; texte: string }
 
+const VENDEUSE_LOCAL_KEY = 'nouvelle-rive-vendeuse-id'
+
 export default function VendeuseCalendrierPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [currentVendeuseId, setCurrentVendeuseId] = useState<string>('')
   const [vendeuses, setVendeuses] = useState<Vendeuse[]>([])
   const [planningSlots, setPlanningSlots] = useState<PlanningSlots>({})
   const [planningLoading, setPlanningLoading] = useState(false)
@@ -51,6 +54,17 @@ export default function VendeuseCalendrierPage() {
       if (u) { setCurrentUserId(u.uid); setIsAdmin(u.email === ADMIN_EMAIL) }
     })
     return () => unsub()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = localStorage.getItem(VENDEUSE_LOCAL_KEY) || ''
+    setCurrentVendeuseId(stored)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === VENDEUSE_LOCAL_KEY) setCurrentVendeuseId(e.newValue || '')
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
   useEffect(() => {
@@ -295,6 +309,7 @@ export default function VendeuseCalendrierPage() {
             tasksData={tasksData}
             userCompletedTaskIds={userCompletedTaskIds}
             isAdmin={isAdmin}
+            currentVendeuseId={isAdmin ? '' : currentVendeuseId}
             onAddTask={handleAddTask}
             onToggleTask={handleToggleTask}
           />

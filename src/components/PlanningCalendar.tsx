@@ -42,6 +42,9 @@ interface PlanningCalendarProps {
   // (ex: déposante qui doit sélectionner des pièces avant de confirmer son RDV).
   // Si la fonction renvoie false, la sauvegarde par défaut est bypassée.
   onRestockSlotPick?: (dateStr: string, creneau: string, val: string) => boolean
+  // ID de la vendeuse connectée : si elle se retire d'un de ses propres slots planning,
+  // on affiche une modale de confirmation au lieu de sauvegarder direct.
+  currentVendeuseId?: string
 }
 
 export default function PlanningCalendar({
@@ -66,6 +69,7 @@ export default function PlanningCalendar({
   dailyCA = {},
   dailyCAByCreneau = {},
   onRestockSlotPick,
+  currentVendeuseId = '',
 }: PlanningCalendarProps) {
 
   const [internalMonth, setInternalMonth] = useState(() => {
@@ -172,6 +176,23 @@ export default function PlanningCalendar({
 
   const [addingTaskDate, setAddingTaskDate] = useState<string | null>(null)
   const [newTaskText, setNewTaskText] = useState('')
+  const [pendingRemoval, setPendingRemoval] = useState<{ ds: string; cr: string } | null>(null)
+
+  const handlePlanningChange = (ds: string, cr: string, value: string) => {
+    const currentValue = planningSlots[`${ds}_${cr}`]
+    // Vendeuse non-admin qui se retire d'un de ses propres slots → confirmation
+    if (!isAdmin && currentVendeuseId && value === '' && currentValue === currentVendeuseId) {
+      setPendingRemoval({ ds, cr })
+      return
+    }
+    onAssign?.(ds, cr, value)
+  }
+
+  const confirmRemoval = () => {
+    if (!pendingRemoval) return
+    onAssign?.(pendingRemoval.ds, pendingRemoval.cr, '')
+    setPendingRemoval(null)
+  }
 
   const handleSubmitTask = (dateStr: string) => {
     if (!newTaskText.trim()) return
@@ -241,7 +262,7 @@ export default function PlanningCalendar({
           <div key={cr} className="mb-0.5">
             <select
               value={vendeuseId || ''}
-              onChange={e => onAssign?.(ds, cr, e.target.value)}
+              onChange={e => handlePlanningChange(ds, cr, e.target.value)}
               className="w-full text-[10px] rounded px-1 py-0.5 border-0 cursor-pointer font-medium"
               style={{ backgroundColor: v ? v.couleur + '20' : 'transparent', color: v ? v.couleur : '#9ca3af' }}
               title={cr}
@@ -452,6 +473,35 @@ export default function PlanningCalendar({
                   </div>
                 )
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingRemoval && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setPendingRemoval(null)}
+        >
+          <div
+            className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold mb-1">Tu dois trouver ta remplaçante !</h3>
+            <p className="text-sm text-gray-500 mb-5">(même si elle sera pas aussi belle)</p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPendingRemoval(null)}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmRemoval}
+                className="px-4 py-2 text-sm bg-[#22209C] text-white rounded-lg hover:bg-[#22209C]/90 font-medium"
+              >
+                Enregistrer
+              </button>
             </div>
           </div>
         </div>
