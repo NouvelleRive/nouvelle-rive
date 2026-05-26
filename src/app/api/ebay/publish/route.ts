@@ -119,6 +119,11 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        if (produitData.recu === false) {
+          results.push({ productId, success: false, error: 'Pas encore reçu à la boutique' })
+          continue
+        }
+
         if (produitData.ebayListingId) {
           results.push({ productId, success: false, error: 'Déjà publié sur eBay' })
           continue

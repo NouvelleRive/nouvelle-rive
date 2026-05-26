@@ -43,6 +43,7 @@ export async function GET() {
         p.statut !== 'supprime' &&
         p.statut !== 'retour' &&
         p.vendu !== true &&
+        p.recu !== false &&
         (p.quantite ?? 1) > 0 &&
         p.prix > 0 &&
         (p.photos?.face || p.imageUrl)

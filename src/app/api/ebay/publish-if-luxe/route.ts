@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     if (produit.vendu === true) return NextResponse.json({ success: true, action: 'noop', reason: 'vendu' })
     if ((produit.quantite ?? 1) <= 0) return NextResponse.json({ success: true, action: 'noop', reason: 'stock-0' })
     if (produit.statut === 'retour' || produit.statut === 'supprime') return NextResponse.json({ success: true, action: 'noop', reason: 'statut-' + produit.statut })
+    if (produit.recu === false) return NextResponse.json({ success: true, action: 'noop', reason: 'pas-encore-recu' })
 
     const hasImage = (Array.isArray(produit.imageUrls) && produit.imageUrls.length > 0) || produit.imageUrl
     if (!hasImage) return NextResponse.json({ success: true, action: 'noop', reason: 'no-image' })
