@@ -145,7 +145,6 @@ export default function CreateurPage() {
             if (p.statut === 'retour' || p.statut === 'supprime') return false
             if (p.hidden === true) return false
             if (p.forceDisplay === false) return false
-            if (p.recu === false) return false
             const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
             return !!hasImage
           })
