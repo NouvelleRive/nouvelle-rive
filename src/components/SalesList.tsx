@@ -336,8 +336,52 @@ export default function SalesList({
               const prix = getPrix(vente)
               const isSelected = selectedIds.has(vente.id)
               return (
-                <div key={vente.id} className={`bg-white rounded-xl border p-4 shadow-sm ${isAdmin && vente.isAttribue ? 'border-l-4 border-l-green-500' : ''} ${isAdmin && !vente.isAttribue ? 'border-l-4 border-l-amber-500' : ''} ${isSelected ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}>
-                  <div className="flex items-start gap-3">
+                <div key={vente.id} className={`bg-white rounded-xl border p-2.5 sm:p-4 shadow-sm ${isAdmin && vente.isAttribue ? 'border-l-4 border-l-green-500' : ''} ${isAdmin && !vente.isAttribue ? 'border-l-4 border-l-amber-500' : ''} ${isSelected ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}>
+                  {/* MOBILE */}
+                  <div className="sm:hidden">
+                    {/* Ligne haut : checkbox + statut + trigramme + prix + actions */}
+                    <div className="flex items-center gap-1.5">
+                      {isAdmin && (
+                        <button onClick={() => toggleSelect(vente.id)} className="flex-shrink-0 text-gray-400">
+                          {isSelected ? <CheckSquare size={16} className="text-blue-500" /> : <Square size={16} />}
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <div className={`flex-shrink-0 ${vente.isAttribue ? 'text-green-500' : 'text-amber-500'}`}>
+                          {vente.isAttribue ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                        </div>
+                      )}
+                      {vente.trigramme && <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded flex-shrink-0">{vente.trigramme}</span>}
+                      <p className="font-bold text-green-600 text-[14px] ml-auto whitespace-nowrap">{prix}€</p>
+                      {vente.prixInitial && vente.prixInitial !== prix && <p className="text-[10px] text-gray-400 whitespace-nowrap">({vente.prixInitial}€)</p>}
+                      {isAdmin && (
+                        <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
+                          {onAttribuer && <button onClick={() => onAttribuer(vente)} className={`p-1 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={13} /></button>}
+                          {onModifierPrix && <button onClick={() => onModifierPrix(vente)} className="p-1 bg-blue-100 text-blue-600 rounded"><Pencil size={13} /></button>}
+                          {onSupprimer && <button onClick={() => onSupprimer(vente)} className="p-1 bg-red-100 text-red-600 rounded"><Trash2 size={13} /></button>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Titre sur une ligne dessous */}
+                    <h3 className="text-[13px] font-medium text-gray-900 leading-snug mt-2">
+                      {vente.sku && <span className="text-[#22209C] font-semibold">{vente.sku}</span>}
+                      {vente.sku && <span className="text-gray-400"> · </span>}
+                      {(vente.nom || vente.remarque || 'Vente sans nom').replace(new RegExp(`^${vente.sku}\\s*-\\s*`, 'i'), '')}
+                    </h3>
+                    {vente.description && <p className="text-[12px] text-gray-500 line-clamp-2 mt-0.5">{vente.description}</p>}
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      Vendu le {format(getDateFromVente(vente), 'dd/MM/yyyy à HH:mm')}{cat && <span> · {cat}</span>}
+                      {vente.createdAt && (() => {
+                        const entree = typeof (vente.createdAt as any).toDate === 'function' ? (vente.createdAt as any).toDate() : new Date(vente.createdAt as string)
+                        const jours = Math.round((getDateFromVente(vente).getTime() - entree.getTime()) / (1000 * 60 * 60 * 24))
+                        return <span> · Entré le {format(entree, 'dd/MM/yyyy')} ({jours}j)</span>
+                      })()}
+                    </p>
+                  </div>
+
+                  {/* DESKTOP */}
+                  <div className="hidden sm:flex items-start gap-3">
                     {isAdmin && (<button onClick={() => toggleSelect(vente.id)} className="flex-shrink-0 text-gray-400 hover:text-gray-600 mt-1">{isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} />}</button>)}
                     {isAdmin && (<div className={`flex-shrink-0 mt-1 ${vente.isAttribue ? 'text-green-500' : 'text-amber-500'}`}>{vente.isAttribue ? <CheckCircle size={20} /> : <AlertCircle size={20} />}</div>)}
                     <div className="flex-1 min-w-0">
