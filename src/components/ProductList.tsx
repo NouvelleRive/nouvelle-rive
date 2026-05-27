@@ -1100,7 +1100,6 @@
               const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
               const allImages = getAllImages(p)
               const isExpanded = expandedIds.has(p.id)
-              const displayImages = isExpanded ? allImages : allImages.slice(0, 2)
               const hasMoreImages = allImages.length > 2
 
               const canGenerateTryon = canUseFashnAI(cat || '') && 
@@ -1217,8 +1216,16 @@
                   {/* DESKTOP */}
                   <div className="hidden sm:flex items-start gap-4">
                     <div className="flex-shrink-0 pt-1"><input type="checkbox" checked={isSelected} onChange={() => toggleSelection(p.id)} className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]" /></div>
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex items-start gap-1.5">
                       {allImages.length > 0 ? <img src={allImages[0]} alt={p.nom} className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-90" onClick={() => window.open(allImages[0], '_blank')} /> : <div className="w-20 h-20 bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400 gap-1"><ImageIcon size={24} className="text-green-400" /><span className="text-[10px]">{p.sku || p.nom?.substring(0, 10)}</span></div>}
+                      {allImages.length > 1 && (
+                        <div className="flex flex-col gap-1">
+                          <img src={allImages[1]} alt={`${p.nom} 2`} className="w-[38px] h-[38px] object-cover rounded-md cursor-pointer hover:opacity-80" onClick={() => window.open(allImages[1], '_blank')} />
+                          {hasMoreImages && (
+                            <button onClick={() => toggleExpanded(p.id)} className="w-[38px] h-[38px] bg-gray-100 rounded-md flex items-center justify-center text-gray-500 text-[11px] font-medium hover:bg-gray-200">+{allImages.length - 2}</button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 text-base">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
@@ -1281,12 +1288,11 @@
                       <button onClick={() => handleToggleForceDisplay(p)} className={`p-2 rounded-lg ${isHidden(p) ? 'text-gray-300 hover:text-gray-500 hover:bg-gray-100' : 'text-green-500 hover:bg-green-50'}`}>{isHidden(p) ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                     </div>
                   </div>
-                  {allImages.length > 1 && (
+                  {isExpanded && allImages.length > 2 && (
                     <div className="hidden sm:block mt-3 pt-3 border-t border-gray-100">
                       <div className="flex gap-2 items-center flex-wrap">
-                        {displayImages.slice(1).map((url, idx) => <img key={idx} src={url} alt={`${p.nom} ${idx + 2}`} className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-80" onClick={() => window.open(url, '_blank')} />)}
-                        {hasMoreImages && !isExpanded && <button onClick={() => toggleExpanded(p.id)} className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 text-xs font-medium hover:bg-gray-200">+{allImages.length - 2}</button>}
-                        {isExpanded && allImages.length > 2 && <button onClick={() => toggleExpanded(p.id)} className="text-xs text-[#22209C] hover:underline flex items-center gap-1"><ChevronUp size={14} /> Réduire</button>}
+                        {allImages.slice(2).map((url, idx) => <img key={idx} src={url} alt={`${p.nom} ${idx + 3}`} className="w-12 h-12 object-cover rounded-lg cursor-pointer hover:opacity-80" onClick={() => window.open(url, '_blank')} />)}
+                        <button onClick={() => toggleExpanded(p.id)} className="text-xs text-[#22209C] hover:underline flex items-center gap-1"><ChevronUp size={14} /> Réduire</button>
                       </div>
                     </div>
                   )}
