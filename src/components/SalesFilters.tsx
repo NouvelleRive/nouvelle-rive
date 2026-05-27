@@ -439,7 +439,7 @@ export default function SalesFilters({
         <div className="flex items-center gap-3 text-sm">
           <span className="whitespace-nowrap"><span className="text-gray-500">Nb</span> <span className="font-bold">{currentMonthStats.nb}</span></span>
           <span className="whitespace-nowrap"><span className="text-gray-500">CA</span> <span className="font-bold text-blue-600">{formatCA(currentMonthStats.ca)} €</span></span>
-          <span className="whitespace-nowrap"><span className="text-gray-500">Auj</span> <span className="font-bold">{formatCA(todayCA)} €</span></span>
+          <span className="whitespace-nowrap"><span className="text-gray-500">Auj</span> <span className="font-bold text-blue-600">{formatCA(todayCA)} €</span></span>
           <button
             onClick={() => setShowMonthSelect(s => !s)}
             aria-label="Télécharger"
