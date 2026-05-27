@@ -21,9 +21,6 @@ export default function AdminNosVentesPage() {
   const [ventes, setVentes] = useState<Vente[]>([])
   const [loadingVentes, setLoadingVentes] = useState(false)
 
-  // Sync
-  const [syncLoading, setSyncLoading] = useState(false)
-
   // Modals
   const [showModalAttribuer, setShowModalAttribuer] = useState(false)
   const [showModalSupprimer, setShowModalSupprimer] = useState(false)
@@ -170,30 +167,6 @@ export default function AdminNosVentesPage() {
   }, [allProduits, searchProduit, venteSelectionnee])
 
   // ==================== HANDLERS ====================
-
-  // Sync Square
-  const handleSync = async (startDate: string, endDate: string) => {
-    setSyncLoading(true)
-    try {
-      const res = await fetch('/api/sync-ventes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startDate, endDate })
-      })
-      const data = await res.json()
-      if (data.success) {
-        alert(`${data.imported || 0} vente(s) synchronisée(s)`)
-        await loadVentes()
-      } else {
-        alert(data.error || 'Erreur sync')
-      }
-    } catch (e) {
-      alert('Erreur : SQ500')
-    } finally {
-      setSyncLoading(false)
-    }
-  }
-
 
   // Ouvrir modal attribution
   const handleAttribuer = (vente: Vente) => {
@@ -442,8 +415,6 @@ export default function AdminNosVentesPage() {
         onSupprimer={handleSupprimer}
         onSupprimerBatch={handleSupprimerBatch}
         onAjouterVente={() => setShowModalAjout(true)}
-        onSync={handleSync}
-        syncLoading={syncLoading}
         onRefresh={loadVentes}
       />
 

@@ -65,9 +65,6 @@ interface SalesListProps {
   onSupprimer?: (vente: Vente) => void
   onSupprimerBatch?: (ids: string[]) => void
   onAjouterVente?: () => void
-  // Sync
-  onSync?: (startDate: string, endDate: string) => Promise<void>
-  syncLoading?: boolean
   // Refresh
   onRefresh?: () => void
 }
@@ -90,8 +87,6 @@ export default function SalesList({
   onSupprimer,
   onSupprimerBatch,
   onAjouterVente,
-  onSync,
-  syncLoading = false,
   onRefresh,
 }: SalesListProps) {
 
@@ -128,7 +123,7 @@ export default function SalesList({
   }
 
   // =====================
-  // DERNIÈRE VENTE (pour sync)
+  // DERNIÈRE VENTE (info admin)
   // =====================
   const derniereVenteDate = useMemo(() => {
     if (ventes.length === 0) return null
@@ -143,9 +138,7 @@ export default function SalesList({
   const stats = useMemo(() => {
     const nb = ventesFiltrées.length
     const ca = ventesFiltrées.reduce((s, v) => s + getPrix(v), 0)
-    const attribuees = ventesFiltrées.filter(v => v.isAttribue).length
-    const nonAttribuees = ventesFiltrées.filter(v => !v.isAttribue).length
-    return { nb, ca, attribuees, nonAttribuees }
+    return { nb, ca }
   }, [ventesFiltrées])
 
   // =====================
@@ -171,18 +164,6 @@ export default function SalesList({
       setSelectedIds(new Set())
       setShowDeleteModal(false)
     }
-  }
-
-  // =====================
-  // SYNC SIMPLIFIÉ
-  // =====================
-  const handleSyncRecent = async () => {
-    if (!onSync) return
-    const startDate = derniereVenteDate
-      ? format(derniereVenteDate, 'yyyy-MM-dd')
-      : format(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
-    const endDate = format(new Date(), 'yyyy-MM-dd')
-    await onSync(startDate, endDate)
   }
 
   // =====================
@@ -226,20 +207,8 @@ export default function SalesList({
         <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
       </div>
 
-      {/* Ligne : Sync/Actualiser + Stats */}
+      {/* Ligne : Actualiser + Stats */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
-        {/* Bouton Sync (admin) */}
-        {isAdmin && onSync && (
-          <button
-            onClick={handleSyncRecent}
-            disabled={syncLoading}
-            className="flex items-center gap-2 bg-[#22209C] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-[#1a1a7a] transition-colors"
-          >
-            <RefreshCw size={16} className={syncLoading ? 'animate-spin' : ''} />
-            {syncLoading ? 'Sync...' : 'Synchroniser'}
-          </button>
-        )}
-
         {/* Bouton Actualiser (chineuse) */}
         {!isAdmin && onRefresh && (
           <button
@@ -257,19 +226,6 @@ export default function SalesList({
             <span className="text-xs text-gray-500">Total</span>
             <span className="font-bold">{stats.nb}</span>
           </div>
-          
-          {isAdmin && (
-            <>
-              <div className="bg-white border border-green-200 rounded-lg px-3 py-2 flex items-center gap-2">
-                <span className="text-xs text-green-600">Attribuées</span>
-                <span className="font-bold text-green-600">{stats.attribuees}</span>
-              </div>
-              <div className="bg-white border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-2">
-                <span className="text-xs text-amber-600">À attribuer</span>
-                <span className="font-bold text-amber-600">{stats.nonAttribuees}</span>
-              </div>
-            </>
-          )}
           
           <div className="bg-white border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
             <span className="text-xs text-blue-600">CA</span>

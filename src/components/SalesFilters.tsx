@@ -385,8 +385,8 @@ export default function SalesFilters({
         {/* Toggle vue déplacé dans SalesList, juste au-dessus des articles */}
       </div>
 
-      {/* TÉLÉCHARGER */}
-      <div className="bg-white border rounded-xl p-4 shadow-sm">
+      {/* TÉLÉCHARGER — desktop */}
+      <div className="hidden lg:block bg-white border rounded-xl p-4 shadow-sm">
         <h2 className="text-lg font-semibold mb-4">Télécharger</h2>
         <div className="flex flex-col gap-3">
           <button onClick={exportCSV} className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-white text-sm" style={{ background: PRIMARY }}>
@@ -403,6 +403,27 @@ export default function SalesFilters({
           )}
           <p className="text-xs text-gray-500">{isDeposante ? "L'attestation est à retourner signée par mail à nouvelleriveparis@gmail.com avant le 9 du mois" : 'La facture est à retourner par mail à nouvelleriveparis@gmail.com avant le 9 du mois'}</p>
         </div>
+      </div>
+
+      {/* TÉLÉCHARGER — mobile : bouton seul à droite, ouvre direct la popup mois */}
+      <div className="lg:hidden flex flex-col items-end gap-2">
+        <button
+          onClick={() => setShowMonthSelect(s => !s)}
+          className="flex items-center gap-2 rounded-lg px-4 py-2 text-white text-sm"
+          style={{ background: PRIMARY }}
+        >
+          <Download size={16} /> Télécharger
+        </button>
+        {showMonthSelect && (
+          <select
+            onChange={(e) => { if (e.target.value) { if (isDeposante) { setPendingMonth(e.target.value); setShowAttestationModal(true) } else { generateInvoiceFor(e.target.value) } } }}
+            defaultValue=""
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="" disabled>Choisir un mois…</option>
+            {moisDisponibles.map(({ value, label }) => <option key={value} value={value}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>)}
+          </select>
+        )}
       </div>
     </div>
 
