@@ -1156,7 +1156,6 @@
                         })()}
                         <button onClick={() => handleEdit(p)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={14} /></button>
                         <button onClick={() => onCustomDelete ? onCustomDelete(p.id) : handleDelete(p.id)} title={onCustomDelete ? (customDeleteTitle || 'Retirer') : 'Supprimer'} className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>
-                        <button onClick={() => handleToggleForceDisplay(p)} className={`p-1 rounded-lg ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                       </div>
                     </div>
 
@@ -1167,7 +1166,10 @@
                       {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                     </h3>
                     {p.marque && <p className="text-[12px] text-gray-500 mt-0.5">{p.marque}</p>}
-                    <p className="text-[11px] text-gray-400 mt-0.5">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[11px] text-gray-400">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
+                      <button onClick={() => handleToggleForceDisplay(p)} className={`p-0.5 rounded ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                    </div>
                     {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1"><RefreshCw size={11} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-red-600 mt-1"><RefreshCw size={11} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
                     {getPriceBadgeStatus(p) === 'orange' && (
