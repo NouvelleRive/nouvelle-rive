@@ -450,14 +450,17 @@ export default function SalesFilters({
           </button>
         </div>
         {showMonthSelect && (
-          <select
-            onChange={(e) => { if (e.target.value) { if (isDeposante) { setPendingMonth(e.target.value); setShowAttestationModal(true) } else { generateInvoiceFor(e.target.value) } } }}
-            defaultValue=""
-            className="mt-2 w-full border rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="" disabled>Choisir un mois…</option>
-            {moisDisponibles.map(({ value, label }) => <option key={value} value={value}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>)}
-          </select>
+          <>
+            <select
+              onChange={(e) => { if (e.target.value) { if (isDeposante) { setPendingMonth(e.target.value); setShowAttestationModal(true) } else { generateInvoiceFor(e.target.value) } } }}
+              defaultValue=""
+              className="mt-2 w-full border rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="" disabled>Choisir un mois…</option>
+              {moisDisponibles.map(({ value, label }) => <option key={value} value={value}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>)}
+            </select>
+            <p className="text-xs text-gray-500 mt-2">{isDeposante ? "L'attestation est à retourner signée par mail à nouvelleriveparis@gmail.com avant le 9 du mois" : 'La facture est à retourner par mail à nouvelleriveparis@gmail.com avant le 9 du mois'}</p>
+          </>
         )}
       </div>
     </div>
