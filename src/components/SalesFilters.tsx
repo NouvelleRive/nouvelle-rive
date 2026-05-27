@@ -75,22 +75,29 @@ export default function SalesFilters({
     return isNaN(d.getTime()) ? '—' : format(d, 'dd/MM/yyyy')
   }
 
-  // Stats "ce mois" (mois en cours, indépendant du filtre)
-  const currentMonthStats = useMemo(() => {
+  // Stats "ce mois" + "aujourd'hui" (indépendant du filtre)
+  const { currentMonthStats, todayCA } = useMemo(() => {
     const now = new Date()
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const ymd = `${ym}-${String(now.getDate()).padStart(2, '0')}`
     let nb = 0
     let ca = 0
+    let today = 0
     for (const v of ventes) {
       const d = getDateFromVente(v)
       if (isNaN(d.getTime())) continue
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      if (key === ym) {
+      const keyM = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (keyM === ym) {
         nb++
         ca += getPrix(v)
+        const keyD = `${keyM}-${String(d.getDate()).padStart(2, '0')}`
+        if (keyD === ymd) today += getPrix(v)
       }
     }
-    return { nb, ca: Math.round(ca) }
+    return {
+      currentMonthStats: { nb, ca: Math.round(ca) },
+      todayCA: Math.round(today),
+    }
   }, [ventes])
 
   // Replace narrow nbsp (U+202F) and nbsp (U+00A0) from toLocaleString with regular space
@@ -427,17 +434,19 @@ export default function SalesFilters({
         </div>
       </div>
 
-      {/* MOBILE : ligne [Nb · CA · Télécharger] (chiffres = mois en cours) */}
+      {/* MOBILE : ligne [Nb · CA · Auj · Télécharger] (chiffres = mois en cours + auj) */}
       <div className="lg:hidden col-span-1 order-first">
         <div className="flex items-center gap-3 text-sm">
           <span className="whitespace-nowrap"><span className="text-gray-500">Nb</span> <span className="font-bold">{currentMonthStats.nb}</span></span>
           <span className="whitespace-nowrap"><span className="text-gray-500">CA</span> <span className="font-bold text-blue-600">{formatCA(currentMonthStats.ca)} €</span></span>
+          <span className="whitespace-nowrap"><span className="text-gray-500">Auj</span> <span className="font-bold">{formatCA(todayCA)} €</span></span>
           <button
             onClick={() => setShowMonthSelect(s => !s)}
-            className="ml-auto flex items-center gap-2 rounded-lg px-4 py-2 text-white text-sm"
+            aria-label="Télécharger"
+            className="ml-auto flex items-center justify-center rounded-lg p-2 text-white"
             style={{ background: PRIMARY }}
           >
-            <Download size={16} /> Télécharger
+            <Download size={16} />
           </button>
         </div>
         {showMonthSelect && (

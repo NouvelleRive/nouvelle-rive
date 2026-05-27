@@ -111,8 +111,8 @@ export default function FilterBox({
         className="lg:hidden flex items-center justify-between w-full mb-2 cursor-pointer"
         onClick={() => setShowFilters(!showFilters)}
       >
-        <h2 className="text-lg font-semibold">Filtrer</h2>
-        {showFilters ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        <h2 className="text-sm font-medium">Filtrer</h2>
+        {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </div>
       
       {/* Header desktop */}

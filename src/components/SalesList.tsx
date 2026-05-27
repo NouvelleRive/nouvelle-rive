@@ -123,16 +123,6 @@ export default function SalesList({
   }
 
   // =====================
-  // DERNIÈRE VENTE (info admin)
-  // =====================
-  const derniereVenteDate = useMemo(() => {
-    if (ventes.length === 0) return null
-    const dates = ventes.map(v => getDateFromVente(v)).filter(d => !isNaN(d.getTime()))
-    if (dates.length === 0) return null
-    return new Date(Math.max(...dates.map(d => d.getTime())))
-  }, [ventes])
-
-  // =====================
   // STATS
   // =====================
   const stats = useMemo(() => {
@@ -239,13 +229,6 @@ export default function SalesList({
           )}
         </div>
       </div>
-
-      {/* Info dernière sync (admin) */}
-      {isAdmin && derniereVenteDate && (
-        <p className="text-xs text-gray-500 -mt-4 mb-4">
-          Dernière vente : {format(derniereVenteDate, 'dd/MM/yyyy', { locale: fr })}
-        </p>
-      )}
 
       {/* Filtres + Toggle + Télécharger */}
       <SalesFilters
