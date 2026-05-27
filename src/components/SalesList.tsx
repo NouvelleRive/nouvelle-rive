@@ -346,11 +346,6 @@ export default function SalesList({
                           {isSelected ? <CheckSquare size={16} className="text-blue-500" /> : <Square size={16} />}
                         </button>
                       )}
-                      {isAdmin && (
-                        <div className={`flex-shrink-0 ${vente.isAttribue ? 'text-green-500' : 'text-amber-500'}`}>
-                          {vente.isAttribue ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                        </div>
-                      )}
                       {vente.trigramme && <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded flex-shrink-0">{vente.trigramme}</span>}
                       <p className="font-bold text-green-600 text-[14px] ml-auto whitespace-nowrap">{prix}€</p>
                       {vente.prixInitial && vente.prixInitial !== prix && <p className="text-[10px] text-gray-400 whitespace-nowrap">({vente.prixInitial}€)</p>}
@@ -383,7 +378,6 @@ export default function SalesList({
                   {/* DESKTOP */}
                   <div className="hidden sm:flex items-start gap-3">
                     {isAdmin && (<button onClick={() => toggleSelect(vente.id)} className="flex-shrink-0 text-gray-400 hover:text-gray-600 mt-1">{isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} />}</button>)}
-                    {isAdmin && (<div className={`flex-shrink-0 mt-1 ${vente.isAttribue ? 'text-green-500' : 'text-amber-500'}`}>{vente.isAttribue ? <CheckCircle size={20} /> : <AlertCircle size={20} />}</div>)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         {vente.trigramme && <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">{vente.trigramme}</span>}
