@@ -1,7 +1,7 @@
 // components/SalesList.tsx
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -313,13 +313,29 @@ export default function SalesList({
             <div className="bg-white rounded-xl border p-12 text-center">
               <p className="text-gray-400">Aucune vente</p>
             </div>
-          ) : (
-            ventesFiltrées.slice(0, visibleCount).map(vente => {
+          ) : (() => {
+            const today = new Date(); today.setHours(0, 0, 0, 0)
+            const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
+            let lastSection: 'auj' | 'hier' | 'older' | null = null
+            return ventesFiltrées.slice(0, visibleCount).map(vente => {
               const cat = getCategorie(vente)
               const prix = getPrix(vente)
               const isSelected = selectedIds.has(vente.id)
+              const d = getDateFromVente(vente); d.setHours(0, 0, 0, 0)
+              const section: 'auj' | 'hier' | 'older' =
+                d.getTime() === today.getTime() ? 'auj'
+                : d.getTime() === yesterday.getTime() ? 'hier'
+                : 'older'
+              const showHeader = section !== lastSection && (section === 'auj' || section === 'hier')
+              lastSection = section
               return (
-                <div key={vente.id} className={`bg-white rounded-xl border p-2.5 sm:p-4 shadow-sm ${isAdmin && vente.isAttribue ? 'border-l-4 border-l-green-500' : ''} ${isAdmin && !vente.isAttribue ? 'border-l-4 border-l-amber-500' : ''} ${isSelected ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}>
+                <React.Fragment key={vente.id}>
+                  {showHeader && (
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mt-4 first:mt-0 mb-1">
+                      {section === 'auj' ? 'Auj' : 'Hier'}
+                    </h3>
+                  )}
+                <div className={`bg-white rounded-xl border p-2.5 sm:p-4 shadow-sm ${isAdmin && vente.isAttribue ? 'border-l-4 border-l-green-500' : ''} ${isAdmin && !vente.isAttribue ? 'border-l-4 border-l-amber-500' : ''} ${isSelected ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}>
                   {/* MOBILE */}
                   <div className="sm:hidden">
                     {/* Ligne haut : checkbox + statut + trigramme + prix + actions */}
@@ -389,9 +405,10 @@ export default function SalesList({
                     )}
                   </div>
                 </div>
+                </React.Fragment>
               )
             })
-          )}
+          })()}
         </div>
       )}
 
