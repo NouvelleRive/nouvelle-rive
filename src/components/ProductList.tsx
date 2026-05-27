@@ -915,7 +915,7 @@
       }
 
       return (
-        <div className="p-4 max-w-6xl mx-auto">
+        <div className="p-2 sm:p-4 max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
@@ -1168,10 +1168,6 @@
                     </h3>
                     {p.marque && <p className="text-[12px] text-gray-500 mt-0.5">{p.marque}</p>}
                     <p className="text-[11px] text-gray-400 mt-0.5">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
-                    {p.recu === false && <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 mt-1"><Clock size={11} /> En attente</span>}
-                    {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
-                      <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
-                    )}
                     {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1"><RefreshCw size={11} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-red-600 mt-1"><RefreshCw size={11} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
                     {getPriceBadgeStatus(p) === 'orange' && (
@@ -1194,9 +1190,15 @@
                     )}
 
                     {/* Ligne info bas */}
-                    <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
+                    <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
                       <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
+                      {p.recu === false && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</span>
+                      )}
+                      {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-green-600">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
+                      )}
                       {p.statut === 'outOfStock' && (
                         <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                       )}
