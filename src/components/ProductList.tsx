@@ -82,7 +82,7 @@
       forceDisplay?: boolean
       prixBaisseLe?: Timestamp
       ancienPrix?: number
-      source?: 'chineuse' | 'deposante'
+      source?: 'chineuse' | 'deposante' | 'achat-vinted' | 'achat-vestiaire' | 'achat-drouot'
       ebayListingId?: string | null
       ebayOfferId?: string | null
     }
@@ -239,7 +239,6 @@
       const [deleteProgress, setDeleteProgress] = useState<{ current: number; total: number } | null>(null)
 
       // Actions
-      const [updatingSquare, setUpdatingSquare] = useState(false)
       const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
       const [savingProduct, setSavingProduct] = useState(false)
       const [saveMessage, setSaveMessage] = useState<string | null>(null)
@@ -346,12 +345,6 @@
 
       const produitsTriés = useMemo(() => {
       return [...produitsFiltres].sort((a, b) => {
-        // Si filtre prix baissé actif → tri par date de baisse desc (plus récente d'abord)
-        if (filtrePrixBaisse) {
-          const ba = a.prixBaisseLe instanceof Timestamp ? a.prixBaisseLe.toDate().getTime() : 0
-          const bb = b.prixBaisseLe instanceof Timestamp ? b.prixBaisseLe.toDate().getTime() : 0
-          return bb - ba
-        }
         if (tri === 'alpha') {
           return (a.nom || '').localeCompare(b.nom || '')
         }
@@ -620,19 +613,6 @@
       setLocalHidden(prev => ({ ...prev, [p.id]: currentHidden }))
     }
   }
-
-    const handleUpdateSquare = async () => {
-      const idsToSync = new Set([...selectedIds, ...dirtyIds])
-      if (idsToSync.size === 0) {
-        alert('Aucun produit à synchroniser')
-        return
-      }
-
-      setDirtyIds(new Set())
-      setSelectedIds(new Set())
-      
-      alert(`${idsToSync.size} produit(s) synchronisé(s)`)
-    }
 
       const handleBatchUpdate = async (field: 'prix' | 'categorie' | 'quantite', value: any) => {
         if (selectedIds.size === 0) return
@@ -922,7 +902,6 @@
     }
 
       const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix || filtrePhotoManquante || filtreDeposanteOnly || filtrePrixBaisse)
-      const hasChangesToSync = selectedIds.size > 0 || dirtyIds.size > 0
 
       // =====================
       // RENDER
@@ -1045,18 +1024,8 @@
             </span>
           </div>
 
-          {/* Barre d'actions : Sync Square + Actions groupées */}
+          {/* Barre d'actions groupées */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            {/* Bouton Mettre à jour en caisse */}
-            <button
-              onClick={handleUpdateSquare}
-              disabled={!hasChangesToSync || updatingSquare}
-              className="bg-black text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 flex items-center gap-2 hover:bg-gray-800 transition-colors"
-            >
-              <RefreshCw size={16} className={updatingSquare ? 'animate-spin' : ''} />
-              {updatingSquare ? 'Sync...' : 'Mettre à jour en caisse'}
-            </button>
-
             {/* Menu actions groupées */}
             {selectedIds.size > 0 && (
               <div className="relative">
@@ -1141,87 +1110,107 @@
               const isDirty = dirtyIds.has(p.id)
               const isSelected = selectedIds.has(p.id)
 
+              // Brouillon achat (Vinted/Vestiaire/Drouot) pas encore arrivé en boutique :
+              // bordure aux couleurs de la plateforme + opacité, jusqu'à ce que la pièce
+              // soit marquée 'recu-boutique'. Voir src/modules/achat/types.ts.
+              const achatSource = typeof p.source === 'string' && p.source.startsWith('achat-') ? p.source : null
+              const achatStatut = (p as any).achatStatut as string | undefined
+              const isAchatBrouillon = !!achatSource && achatStatut !== 'recu-boutique'
+              const achatBorderClass = isAchatBrouillon && !isSelected
+                ? achatSource === 'achat-vinted' ? 'border-[#09B1BA] border-2' :
+                  achatSource === 'achat-vestiaire' ? 'border-black border-2' :
+                  achatSource === 'achat-drouot' ? 'border-[#B8860B] border-2' : ''
+                : ''
+
               return (
                 <div
                   key={p.id}
-                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false || (p as any).statutRestock === 'enAttente' || (p as any).statutDestock === 'enAttente' ? 'opacity-50 bg-gray-50' : ''} p-4 shadow-sm hover:shadow-md transition-all`}
+                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : achatBorderClass || 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false || isAchatBrouillon || (p as any).statutRestock === 'enAttente' || (p as any).statutDestock === 'enAttente' ? 'opacity-50 bg-gray-50' : ''} p-2.5 sm:p-4 shadow-sm hover:shadow-md transition-all`}
                 >
                   {/* MOBILE */}
-                  <div className="sm:hidden flex gap-3">
-                    <div className="flex-shrink-0 flex flex-col gap-1">
-                      <div className="flex items-start gap-2">
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelection(p.id)} className="w-4 h-4 mt-1 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]" />
+                  <div className="sm:hidden">
+                    {/* Ligne photos + actions */}
+                    <div className="flex items-start gap-2">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelection(p.id)} className="w-4 h-4 mt-1 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C] flex-shrink-0" />
+                      <div className="flex-1 flex gap-1.5 items-start min-w-0">
                         {allImages.length > 0 ? (
-                          <img src={allImages[0]} alt={p.nom} className="w-16 h-16 object-cover rounded-lg cursor-pointer" onClick={() => window.open(allImages[0], '_blank')} />
+                          <img src={allImages[0]} alt={p.nom} className="w-20 h-20 object-cover rounded-lg cursor-pointer flex-shrink-0" onClick={() => window.open(allImages[0], '_blank')} />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center"><ImageIcon size={20} className="text-gray-400" /></div>
+                          <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><ImageIcon size={20} className="text-gray-400" /></div>
+                        )}
+                        {allImages.length > 1 && (
+                          <img src={allImages[1]} alt={`${p.nom} 2`} className="w-10 h-10 object-cover rounded cursor-pointer flex-shrink-0" onClick={() => window.open(allImages[1], '_blank')} />
+                        )}
+                        {allImages.length > 2 && (
+                          <button onClick={() => toggleExpanded(p.id)} className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-500 text-[11px] font-medium flex-shrink-0">+{allImages.length - 2}</button>
                         )}
                       </div>
-                      {allImages.length > 1 && (
-                        <div className="flex gap-1 ml-6">
-                          <img src={allImages[1]} alt={`${p.nom} 2`} className="w-8 h-8 object-cover rounded cursor-pointer" onClick={() => window.open(allImages[1], '_blank')} />
-                          {allImages.length > 2 && <button onClick={() => toggleExpanded(p.id)} className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-gray-500 text-xs font-medium">+{allImages.length - 2}</button>}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-sm leading-tight">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
-                      <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
-                      {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente</span>}
-                      {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
-                        <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
-                      )}
-                      {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
-                      {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1"><RefreshCw size={12} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
-                      {getPriceBadgeStatus(p) === 'orange' && (
-  <button
-    onClick={() => handleDelete(p.id)}
-    className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200"
-  >
-    🔄 2 mois+ – rotation / baisse de prix ?
-  </button>
-)}
-{getPriceBadgeStatus(p) === 'blue' && (
-  <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
-    💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {p.ancienPrix} €)
-  </span>
-)}
-{getPriceBadgeStatus(p) === 'red' && (
-  <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
-    🚨 À récupérer – prix baissé il y a 1 mois+
-  </span>
-)}
-                    </div>
-                    <div className="flex flex-col gap-0.5 flex-shrink-0">
-                      {canGenerateTryon && (() => {
-                        const wt = getWearTypeForProduct(p, chineusesList)
-                        if (wt === 'unisex') return (<>
-                          <button onClick={() => openTryonModal(p, 'female')} disabled={generatingTryonId === p.id} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg disabled:opacity-50" title="Porté femme">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>
-                          <button onClick={() => openTryonModal(p, 'male')} disabled={generatingTryonId === p.id} className="p-1.5 text-pink-500 hover:bg-pink-50 rounded-lg disabled:opacity-50" title="Porté homme">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>
-                        </>)
-                        return <button onClick={() => openTryonModal(p, wt === 'menswear' ? 'male' : 'female')} disabled={generatingTryonId === p.id} className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={16} />}</button>
-                      })()}
-                      <button onClick={() => handleEdit(p)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={16} /></button>
-                      <button onClick={() => onCustomDelete ? onCustomDelete(p.id) : handleDelete(p.id)} title={onCustomDelete ? (customDeleteTitle || 'Retirer') : 'Supprimer'} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
-                      <button onClick={() => handleToggleForceDisplay(p)} className={`p-1.5 rounded-lg ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-                    </div>
-                  </div>
-                  <div className="sm:hidden flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100 text-sm">
-                    <span><span className="text-gray-400">SKU:</span> <span className="font-medium">{p.sku || '—'}</span></span>
-                    <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
-                    <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
-                    {p.statut === 'outOfStock' && (
-                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
-                    )}
-                  </div>
-                  {isExpanded && allImages.length > 2 && (
-                    <div className="sm:hidden mt-3 pt-3 border-t border-gray-100">
-                      <div className="flex gap-2 flex-wrap">
-                        {allImages.slice(2).map((url, idx) => <img key={idx} src={url} alt={`${p.nom} ${idx + 3}`} className="w-12 h-12 object-cover rounded-lg cursor-pointer" onClick={() => window.open(url, '_blank')} />)}
-                        <button onClick={() => toggleExpanded(p.id)} className="text-xs text-[#22209C] hover:underline flex items-center gap-1"><ChevronUp size={14} /> Réduire</button>
+                      <div className="flex flex-col gap-0.5 flex-shrink-0">
+                        {canGenerateTryon && (() => {
+                          const wt = getWearTypeForProduct(p, chineusesList)
+                          if (wt === 'unisex') return (<>
+                            <button onClick={() => openTryonModal(p, 'female')} disabled={generatingTryonId === p.id} className="p-1 text-blue-500 hover:bg-blue-50 rounded-lg disabled:opacity-50" title="Porté femme">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={14} />}</button>
+                            <button onClick={() => openTryonModal(p, 'male')} disabled={generatingTryonId === p.id} className="p-1 text-pink-500 hover:bg-pink-50 rounded-lg disabled:opacity-50" title="Porté homme">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={14} />}</button>
+                          </>)
+                          return <button onClick={() => openTryonModal(p, wt === 'menswear' ? 'male' : 'female')} disabled={generatingTryonId === p.id} className="p-1 text-purple-500 hover:bg-purple-50 rounded-lg disabled:opacity-50">{generatingTryonId === p.id ? <span className="text-xs">⏳</span> : <Sparkles size={14} />}</button>
+                        })()}
+                        <button onClick={() => handleEdit(p)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><MoreHorizontal size={14} /></button>
+                        <button onClick={() => onCustomDelete ? onCustomDelete(p.id) : handleDelete(p.id)} title={onCustomDelete ? (customDeleteTitle || 'Retirer') : 'Supprimer'} className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>
+                        <button onClick={() => handleToggleForceDisplay(p)} className={`p-1 rounded-lg ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                       </div>
                     </div>
-                  )}
+
+                    {/* Titre + marque sous les photos */}
+                    <h3 className="text-[13px] font-medium text-gray-900 leading-snug mt-2">
+                      {p.sku && <span className="text-[#22209C] font-semibold">{p.sku}</span>}
+                      {p.sku && <span className="text-gray-400"> · </span>}
+                      {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
+                    </h3>
+                    {p.marque && <p className="text-[12px] text-gray-500 mt-0.5">{p.marque}</p>}
+                    <p className="text-[11px] text-gray-400 mt-0.5">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
+                    {p.recu === false && <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 mt-1"><Clock size={11} /> En attente</span>}
+                    {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
+                    )}
+                    {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1"><RefreshCw size={11} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
+                    {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-red-600 mt-1"><RefreshCw size={11} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
+                    {getPriceBadgeStatus(p) === 'orange' && (
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="inline-flex items-center gap-1 text-[11px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full mt-1 hover:bg-orange-200"
+                      >
+                        🔄 2 mois+ – rotation / baisse de prix ?
+                      </button>
+                    )}
+                    {getPriceBadgeStatus(p) === 'blue' && (
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full mt-1">
+                        💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {p.ancienPrix} €)
+                      </span>
+                    )}
+                    {getPriceBadgeStatus(p) === 'red' && (
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
+                        🚨 À récupérer – prix baissé il y a 1 mois+
+                      </span>
+                    )}
+
+                    {/* Ligne info bas */}
+                    <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
+                      <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
+                      <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
+                      {p.statut === 'outOfStock' && (
+                        <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
+                      )}
+                    </div>
+
+                    {isExpanded && allImages.length > 2 && (
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <div className="flex gap-2 flex-wrap">
+                          {allImages.slice(2).map((url, idx) => <img key={idx} src={url} alt={`${p.nom} ${idx + 3}`} className="w-12 h-12 object-cover rounded-lg cursor-pointer" onClick={() => window.open(url, '_blank')} />)}
+                          <button onClick={() => toggleExpanded(p.id)} className="text-[11px] text-[#22209C] hover:underline flex items-center gap-1"><ChevronUp size={12} /> Réduire</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* DESKTOP */}
                   <div className="hidden sm:flex items-start gap-4">
