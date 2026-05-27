@@ -1186,16 +1186,16 @@
                       </span>
                     )}
 
-                    {/* Ligne info bas : Prix · Qté · Date · ... · Œil */}
+                    {/* Ligne info bas : Prix · Qté · (Reçu le | En attente | Date créa) · Rupture · Œil */}
                     <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
                       <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
-                      <span className="text-[11px] text-gray-400">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</span>
-                      {p.recu === false && (
+                      {p.recu === false ? (
                         <span className="inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</span>
-                      )}
-                      {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-green-600">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
+                      ) : p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp ? (
+                        <span><span className="text-gray-400">Reçu le:</span> <span className="font-medium">{format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span></span>
+                      ) : (
+                        <span className="text-[11px] text-gray-400">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</span>
                       )}
                       {p.statut === 'outOfStock' && (
                         <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>

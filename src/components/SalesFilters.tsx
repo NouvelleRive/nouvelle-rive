@@ -75,6 +75,28 @@ export default function SalesFilters({
     return isNaN(d.getTime()) ? '—' : format(d, 'dd/MM/yyyy')
   }
 
+  // Stats "ce mois" (mois en cours, indépendant du filtre)
+  const currentMonthStats = useMemo(() => {
+    const now = new Date()
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    let nb = 0
+    let ca = 0
+    for (const v of ventes) {
+      const d = getDateFromVente(v)
+      if (isNaN(d.getTime())) continue
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (key === ym) {
+        nb++
+        ca += getPrix(v)
+      }
+    }
+    return { nb, ca: Math.round(ca) }
+  }, [ventes])
+
+  // Replace narrow nbsp (U+202F) and nbsp (U+00A0) from toLocaleString with regular space
+  const formatCA = (n: number) =>
+    n.toLocaleString('fr-FR', { maximumFractionDigits: 0 }).replace(/[  ]/g, ' ')
+
   const moisDisponibles = useMemo(() => {
     const set = new Set<string>()
     ventes.forEach(v => {
@@ -405,20 +427,24 @@ export default function SalesFilters({
         </div>
       </div>
 
-      {/* TÉLÉCHARGER — mobile : bouton seul à droite, ouvre direct la popup mois */}
-      <div className="lg:hidden flex flex-col items-end gap-2">
-        <button
-          onClick={() => setShowMonthSelect(s => !s)}
-          className="flex items-center gap-2 rounded-lg px-4 py-2 text-white text-sm"
-          style={{ background: PRIMARY }}
-        >
-          <Download size={16} /> Télécharger
-        </button>
+      {/* MOBILE : ligne [Nb · CA · Télécharger] (chiffres = mois en cours) */}
+      <div className="lg:hidden col-span-1 order-first">
+        <div className="flex items-center gap-3 text-sm">
+          <span className="whitespace-nowrap"><span className="text-gray-500">Nb</span> <span className="font-bold">{currentMonthStats.nb}</span></span>
+          <span className="whitespace-nowrap"><span className="text-gray-500">CA</span> <span className="font-bold text-blue-600">{formatCA(currentMonthStats.ca)} €</span></span>
+          <button
+            onClick={() => setShowMonthSelect(s => !s)}
+            className="ml-auto flex items-center gap-2 rounded-lg px-4 py-2 text-white text-sm"
+            style={{ background: PRIMARY }}
+          >
+            <Download size={16} /> Télécharger
+          </button>
+        </div>
         {showMonthSelect && (
           <select
             onChange={(e) => { if (e.target.value) { if (isDeposante) { setPendingMonth(e.target.value); setShowAttestationModal(true) } else { generateInvoiceFor(e.target.value) } } }}
             defaultValue=""
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="mt-2 w-full border rounded-lg px-3 py-2 text-sm"
           >
             <option value="" disabled>Choisir un mois…</option>
             {moisDisponibles.map(({ value, label }) => <option key={value} value={value}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>)}

@@ -220,8 +220,8 @@ export default function SalesList({
           </button>
         )}
 
-        {/* Stats */}
-        <div className="flex flex-wrap items-center gap-2 flex-1">
+        {/* Stats — desktop only (mobile: voir ligne Nb · CA · Télécharger dans SalesFilters) */}
+        <div className="hidden lg:flex flex-wrap items-center gap-2 flex-1">
           <div className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2">
             <span className="text-xs text-gray-500">Total</span>
             <span className="font-bold">{stats.nb}</span>
