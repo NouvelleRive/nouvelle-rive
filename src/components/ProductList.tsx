@@ -1166,10 +1166,6 @@
                       {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                     </h3>
                     {p.marque && <p className="text-[12px] text-gray-500 mt-0.5">{p.marque}</p>}
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-[11px] text-gray-400">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
-                      <button onClick={() => handleToggleForceDisplay(p)} className={`p-0.5 rounded ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
-                    </div>
                     {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1"><RefreshCw size={11} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-red-600 mt-1"><RefreshCw size={11} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
                     {getPriceBadgeStatus(p) === 'orange' && (
@@ -1191,10 +1187,11 @@
                       </span>
                     )}
 
-                    {/* Ligne info bas */}
+                    {/* Ligne info bas : Prix · Qté · Date · ... · Œil */}
                     <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
                       <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
+                      <span className="text-[11px] text-gray-400">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</span>
                       {p.recu === false && (
                         <span className="inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</span>
                       )}
@@ -1204,6 +1201,7 @@
                       {p.statut === 'outOfStock' && (
                         <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                       )}
+                      <button onClick={() => handleToggleForceDisplay(p)} className={`ml-auto p-0.5 rounded ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                     </div>
 
                     {isExpanded && allImages.length > 2 && (
