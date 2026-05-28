@@ -135,22 +135,27 @@ let q = options?.lastDoc
   })) as Produit[]
 
   // Première page : on ajoute aussi les pièces vendues depuis moins de 7 jours
-  // pour qu'elles restent visibles avec leur badge "Vendu".
+  // pour qu'elles restent visibles avec leur badge "Vendu". Si l'index composite
+  // n'existe pas encore, on log et on continue : pas question de bloquer la page.
   if (isFirstPage) {
-    const septJoursMs = 7 * 24 * 60 * 60 * 1000
-    const seuil = Timestamp.fromMillis(Date.now() - septJoursMs)
-    const qVendues = query(
-      collection(db, 'produits'),
-      where('vendu', '==', true),
-      where('dateVente', '>=', seuil),
-      orderBy('dateVente', 'desc'),
-      limit(500)
-    )
-    const venduesSnap = await getDocs(qVendues)
-    const existingIds = new Set(produits.map(p => p.id))
-    for (const d of venduesSnap.docs) {
-      if (existingIds.has(d.id)) continue
-      produits.push({ id: d.id, ...d.data() } as Produit)
+    try {
+      const septJoursMs = 7 * 24 * 60 * 60 * 1000
+      const seuil = Timestamp.fromMillis(Date.now() - septJoursMs)
+      const qVendues = query(
+        collection(db, 'produits'),
+        where('vendu', '==', true),
+        where('dateVente', '>=', seuil),
+        orderBy('dateVente', 'desc'),
+        limit(500)
+      )
+      const venduesSnap = await getDocs(qVendues)
+      const existingIds = new Set(produits.map(p => p.id))
+      for (const d of venduesSnap.docs) {
+        if (existingIds.has(d.id)) continue
+        produits.push({ id: d.id, ...d.data() } as Produit)
+      }
+    } catch (err) {
+      console.warn('[siteConfig] requête vendues récentes échouée (index manquant ?)', err)
     }
   }
 
@@ -260,7 +265,7 @@ export function useFilteredProducts(pageId: string) {
 
       setLoadingMore(true)
       let lastDoc = first.lastDoc
-      let hasMore = first.hasMore
+      let hasMore: boolean = first.hasMore
       while (hasMore && !cancelled) {
         const next = await getFilteredProducts(pageId, { lastDoc, limitCount: 300 })
         if (cancelled) return
