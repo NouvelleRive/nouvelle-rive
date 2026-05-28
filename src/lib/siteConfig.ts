@@ -111,6 +111,8 @@ export async function getFilteredProducts(
     : { regles: [] }
 
   const limitCount = options?.limitCount || 100
+  const isFirstPage = !options?.lastDoc
+
 let q = options?.lastDoc
   ? query(
       collection(db, 'produits'),
@@ -132,6 +134,26 @@ let q = options?.lastDoc
     ...d.data()
   })) as Produit[]
 
+  // Première page : on ajoute aussi les pièces vendues depuis moins de 7 jours
+  // pour qu'elles restent visibles avec leur badge "Vendu".
+  if (isFirstPage) {
+    const septJoursMs = 7 * 24 * 60 * 60 * 1000
+    const seuil = Timestamp.fromMillis(Date.now() - septJoursMs)
+    const qVendues = query(
+      collection(db, 'produits'),
+      where('vendu', '==', true),
+      where('dateVente', '>=', seuil),
+      orderBy('dateVente', 'desc'),
+      limit(500)
+    )
+    const venduesSnap = await getDocs(qVendues)
+    const existingIds = new Set(produits.map(p => p.id))
+    for (const d of venduesSnap.docs) {
+      if (existingIds.has(d.id)) continue
+      produits.push({ id: d.id, ...d.data() } as Produit)
+    }
+  }
+
   const chineusesSnap = await getDocs(collection(db, 'chineuse'))
   const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({
     uid: d.id,
@@ -142,13 +164,25 @@ let q = options?.lastDoc
 
   const exclus = new Set(config.produitsManquels || [])
 
+  const septJoursMs = 7 * 24 * 60 * 60 * 1000
+
   produits = produits.filter(p => {
     // Exclus manuellement depuis l'admin pour cette page (sans suppression Firestore)
     if (exclus.has(p.id)) return false
 
-    // Exclure produits vendus (quantité 0) ou retournés/supprimés
+    const isVendu = !!(p as any).vendu
     const quantite = (p as any).quantite ?? 1
-    if (quantite <= 0) return false
+
+    if (isVendu) {
+      // Garder les pièces vendues depuis moins de 7 jours (avec badge "Vendu" côté UI)
+      const dv = (p as any).dateVente
+      if (!dv) return false
+      const dvMs = dv instanceof Timestamp ? dv.toMillis() : new Date(dv).getTime()
+      if (!Number.isFinite(dvMs) || Date.now() - dvMs > septJoursMs) return false
+    } else {
+      if (quantite <= 0) return false
+    }
+
     if ((p as any).statut === 'retour' || (p as any).statut === 'supprime') return false
     if ((p as any).recu === false) return false
     if ((p as any).hidden === true) return false
