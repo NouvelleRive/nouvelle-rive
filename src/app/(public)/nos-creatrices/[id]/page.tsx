@@ -544,11 +544,11 @@ export default function CreateurPage() {
                   return (
                     <div key={`mobile-${bi}`}>
                       {videoSlice.length > 0 && (
-                        <div className={isPair ? 'grid grid-cols-2' : 'block'} style={{ borderTop: '1px solid #000' }}>
+                        <div className={isPair ? 'grid grid-cols-2' : 'block'}>
                           {videoSlice.map((url, vi) => (
-                            <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16', borderRight: isPair && vi === 0 ? '1px solid #000' : 'none' }}>
+                            <div key={`v-${vi}`} className="w-full" style={{ aspectRatio: '9 / 16' }}>
                               {/\.mp4(\?|$)/i.test(url) ? (
-                                <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
+                                <LazyAutoplayVideo src={url} className="w-full h-full object-cover" />
                               ) : instagramEmbed(url) ? (
                                 <iframe src={instagramEmbed(url)!} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
                               ) : null}
