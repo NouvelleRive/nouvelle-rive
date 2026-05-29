@@ -432,12 +432,14 @@
               <div className="bg-gray-50 rounded-lg p-2">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase mb-1">Détourage</h3>
                 <div className="flex flex-col gap-1">
-                  <button
-                    onClick={handleAutoRemove}
-                    className="py-1.5 bg-[#22209C] text-white rounded text-xs font-semibold hover:opacity-90"
-                  >
-                    Détourer
-                  </button>
+                  {!alreadyProcessed && (
+                    <button
+                      onClick={handleAutoRemove}
+                      className="py-1.5 bg-[#22209C] text-white rounded text-xs font-semibold hover:opacity-90"
+                    >
+                      Détourer
+                    </button>
+                  )}
                   <button
                     onClick={handleEnterEraseMode}
                     className="py-1.5 bg-white border border-gray-200 text-gray-700 rounded text-xs hover:bg-gray-50"
