@@ -19,7 +19,7 @@
     const [error, setError] = useState<string | null>(null)
     const [rotation, setRotation] = useState(0)
     const [fineRotation, setFineRotation] = useState(0)
-    const [mode, setMode] = useState<'view' | 'erase' | 'restore'>('view')
+    const [mode, setMode] = useState<'view' | 'erase' | 'restore' | 'crop'>('view')
     const [brushSize, setBrushSize] = useState(30)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
     const [zoom, setZoom] = useState(1)
@@ -29,6 +29,11 @@
     const [canvasHistory, setCanvasHistory] = useState<ImageData[]>([])
     const originalImageRef = useRef<HTMLImageElement | null>(null)
     const sourceImageRef = useRef<HTMLImageElement | null>(null)
+    // Crop mode (non-détouré) : pan/zoom dans un viewport carré
+    const cropContainerRef = useRef<HTMLDivElement>(null)
+    const cropImgRef = useRef<HTMLImageElement>(null)
+    const cropDragStart = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 })
+    const [cropDragging, setCropDragging] = useState(false)
 
     if (!imageUrl) {
       return (
@@ -200,23 +205,97 @@
       })
     }
 
-    const handleConserver = async () => {
+    const handleConserver = () => {
+      // Au lieu d'envoyer direct au serveur, on bascule en mode crop pour que la
+      // chineuse choisisse elle-même le cadrage carré (pan + zoom).
+      setOffset({ x: 0, y: 0 })
+      setZoom(1)
+      setError(null)
+      setMode('crop')
+    }
+
+    const cropPointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+      const p = 'touches' in e ? e.touches[0] : (e as React.MouseEvent)
+      cropDragStart.current = { x: p.clientX, y: p.clientY, offsetX: offset.x, offsetY: offset.y }
+      setCropDragging(true)
+    }
+    const cropPointerMove = (e: React.MouseEvent | React.TouchEvent) => {
+      if (!cropDragging) return
+      const p = 'touches' in e ? e.touches[0] : (e as React.MouseEvent)
+      setOffset({
+        x: cropDragStart.current.offsetX + (p.clientX - cropDragStart.current.x),
+        y: cropDragStart.current.offsetY + (p.clientY - cropDragStart.current.y),
+      })
+    }
+    const cropPointerUp = () => setCropDragging(false)
+
+    const handleConfirmCrop = async () => {
+      const img = cropImgRef.current
+      const container = cropContainerRef.current
+      if (!img || !container) return
+
       setProcessing(true)
       try {
+        // Attendre que l'image soit décodée
+        if (!img.complete || !img.naturalWidth) {
+          await new Promise<void>((resolve, reject) => {
+            img.addEventListener('load', () => resolve(), { once: true })
+            img.addEventListener('error', () => reject(new Error('image load')), { once: true })
+          })
+        }
+
+        const containerSize = container.offsetWidth
+        const iW = img.naturalWidth
+        const iH = img.naturalHeight
+        // object-cover : on scale pour couvrir le carré, puis on applique zoom utilisateur
+        const cover = Math.max(containerSize / iW, containerSize / iH)
+        const totalScale = cover * zoom
+        const drawW_display = iW * totalScale
+        const drawH_display = iH * totalScale
+        // Position centrée + offset (en px container)
+        const drawX_display = (containerSize - drawW_display) / 2 + offset.x
+        const drawY_display = (containerSize - drawH_display) / 2 + offset.y
+
+        // Mapping container 1:1 → canvas 1200:1200
+        const k = 1200 / containerSize
+        const canvas = document.createElement('canvas')
+        canvas.width = 1200
+        canvas.height = 1200
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, 1200, 1200)
+        ctx.drawImage(
+          img,
+          drawX_display * k,
+          drawY_display * k,
+          drawW_display * k,
+          drawH_display * k,
+        )
+
+        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/png'))
+        const arrayBuffer = await blob.arrayBuffer()
+        const uint8 = new Uint8Array(arrayBuffer)
+        let binary = ''
+        const chunk = 8192
+        for (let i = 0; i < uint8.length; i += chunk) {
+          binary += String.fromCharCode(...uint8.slice(i, i + chunk))
+        }
+        const base64 = btoa(binary)
+
         const res = await fetch('/api/detourage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl, formatOnly: true })
+          body: JSON.stringify({ base64, uploadOnly: true, skipDetourage: true }),
         })
         const data = await res.json()
         if (data.success && data.maskUrl) {
           onConfirm(data.maskUrl)
         } else {
-          throw new Error(data.error || 'Erreur')
+          throw new Error(data.error || 'erreur upload')
         }
-      } catch (err: any) {
-        console.error('Erreur conserver:', err)
-        onConfirm(imageUrl)
+      } catch (err) {
+        console.error('Erreur crop confirm:', err)
+        setError('FA500')
       } finally {
         setProcessing(false)
       }
@@ -336,6 +415,30 @@
               onTouchEnd={(e) => { e.preventDefault(); stopDrawing() }}
               onTouchMove={(e) => { e.preventDefault(); draw(e) }}
             />
+          ) : mode === 'crop' ? (
+            <div
+              ref={cropContainerRef}
+              className="relative w-full h-full overflow-hidden bg-white select-none touch-none"
+              style={{ aspectRatio: '1 / 1', cursor: cropDragging ? 'grabbing' : 'grab' }}
+              onMouseDown={cropPointerDown}
+              onMouseMove={cropPointerMove}
+              onMouseUp={cropPointerUp}
+              onMouseLeave={cropPointerUp}
+              onTouchStart={cropPointerDown}
+              onTouchMove={cropPointerMove}
+              onTouchEnd={cropPointerUp}
+            >
+              <img
+                ref={cropImgRef}
+                src={imageUrl}
+                alt="Aperçu cadrage"
+                crossOrigin="anonymous"
+                draggable={false}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: 'center center' }}
+              />
+              <div className="absolute inset-0 pointer-events-none ring-1 ring-black/40" />
+            </div>
           ) : (
             <img
               src={currentDisplayUrl}
@@ -415,6 +518,63 @@
               >
                 Conserver
               </button>
+            </>
+          )}
+
+          {mode === 'crop' && (
+            <>
+              <p className="text-xs text-gray-500 leading-snug">
+                Déplace la photo avec le doigt pour choisir ce qui rentre dans le carré, puis valide.
+              </p>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase">Zoom</h3>
+                  {zoom !== 1 && (
+                    <button onClick={() => setZoom(1)} className="text-xs text-red-500">Reset</button>
+                  )}
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                  <button onClick={() => setZoom(z => Math.max(0.5, +(z - 0.1).toFixed(2)))} className="w-8 h-8 bg-white border rounded hover:bg-gray-100 flex items-center justify-center text-gray-600">−</button>
+                  <span className="text-xs text-gray-600 w-10 text-center">{Math.round(zoom * 100)}%</span>
+                  <button onClick={() => setZoom(z => Math.min(3, +(z + 0.1).toFixed(2)))} className="w-8 h-8 bg-white border rounded hover:bg-gray-100 flex items-center justify-center text-gray-600">+</button>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase">Position</h3>
+                  {(offset.x !== 0 || offset.y !== 0) && (
+                    <button onClick={() => setOffset({ x: 0, y: 0 })} className="text-xs text-red-500">Reset</button>
+                  )}
+                </div>
+                <div className="flex justify-center">
+                  <div className="inline-grid grid-cols-3 gap-0.5">
+                    <div></div>
+                    <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y - 20 }))} className="w-7 h-7 bg-white border rounded hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xs">▲</button>
+                    <div></div>
+                    <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x - 20 }))} className="w-7 h-7 bg-white border rounded hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xs">◀</button>
+                    <button onClick={() => setOffset({ x: 0, y: 0 })} className="w-7 h-7 bg-white border rounded hover:bg-gray-100 flex items-center justify-center text-gray-400 text-xs">●</button>
+                    <button onClick={() => setOffset(prev => ({ ...prev, x: prev.x + 20 }))} className="w-7 h-7 bg-white border rounded hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xs">▶</button>
+                    <div></div>
+                    <button onClick={() => setOffset(prev => ({ ...prev, y: prev.y + 20 }))} className="w-7 h-7 bg-white border rounded hover:bg-gray-100 flex items-center justify-center text-gray-600 text-xs">▼</button>
+                    <div></div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => { setOffset({ x: 0, y: 0 }); setZoom(1); setMode('view') }}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm"
+                >
+                  Retour
+                </button>
+                <button
+                  onClick={handleConfirmCrop}
+                  disabled={processing}
+                  className="flex-1 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+                >
+                  <Check size={14} className="inline mr-1" /> Valider
+                </button>
+              </div>
             </>
           )}
 
