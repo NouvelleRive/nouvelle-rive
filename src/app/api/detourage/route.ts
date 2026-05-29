@@ -28,35 +28,49 @@
 
   export async function POST(req: NextRequest) {
     try {
-      const { imageUrl, rotation = 0, base64, uploadOnly, mode, applyTransform, offset, zoom = 1, formatOnly, categorie } = await req.json()
+      const { imageUrl, rotation = 0, base64, uploadOnly, skipDetourage, mode, applyTransform, offset, zoom = 1, formatOnly, categorie } = await req.json()
 
       // Mode uploadOnly avec base64 (upload brut avant PhotoEditor)
       if (base64 && (uploadOnly || mode === 'erased')) {
-        console.log('🔄 Conserver (base64, sans détourage), rotation:', rotation)
-        
+        // Photo NON-DÉTOURÉE (upload direct chineuse ou skipDetourage) → cover crop,
+        // le carré est rempli, pas de padding blanc.
+        // Photo APRÈS GOMME manuelle (mode==='erased' seul, depuis PhotoEditor) →
+        // inside + extend blanc pour préserver le canvas effacé tel quel.
+        const isNonDetoured = uploadOnly === true || skipDetourage === true
+        console.log('🔄 Conserver (base64), rotation:', rotation, '— mode:', isNonDetoured ? 'non-détouré cover' : 'erased inside')
+
         let sharpInstance = sharp(Buffer.from(base64, 'base64'))
 
         if (rotation !== 0) {
           sharpInstance = sharpInstance.rotate(rotation)
         }
 
-       const tempBuffer = await sharpInstance
-          .resize(1200, 1200, { fit: 'inside' })
-          .toBuffer()
-        const meta = await sharp(tempBuffer).metadata()
-        const w = meta.width || 1200
-        const h = meta.height || 1200
-        const finalBuffer = await sharp(tempBuffer)
-          .extend({
-            top: Math.floor((1200 - h) / 2),
-            bottom: Math.ceil((1200 - h) / 2),
-            left: Math.floor((1200 - w) / 2),
-            right: Math.ceil((1200 - w) / 2),
-            background: { r: 255, g: 255, b: 255 }
-          })
-          .flatten({ background: { r: 255, g: 255, b: 255 } })
-          .png({ quality: 90 })
-          .toBuffer()
+        let finalBuffer: Buffer
+        if (isNonDetoured) {
+          finalBuffer = await sharpInstance
+            .resize(1200, 1200, { fit: 'cover', position: 'centre' })
+            .flatten({ background: { r: 255, g: 255, b: 255 } })
+            .png({ quality: 90 })
+            .toBuffer()
+        } else {
+          const tempBuffer = await sharpInstance
+            .resize(1200, 1200, { fit: 'inside' })
+            .toBuffer()
+          const meta = await sharp(tempBuffer).metadata()
+          const w = meta.width || 1200
+          const h = meta.height || 1200
+          finalBuffer = await sharp(tempBuffer)
+            .extend({
+              top: Math.floor((1200 - h) / 2),
+              bottom: Math.ceil((1200 - h) / 2),
+              left: Math.floor((1200 - w) / 2),
+              right: Math.ceil((1200 - w) / 2),
+              background: { r: 255, g: 255, b: 255 }
+            })
+            .flatten({ background: { r: 255, g: 255, b: 255 } })
+            .png({ quality: 90 })
+            .toBuffer()
+        }
 
         const storageZone = process.env.BUNNY_STORAGE_ZONE
         const apiKey = process.env.BUNNY_API_KEY
