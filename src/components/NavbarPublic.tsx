@@ -17,6 +17,20 @@ export default function NavbarPublic() {
   const { count, hydrated } = useCart()
   const videoRef = useRef<HTMLVideoElement>(null)
   const showVideo = pathname === '/'
+  const [stickyVisible, setStickyVisible] = useState(false)
+  const [stickyMenuOpen, setStickyMenuOpen] = useState(false)
+
+  // Barre sticky : apparaît après ~120px de scroll (quand la barre boutons du haut a disparu).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onScroll = () => setStickyVisible(window.scrollY > 120)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Ferme le menu sticky à chaque changement de page
+  useEffect(() => { setStickyMenuOpen(false) }, [pathname])
 
   // Force ralenti 0.25× + relance .play() au cas où autoplay aurait été bloqué
   // (iOS mode éco, etc.). On REapplique playbackRate à chaque event car certains
@@ -100,8 +114,89 @@ export default function NavbarPublic() {
     lang
   )
 
+  const menuLabel = t('MENU', 'MENU', lang)
+
   return (
     <>
+      {/* Barre sticky toujours dispo en scroll : MENU + PANIER + COMPTE */}
+      <div
+        className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-200 ${stickyVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'}`}
+        style={{ fontFamily: fontHelvetica }}
+        aria-hidden={!stickyVisible}
+      >
+        <div className="bg-white border-b border-black px-4 md:px-6 py-2 flex items-center justify-end gap-2 md:gap-3">
+          <button
+            type="button"
+            onClick={() => setStickyMenuOpen((o) => !o)}
+            className="px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+            style={{
+              fontSize: '9px',
+              letterSpacing: '0.1em',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+            }}
+            aria-expanded={stickyMenuOpen}
+            aria-controls="sticky-menu-panel"
+          >
+            {menuLabel}
+          </button>
+          <Link
+            href="/panier"
+            className="relative px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+            style={{
+              fontSize: '9px',
+              letterSpacing: '0.1em',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {cartLabel} {hydrated && count > 0 ? `(${count})` : ''}
+          </Link>
+          <Link
+            href={compteHref}
+            className="px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+            style={{
+              fontSize: '9px',
+              letterSpacing: '0.1em',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {accountLabel}
+          </Link>
+        </div>
+        {stickyMenuOpen && (
+          <div
+            id="sticky-menu-panel"
+            className="bg-white border-b border-black px-4 md:px-6 py-4 max-h-[70vh] overflow-y-auto"
+          >
+            <div className="flex flex-col gap-0.5">
+              {boutiqueLinks.map((link) => {
+                const linkPath = link.href.split('#')[0]
+                const active = pathname === linkPath
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setStickyMenuOpen(false)}
+                    className="nav-link transition-colors duration-200"
+                    style={{
+                      fontSize: '11px',
+                      letterSpacing: '0.2em',
+                      color: active ? bleuElectrique : '#000',
+                      fontWeight: active ? '600' : '400',
+                      lineHeight: '1.8',
+                    }}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Vidéo bannière (boutique uniquement) */}
       {showVideo && (
         <div className="relative w-full overflow-hidden bg-black">
