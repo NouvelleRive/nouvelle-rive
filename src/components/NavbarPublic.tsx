@@ -124,14 +124,13 @@ export default function NavbarPublic() {
         style={{ fontFamily: fontHelvetica }}
         aria-hidden={!stickyVisible}
       >
-        <div className="bg-white border-b border-black px-4 md:px-6 py-2 flex items-center justify-end gap-2 md:gap-3">
+        <div className="bg-white border-b border-black px-3 md:px-6 py-2 flex items-center justify-end gap-1.5 md:gap-3">
           <button
             type="button"
             onClick={() => setStickyMenuOpen((o) => !o)}
-            className="px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+            className="px-1.5 md:px-4 py-1 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200 text-[8px] md:text-[9px]"
             style={{
-              fontSize: '9px',
-              letterSpacing: '0.1em',
+              letterSpacing: '0.08em',
               fontWeight: '600',
               whiteSpace: 'nowrap',
             }}
@@ -142,10 +141,9 @@ export default function NavbarPublic() {
           </button>
           <Link
             href="/panier"
-            className="relative px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+            className="relative px-1.5 md:px-4 py-1 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200 text-[8px] md:text-[9px]"
             style={{
-              fontSize: '9px',
-              letterSpacing: '0.1em',
+              letterSpacing: '0.08em',
               fontWeight: '600',
               whiteSpace: 'nowrap',
             }}
@@ -154,10 +152,9 @@ export default function NavbarPublic() {
           </Link>
           <Link
             href={compteHref}
-            className="px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+            className="px-1.5 md:px-4 py-1 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200 text-[8px] md:text-[9px]"
             style={{
-              fontSize: '9px',
-              letterSpacing: '0.1em',
+              letterSpacing: '0.08em',
               fontWeight: '600',
               whiteSpace: 'nowrap',
             }}
@@ -233,13 +230,12 @@ export default function NavbarPublic() {
             className="absolute top-4 right-4 md:top-6 md:right-6 flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3 z-10"
             style={{ fontFamily: fontHelvetica }}
           >
-            <div className="order-1 md:order-2 flex items-center gap-3">
+            <div className="order-1 md:order-2 flex items-center gap-2 md:gap-3">
               <Link
                 href="/panier"
-                className="relative px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+                className="relative px-1.5 md:px-4 py-1 md:py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200 text-[8px] md:text-[9px]"
                 style={{
-                  fontSize: '9px',
-                  letterSpacing: '0.1em',
+                  letterSpacing: '0.08em',
                   fontWeight: '600',
                   whiteSpace: 'nowrap'
                 }}
@@ -248,10 +244,9 @@ export default function NavbarPublic() {
               </Link>
               <Link
                 href={compteHref}
-                className="px-3 md:px-4 py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200"
+                className="px-1.5 md:px-4 py-1 md:py-2 border border-white text-white bg-black/30 backdrop-blur-sm hover:bg-white hover:text-black transition-all duration-200 text-[8px] md:text-[9px]"
                 style={{
-                  fontSize: '9px',
-                  letterSpacing: '0.1em',
+                  letterSpacing: '0.08em',
                   fontWeight: '600',
                   whiteSpace: 'nowrap'
                 }}
@@ -285,13 +280,12 @@ export default function NavbarPublic() {
               >
                 NOUVELLE RIVE
               </h1>
-              <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                 <Link
                   href="/panier"
-                  className="relative px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+                  className="relative px-1.5 md:px-4 py-1 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200 text-[8px] md:text-[9px]"
                   style={{
-                    fontSize: '9px',
-                    letterSpacing: '0.1em',
+                    letterSpacing: '0.08em',
                     fontWeight: '600',
                     whiteSpace: 'nowrap'
                   }}
@@ -300,10 +294,9 @@ export default function NavbarPublic() {
                 </Link>
                 <Link
                   href={compteHref}
-                  className="px-2 md:px-4 py-1.5 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200"
+                  className="px-1.5 md:px-4 py-1 md:py-2 border border-black hover:bg-black hover:text-white transition-all duration-200 text-[8px] md:text-[9px]"
                   style={{
-                    fontSize: '9px',
-                    letterSpacing: '0.1em',
+                    letterSpacing: '0.08em',
                     fontWeight: '600',
                     whiteSpace: 'nowrap'
                   }}
@@ -367,7 +360,8 @@ export default function NavbarPublic() {
                   fontStyle: 'italic'
                 }}
               >
-                {marqueeText}
+                {marqueeText}{' '}
+                <span style={{ fontWeight: 700 }}>// WORLD WIDE DELIVERY</span>
               </span>
             ))}
           </div>
