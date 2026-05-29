@@ -933,8 +933,39 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                 ))}
               </div>
               <div className="lg:hidden">
-                  <table className="w-full text-xs"><thead><tr className="border-b border-gray-100"><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>#</th><th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th><th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Marge</th></tr></thead><tbody>{(showAllChineuses ? classementChineuses : classementChineuses.slice(0, 10)).map((c, i) => (<tr key={c.key} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''}`}><td className="py-1.5 px-1.5 text-sm">{getMedal(i)}</td><td className="py-1.5 px-1.5"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>{c.trigramme}</div><span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span></div></td><td className="py-1.5 px-1.5 text-right font-semibold text-gray-900 whitespace-nowrap">{c.ca.toLocaleString('fr-FR')}€</td><td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td><td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{c.benef.toLocaleString('fr-FR')} €</td></tr>))}</tbody></table>{classementChineuses.length > 10 && (<button onClick={() => setShowAllChineuses(!showAllChineuses)} className="w-full mt-2 py-2 text-xs text-[#22209C] font-medium border border-gray-200 rounded-lg hover:bg-gray-50">{showAllChineuses ? 'Réduire ▲' : `Voir tout (${classementChineuses.length}) ▼`}</button>)}
-                </div>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2 px-1 font-medium text-gray-400 uppercase w-6" style={{ fontSize: '10px' }}>#</th>
+                      <th className="text-left py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Chineuse</th>
+                      <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>CA</th>
+                      <th className="text-right py-2 px-1 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Ventes</th>
+                      <th className="text-right py-2 px-1.5 font-medium text-gray-400 uppercase" style={{ fontSize: '10px' }}>Marge</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(showAllChineuses ? classementChineuses : classementChineuses.slice(0, 10)).map((c, i) => (
+                      <tr key={c.key} className={`border-b border-gray-50 ${i < 3 ? 'bg-amber-50/30' : ''}`}>
+                        <td className="py-1.5 px-1 text-xs text-gray-500 w-6">{getMedal(i)}</td>
+                        <td className="py-1.5 px-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#22209C] to-purple-500 flex items-center justify-center text-white font-bold" style={{ fontSize: '9px' }}>{c.trigramme}</div>
+                            <span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span>
+                          </div>
+                        </td>
+                        <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900 whitespace-nowrap">{c.ca.toLocaleString('fr-FR').replace(/[  ]/g, ' ')} €</td>
+                        <td className="py-1.5 px-1 text-right text-gray-600">{c.ventes}</td>
+                        <td className="py-1.5 px-1.5 text-right font-semibold text-green-600 whitespace-nowrap">{c.benef.toLocaleString('fr-FR').replace(/[  ]/g, ' ')} €</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {classementChineuses.length > 10 && (
+                  <button onClick={() => setShowAllChineuses(!showAllChineuses)} className="w-full mt-2 py-2 text-xs text-[#22209C] font-medium border border-gray-200 rounded-lg hover:bg-gray-50">
+                    {showAllChineuses ? 'Réduire ▲' : `Voir tout (${classementChineuses.length}) ▼`}
+                  </button>
+                )}
+              </div>
               </div>
             )}
           </div>
