@@ -134,19 +134,19 @@ let q = options?.lastDoc
     ...d.data()
   })) as Produit[]
 
-  // Première page : on ajoute aussi les pièces vendues depuis moins de 7 jours
+  // Première page : on ajoute aussi les pièces vendues depuis moins de 3 semaines
   // pour qu'elles restent visibles avec leur badge "Vendu". Si l'index composite
   // n'existe pas encore, on log et on continue : pas question de bloquer la page.
   if (isFirstPage) {
     try {
-      const septJoursMs = 7 * 24 * 60 * 60 * 1000
-      const seuil = Timestamp.fromMillis(Date.now() - septJoursMs)
+      const troisSemainesMs = 21 * 24 * 60 * 60 * 1000
+      const seuil = Timestamp.fromMillis(Date.now() - troisSemainesMs)
       const qVendues = query(
         collection(db, 'produits'),
         where('vendu', '==', true),
         where('dateVente', '>=', seuil),
         orderBy('dateVente', 'desc'),
-        limit(500)
+        limit(1000)
       )
       const venduesSnap = await getDocs(qVendues)
       const existingIds = new Set(produits.map(p => p.id))
@@ -169,7 +169,7 @@ let q = options?.lastDoc
 
   const exclus = new Set(config.produitsManquels || [])
 
-  const septJoursMs = 7 * 24 * 60 * 60 * 1000
+  const troisSemainesMs = 21 * 24 * 60 * 60 * 1000
 
   produits = produits.filter(p => {
     // Exclus manuellement depuis l'admin pour cette page (sans suppression Firestore)
@@ -179,11 +179,11 @@ let q = options?.lastDoc
     const quantite = (p as any).quantite ?? 1
 
     if (isVendu) {
-      // Garder les pièces vendues depuis moins de 7 jours (avec badge "Vendu" côté UI)
+      // Garder les pièces vendues depuis moins de 3 semaines (avec badge "Vendu" côté UI)
       const dv = (p as any).dateVente
       if (!dv) return false
       const dvMs = dv instanceof Timestamp ? dv.toMillis() : new Date(dv).getTime()
-      if (!Number.isFinite(dvMs) || Date.now() - dvMs > septJoursMs) return false
+      if (!Number.isFinite(dvMs) || Date.now() - dvMs > troisSemainesMs) return false
     } else {
       if (quantite <= 0) return false
     }
