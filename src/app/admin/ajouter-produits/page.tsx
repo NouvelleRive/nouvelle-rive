@@ -218,8 +218,8 @@ export default function AdminAjouterPage() {
       )}
       
       {selectedChineuse && (
-        <div className="bg-white rounded border p-6">
-          <ProductForm 
+        <div className="p-2 sm:p-4">
+          <ProductForm
             key={autoSku}
             mode="create" 
             isAdmin={true}
