@@ -17,6 +17,7 @@
     import ProductForm, { ProductFormData } from '@/components/ProductForm'
     import FilterBox from '@/components/FilterBox'
     import { libelleAchatStatut, libelleTransporteur, suggestPrixVente, type AchatStatut } from '@/modules/achat/types'
+    import ImportMailModal from '@/modules/achat/ImportMailModal'
     import { calcMargeNette } from '@/lib/marge'
 
     // Conversion base64 robuste pour gros fichiers
@@ -216,6 +217,7 @@
       }, [])
 
       // Filtres
+      const [importModalOpen, setImportModalOpen] = useState(false)
       const [recherche, setRecherche] = useState('')
       const [filtreCategorie, setFiltreCategorie] = useState('')
       const [filtreDeposant, setFiltreDeposant] = useState('')
@@ -934,9 +936,20 @@
       return (
         <div className="p-2 sm:p-4 max-w-6xl mx-auto">
           {/* Header */}
-          <div className="mb-6">
+          <div className="mb-6 relative">
             <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
+            {isAdmin && (
+              <button
+                onClick={() => setImportModalOpen(true)}
+                className="absolute right-0 top-0 inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-[#09B1BA] hover:bg-[#078a91] rounded-lg shadow-sm"
+              >
+                <ImageIcon size={14} /> Importer mail Vinted
+              </button>
+            )}
           </div>
+          {isAdmin && importModalOpen && (
+            <ImportMailModal onClose={() => setImportModalOpen(false)} />
+          )}
 
           {/* Filtres - UTILISE FILTERBOX */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
