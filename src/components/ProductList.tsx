@@ -1039,10 +1039,11 @@
                 {isAdmin && (
                   <div className="bg-white border rounded-xl p-4 shadow-sm">
                     <h2 className="text-lg font-semibold mb-3">Importer</h2>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1">
                       <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
-                        Mail Vinted
+                        Vinted
                       </button>
+                      <span className="text-[11px] text-gray-400 text-center">copier coller</span>
                     </div>
                   </div>
                 )}

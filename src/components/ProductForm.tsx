@@ -1472,10 +1472,13 @@ async function compressImage(file: File): Promise<string> {
                 <button
                   type="button"
                   onClick={onVintedImport}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 transition text-[#09B1BA]"
+                  className="w-full flex flex-col items-center justify-center gap-0 px-4 py-3 hover:bg-gray-50 transition text-[#09B1BA]"
                 >
-                  <FileSpreadsheet size={18} />
-                  <span className="font-medium text-sm">Import Vinted</span>
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet size={18} />
+                    <span className="font-medium text-sm">Vinted</span>
+                  </div>
+                  <span className="text-[11px] text-gray-400">copier coller</span>
                 </button>
               )}
             </div>
