@@ -1026,9 +1026,11 @@
               }}
             />
 
-            {/* Exporter (+ Importer admin) - hidden on mobile */}
+            {/* Exporter (+ Importer admin) - hidden on mobile.
+                justify-between : pousse "Importer" en bas pour aligner avec le bas
+                de la boîte Filtrer à gauche. */}
             {!isDeposante && (
-              <div className="hidden lg:flex flex-col gap-4">
+              <div className="hidden lg:flex flex-col gap-4 justify-between">
                 <div className="bg-white border rounded-xl p-4 shadow-sm">
                   <h2 className="text-lg font-semibold mb-3">Exporter</h2>
                   <div className="flex flex-col gap-2">
