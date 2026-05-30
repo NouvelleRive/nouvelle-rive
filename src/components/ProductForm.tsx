@@ -1613,7 +1613,7 @@ async function compressImage(file: File): Promise<string> {
               
               {/* Nom de la pièce */}
               <div className="col-span-3">
-                <label className="block text-sm font-medium mb-1">Nom de la pièce *</label>
+                <label className="block text-xs font-medium mb-1">Nom de la pièce *</label>
                 <div className="flex">
                   {mode === 'create' && sku && (
                     <span className="px-3 py-1.5 bg-gray-100 border border-r-0 rounded-l text-sm text-gray-600 whitespace-nowrap">
@@ -1645,7 +1645,7 @@ async function compressImage(file: File): Promise<string> {
 
               {/* SKU */}
               <div className="col-span-2 md:col-span-1">
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xs font-medium mb-1">
                   SKU {isAdmin && <span className="text-orange-500 text-xs">(modifiable)</span>}
                 </label>
                 {isAdmin ? (
@@ -1672,7 +1672,7 @@ async function compressImage(file: File): Promise<string> {
 
               {/* Catégorie */}
               <div>
-                <label className="block text-sm font-medium mb-1">Catégorie</label>
+                <label className="block text-xs font-medium mb-1">Catégorie</label>
                 <select
                   value={formData.categorie}
                   onChange={(e) => setFormData({ ...formData, categorie: e.target.value, taille: '', modele: '' })}
@@ -1693,7 +1693,7 @@ async function compressImage(file: File): Promise<string> {
             <div className="grid grid-cols-3 gap-3 mt-3">
               {/* Taille */}
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xs font-medium mb-1">
                   {typeTaille === 'chaussures' ? 'Pointure' : 'Taille'}
                 </label>
                 {taillesDisponibles.length > 0 ? (
@@ -1720,7 +1720,7 @@ async function compressImage(file: File): Promise<string> {
 
               {/* Prix */}
               <div>
-                <label className="block text-sm font-medium mb-1">Prix (€)</label>
+                <label className="block text-xs font-medium mb-1">Prix (€)</label>
                 <input
                   type="number"
                   value={formData.prix}
@@ -1749,7 +1749,7 @@ async function compressImage(file: File): Promise<string> {
                   ne payent pas d'achat, leur marge dépend de la rétrocession). */}
               {trigramme?.toUpperCase() === 'NR' && (
                 <div>
-                  <label className="block text-sm font-medium mb-1">Prix d'achat (€)</label>
+                  <label className="block text-xs font-medium mb-1">Prix d'achat (€)</label>
                   <input
                     type="number"
                     value={formData.prixAchat || ''}
@@ -1776,7 +1776,7 @@ async function compressImage(file: File): Promise<string> {
 
               {/* Quantité */}
               <div>
-                <label className="block text-sm font-medium mb-1">Quantité</label>
+                <label className="block text-xs font-medium mb-1">Quantité</label>
                 <input
                   type="number"
                   value={lockQuantity ? '1' : formData.quantite}
@@ -1791,7 +1791,7 @@ async function compressImage(file: File): Promise<string> {
             {/* Marque (obligatoire si requireBrand) */}
             {requireBrand && (
               <div className="mt-3">
-                <label className="block text-sm font-medium mb-1">Marque *</label>
+                <label className="block text-xs font-medium mb-1">Marque *</label>
                 <input
                   type="text"
                   value={formData.marque}
@@ -1807,7 +1807,7 @@ async function compressImage(file: File): Promise<string> {
             {formData.categorie.toLowerCase().includes('sac') && (
               <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Longueur (cm) *</label>
+                  <label className="block text-xs font-medium mb-1">Longueur (cm) *</label>
                   <input
                     type="number"
                     value={formData.bagLength || ''}
@@ -1830,7 +1830,7 @@ async function compressImage(file: File): Promise<string> {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Hauteur (cm) *</label>
+                  <label className="block text-xs font-medium mb-1">Hauteur (cm) *</label>
                   <input
                     type="number"
                     value={formData.bagHeight || ''}
@@ -1853,7 +1853,7 @@ async function compressImage(file: File): Promise<string> {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Taille détectée</label>
+                  <label className="block text-xs font-medium mb-1">Taille détectée</label>
                   <div className={`w-full border rounded px-2 py-1.5 text-sm ${formData.bagSizeName ? 'bg-green-50 border-green-300 text-green-700 font-medium' : 'bg-gray-100 text-gray-400'}`}>
                     {formData.bagSizeName || '—'}
                   </div>
