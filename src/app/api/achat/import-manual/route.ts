@@ -51,10 +51,16 @@ export async function POST(req: NextRequest) {
   // --- Détection par contenu + dispatch ------------------------------------
   try {
     // Page Vinted (annonce produit) collée → priorité car contient plus d'infos
-    // (marque/taille/couleur/état/description) que le mail "Ton reçu". On exige
-    // que ce soit le contenu réel de la page (pas juste une URL), le parser
-    // vérifie la présence de labels caractéristiques (Marque / Taille / etc.).
-    if (/Inclut la Protection acheteurs/i.test(body)) {
+    // (marque/taille/couleur/état/description) que le mail "Ton reçu". On dispatche
+    // sur la page dès qu'on détecte un marker Vinted (URL items/, Protection acheteurs,
+    // ou plusieurs labels page). Le parser fait la validation détaillée.
+    const looksLikeVintedPage =
+      /Inclut la Protection acheteurs/i.test(body) ||
+      /Protection acheteurs/i.test(body) ||
+      /vinted\.fr\/items\//i.test(body) ||
+      /Dressing du membre/i.test(body) ||
+      /Articles similaires/i.test(body)
+    if (looksLikeVintedPage) {
       return await handleVintedPage(body)
     }
     if (/Re[çc]u pour votre commande Vinted/i.test(body) || /Votre paiement a [ée]t[ée] re[çc]u/i.test(body)) {
@@ -70,7 +76,7 @@ export async function POST(req: NextRequest) {
     if (/Pickup\s+Pass/i.test(body) || /arriv[ée]\s+en\s+relais\s+Pickup/i.test(body)) {
       return await handleChronopostPickup(body)
     }
-    return NextResponse.json({ ok: false, reason: 'type de mail non reconnu' }, { status: 400 })
+    return NextResponse.json({ ok: false, reason: 'contenu non reconnu (colle une page Vinted complète ou un mail)' }, { status: 400 })
   } catch (e: any) {
     console.error('import-manual error:', e)
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 })
