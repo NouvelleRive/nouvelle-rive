@@ -2213,7 +2213,7 @@ async function compressImage(file: File): Promise<string> {
                       type="button"
                       onClick={handleGenerateTryon}
                       disabled={generatingTryon || !formData.existingPhotos.face || lockOneShot}
-                      className="px-4 py-2 bg-[#22209C] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
+                      className="px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
                     >
                       {generatingTryon ? (
                         <>
@@ -2277,7 +2277,7 @@ async function compressImage(file: File): Promise<string> {
                   }
                 }}
                 disabled={generatingDesc || !formData.existingPhotos.face || !formData.categorie}
-                className="px-4 py-2 bg-[#22209C] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
+                className="px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center gap-2"
               >
                 {generatingDesc ? (
                   <>
@@ -2497,14 +2497,14 @@ async function compressImage(file: File): Promise<string> {
         {/* BOUTONS */}
           <div className="flex gap-3">
             {onCancel && (
-              <button type="button" onClick={onCancel} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition">
+              <button type="button" onClick={onCancel} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
                 Annuler
               </button>
             )}
             <button
               type="submit"
               disabled={loading || skuValidating || (isAdmin && chineuses.length > 0 && !selectedChineuse)}
-              className={`${onCancel ? 'flex-1' : 'w-full'} bg-[#22209C] text-white py-2.5 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition`}
+              className={`${onCancel ? 'flex-1' : 'w-full'} bg-[#22209C] text-white py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition`}
             >
               {loading || skuValidating ? '⏳ En cours...' : (submitLabel || defaultSubmitLabel)}
             </button>
