@@ -1563,7 +1563,6 @@ async function compressImage(file: File): Promise<string> {
                   </button>
                 </div>
               </div>
-            )}
           </div>
         )}
 
