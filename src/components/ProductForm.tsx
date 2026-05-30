@@ -1460,7 +1460,7 @@ async function compressImage(file: File): Promise<string> {
         {mode === 'create' && showExcelImport && onExcelImport && (
           <div className="bg-white border rounded-lg p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Importer</h3>
-            <div className="flex flex-col gap-2">
+            <div className={`grid gap-2 ${onWhatnotImport ? 'grid-cols-3' : onVintedImport ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <button
                 type="button"
                 onClick={() => setShowExcelSection(!showExcelSection)}
@@ -1470,16 +1470,13 @@ async function compressImage(file: File): Promise<string> {
                 <span className="text-white/70">{showExcelSection ? '✕' : '+'}</span>
               </button>
               {onVintedImport && (
-                <>
-                  <button
-                    type="button"
-                    onClick={onVintedImport}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors"
-                  >
-                    Vinted
-                  </button>
-                  <span className="text-[11px] text-gray-400 text-center">copie colle la page (cmd+A, cmd+C, cmd+V)</span>
-                </>
+                <button
+                  type="button"
+                  onClick={onVintedImport}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors"
+                >
+                  Vinted
+                </button>
               )}
               {onWhatnotImport && (
                 <button
@@ -1491,6 +1488,9 @@ async function compressImage(file: File): Promise<string> {
                 </button>
               )}
             </div>
+            {onVintedImport && (
+              <p className="text-[11px] text-gray-400 text-center mt-2">copie colle la page (cmd+A, cmd+C, cmd+V)</p>
+            )}
           </div>
         )}
         {mode === 'create' && showExcelImport && onExcelImport && showExcelSection && (
