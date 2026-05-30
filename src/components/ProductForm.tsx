@@ -1459,17 +1459,14 @@ async function compressImage(file: File): Promise<string> {
         {/* === IMPORT EXCEL + VINTED (mode création uniquement) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (
           <div className={`grid gap-3 ${onWhatnotImport ? 'grid-cols-3' : onVintedImport ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowExcelSection(!showExcelSection)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#22209C] text-white hover:bg-[#1a1880] transition"
               >
-                <div className="flex items-center gap-2 text-[#22209C]">
-                  <FileSpreadsheet size={18} />
-                  <span className="font-medium text-sm">Excel</span>
-                </div>
-                <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
+                <span className="font-medium text-sm">Excel</span>
+                <span className="text-white/70 text-sm">{showExcelSection ? '✕' : '+'}</span>
               </button>
             </div>
             {onVintedImport && (
