@@ -1205,7 +1205,7 @@
                       ) : (
                         <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><ImageIcon size={20} className="text-gray-400" /></div>
                       )}
-                      {/* Colonne à droite des photos : marque + reçu */}
+                      {/* Colonne à droite des photos : marque + Reçu + statut */}
                       <div className="flex-1 min-w-0 flex flex-col gap-1 text-[12px]">
                         {p.marque && <span className="font-medium text-gray-700 truncate">{p.marque}</span>}
                         <span>
@@ -1218,6 +1218,14 @@
                                 : '—'}
                           </span>
                         </span>
+                        {/* Badge statut directement sous la date */}
+                        {p.source?.startsWith('achat-') && p.achatStatut ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-[#09B1BA]">
+                            <Clock size={11} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
+                          </span>
+                        ) : p.recu === false ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</span>
+                        ) : null}
                         {/* Miniatures secondaires */}
                         {allImages.length > 1 && (
                           <div className="flex gap-1 mt-1">
@@ -1268,18 +1276,6 @@
                         🚨 À récupérer – prix baissé il y a 1 mois+
                       </span>
                     )}
-
-                    {/* Statut achat / en attente — affiché AVANT la barre quand applicable */}
-                    {p.source?.startsWith('achat-') && p.achatStatut ? (
-                      <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-[#09B1BA]">
-                        <Clock size={11} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
-                        {p.achatStatut === 'livre' && p.achatLieuLivraison && (
-                          <span className="text-gray-500"> · {p.achatLieuLivraison}</span>
-                        )}
-                      </div>
-                    ) : p.recu === false ? (
-                      <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</div>
-                    ) : null}
 
                     {/* Ligne info bas : Prix · Qté · Achat · Marge */}
                     <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
