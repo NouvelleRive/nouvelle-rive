@@ -16,6 +16,8 @@ export type Chineuse = {
   categoriesAutorisees?: string[]
   accroche?: string
   description?: string
+  /** 'unique' (par défaut, pièce unique) ou 'smallBatch' (restock multi-quantité) */
+  stockType?: 'unique' | 'smallBatch'
 }
 
 export type Cat = {
@@ -131,8 +133,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         .filter((u: any) => u.trigramme) as Deposant[]
       setDeposants(usersData)
 
-      // Liste des chineuses pour le dropdown
-      const chineuses = usersData.map(u => ({
+      // Liste des chineuses pour le dropdown — on inclut stockType pour les
+      // règles d'affichage des boutons d'import Vinted/Whatnot (NR/smallBatch/unique).
+      const chineuses = usersData.map((u: any) => ({
         uid: u.id,
         email: u.email,
         nom: u.nom,
@@ -140,6 +143,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         categoriesAutorisees: u.categoriesAutorisees,
         accroche: u.accroche,
         description: u.description,
+        stockType: u.stockType,
       }))
       setChineusesList(chineuses)
 
