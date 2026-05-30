@@ -1039,11 +1039,14 @@
                 {isAdmin && (
                   <div className="bg-white border rounded-xl p-4 shadow-sm">
                     <h2 className="text-lg font-semibold mb-3">Importer</h2>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2">
                       <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
                         Vinted
                       </button>
-                      <span className="text-[11px] text-gray-400 text-center">copie colle la page vinted (cmd+A, cmd+C, cmd+V)</span>
+                      <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg text-sm hover:bg-gray-800 transition-colors">
+                        Whatnot
+                      </button>
+                      <span className="text-[11px] text-gray-400 text-center mt-1">copie colle la page (cmd+A, cmd+C, cmd+V)</span>
                     </div>
                   </div>
                 )}

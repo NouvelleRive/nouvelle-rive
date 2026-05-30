@@ -371,6 +371,8 @@ async function compressImage(file: File): Promise<string> {
     onExcelImport?: (produits: ExcelImportData[]) => Promise<void>
     /** Si fourni, affiche un bouton "Import Vinted" à droite de "Import Excel" qui appelle ce callback (ouvre une modal côté parent). */
     onVintedImport?: () => void
+    /** Si fourni, affiche un bouton "Import Whatnot" — admin only, à mettre uniquement quand isAdmin=true. */
+    onWhatnotImport?: () => void
     onCancel?: () => void
     
     // État
@@ -444,6 +446,7 @@ async function compressImage(file: File): Promise<string> {
     onSubmit,
     onExcelImport,
     onVintedImport,
+    onWhatnotImport,
     onCancel,
     loading = false,
     submitLabel,
@@ -1455,7 +1458,7 @@ async function compressImage(file: File): Promise<string> {
         
         {/* === IMPORT EXCEL + VINTED (mode création uniquement) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (
-          <div className={`grid ${onVintedImport ? 'grid-cols-2 gap-3' : 'grid-cols-1'}`}>
+          <div className={`grid gap-3 ${onWhatnotImport ? 'grid-cols-3' : onVintedImport ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <div className="bg-white border rounded-lg overflow-hidden">
               <button
                 type="button"
@@ -1478,6 +1481,18 @@ async function compressImage(file: File): Promise<string> {
                 >
                   <FileSpreadsheet size={18} />
                   <span className="font-medium text-sm">Vinted</span>
+                </button>
+              </div>
+            )}
+            {onWhatnotImport && (
+              <div className="bg-white border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={onWhatnotImport}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 transition text-black"
+                >
+                  <FileSpreadsheet size={18} />
+                  <span className="font-medium text-sm">Whatnot</span>
                 </button>
               </div>
             )}

@@ -28,6 +28,7 @@ export default function AdminAjouterPage() {
 
   const [creatingProduct, setCreatingProduct] = useState(false)
   const [vintedModalOpen, setVintedModalOpen] = useState(false)
+  const [whatnotModalOpen, setWhatnotModalOpen] = useState(false)
 
   // Convertir les catégories de la chineuse pour ProductForm
   const chineuseCategories = useMemo(() => {
@@ -235,12 +236,17 @@ export default function AdminAjouterPage() {
                 ? () => setVintedModalOpen(true)
                 : undefined
             }
+            onWhatnotImport={
+              // Whatnot : admin uniquement (la page admin l'est déjà, donc toujours présenté ici)
+              () => setWhatnotModalOpen(true)
+            }
             loading={creatingProduct}
             showExcelImport={true}
           />
         </div>
       )}
       {vintedModalOpen && <ImportMailModal onClose={() => setVintedModalOpen(false)} />}
+      {whatnotModalOpen && <ImportMailModal onClose={() => setWhatnotModalOpen(false)} />}
     </>
   )
 }
