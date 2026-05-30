@@ -265,9 +265,26 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
         )}
 
         {step === 'done' && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="text-green-700 font-medium">{resultMsg}</div>
-            <button onClick={onClose} className="px-4 py-2 bg-[#22209C] text-white text-sm rounded-lg">Fermer</button>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
+                Fermer
+              </button>
+              <button
+                onClick={() => {
+                  // reset complet pour enchaîner sur une autre pièce
+                  setPasted('')
+                  setItems([])
+                  setErrorMsg(null)
+                  setResultMsg(null)
+                  setStep('paste')
+                }}
+                className="px-4 py-2 bg-[#09B1BA] text-white text-sm rounded-lg hover:bg-[#078a91]"
+              >
+                Ajouter une autre pièce
+              </button>
+            </div>
           </div>
         )}
       </div>
