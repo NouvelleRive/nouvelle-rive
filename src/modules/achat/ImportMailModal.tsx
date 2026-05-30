@@ -92,11 +92,29 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
   }
 
   const handleCreate = async () => {
-    // validation : prix de vente requis pour chaque item
+    // validation : tous les champs obligatoires doivent être remplis avant création
     for (let i = 0; i < items.length; i++) {
-      const pv = parseFloat(items[i].prixVente || '')
+      const it = items[i]
+      const prefix = items.length > 1 ? `Pièce ${i + 1} : ` : ''
+      if (!it.titre?.trim()) {
+        setErrorMsg(`${prefix}le titre est obligatoire.`)
+        return
+      }
+      if (!it.categorie?.label?.trim()) {
+        setErrorMsg(`${prefix}la catégorie est obligatoire (non détectée auto, à compléter à la main après création).`)
+        return
+      }
+      if (!it.marque?.trim()) {
+        setErrorMsg(`${prefix}la marque est obligatoire.`)
+        return
+      }
+      if (!it.taille?.trim()) {
+        setErrorMsg(`${prefix}la taille est obligatoire.`)
+        return
+      }
+      const pv = parseFloat(it.prixVente || '')
       if (!Number.isFinite(pv) || pv <= 0) {
-        setErrorMsg(`Item ${i + 1} : prix de vente manquant ou invalide.`)
+        setErrorMsg(`${prefix}prix de vente manquant ou invalide.`)
         return
       }
     }
