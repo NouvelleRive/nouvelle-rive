@@ -1467,7 +1467,7 @@ async function compressImage(file: File): Promise<string> {
               >
                 <div className="flex items-center gap-2 text-[#22209C]">
                   <FileSpreadsheet size={18} />
-                  <span className="font-medium text-sm">Import Excel</span>
+                  <span className="font-medium text-sm">Excel</span>
                 </div>
                 <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
               </button>
