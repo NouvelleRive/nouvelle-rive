@@ -1197,20 +1197,35 @@
                 >
                   {/* MOBILE */}
                   <div className="sm:hidden">
-                    {/* Ligne photos + actions */}
+                    {/* Ligne photos + marque/reçu + actions */}
                     <div className="flex items-start gap-2">
                       <input type="checkbox" checked={isSelected} onChange={() => toggleSelection(p.id)} className="w-4 h-4 mt-1 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C] flex-shrink-0" />
-                      <div className="flex-1 flex gap-1.5 items-start min-w-0">
-                        {allImages.length > 0 ? (
-                          <img src={allImages[0]} alt={p.nom} className="w-20 h-20 object-cover rounded-lg cursor-pointer flex-shrink-0" onClick={() => window.open(allImages[0], '_blank')} />
-                        ) : (
-                          <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><ImageIcon size={20} className="text-gray-400" /></div>
-                        )}
+                      {allImages.length > 0 ? (
+                        <img src={allImages[0]} alt={p.nom} className="w-20 h-20 object-cover rounded-lg cursor-pointer flex-shrink-0" onClick={() => window.open(allImages[0], '_blank')} />
+                      ) : (
+                        <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><ImageIcon size={20} className="text-gray-400" /></div>
+                      )}
+                      {/* Colonne à droite des photos : marque + reçu */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1 text-[12px]">
+                        {p.marque && <span className="font-medium text-gray-700 truncate">{p.marque}</span>}
+                        <span>
+                          <span className="text-gray-400">Reçu :</span>{' '}
+                          <span className="font-medium text-gray-700">
+                            {p.dateReception instanceof Timestamp
+                              ? format(p.dateReception.toDate(), 'd MMM', { locale: fr })
+                              : p.recu === true && p.createdAt instanceof Timestamp
+                                ? format(p.createdAt.toDate(), 'd MMM', { locale: fr })
+                                : '—'}
+                          </span>
+                        </span>
+                        {/* Miniatures secondaires */}
                         {allImages.length > 1 && (
-                          <img src={allImages[1]} alt={`${p.nom} 2`} className="w-10 h-10 object-cover rounded cursor-pointer flex-shrink-0" onClick={() => window.open(allImages[1], '_blank')} />
-                        )}
-                        {allImages.length > 2 && (
-                          <button onClick={() => toggleExpanded(p.id)} className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-gray-500 text-[11px] font-medium flex-shrink-0">+{allImages.length - 2}</button>
+                          <div className="flex gap-1 mt-1">
+                            <img src={allImages[1]} alt={`${p.nom} 2`} className="w-8 h-8 object-cover rounded cursor-pointer flex-shrink-0" onClick={() => window.open(allImages[1], '_blank')} />
+                            {allImages.length > 2 && (
+                              <button onClick={() => toggleExpanded(p.id)} className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-gray-500 text-[10px] font-medium flex-shrink-0">+{allImages.length - 2}</button>
+                            )}
+                          </div>
                         )}
                       </div>
                       <div className="flex flex-col gap-0.5 flex-shrink-0">
@@ -1227,13 +1242,12 @@
                       </div>
                     </div>
 
-                    {/* Titre + marque sous les photos */}
+                    {/* Titre sous les photos */}
                     <h3 className="text-[13px] font-medium text-gray-900 leading-snug mt-2">
                       {p.sku && <span className="text-[#22209C] font-semibold">{p.sku}</span>}
                       {p.sku && <span className="text-gray-400"> · </span>}
                       {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                     </h3>
-                    {p.marque && <p className="text-[12px] text-gray-500 mt-0.5">{p.marque}</p>}
                     {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1"><RefreshCw size={11} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-red-600 mt-1"><RefreshCw size={11} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
                     {getPriceBadgeStatus(p) === 'orange' && (
@@ -1255,7 +1269,19 @@
                       </span>
                     )}
 
-                    {/* Ligne info bas : Prix · Qté · (Reçu le | En attente | Date créa) · Rupture · Œil */}
+                    {/* Statut achat / en attente — affiché AVANT la barre quand applicable */}
+                    {p.source?.startsWith('achat-') && p.achatStatut ? (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-[#09B1BA]">
+                        <Clock size={11} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
+                        {p.achatStatut === 'livre' && p.achatLieuLivraison && (
+                          <span className="text-gray-500"> · {p.achatLieuLivraison}</span>
+                        )}
+                      </div>
+                    ) : p.recu === false ? (
+                      <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</div>
+                    ) : null}
+
+                    {/* Ligne info bas : Prix · Qté · Achat · Marge */}
                     <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
                       <span><span className="text-gray-400">Prix:</span> {typeof p.prix === 'number' ? (
                         <span className="font-medium">{p.prix} €</span>
@@ -1264,6 +1290,7 @@
                       ) : (
                         <span className="font-medium">—</span>
                       )}</span>
+                      <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
                       {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{typeof p.prixAchat === 'number' ? `${p.prixAchat} €` : '—'}</span></span>
                       )}
@@ -1273,21 +1300,6 @@
                           <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m !== null ? `${m} €` : '—'}</span></span>
                         )
                       })()}
-                      <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
-                      {p.source?.startsWith('achat-') && p.achatStatut ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-[#09B1BA]">
-                          <Clock size={11} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
-                          {p.achatStatut === 'livre' && p.achatLieuLivraison && (
-                            <span className="text-gray-500"> · {p.achatLieuLivraison}</span>
-                          )}
-                        </span>
-                      ) : p.recu === false ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</span>
-                      ) : p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp ? (
-                        <span><span className="text-gray-400">Reçu le:</span> <span className="font-medium">{format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span></span>
-                      ) : (
-                        <span className="text-[11px] text-gray-400">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</span>
-                      )}
                       {p.statut === 'outOfStock' && (
                         <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                       )}
