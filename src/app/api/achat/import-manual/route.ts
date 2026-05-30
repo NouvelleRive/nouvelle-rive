@@ -51,8 +51,10 @@ export async function POST(req: NextRequest) {
   // --- Détection par contenu + dispatch ------------------------------------
   try {
     // Page Vinted (annonce produit) collée → priorité car contient plus d'infos
-    // (marque/taille/couleur/état/description) que le mail "Ton reçu".
-    if (/vinted\.fr\/items\//i.test(body) || /Inclut la Protection acheteurs/i.test(body)) {
+    // (marque/taille/couleur/état/description) que le mail "Ton reçu". On exige
+    // que ce soit le contenu réel de la page (pas juste une URL), le parser
+    // vérifie la présence de labels caractéristiques (Marque / Taille / etc.).
+    if (/Inclut la Protection acheteurs/i.test(body)) {
       return await handleVintedPage(body)
     }
     if (/Re[çc]u pour votre commande Vinted/i.test(body) || /Votre paiement a [ée]t[ée] re[çc]u/i.test(body)) {

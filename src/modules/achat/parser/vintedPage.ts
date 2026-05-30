@@ -50,12 +50,25 @@ export function parseVintedPage(rawText: string): VintedPageResult {
   const itemIdMatch = url?.match(/\/items\/(\d+)/)
   const itemId = itemIdMatch ? itemIdMatch[1] : null
 
-  // Détecte qu'il s'agit bien d'une page Vinted (et pas autre chose) :
+  // On exige le contenu de la page complète : la présence d'au moins 2 des 4
+  // labels caractéristiques (Marque / Taille / État / Couleur) ou la marker
+  // "Inclut la Protection acheteurs" garantit qu'on a bien la page collée et
+  // pas juste une URL ou un fragment.
+  const labelsPresent = [
+    matchLabel(lines, 'Marque'),
+    matchLabel(lines, 'Taille'),
+    matchLabel(lines, 'État') || matchLabel(lines, 'Etat'),
+    matchLabel(lines, 'Couleur'),
+  ].filter(Boolean).length
   const looksLikePage =
     /Inclut la Protection acheteurs/i.test(text) ||
-    /vinted\.fr\/items/i.test(text) ||
-    (matchLabel(lines, 'Marque') !== null && matchLabel(lines, 'Taille') !== null)
-  if (!looksLikePage) return { ok: false, reason: 'Pas une page Vinted reconnaissable' }
+    labelsPresent >= 2
+  if (!looksLikePage) {
+    return {
+      ok: false,
+      reason: 'Contenu insuffisant. Colle la page Vinted complète (Cmd+A sur l\'annonce, pas juste le lien).',
+    }
+  }
 
   const marque = matchLabel(lines, 'Marque') || ''
   const taille = matchLabel(lines, 'Taille') || ''

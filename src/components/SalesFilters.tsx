@@ -123,9 +123,8 @@ export default function SalesFilters({
   const chineusesDisponibles = useMemo(() => {
     const map = new Map<string, string>()
     chineuses.forEach(c => { if (c.trigramme) map.set(c.trigramme.toUpperCase(), c.nom || c.trigramme) })
-    ventes.forEach(v => { const t = getTrigrammeFromVente(v); if (t && !map.has(t)) map.set(t, t) })
     return Array.from(map.entries()).map(([trigramme, nom]) => ({ trigramme, nom })).sort((a, b) => a.trigramme.localeCompare(b.trigramme))
-  }, [ventes, chineuses])
+  }, [chineuses])
 
   const ventesFiltrées = useMemo(() => {
     let result = [...ventes]
