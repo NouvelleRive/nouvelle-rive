@@ -1335,9 +1335,18 @@
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 text-base">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
+                      <h3 className="text-sm font-semibold text-gray-900">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
                       {p.description && <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>}
-                      <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        <span className="text-gray-400">Reçu le:</span>{' '}
+                        <span className="font-medium text-gray-700">
+                          {p.dateReception instanceof Timestamp
+                            ? format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })
+                            : p.recu === true && p.createdAt instanceof Timestamp
+                              ? format(p.createdAt.toDate(), 'd MMM yyyy', { locale: fr })
+                              : '—'}
+                        </span>
+                      </p>
                       {/* Display chineur retiré : info inutile dans la grille admin (mais le champ reste en base). */}
                       {p.source?.startsWith('achat-') && p.achatStatut ? (
                         <span className="inline-flex items-center gap-1 text-xs text-[#09B1BA] mt-1">
