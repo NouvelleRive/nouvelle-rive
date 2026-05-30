@@ -1016,7 +1016,9 @@
                   value: filtrePhotoManquante,
                   onChange: setFiltrePhotoManquante,
                 },
-                ...(isAdmin ? {
+                // Filtre 'Déposante uniquement' : admin global uniquement.
+                // Pas affiché quand on filtre déjà sur une chineuse spécifique.
+                ...(isAdmin && !targetChineuse ? {
                   deposante: {
                     value: filtreDeposanteOnly,
                     onChange: setFiltreDeposanteOnly,
