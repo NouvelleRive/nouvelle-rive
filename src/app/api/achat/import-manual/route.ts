@@ -40,10 +40,14 @@ export async function POST(req: NextRequest) {
 
   // --- Lecture du payload --------------------------------------------------
   let body = ''
+  let validatedItems: any[] | null = null
   let targetChineuse: { uid: string; email: string; trigramme: string } | null = null
   try {
     const json = await req.json()
     body = String(json?.body || '')
+    if (Array.isArray(json?.validatedItems)) {
+      validatedItems = json.validatedItems
+    }
     if (json?.targetChineuse?.uid && json?.targetChineuse?.trigramme) {
       targetChineuse = {
         uid: String(json.targetChineuse.uid),
@@ -54,15 +58,21 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
   }
-  if (!body.trim()) {
-    return NextResponse.json({ error: 'body vide' }, { status: 400 })
-  }
 
   // Si le client n'a pas précisé de chineuse cible, on tombe sur NR par défaut.
   if (!targetChineuse) {
     const nr = await findChineuseNR()
     if (!nr) return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable et aucune chineuse fournie' }, { status: 500 })
     targetChineuse = { uid: nr.uid, email: nr.email, trigramme: 'NR' }
+  }
+
+  // --- Mode "pré-validé" : on écrit directement depuis les fields édités par l'admin
+  if (validatedItems && validatedItems.length > 0) {
+    return await handleValidatedItems(validatedItems, targetChineuse)
+  }
+
+  if (!body.trim()) {
+    return NextResponse.json({ error: 'body vide ou validatedItems vide' }, { status: 400 })
   }
 
   // --- Détection par contenu + dispatch ------------------------------------
@@ -106,6 +116,74 @@ export async function POST(req: NextRequest) {
 // volontaire et minimale : ces 4 fonctions disparaîtront en même temps que
 // cette route quand le webhook Pub/Sub aura validé le backlog.
 // ---------------------------------------------------------------------------
+
+/**
+ * Mode pré-validé : l'admin a déjà revu les champs dans le modal et a saisi
+ * le prix de vente. On écrit directement chaque item en Firestore avec un
+ * SKU incrémenté sur la chineuse cible.
+ */
+async function handleValidatedItems(
+  items: any[],
+  target: { uid: string; email: string; trigramme: string }
+) {
+  const startNum = await computeNextSkuNum(target.trigramme)
+  const created: { docId: string; sku: string }[] = []
+
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i]
+    const sku = `${target.trigramme}${startNum + i}`
+
+    // ID déterministe : si on a un itemId Vinted ou un orderId Whatnot, on
+    // l'utilise pour anti-doublon. Sinon, doc auto-id.
+    const provenance: string = it.provenance || 'vinted'
+    let docId: string | null = null
+    if (it.itemId) docId = `vinted_item_${it.itemId}`
+    else if (it.achatOrderId && provenance === 'vinted') docId = `vinted_${it.achatOrderId}`
+    else if (it.achatOrderId && provenance === 'whatnot') docId = `whatnot_${it.achatOrderId}`
+
+    const prixVente = parseFloat(String(it.prixVente || '')) || 0
+    const prixAchat = typeof it.prixAchat === 'number' ? it.prixAchat : (parseFloat(String(it.prixAchat || '')) || null)
+
+    const payload: Record<string, unknown> = {
+      nom: `${sku} - ${it.titre || ''}`,
+      description: it.description || '',
+      categorie: it.categorie || '',
+      marque: it.marque || '',
+      taille: it.taille || '',
+      color: it.couleur || null,
+      etat: it.etat || '',
+      sku,
+      trigramme: target.trigramme,
+      chineurUid: target.uid,
+      chineur: target.email,
+      imageUrls: [],
+      imageUrl: '',
+      photosReady: false,
+      vendu: false,
+      recu: false,
+      quantite: 1,
+      createdAt: Timestamp.now(),
+      prix: prixVente,
+      ...(prixAchat != null ? { prixAchat } : {}),
+      source: provenance === 'whatnot' ? 'achat-whatnot' : 'achat-vinted',
+      achatProvenance: provenance,
+      achatStatut: 'commande',
+      achatVendeur: it.vendeur || '',
+      achatTitreOriginal: it.titreOriginal || it.titre || '',
+      ...(it.achatOrderId ? { achatOrderId: String(it.achatOrderId) } : {}),
+    }
+
+    if (docId) {
+      await adminDb.collection('produits').doc(docId).set(payload, { merge: true })
+      created.push({ docId, sku })
+    } else {
+      const ref = await adminDb.collection('produits').add(payload)
+      created.push({ docId: ref.id, sku })
+    }
+  }
+
+  return NextResponse.json({ ok: true, kind: 'validated-items', count: created.length, docs: created })
+}
 
 async function handleWhatnotPurchase(
   body: string,
