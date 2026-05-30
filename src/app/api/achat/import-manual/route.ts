@@ -17,6 +17,7 @@ import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPic
 import { parseVintedPage, vintedPageDocId } from '@/modules/achat/parser/vintedPage'
 import { parseWhatnotPurchase, whatnotDocId } from '@/modules/achat/parser/whatnot'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
+import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
 
 const ADMIN_EMAILS = new Set(['nouvelleriveparis@gmail.com'])
 
@@ -117,15 +118,19 @@ async function handleWhatnotPurchase(
   const startNum = await computeNextSkuNum(target.trigramme)
   const createdDocs: { docId: string; sku: string; orderId: string }[] = []
 
+  // On récupère les catégories de la chineuse une seule fois pour tous les items
+  const chineuseCategories = await fetchChineuseCategories(target.uid)
+
   for (let i = 0; i < purchase.items.length; i++) {
     const item = purchase.items[i]
     const sku = `${target.trigramme}${startNum + i}`
     const docId = whatnotDocId(item.orderId)
+    const detected = detectCategorieFromTitre(item.titre, chineuseCategories)
 
     const payload: Record<string, unknown> = {
       nom: `${sku} - ${item.titre}`,
       description: '',
-      categorie: '',
+      categorie: detected || '',
       marque: '',
       taille: '',
       sku,
@@ -165,11 +170,12 @@ async function handleVintedPage(
   // ID déterministe via itemId si dispo, sinon doc créé sans ID (laissera doublon possible).
   const docId = page.itemId ? vintedPageDocId(page.itemId) : null
   const sku = await computeNextSku(target.trigramme)
+  const detectedCategorie = await detectCategorieForChineuse(target.uid, page.titre || '')
 
   const payload: Record<string, unknown> = {
     nom: `${sku} - ${page.titre || 'Pièce Vinted'}`,
     description: page.description || '',
-    categorie: '',
+    categorie: detectedCategorie || '',
     marque: page.marque && page.marque.toLowerCase() !== 'inconnu' ? page.marque : '',
     taille: page.taille || '',
     color: page.couleur || null,
@@ -298,6 +304,36 @@ async function handleChronopostPickup(body: string) {
 // ---------------------------------------------------------------------------
 // Helpers Firestore (dupliqués de la route webhook).
 // ---------------------------------------------------------------------------
+
+/**
+ * Récupère la liste des catégories ("Catégorie") d'une chineuse depuis son doc
+ * Firestore, ou tableau vide si introuvable.
+ */
+async function fetchChineuseCategories(uid: string): Promise<CategorieEntry[]> {
+  try {
+    const doc = await adminDb.collection('chineuse').doc(uid).get()
+    if (!doc.exists) return []
+    const data = doc.data() as any
+    // Champ "Catégorie" (avec accent, tel que stocké en base par l'app)
+    const raw = data?.['Catégorie'] || data?.categorie || []
+    if (!Array.isArray(raw)) return []
+    return raw.map((c: any) => ({ label: c?.label, idsquare: c?.idsquare }))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Helper qui combine fetch des catégories chineuse + détection sur le titre.
+ * Retourne l'entrée catégorie matchée (avec label + idsquare) ou null.
+ */
+async function detectCategorieForChineuse(
+  uid: string,
+  titre: string
+): Promise<CategorieEntry | null> {
+  const cats = await fetchChineuseCategories(uid)
+  return detectCategorieFromTitre(titre, cats)
+}
 
 async function findChineuseNR(): Promise<{ uid: string; email: string } | null> {
   const snap = await adminDb.collection('chineuse').where('trigramme', '==', 'NR').limit(1).get()
