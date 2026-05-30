@@ -32,12 +32,19 @@
 
       // Mode uploadOnly avec base64 (upload brut avant PhotoEditor)
       if (base64 && (uploadOnly || mode === 'erased')) {
-        // Photo NON-DÉTOURÉE (upload direct chineuse ou skipDetourage) → cover crop,
-        // le carré est rempli, pas de padding blanc.
-        // Photo APRÈS GOMME manuelle (mode==='erased' seul, depuis PhotoEditor) →
-        // inside + extend blanc pour préserver le canvas effacé tel quel.
-        const isNonDetoured = uploadOnly === true || skipDetourage === true
-        console.log('🔄 Conserver (base64), rotation:', rotation, '— mode:', isNonDetoured ? 'non-détouré cover' : 'erased inside')
+        // RÈGLE PHOTOS (cf. memory feedback_photos_carrees.md) :
+        // - détourées = inside + extend blanc (préserve l'image complète)
+        // - non-détourées = cover crop (remplit le carré)
+        //
+        // Le cover ne se déclenche QUE quand l'appelant signale explicitement
+        // "Conserver sans détourer" via les DEUX flags uploadOnly + skipDetourage
+        // (seul PhotoEditor.tsx:288 envoie ça, après le crop UI utilisateur).
+        //
+        // Tous les autres cas (uploadOnly seul = upload temp avant PhotoEditor,
+        // mode==='erased' seul = gomme manuelle, skipDetourage+erased = photos
+        // détail / profil sélectionneuse) restent en inside + extend blanc.
+        const isNonDetoured = uploadOnly === true && skipDetourage === true
+        console.log('🔄 Conserver (base64), rotation:', rotation, '— mode:', isNonDetoured ? 'non-détouré cover' : 'inside + extend blanc')
 
         let sharpInstance = sharp(Buffer.from(base64, 'base64'))
 
