@@ -1043,7 +1043,7 @@
                       <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
                         Vinted
                       </button>
-                      <span className="text-[11px] text-gray-400 text-center">copier coller du mail, de la page vinted ou du lien (ctrl+C/ctrl+V)</span>
+                      <span className="text-[11px] text-gray-400 text-center">copie colle la page vinted ou son lien (cmd+A, cmd+C, cmd+V)</span>
                     </div>
                   </div>
                 )}
