@@ -1473,25 +1473,23 @@ async function compressImage(file: File): Promise<string> {
               </button>
             </div>
             {onVintedImport && (
-              <div className="bg-white border rounded-lg overflow-hidden">
+              <div className="rounded-lg overflow-hidden">
                 <button
                   type="button"
                   onClick={onVintedImport}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 transition text-[#09B1BA]"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#09B1BA] text-white hover:bg-[#078a91] transition"
                 >
-                  <FileSpreadsheet size={18} />
                   <span className="font-medium text-sm">Vinted</span>
                 </button>
               </div>
             )}
             {onWhatnotImport && (
-              <div className="bg-white border rounded-lg overflow-hidden">
+              <div className="rounded-lg overflow-hidden">
                 <button
                   type="button"
                   onClick={onWhatnotImport}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-[#FFCD2D]/10 transition text-[#a08800]"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FFCD2D] text-black hover:bg-[#f0c020] transition"
                 >
-                  <FileSpreadsheet size={18} />
                   <span className="font-medium text-sm">Whatnot</span>
                 </button>
               </div>
