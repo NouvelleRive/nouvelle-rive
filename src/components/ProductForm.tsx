@@ -1750,33 +1750,34 @@ async function compressImage(file: File): Promise<string> {
                 })()}
               </div>
 
-              {/* Prix d'achat + marge nette (admin only, calcul à la volée) */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Prix d'achat (€) <span className="text-gray-400 text-xs font-normal">— ce que NR a payé</span>
-                </label>
-                <input
-                  type="number"
-                  value={formData.prixAchat || ''}
-                  onChange={(e) => setFormData({ ...formData, prixAchat: e.target.value })}
-                  step="0.01"
-                  min="0"
-                  className="w-full border rounded px-2 py-1.5 text-sm"
-                  placeholder="ex: 77.19"
-                />
-                {(() => {
-                  const pa = parseFloat(formData.prixAchat || '')
-                  const pv = parseFloat(formData.prix || '')
-                  if (!Number.isFinite(pa) || !Number.isFinite(pv)) return null
-                  const marge = Math.round((pv - pa) * 0.80)
-                  return (
-                    <p className="text-[11px] mt-1 text-gray-500">
-                      Marge nette : <strong className={marge < 0 ? 'text-red-600' : 'text-green-700'}>{marge} €</strong>
-                      <span className="text-gray-400"> ((prix − achat) × 0.80 TVA)</span>
-                    </p>
-                  )
-                })()}
-              </div>
+              {/* Prix d'achat + marge nette — uniquement pour NR (les autres chineuses
+                  ne payent pas d'achat, leur marge dépend de la rétrocession). */}
+              {trigramme?.toUpperCase() === 'NR' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Prix d'achat (€)</label>
+                  <input
+                    type="number"
+                    value={formData.prixAchat || ''}
+                    onChange={(e) => setFormData({ ...formData, prixAchat: e.target.value })}
+                    step="0.01"
+                    min="0"
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                    placeholder="ex: 77.19"
+                  />
+                  {(() => {
+                    const pa = parseFloat(formData.prixAchat || '')
+                    const pv = parseFloat(formData.prix || '')
+                    if (!Number.isFinite(pa) || !Number.isFinite(pv)) return null
+                    const marge = Math.round((pv - pa) * 0.80)
+                    return (
+                      <p className="text-[11px] mt-1 text-gray-500">
+                        Marge nette : <strong className={marge < 0 ? 'text-red-600' : 'text-green-700'}>{marge} €</strong>
+                        <span className="text-gray-400"> ((prix − achat) × 0.80 TVA)</span>
+                      </p>
+                    )
+                  })()}
+                </div>
+              )}
 
               {/* Quantité */}
               <div>
