@@ -1460,7 +1460,8 @@ async function compressImage(file: File): Promise<string> {
         {mode === 'create' && showExcelImport && onExcelImport && (
           <div className="bg-white border rounded-lg p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Importer</h3>
-            <div className={`grid gap-2 ${onWhatnotImport ? 'grid-cols-3' : onVintedImport ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`grid gap-x-2 gap-y-1 ${onWhatnotImport ? 'grid-cols-3' : onVintedImport ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {/* Ligne 1 : les boutons */}
               <button
                 type="button"
                 onClick={() => setShowExcelSection(!showExcelSection)}
@@ -1487,10 +1488,15 @@ async function compressImage(file: File): Promise<string> {
                   Whatnot
                 </button>
               )}
+              {/* Ligne 2 : helper uniquement sous Vinted (cellule vide ailleurs) */}
+              {onVintedImport && (
+                <>
+                  <div />
+                  <p className="text-[11px] text-gray-400 text-center">copie colle la page (cmd+A, cmd+C, cmd+V)</p>
+                  {onWhatnotImport && <div />}
+                </>
+              )}
             </div>
-            {onVintedImport && (
-              <p className="text-[11px] text-gray-400 text-center mt-2">copie colle la page (cmd+A, cmd+C, cmd+V)</p>
-            )}
           </div>
         )}
         {mode === 'create' && showExcelImport && onExcelImport && showExcelSection && (
