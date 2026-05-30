@@ -264,6 +264,8 @@ async function compressImage(file: File): Promise<string> {
     description: string
     categorie: string
     prix: string
+    /** Prix d'achat NR (cost) — sert au calcul de la marge nette (admin only) */
+    prixAchat?: string
     quantite: string
     marque: string
     taille: string
@@ -463,6 +465,7 @@ async function compressImage(file: File): Promise<string> {
       description: initialData?.description || '',
       categorie: initialData?.categorie || '',
       prix: initialData?.prix || '',
+      prixAchat: (initialData as any)?.prixAchat?.toString?.() || '',
       quantite: initialData?.quantite || '1',
       marque: initialData?.marque || '',
       taille: initialData?.taille || '',
@@ -520,6 +523,7 @@ async function compressImage(file: File): Promise<string> {
           description: initialData.description || '',
           categorie: initialData.categorie || '',
           prix: initialData.prix || '',
+          prixAchat: (initialData as any).prixAchat?.toString?.() || '',
           quantite: initialData.quantite || '1',
           marque: initialData.marque || '',
           taille: initialData.taille || '',
@@ -1697,7 +1701,7 @@ async function compressImage(file: File): Promise<string> {
                   min="0"
                   required
                   className="w-full border rounded px-2 py-1.5 text-sm"
-                  placeholder="45"
+                  placeholder={formData.prixAchat ? `${Math.round(parseFloat(formData.prixAchat) * 2.5)} (suggéré achat × 2.5)` : '45'}
                 />
                 {priceRangeFor && (() => {
                   const range = priceRangeFor(formData.marque || '', formData.categorie || '')
@@ -1708,6 +1712,34 @@ async function compressImage(file: File): Promise<string> {
                     <p className={`text-[11px] mt-1 ${isOutOfRange ? 'text-orange-600' : 'text-gray-500'}`}>
                       💡 Fourchette conseillée : <strong>{range.min}€ – {range.max}€</strong>
                       {isOutOfRange && ' — hors fourchette'}
+                    </p>
+                  )
+                })()}
+              </div>
+
+              {/* Prix d'achat + marge nette (admin only, calcul à la volée) */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Prix d'achat (€) <span className="text-gray-400 text-xs font-normal">— ce que NR a payé</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.prixAchat || ''}
+                  onChange={(e) => setFormData({ ...formData, prixAchat: e.target.value })}
+                  step="0.01"
+                  min="0"
+                  className="w-full border rounded px-2 py-1.5 text-sm"
+                  placeholder="ex: 77.19"
+                />
+                {(() => {
+                  const pa = parseFloat(formData.prixAchat || '')
+                  const pv = parseFloat(formData.prix || '')
+                  if (!Number.isFinite(pa) || !Number.isFinite(pv)) return null
+                  const marge = Math.round((pv - pa) * 0.80)
+                  return (
+                    <p className="text-[11px] mt-1 text-gray-500">
+                      Marge nette : <strong className={marge < 0 ? 'text-red-600' : 'text-green-700'}>{marge} €</strong>
+                      <span className="text-gray-400"> ((prix − achat) × 0.80 TVA)</span>
                     </p>
                   )
                 })()}

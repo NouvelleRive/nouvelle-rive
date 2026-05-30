@@ -706,6 +706,12 @@
             description: data.description || '',
             categorie: catObj || { label: data.categorie },
             prix: parseFloat(data.prix) || 0,
+            // prixAchat : si saisi, on stocke en number ; si vide, on supprime le champ
+            ...((data as any).prixAchat !== undefined
+              ? ((data as any).prixAchat?.trim?.()
+                  ? { prixAchat: parseFloat((data as any).prixAchat) || 0 }
+                  : { prixAchat: deleteField() })
+              : {}),
             quantite: (() => {
               const newQte = isNaN(parseInt(data.quantite)) ? 1 : parseInt(data.quantite)
               const oldQte = editingProduct.quantite ?? 1
@@ -936,16 +942,8 @@
       return (
         <div className="p-2 sm:p-4 max-w-6xl mx-auto">
           {/* Header */}
-          <div className="mb-6 relative">
+          <div className="mb-6">
             <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
-            {isAdmin && (
-              <button
-                onClick={() => setImportModalOpen(true)}
-                className="absolute right-0 top-0 inline-flex items-center gap-2 px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-[#09B1BA] hover:bg-[#078a91] rounded-lg shadow-sm"
-              >
-                <ImageIcon size={14} /> Importer mail Vinted
-              </button>
-            )}
           </div>
           {isAdmin && importModalOpen && (
             <ImportMailModal onClose={() => setImportModalOpen(false)} />
@@ -1024,18 +1022,30 @@
               }}
             />
 
-            {/* Exporter - hidden on mobile */}
+            {/* Exporter (+ Importer admin) - hidden on mobile */}
             {!isDeposante && (
-              <div className="hidden lg:block bg-white border rounded-xl p-4 shadow-sm">
-                <h2 className="text-lg font-semibold mb-4">Exporter</h2>
-                <div className="flex flex-col gap-3">
-                  <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
-                    <FileSpreadsheet size={14} /> Excel
-                  </button>
-                  <button onClick={exportToPDF} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors">
-                    <Download size={14} /> PDF
-                  </button>
+              <div className="hidden lg:flex flex-col gap-4">
+                <div className="bg-white border rounded-xl p-4 shadow-sm">
+                  <h2 className="text-lg font-semibold mb-3">Exporter</h2>
+                  <div className="flex flex-col gap-2">
+                    <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
+                      <FileSpreadsheet size={14} /> Excel
+                    </button>
+                    <button onClick={exportToPDF} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors">
+                      <Download size={14} /> PDF
+                    </button>
+                  </div>
                 </div>
+                {isAdmin && (
+                  <div className="bg-white border rounded-xl p-4 shadow-sm">
+                    <h2 className="text-lg font-semibold mb-3">Importer</h2>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
+                        Mail Vinted
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
