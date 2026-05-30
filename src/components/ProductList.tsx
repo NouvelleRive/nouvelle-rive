@@ -1220,11 +1220,11 @@
                         </span>
                         {/* Badge statut directement sous la date */}
                         {p.source?.startsWith('achat-') && p.achatStatut ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-[#09B1BA]">
-                            <Clock size={11} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
+                          <span className="inline-flex items-center gap-1 text-[12px] text-[#09B1BA]">
+                            <Clock size={12} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
                           </span>
                         ) : p.recu === false ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</span>
+                          <span className="inline-flex items-center gap-1 text-[12px] text-amber-600"><Clock size={12} /> En attente</span>
                         ) : null}
                         {/* Miniatures secondaires */}
                         {allImages.length > 1 && (
@@ -1251,7 +1251,7 @@
                     </div>
 
                     {/* Titre sous les photos */}
-                    <h3 className="text-[13px] font-medium text-gray-900 leading-snug mt-2">
+                    <h3 className="text-[12px] font-medium text-gray-900 leading-snug mt-2">
                       {p.sku && <span className="text-[#22209C] font-semibold">{p.sku}</span>}
                       {p.sku && <span className="text-gray-400"> · </span>}
                       {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
