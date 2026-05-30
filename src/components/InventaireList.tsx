@@ -48,7 +48,7 @@
     statutRecuperation?: 'aRecuperer' | 'vole' | null
     dateSignalement?: Timestamp
     signalePar?: string
-    source?: 'chineuse' | 'deposante'
+    source?: 'chineuse' | 'deposante' | 'achat-vinted' | 'achat-vestiaire' | 'achat-drouot'
     trigramme?: string
     photosDefautsReception?: string[]
     noteReception?: string

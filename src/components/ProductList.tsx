@@ -16,6 +16,8 @@
     import autoTable from 'jspdf-autotable'
     import ProductForm, { ProductFormData } from '@/components/ProductForm'
     import FilterBox from '@/components/FilterBox'
+    import { libelleAchatStatut, libelleTransporteur, suggestPrixVente, type AchatStatut } from '@/modules/achat/types'
+    import { calcMargeNette } from '@/lib/marge'
 
     // Conversion base64 robuste pour gros fichiers
     function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -85,6 +87,21 @@
       source?: 'chineuse' | 'deposante' | 'achat-vinted' | 'achat-vestiaire' | 'achat-drouot'
       ebayListingId?: string | null
       ebayOfferId?: string | null
+      // Champs achat (Vinted/Vestiaire/Drouot) — voir src/modules/achat/types.ts
+      prixAchat?: number
+      marge?: number
+      achatProvenance?: 'vinted' | 'vestiaire' | 'drouot'
+      achatStatut?: 'commande' | 'expedie' | 'livre' | 'recu-boutique' | 'non-conforme' | 'jamais-recu' | 'perso'
+      achatOrderId?: string
+      achatVendeur?: string
+      achatDateCommande?: Timestamp
+      achatTitreOriginal?: string
+      achatNumeroSuivi?: string
+      achatTransporteur?: string
+      achatLieuLivraison?: string
+      achatCodeRetrait?: string
+      achatDateLivraison?: Timestamp
+      achatDateLimiteRetrait?: string
     }
 
     export type Deposant = {
@@ -1188,9 +1205,28 @@
 
                     {/* Ligne info bas : Prix · Qté · (Reçu le | En attente | Date créa) · Rupture · Œil */}
                     <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
-                      <span><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></span>
+                      <span><span className="text-gray-400">Prix:</span> {typeof p.prix === 'number' ? (
+                        <span className="font-medium">{p.prix} €</span>
+                      ) : typeof p.prixAchat === 'number' ? (
+                        <span className="font-medium text-gray-400 italic" title={`Suggéré (achat ${p.prixAchat} € × 2.5)`}>{suggestPrixVente(p.prixAchat)} €</span>
+                      ) : (
+                        <span className="font-medium">—</span>
+                      )}</span>
+                      {isAdmin && (() => {
+                        const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
+                        return m === null ? null : (
+                          <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m} €</span></span>
+                        )
+                      })()}
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
-                      {p.recu === false ? (
+                      {p.source?.startsWith('achat-') && p.achatStatut ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-[#09B1BA]">
+                          <Clock size={11} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
+                          {p.achatStatut === 'livre' && p.achatLieuLivraison && (
+                            <span className="text-gray-500"> · {p.achatLieuLivraison}</span>
+                          )}
+                        </span>
+                      ) : p.recu === false ? (
                         <span className="inline-flex items-center gap-1 text-[11px] text-amber-600"><Clock size={11} /> En attente</span>
                       ) : p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp ? (
                         <span><span className="text-gray-400">Reçu le:</span> <span className="font-medium">{format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span></span>
@@ -1202,6 +1238,22 @@
                       )}
                       <button onClick={() => handleToggleForceDisplay(p)} className={`ml-auto p-0.5 rounded ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                     </div>
+
+                    {/* Encart Livraison — uniquement pour les pièces achetées (Vinted/…). Chaque
+                        champ ne s'affiche que s'il est rempli. */}
+                    {p.source?.startsWith('achat-') && (
+                      <div className="mt-2 pt-2 border-t border-[#09B1BA]/30 text-[11px] flex flex-wrap gap-x-3 gap-y-1">
+                        <span className="font-semibold text-[#09B1BA] uppercase tracking-wide text-[10px] basis-full">Livraison</span>
+                        {p.achatTransporteur && <span><span className="text-gray-400">Livreur:</span> <span className="font-medium">{libelleTransporteur(p.achatTransporteur)}</span></span>}
+                        {p.achatStatut && <span><span className="text-gray-400">Statut:</span> <span className="font-medium">{libelleAchatStatut(p.achatStatut as AchatStatut)}</span></span>}
+                        {p.achatDateLivraison instanceof Timestamp && <span><span className="text-gray-400">Date:</span> <span className="font-medium">{format(p.achatDateLivraison.toDate(), 'd MMM yyyy', { locale: fr })}</span></span>}
+                        {p.achatNumeroSuivi && <span><span className="text-gray-400">Suivi:</span> <span className="font-medium">{p.achatNumeroSuivi}</span></span>}
+                        {p.achatCodeRetrait && (
+                          <span><span className="text-gray-400">Code retrait:</span> <span className="font-medium">{p.achatCodeRetrait}{p.achatDateLimiteRetrait ? ` (avant ${p.achatDateLimiteRetrait})` : ''}</span></span>
+                        )}
+                        {p.achatLieuLivraison && <span className="basis-full"><span className="text-gray-400">Adresse:</span> <span className="font-medium">{p.achatLieuLivraison}</span></span>}
+                      </div>
+                    )}
 
                     {isExpanded && allImages.length > 2 && (
                       <div className="mt-2 pt-2 border-t border-gray-100">
@@ -1232,7 +1284,16 @@
                       {p.description && <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>}
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
                       {isAdmin && <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>}
-                      {p.recu === false && <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente de réception</span>}
+                      {p.source?.startsWith('achat-') && p.achatStatut ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-[#09B1BA] mt-1">
+                          <Clock size={12} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
+                          {p.achatStatut === 'livre' && p.achatLieuLivraison && (
+                            <span className="text-gray-500"> · {p.achatLieuLivraison}</span>
+                          )}
+                        </span>
+                      ) : p.recu === false && (
+                        <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente de réception</span>
+                      )}
                       {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
                         <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1">✓ Reçu le {format(p.dateReception.toDate(), 'd MMM yyyy', { locale: fr })}</span>
                       )}
@@ -1256,6 +1317,20 @@
     🚨 À récupérer – prix baissé il y a 1 mois+
   </span>
 )}
+                      {/* Encart Livraison desktop — même règle d'affichage que mobile */}
+                      {p.source?.startsWith('achat-') && (
+                        <div className="mt-2 pt-2 border-t border-[#09B1BA]/30 text-[11px] flex flex-wrap gap-x-3 gap-y-1">
+                          <span className="font-semibold text-[#09B1BA] uppercase tracking-wide text-[10px] basis-full">Livraison</span>
+                          {p.achatTransporteur && <span><span className="text-gray-400">Livreur:</span> <span className="font-medium">{libelleTransporteur(p.achatTransporteur)}</span></span>}
+                          {p.achatStatut && <span><span className="text-gray-400">Statut:</span> <span className="font-medium">{libelleAchatStatut(p.achatStatut as AchatStatut)}</span></span>}
+                          {p.achatDateLivraison instanceof Timestamp && <span><span className="text-gray-400">Date:</span> <span className="font-medium">{format(p.achatDateLivraison.toDate(), 'd MMM yyyy', { locale: fr })}</span></span>}
+                          {p.achatNumeroSuivi && <span><span className="text-gray-400">Suivi:</span> <span className="font-medium">{p.achatNumeroSuivi}</span></span>}
+                          {p.achatCodeRetrait && (
+                            <span><span className="text-gray-400">Code retrait:</span> <span className="font-medium">{p.achatCodeRetrait}{p.achatDateLimiteRetrait ? ` (avant ${p.achatDateLimiteRetrait})` : ''}</span></span>
+                          )}
+                          {p.achatLieuLivraison && <span className="basis-full"><span className="text-gray-400">Adresse:</span> <span className="font-medium">{p.achatLieuLivraison}</span></span>}
+                        </div>
+                      )}
                     </div>
                     <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[120px]">
                       <p><span className="text-gray-400">Cat:</span> <span className="font-medium text-gray-700">{cat || '—'}</span></p>
@@ -1268,7 +1343,19 @@
                     </div>
                     <div className="hidden md:flex flex-col items-end text-sm text-gray-600 space-y-1 min-w-[100px]">
                       <p><span className="text-gray-400">SKU:</span> <span className="font-medium text-gray-700">{p.sku || '—'}</span></p>
-                      <p><span className="text-gray-400">Prix:</span> <span className="font-medium text-gray-700">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></p>
+                      <p><span className="text-gray-400">Prix:</span> {typeof p.prix === 'number' ? (
+                        <span className="font-medium text-gray-700">{p.prix} €</span>
+                      ) : typeof p.prixAchat === 'number' ? (
+                        <span className="font-medium text-gray-400 italic" title={`Suggéré (achat ${p.prixAchat} € × 2.5)`}>{suggestPrixVente(p.prixAchat)} €</span>
+                      ) : (
+                        <span className="font-medium text-gray-700">—</span>
+                      )}</p>
+                      {isAdmin && (() => {
+                        const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
+                        return m === null ? null : (
+                          <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m} €</span></p>
+                        )
+                      })()}
                       <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
                       {p.statut === 'outOfStock' && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>

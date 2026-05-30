@@ -551,3 +551,164 @@ exports.pingEbaySync = functions
     }
     return null
   })
+
+// =============================================================================
+// Watch Gmail nouvelleriveachats@ pour les mails Vinted/transporteurs.
+// Toutes les 5 min : on récupère les mails non lus matchant nos parsers et on
+// les POST à /api/webhooks/gmail-achats. La route Next.js parse + écrit dans
+// Firestore (chineuse NR, source='achat-vinted', etc.). Une fois traité avec
+// succès, on enlève le label UNREAD du mail pour ne pas le retraiter.
+//
+// Env requis :
+//   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET  (déjà utilisés par checkGmailFactures)
+//   GOOGLE_REFRESH_TOKEN_ACHATS             (OAuth refresh token spécifique au compte achats)
+//   NR_INTERNAL_TOKEN                       (auth partagé avec la route Next.js)
+// =============================================================================
+exports.gmailWatcherAchats = functions
+  .region("europe-west1")
+  .pubsub.schedule("every 5 minutes")
+  .timeZone("Europe/Paris")
+  .onRun(async () => {
+    const fetch = require('node-fetch')
+
+    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN_ACHATS
+    const internalToken = process.env.NR_INTERNAL_TOKEN
+    if (!refreshToken || !internalToken) {
+      console.error('gmailWatcherAchats: GOOGLE_REFRESH_TOKEN_ACHATS / NR_INTERNAL_TOKEN manquants')
+      return null
+    }
+
+    // 1. Échange du refresh token contre un access token court
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    })
+    const tokenJson = await tokenRes.json()
+    if (!tokenJson.access_token) {
+      console.error('gmailWatcherAchats: pas d\'access_token, réponse:', JSON.stringify(tokenJson))
+      return null
+    }
+    const accessToken = tokenJson.access_token
+
+    // 2. Recherche des mails non lus en provenance de nos parsers connus
+    const senders = [
+      'no-reply@vinted.fr',
+      'noreply@mondialrelay.fr',
+      'avisage-ne-pas-repondre@chronopost.fr',
+      'chronopost@network1.pickup.fr',
+    ]
+    const query = encodeURIComponent(`is:unread (${senders.map((e) => `from:${e}`).join(' OR ')})`)
+    const listRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=50`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    const listJson = await listRes.json()
+    if (listJson.error) {
+      console.error('gmailWatcherAchats: erreur list:', JSON.stringify(listJson.error))
+      return null
+    }
+    const messages = listJson.messages || []
+    if (messages.length === 0) {
+      console.log('gmailWatcherAchats: aucun nouveau mail')
+      return null
+    }
+    console.log(`gmailWatcherAchats: ${messages.length} mail(s) à traiter`)
+
+    const baseUrl = process.env.NR_BASE_URL || 'https://www.nouvellerive.eu'
+
+    // 3. Pour chaque mail : récupère le corps, POST à la route, marque comme lu
+    for (const m of messages) {
+      try {
+        const msgRes = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=full`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        )
+        const msg = await msgRes.json()
+        if (msg.error) {
+          console.error(`gmailWatcherAchats ${m.id}: erreur get:`, JSON.stringify(msg.error))
+          continue
+        }
+
+        const headers = {}
+        for (const h of msg.payload?.headers || []) headers[h.name] = h.value
+        const from = headers['From'] || ''
+        const subject = headers['Subject'] || ''
+        const body = extractMessageBody(msg.payload)
+
+        if (!body) {
+          console.warn(`gmailWatcherAchats ${m.id}: pas de corps lisible, skip`)
+          continue
+        }
+
+        // 4. Push vers la route Next.js
+        const hookRes = await fetch(`${baseUrl}/api/webhooks/gmail-achats`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Token': internalToken,
+          },
+          body: JSON.stringify({ gmailMessageId: m.id, from, subject, body }),
+        })
+        const hookText = await hookRes.text()
+        console.log(`gmailWatcherAchats ${m.id} → ${hookRes.status}: ${hookText.slice(0, 200)}`)
+
+        // 5. Marquer comme lu uniquement si le webhook a confirmé ok
+        if (hookRes.ok) {
+          await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}/modify`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
+            }
+          )
+        }
+      } catch (err) {
+        console.error(`gmailWatcherAchats ${m.id}: exception`, err)
+      }
+    }
+
+    return null
+  })
+
+/**
+ * Extrait le corps texte d'un payload Gmail (multi-part possible).
+ * Préfère text/html, sinon text/plain. Décode le base64url.
+ */
+function extractMessageBody(payload) {
+  if (!payload) return ''
+  const decode = (data) => Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
+
+  // Cas mono-part
+  if (payload.body && payload.body.data) {
+    return decode(payload.body.data)
+  }
+
+  // Cas multi-part : on cherche text/html d'abord, puis text/plain
+  const parts = payload.parts || []
+  const html = findPartByMime(parts, 'text/html')
+  if (html?.body?.data) return decode(html.body.data)
+  const plain = findPartByMime(parts, 'text/plain')
+  if (plain?.body?.data) return decode(plain.body.data)
+  return ''
+}
+
+function findPartByMime(parts, mime) {
+  for (const p of parts) {
+    if (p.mimeType === mime && p.body?.data) return p
+    if (p.parts) {
+      const sub = findPartByMime(p.parts, mime)
+      if (sub) return sub
+    }
+  }
+  return null
+}
