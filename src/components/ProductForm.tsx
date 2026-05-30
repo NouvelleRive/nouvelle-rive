@@ -1455,8 +1455,8 @@ async function compressImage(file: File): Promise<string> {
         
         {/* === IMPORT EXCEL + VINTED (mode création uniquement) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (
-          <div className="bg-white border rounded-lg overflow-hidden">
-            <div className="grid grid-cols-2 divide-x">
+          <div className={`grid ${onVintedImport ? 'grid-cols-2 gap-3' : 'grid-cols-1'}`}>
+            <div className="bg-white border rounded-lg overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowExcelSection(!showExcelSection)}
@@ -1468,23 +1468,24 @@ async function compressImage(file: File): Promise<string> {
                 </div>
                 <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
               </button>
-              {onVintedImport && (
+            </div>
+            {onVintedImport && (
+              <div className="bg-white border rounded-lg overflow-hidden">
                 <button
                   type="button"
                   onClick={onVintedImport}
-                  className="w-full flex flex-col items-center justify-center gap-0 px-4 py-3 hover:bg-gray-50 transition text-[#09B1BA]"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 transition text-[#09B1BA]"
                 >
-                  <div className="flex items-center gap-2">
-                    <FileSpreadsheet size={18} />
-                    <span className="font-medium text-sm">Vinted</span>
-                  </div>
-                  <span className="text-[11px] text-gray-400 text-center">copier coller du mail, de la page vinted ou du lien (ctrl+C/ctrl+V)</span>
+                  <FileSpreadsheet size={18} />
+                  <span className="font-medium text-sm">Vinted</span>
                 </button>
-              )}
-            </div>
-            
-            {showExcelSection && (
-              <div className="px-4 pb-4 border-t bg-gray-50">
+              </div>
+            )}
+          </div>
+        )}
+        {mode === 'create' && showExcelImport && onExcelImport && showExcelSection && (
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="px-4 pb-4 bg-gray-50">
                 <p className="text-xs text-gray-500 py-3">
                   Importez plusieurs produits d'un coup via un fichier Excel.
                 </p>

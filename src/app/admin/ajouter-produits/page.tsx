@@ -228,7 +228,13 @@ export default function AdminAjouterPage() {
             trigramme={selectedChineuse.trigramme}
             onSubmit={handleCreateProduit}
             onExcelImport={handleExcelImportFromForm}
-            onVintedImport={() => setVintedModalOpen(true)}
+            onVintedImport={
+              // Réservé aux chineuses qui gèrent des pièces uniques.
+              // Les chineuses "smallBatch" (restock) ne sont pas concernées.
+              (selectedChineuse as any)?.stockType !== 'smallBatch'
+                ? () => setVintedModalOpen(true)
+                : undefined
+            }
             loading={creatingProduct}
             showExcelImport={true}
           />
