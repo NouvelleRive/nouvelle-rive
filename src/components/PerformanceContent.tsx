@@ -385,14 +385,18 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
   // Classement chineuses - groupé par trigramme
   const classementChineuses = useMemo(() => {
-    const map = new Map<string, { ca: number; ventes: number }>()
+    // Accumule ca + ventes + marge brute (prix - achat) par trigramme.
+    const map = new Map<string, { ca: number; ventes: number; margeBrute: number }>()
 
     ventesCurrentMonth.forEach(v => {
       const tri = (v as any).trigramme || 'unknown'
-      const current = map.get(tri) || { ca: 0, ventes: 0 }
+      const current = map.get(tri) || { ca: 0, ventes: 0, margeBrute: 0 }
+      const prixVente = (v as any).prixVenteReel || (v as any).prix || 0
+      const prixAchat = (v as any).prixAchat || 0
       map.set(tri, {
-        ca: current.ca + (v.prixVenteReel || v.prix || 0),
+        ca: current.ca + prixVente,
         ventes: current.ventes + 1,
+        margeBrute: current.margeBrute + Math.max(prixVente - prixAchat, 0),
       })
     })
 
@@ -401,14 +405,19 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         const dep = deposants.find(d => d.trigramme === tri)
         const isNR = tri === 'NR'
         const taux = dep?.taux ?? 0
-        const benef = isNR ? data.ca : Math.round(data.ca * taux / 100)
+        // NR : marge nette = (prixVente − prixAchat) × 0.80 (TVA 20% déduite)
+        // Autres : bénéf = ca × taux% (rétrocession)
+        const benef = isNR
+          ? Math.round(data.margeBrute * 0.80)
+          : Math.round(data.ca * taux / 100)
         return {
           key: tri,
           nom: dep?.nom || tri,
           trigramme: tri,
           benef,
           isNR,
-          ...data,
+          ca: data.ca,
+          ventes: data.ventes,
         }
       })
       .filter(c => c.key !== 'unknown')
