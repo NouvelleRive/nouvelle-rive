@@ -14,6 +14,7 @@ import { parseVintedReceipt, vintedDocId } from '@/modules/achat/parser/vinted'
 import { parseChronopostEnChemin } from '@/modules/achat/parser/chronopost'
 import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
 import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
+import { parseVintedPage, vintedPageDocId } from '@/modules/achat/parser/vintedPage'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 
 const ADMIN_EMAILS = new Set(['nouvelleriveparis@gmail.com'])
@@ -49,6 +50,11 @@ export async function POST(req: NextRequest) {
 
   // --- Détection par contenu + dispatch ------------------------------------
   try {
+    // Page Vinted (annonce produit) collée → priorité car contient plus d'infos
+    // (marque/taille/couleur/état/description) que le mail "Ton reçu".
+    if (/vinted\.fr\/items\//i.test(body) || /Inclut la Protection acheteurs/i.test(body)) {
+      return await handleVintedPage(body)
+    }
     if (/Re[çc]u pour votre commande Vinted/i.test(body) || /Votre paiement a [ée]t[ée] re[çc]u/i.test(body)) {
       return await handleVintedReceipt(body)
     }
@@ -74,6 +80,58 @@ export async function POST(req: NextRequest) {
 // volontaire et minimale : ces 4 fonctions disparaîtront en même temps que
 // cette route quand le webhook Pub/Sub aura validé le backlog.
 // ---------------------------------------------------------------------------
+
+async function handleVintedPage(body: string) {
+  const page = parseVintedPage(body)
+  if (!page.ok) return NextResponse.json({ ok: false, reason: page.reason })
+
+  const nrChineuse = await findChineuseNR()
+  if (!nrChineuse) return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable' }, { status: 500 })
+
+  // ID déterministe via itemId si dispo, sinon doc créé sans ID (laissera doublon possible).
+  const docId = page.itemId ? vintedPageDocId(page.itemId) : null
+  const sku = await computeNextSkuNR()
+
+  const payload: Record<string, unknown> = {
+    nom: `${sku} - ${page.titre || 'Pièce Vinted'}`,
+    description: page.description || '',
+    categorie: '',
+    marque: page.marque && page.marque.toLowerCase() !== 'inconnu' ? page.marque : '',
+    taille: page.taille || '',
+    color: page.couleur || null,
+    etat: page.etat || '',
+    sku,
+    trigramme: 'NR',
+    chineurUid: nrChineuse.uid,
+    chineur: nrChineuse.email,
+    imageUrls: [],
+    imageUrl: '',
+    photosReady: false,
+    vendu: false,
+    recu: false,
+    quantite: 1,
+    createdAt: Timestamp.now(),
+    // Champs achat : on n'a pas de transactionId tant que le mail "Ton reçu"
+    // n'est pas arrivé. On stocke prixArticle (côte achat brut) et prixAvecProtection
+    // séparément. prixAchat = total payé = prixAvecProtection + port (le port n'est
+    // pas dans la page, on le mettra à jour quand le mail arrivera).
+    ...(page.prixAvecProtection !== null ? { prixAchat: page.prixAvecProtection } : {}),
+    source: 'achat-vinted',
+    achatProvenance: 'vinted',
+    achatStatut: 'commande',
+    achatVendeur: page.vendeur || '',
+    achatTitreOriginal: page.titre || '',
+    ...(page.itemId ? { achatVintedItemId: page.itemId } : {}),
+    ...(page.url ? { achatAnnonceUrl: page.url } : {}),
+  }
+
+  if (docId) {
+    await adminDb.collection('produits').doc(docId).set(payload, { merge: true })
+    return NextResponse.json({ ok: true, docId, sku, kind: 'vinted-page' })
+  }
+  const ref = await adminDb.collection('produits').add(payload)
+  return NextResponse.json({ ok: true, docId: ref.id, sku, kind: 'vinted-page-no-itemid' })
+}
 
 async function handleVintedReceipt(body: string) {
   const receipt = parseVintedReceipt(body)
