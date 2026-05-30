@@ -1395,9 +1395,9 @@
                     <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[100px]">
                       <p><span className="text-gray-400">Matière:</span> <span className="font-medium text-gray-700">{p.material || '—'}</span></p>
                       <p><span className="text-gray-400">Couleur:</span> <span className="font-medium text-gray-700">{p.color || '—'}</span></p>
+                      <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
                     </div>
                     <div className="hidden md:flex flex-col items-end text-sm text-gray-600 space-y-1 min-w-[100px]">
-                      <p><span className="text-gray-400">SKU:</span> <span className="font-medium text-gray-700">{p.sku || '—'}</span></p>
                       <p><span className="text-gray-400">Prix:</span> {typeof p.prix === 'number' ? (
                         <span className="font-medium text-gray-700">{p.prix} €</span>
                       ) : typeof p.prixAchat === 'number' ? (
@@ -1414,7 +1414,6 @@
                           <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m !== null ? `${m} €` : '—'}</span></p>
                         )
                       })()}
-                      <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
                       {p.statut === 'outOfStock' && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">Rupture</span>
                       )}
