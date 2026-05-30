@@ -15,6 +15,7 @@ import { parseChronopostEnChemin } from '@/modules/achat/parser/chronopost'
 import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
 import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
 import { parseVintedPage, vintedPageDocId } from '@/modules/achat/parser/vintedPage'
+import { parseWhatnotPurchase, whatnotDocId } from '@/modules/achat/parser/whatnot'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 
 const ADMIN_EMAILS = new Set(['nouvelleriveparis@gmail.com'])
@@ -66,6 +67,10 @@ export async function POST(req: NextRequest) {
     if (/Re[çc]u pour votre commande Vinted/i.test(body) || /Votre paiement a [ée]t[ée] re[çc]u/i.test(body)) {
       return await handleVintedReceipt(body)
     }
+    // Whatnot — détecté via le nom Whatnot dans le mail + un Order # caractéristique
+    if (/Whatnot/i.test(body) && /Order\s*#\s*\d+/i.test(body)) {
+      return await handleWhatnotPurchase(body)
+    }
     if (/colis\s+[A-Z0-9]{8,20}\s+est en chemin/i.test(body)) {
       return await handleCarrierTracking(body)
     }
@@ -88,6 +93,55 @@ export async function POST(req: NextRequest) {
 // volontaire et minimale : ces 4 fonctions disparaîtront en même temps que
 // cette route quand le webhook Pub/Sub aura validé le backlog.
 // ---------------------------------------------------------------------------
+
+async function handleWhatnotPurchase(body: string) {
+  const purchase = parseWhatnotPurchase(body)
+  if (!purchase.ok) return NextResponse.json({ ok: false, reason: purchase.reason })
+
+  const nrChineuse = await findChineuseNR()
+  if (!nrChineuse) return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable' }, { status: 500 })
+
+  // On calcule le SKU de départ, puis on incrémente pour chaque item du même mail.
+  const startNum = await computeNextSkuNumNR()
+  const createdDocs: { docId: string; sku: string; orderId: string }[] = []
+
+  for (let i = 0; i < purchase.items.length; i++) {
+    const item = purchase.items[i]
+    const sku = `NR${startNum + i}`
+    const docId = whatnotDocId(item.orderId)
+
+    const payload: Record<string, unknown> = {
+      nom: `${sku} - ${item.titre}`,
+      description: '',
+      categorie: '',
+      marque: '',
+      taille: '',
+      sku,
+      trigramme: 'NR',
+      chineurUid: nrChineuse.uid,
+      chineur: nrChineuse.email,
+      imageUrls: [],
+      imageUrl: '',
+      photosReady: false,
+      vendu: false,
+      recu: false,
+      quantite: 1,
+      createdAt: Timestamp.now(),
+      prixAchat: item.prixTotal,
+      source: 'achat-whatnot',
+      achatProvenance: 'whatnot',
+      achatStatut: 'commande',
+      achatOrderId: item.orderId,
+      achatVendeur: purchase.vendeur,
+      achatTitreOriginal: item.titre,
+    }
+
+    await adminDb.collection('produits').doc(docId).set(payload, { merge: true })
+    createdDocs.push({ docId, sku, orderId: item.orderId })
+  }
+
+  return NextResponse.json({ ok: true, kind: 'whatnot-purchase', count: createdDocs.length, docs: createdDocs })
+}
 
 async function handleVintedPage(body: string) {
   const page = parseVintedPage(body)
@@ -233,6 +287,11 @@ async function findChineuseNR(): Promise<{ uid: string; email: string } | null> 
 }
 
 async function computeNextSkuNR(): Promise<string> {
+  return `NR${await computeNextSkuNumNR()}`
+}
+
+/** Retourne juste le numéro suivant (utile quand on crée plusieurs SKU NR d'affilée). */
+async function computeNextSkuNumNR(): Promise<number> {
   const snap = await adminDb.collection('produits').where('trigramme', '==', 'NR').get()
   let maxNum = 0
   snap.docs.forEach((d) => {
@@ -240,7 +299,7 @@ async function computeNextSkuNR(): Promise<string> {
     const m = sku.match(/^NR(\d+)$/)
     if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10))
   })
-  return `NR${maxNum + 1}`
+  return maxNum + 1
 }
 
 async function findVintedProduitSansSuivi() {

@@ -45,6 +45,7 @@ export default function ImportMailModal({ onClose }: Props) {
       const detail =
         json.kind === 'vinted-receipt' ? `Brouillon créé : ${json.sku}` :
         json.kind === 'vinted-page' || json.kind === 'vinted-page-no-itemid' ? `Brouillon créé depuis la page : ${json.sku}` :
+        json.kind === 'whatnot-purchase' ? `${json.count} brouillon(s) Whatnot créé(s)` :
         json.kind === 'tracking-set' ? `Suivi ${json.numeroSuivi} ajouté` :
         json.kind?.startsWith('mondial-relay') ? 'Livraison Mondial Relay enregistrée' :
         json.kind === 'chronopost-pickup' ? 'Livraison Chronopost Pickup enregistrée' :
