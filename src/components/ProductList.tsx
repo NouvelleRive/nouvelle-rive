@@ -1016,12 +1016,12 @@
                   value: filtrePhotoManquante,
                   onChange: setFiltrePhotoManquante,
                 },
-                ...(isDeposante ? {} : {
+                ...(isAdmin ? {
                   deposante: {
                     value: filtreDeposanteOnly,
                     onChange: setFiltreDeposanteOnly,
                   },
-                }),
+                } : {}),
                 prixBaisse: {
                   value: filtrePrixBaisse,
                   onChange: setFiltrePrixBaisse,
