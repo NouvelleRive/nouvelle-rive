@@ -1264,13 +1264,13 @@
                       ) : (
                         <span className="font-medium">—</span>
                       )}</span>
-                      {isAdmin && typeof p.prixAchat === 'number' && (
-                        <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{p.prixAchat} €</span></span>
+                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
+                        <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{typeof p.prixAchat === 'number' ? `${p.prixAchat} €` : '—'}</span></span>
                       )}
-                      {isAdmin && (() => {
+                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
-                        return m === null ? null : (
-                          <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m} €</span></span>
+                        return (
+                          <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m !== null ? `${m} €` : '—'}</span></span>
                         )
                       })()}
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
@@ -1405,13 +1405,13 @@
                       ) : (
                         <span className="font-medium text-gray-700">—</span>
                       )}</p>
-                      {isAdmin && typeof p.prixAchat === 'number' && (
-                        <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{p.prixAchat} €</span></p>
+                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
+                        <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{typeof p.prixAchat === 'number' ? `${p.prixAchat} €` : '—'}</span></p>
                       )}
-                      {isAdmin && (() => {
+                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
-                        return m === null ? null : (
-                          <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m} €</span></p>
+                        return (
+                          <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m !== null ? `${m} €` : '—'}</span></p>
                         )
                       })()}
                       <p><span className="text-gray-400">Qté:</span> <span className="font-medium text-gray-700">{p.quantite ?? 1}</span></p>
@@ -1583,12 +1583,14 @@
                       productId={editingProduct?.id}
                       categories={categories.length > 0 ? categories : categoriesUniques.map(c => ({ label: c as string }))}
                       sku={editingProduct?.sku}
+                      trigramme={editingProduct?.trigramme}
                       initialData={editingProduct ? {
                       nom: (editingProduct.nom || '').replace(new RegExp(`^${editingProduct.sku}\\s*-\\s*`, 'i'), ''),
                       sku: editingProduct.sku,
                       description: editingProduct.description,
                       categorie: typeof editingProduct.categorie === 'object' ? editingProduct.categorie?.label : editingProduct.categorie,
                       prix: editingProduct.prix?.toString(),
+                      prixAchat: (editingProduct as any).prixAchat?.toString(),
                       quantite: editingProduct.quantite?.toString(),
                       marque: editingProduct.marque,
                       taille: editingProduct.taille,
