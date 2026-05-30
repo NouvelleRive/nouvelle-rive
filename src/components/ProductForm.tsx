@@ -1458,8 +1458,8 @@ async function compressImage(file: File): Promise<string> {
         
         {/* === ENCART IMPORTER (Excel + Vinted + Whatnot) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (
-          <div className="bg-white border rounded-xl p-4 shadow-sm">
-            <h2 className="text-lg font-semibold mb-3">Importer</h2>
+          <div className="bg-white border rounded-lg p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Importer</h3>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
