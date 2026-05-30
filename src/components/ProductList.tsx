@@ -1043,7 +1043,7 @@
                       <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
                         Vinted
                       </button>
-                      <span className="text-[11px] text-gray-400 text-center">copie colle la page vinted ou son lien (cmd+A, cmd+C, cmd+V)</span>
+                      <span className="text-[11px] text-gray-400 text-center">copie colle la page vinted (cmd+A, cmd+C, cmd+V)</span>
                     </div>
                   </div>
                 )}
@@ -1307,7 +1307,7 @@
                       <h3 className="font-semibold text-gray-900 text-base">{p.sku && <span className="text-[#22209C]">{p.sku}</span>}{p.sku && <span className="text-gray-400"> - </span>}{(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}</h3>
                       {p.description && <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>}
                       <p className="text-xs text-gray-400 mt-1">{p.createdAt instanceof Timestamp ? format(p.createdAt.toDate(), 'dd/MM/yyyy') : '—'}</p>
-                      {isAdmin && <p className="text-xs text-gray-400 mt-0.5">{getChineurName(p.chineur)}</p>}
+                      {/* Display chineur retiré : info inutile dans la grille admin (mais le champ reste en base). */}
                       {p.source?.startsWith('achat-') && p.achatStatut ? (
                         <span className="inline-flex items-center gap-1 text-xs text-[#09B1BA] mt-1">
                           <Clock size={12} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
