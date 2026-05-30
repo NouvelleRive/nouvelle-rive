@@ -55,9 +55,11 @@ export default function NosProduits() {
     ? `PRODUITS DE ${(selectedChineuse.nom || selectedChineuse.email?.split('@')[0] || '').toUpperCase()}`
     : "TOUS LES PRODUITS"
 
-  // Import Vinted/Whatnot uniquement pour les chineuses pièce unique
-  // (les chineuses smallBatch n'achètent pas individuellement sur Vinted/Whatnot).
-  const hideImport = (selectedChineuse as any)?.stockType === 'smallBatch'
+  // Import Vinted/Whatnot : créé sous NR uniquement. Donc on n'affiche les
+  // boutons que quand on est en vue globale (aucune chineuse filtrée) ou que
+  // la chineuse filtrée est NR. Pas de sens sinon — l'import irait quand même
+  // sous NR.
+  const hideImport = !!selectedChineuse && selectedChineuse.trigramme?.toUpperCase() !== 'NR'
 
   return (
     <ProductList

@@ -230,15 +230,14 @@ export default function AdminAjouterPage() {
             onSubmit={handleCreateProduit}
             onExcelImport={handleExcelImportFromForm}
             onVintedImport={
-              // Réservé aux chineuses qui gèrent des pièces uniques.
-              // Les chineuses "smallBatch" (restock) ne sont pas concernées.
-              (selectedChineuse as any)?.stockType !== 'smallBatch'
+              // Visible uniquement quand on ajoute SOUS NR (l'import crée toujours
+              // sous NR, donc inutile de proposer le bouton pour une autre chineuse).
+              selectedChineuse?.trigramme?.toUpperCase() === 'NR'
                 ? () => setVintedModalOpen(true)
                 : undefined
             }
             onWhatnotImport={
-              // Whatnot : admin uniquement + chineuses pièce unique (pas smallBatch)
-              (selectedChineuse as any)?.stockType !== 'smallBatch'
+              selectedChineuse?.trigramme?.toUpperCase() === 'NR'
                 ? () => setWhatnotModalOpen(true)
                 : undefined
             }
