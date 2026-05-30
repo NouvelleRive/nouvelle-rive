@@ -1456,41 +1456,41 @@ async function compressImage(file: File): Promise<string> {
         {/* === GUIDE PHOTO === */}
         <PhotoGuideModal />
         
-        {/* === IMPORT EXCEL + VINTED (mode création uniquement) === */}
+        {/* === ENCART IMPORTER (Excel + Vinted + Whatnot) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (
-          <div className={`grid gap-3 ${onWhatnotImport ? 'grid-cols-3' : onVintedImport ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            <div className="rounded-lg overflow-hidden">
+          <div className="bg-white border rounded-xl p-4 shadow-sm">
+            <h2 className="text-lg font-semibold mb-3">Importer</h2>
+            <div className="flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => setShowExcelSection(!showExcelSection)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#22209C] text-white hover:bg-[#1a1880] transition"
+                className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1880] transition-colors"
               >
-                <span className="font-medium text-sm">Excel</span>
-                <span className="text-white/70 text-sm">{showExcelSection ? '✕' : '+'}</span>
+                <span>Excel</span>
+                <span className="text-white/70">{showExcelSection ? '✕' : '+'}</span>
               </button>
-            </div>
-            {onVintedImport && (
-              <div className="rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={onVintedImport}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#09B1BA] text-white hover:bg-[#078a91] transition"
-                >
-                  <span className="font-medium text-sm">Vinted</span>
-                </button>
-              </div>
-            )}
-            {onWhatnotImport && (
-              <div className="rounded-lg overflow-hidden">
+              {onVintedImport && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onVintedImport}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors"
+                  >
+                    Vinted
+                  </button>
+                  <span className="text-[11px] text-gray-400 text-center">copie colle la page (cmd+A, cmd+C, cmd+V)</span>
+                </>
+              )}
+              {onWhatnotImport && (
                 <button
                   type="button"
                   onClick={onWhatnotImport}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FFCD2D] text-black hover:bg-[#f0c020] transition"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#FFCD2D] text-black rounded-lg text-sm hover:bg-[#f0c020] transition-colors"
                 >
-                  <span className="font-medium text-sm">Whatnot</span>
+                  Whatnot
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
         {mode === 'create' && showExcelImport && onExcelImport && showExcelSection && (
