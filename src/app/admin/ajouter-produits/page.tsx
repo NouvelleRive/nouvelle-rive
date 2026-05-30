@@ -6,10 +6,11 @@ import { collection, getDocs, query, where, addDoc, updateDoc, doc, serverTimest
 import { db } from '@/lib/firebaseConfig'
 import { AdminProvider, useAdmin } from '@/lib/admin/context'
 import ProductForm, { ProductFormData, ExcelImportData } from '@/components/ProductForm'
-import { 
-  computeNextSkuForTrigram, 
+import ImportMailModal from '@/modules/achat/ImportMailModal'
+import {
+  computeNextSkuForTrigram,
   readCategorieRapportLabel,
-  extractSkuNumFromSkuOrName, 
+  extractSkuNumFromSkuOrName,
   checkSkuUnique
 } from '@/lib/admin/helpers'
 
@@ -26,6 +27,7 @@ export default function AdminAjouterPage() {
   } = useAdmin()
 
   const [creatingProduct, setCreatingProduct] = useState(false)
+  const [vintedModalOpen, setVintedModalOpen] = useState(false)
 
   // Convertir les catégories de la chineuse pour ProductForm
   const chineuseCategories = useMemo(() => {
@@ -79,6 +81,7 @@ export default function AdminAjouterPage() {
       const payload: any = {
         nom: fullName, description: data.description, categorie: data.categorie,
         prix: parseFloat(data.prix), quantite: parseInt(data.quantite),
+        ...((data as any).prixAchat?.trim?.() ? { prixAchat: parseFloat((data as any).prixAchat) || 0 } : {}),
         marque: data.marque.trim(), taille: data.taille.trim(),
         material: data.material.trim() || null, color: data.color.trim() || null,
         madeIn: data.madeIn || null, sku: finalSku,
@@ -223,13 +226,15 @@ export default function AdminAjouterPage() {
             sku={autoSku} 
             userName={selectedChineuse.nom || selectedChineuse.email}
             trigramme={selectedChineuse.trigramme}
-            onSubmit={handleCreateProduit} 
+            onSubmit={handleCreateProduit}
             onExcelImport={handleExcelImportFromForm}
+            onVintedImport={() => setVintedModalOpen(true)}
             loading={creatingProduct}
             showExcelImport={true}
           />
         </div>
       )}
+      {vintedModalOpen && <ImportMailModal onClose={() => setVintedModalOpen(false)} />}
     </>
   )
 }

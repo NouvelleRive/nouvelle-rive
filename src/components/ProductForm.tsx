@@ -369,6 +369,8 @@ async function compressImage(file: File): Promise<string> {
     // Callbacks
     onSubmit: (data: ProductFormData) => Promise<void>
     onExcelImport?: (produits: ExcelImportData[]) => Promise<void>
+    /** Si fourni, affiche un bouton "Import Vinted" à droite de "Import Excel" qui appelle ce callback (ouvre une modal côté parent). */
+    onVintedImport?: () => void
     onCancel?: () => void
     
     // État
@@ -441,6 +443,7 @@ async function compressImage(file: File): Promise<string> {
     initialData,
     onSubmit,
     onExcelImport,
+    onVintedImport,
     onCancel,
     loading = false,
     submitLabel,
@@ -1450,20 +1453,32 @@ async function compressImage(file: File): Promise<string> {
         {/* === GUIDE PHOTO === */}
         <PhotoGuideModal />
         
-        {/* === IMPORT EXCEL (mode création uniquement) === */}
+        {/* === IMPORT EXCEL + VINTED (mode création uniquement) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (
           <div className="bg-white border rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowExcelSection(!showExcelSection)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2 text-[#22209C]">
-                <FileSpreadsheet size={18} />
-                <span className="font-medium text-sm">Import Excel</span>
-              </div>
-              <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
-            </button>
+            <div className="grid grid-cols-2 divide-x">
+              <button
+                type="button"
+                onClick={() => setShowExcelSection(!showExcelSection)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
+              >
+                <div className="flex items-center gap-2 text-[#22209C]">
+                  <FileSpreadsheet size={18} />
+                  <span className="font-medium text-sm">Import Excel</span>
+                </div>
+                <span className="text-gray-400 text-sm">{showExcelSection ? '✕' : '+'}</span>
+              </button>
+              {onVintedImport && (
+                <button
+                  type="button"
+                  onClick={onVintedImport}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 transition text-[#09B1BA]"
+                >
+                  <FileSpreadsheet size={18} />
+                  <span className="font-medium text-sm">Import Vinted</span>
+                </button>
+              )}
+            </div>
             
             {showExcelSection && (
               <div className="px-4 pb-4 border-t bg-gray-50">
