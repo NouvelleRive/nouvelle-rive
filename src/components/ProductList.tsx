@@ -1264,6 +1264,9 @@
                       ) : (
                         <span className="font-medium">—</span>
                       )}</span>
+                      {isAdmin && typeof p.prixAchat === 'number' && (
+                        <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{p.prixAchat} €</span></span>
+                      )}
                       {isAdmin && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
                         return m === null ? null : (
@@ -1402,6 +1405,9 @@
                       ) : (
                         <span className="font-medium text-gray-700">—</span>
                       )}</p>
+                      {isAdmin && typeof p.prixAchat === 'number' && (
+                        <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{p.prixAchat} €</span></p>
+                      )}
                       {isAdmin && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
                         return m === null ? null : (
