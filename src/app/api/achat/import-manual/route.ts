@@ -39,9 +39,17 @@ export async function POST(req: NextRequest) {
 
   // --- Lecture du payload --------------------------------------------------
   let body = ''
+  let targetChineuse: { uid: string; email: string; trigramme: string } | null = null
   try {
     const json = await req.json()
     body = String(json?.body || '')
+    if (json?.targetChineuse?.uid && json?.targetChineuse?.trigramme) {
+      targetChineuse = {
+        uid: String(json.targetChineuse.uid),
+        email: String(json.targetChineuse.email || ''),
+        trigramme: String(json.targetChineuse.trigramme).toUpperCase(),
+      }
+    }
   } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
   }
@@ -49,12 +57,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'body vide' }, { status: 400 })
   }
 
+  // Si le client n'a pas précisé de chineuse cible, on tombe sur NR par défaut.
+  if (!targetChineuse) {
+    const nr = await findChineuseNR()
+    if (!nr) return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable et aucune chineuse fournie' }, { status: 500 })
+    targetChineuse = { uid: nr.uid, email: nr.email, trigramme: 'NR' }
+  }
+
   // --- Détection par contenu + dispatch ------------------------------------
   try {
     // Page Vinted (annonce produit) collée → priorité car contient plus d'infos
-    // (marque/taille/couleur/état/description) que le mail "Ton reçu". On dispatche
-    // sur la page dès qu'on détecte un marker Vinted (URL items/, Protection acheteurs,
-    // ou plusieurs labels page). Le parser fait la validation détaillée.
     const looksLikeVintedPage =
       /Inclut la Protection acheteurs/i.test(body) ||
       /Protection acheteurs/i.test(body) ||
@@ -62,14 +74,14 @@ export async function POST(req: NextRequest) {
       /Dressing du membre/i.test(body) ||
       /Articles similaires/i.test(body)
     if (looksLikeVintedPage) {
-      return await handleVintedPage(body)
+      return await handleVintedPage(body, targetChineuse)
     }
     if (/Re[çc]u pour votre commande Vinted/i.test(body) || /Votre paiement a [ée]t[ée] re[çc]u/i.test(body)) {
-      return await handleVintedReceipt(body)
+      return await handleVintedReceipt(body, targetChineuse)
     }
     // Whatnot — détecté via le nom Whatnot dans le mail + un Order # caractéristique
     if (/Whatnot/i.test(body) && /Order\s*#\s*\d+/i.test(body)) {
-      return await handleWhatnotPurchase(body)
+      return await handleWhatnotPurchase(body, targetChineuse)
     }
     if (/colis\s+[A-Z0-9]{8,20}\s+est en chemin/i.test(body)) {
       return await handleCarrierTracking(body)
@@ -94,20 +106,20 @@ export async function POST(req: NextRequest) {
 // cette route quand le webhook Pub/Sub aura validé le backlog.
 // ---------------------------------------------------------------------------
 
-async function handleWhatnotPurchase(body: string) {
+async function handleWhatnotPurchase(
+  body: string,
+  target: { uid: string; email: string; trigramme: string }
+) {
   const purchase = parseWhatnotPurchase(body)
   if (!purchase.ok) return NextResponse.json({ ok: false, reason: purchase.reason })
 
-  const nrChineuse = await findChineuseNR()
-  if (!nrChineuse) return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable' }, { status: 500 })
-
-  // On calcule le SKU de départ, puis on incrémente pour chaque item du même mail.
-  const startNum = await computeNextSkuNumNR()
+  // On calcule le SKU de départ pour cette chineuse, puis on incrémente.
+  const startNum = await computeNextSkuNum(target.trigramme)
   const createdDocs: { docId: string; sku: string; orderId: string }[] = []
 
   for (let i = 0; i < purchase.items.length; i++) {
     const item = purchase.items[i]
-    const sku = `NR${startNum + i}`
+    const sku = `${target.trigramme}${startNum + i}`
     const docId = whatnotDocId(item.orderId)
 
     const payload: Record<string, unknown> = {
@@ -117,9 +129,9 @@ async function handleWhatnotPurchase(body: string) {
       marque: '',
       taille: '',
       sku,
-      trigramme: 'NR',
-      chineurUid: nrChineuse.uid,
-      chineur: nrChineuse.email,
+      trigramme: target.trigramme,
+      chineurUid: target.uid,
+      chineur: target.email,
       imageUrls: [],
       imageUrl: '',
       photosReady: false,
@@ -143,16 +155,16 @@ async function handleWhatnotPurchase(body: string) {
   return NextResponse.json({ ok: true, kind: 'whatnot-purchase', count: createdDocs.length, docs: createdDocs })
 }
 
-async function handleVintedPage(body: string) {
+async function handleVintedPage(
+  body: string,
+  target: { uid: string; email: string; trigramme: string }
+) {
   const page = parseVintedPage(body)
   if (!page.ok) return NextResponse.json({ ok: false, reason: page.reason })
 
-  const nrChineuse = await findChineuseNR()
-  if (!nrChineuse) return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable' }, { status: 500 })
-
   // ID déterministe via itemId si dispo, sinon doc créé sans ID (laissera doublon possible).
   const docId = page.itemId ? vintedPageDocId(page.itemId) : null
-  const sku = await computeNextSkuNR()
+  const sku = await computeNextSku(target.trigramme)
 
   const payload: Record<string, unknown> = {
     nom: `${sku} - ${page.titre || 'Pièce Vinted'}`,
@@ -163,9 +175,9 @@ async function handleVintedPage(body: string) {
     color: page.couleur || null,
     etat: page.etat || '',
     sku,
-    trigramme: 'NR',
-    chineurUid: nrChineuse.uid,
-    chineur: nrChineuse.email,
+    trigramme: target.trigramme,
+    chineurUid: target.uid,
+    chineur: target.email,
     imageUrls: [],
     imageUrl: '',
     photosReady: false,
@@ -195,22 +207,30 @@ async function handleVintedPage(body: string) {
   return NextResponse.json({ ok: true, docId: ref.id, sku, kind: 'vinted-page-no-itemid' })
 }
 
-async function handleVintedReceipt(body: string) {
+async function handleVintedReceipt(
+  body: string,
+  target: { uid: string; email: string; trigramme: string }
+) {
   const receipt = parseVintedReceipt(body)
   if (!receipt.ok) return NextResponse.json({ ok: false, reason: receipt.reason })
 
-  const nrChineuse = await findChineuseNR()
-  if (!nrChineuse) return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable' }, { status: 500 })
-
-  const sku = await computeNextSkuNR()
-  const payload = buildVintedProduitPayload(receipt, { chineuseNR: nrChineuse, sku })
+  const sku = await computeNextSku(target.trigramme)
+  // buildVintedProduitPayload est typé pour NR — on l'appelle puis on override
+  // les champs chineuse + trigramme + sku derrière.
+  const base = buildVintedProduitPayload(receipt, {
+    chineuseNR: { uid: target.uid, email: target.email },
+    sku,
+  })
   const docId = vintedDocId(receipt.transactionId)
 
   await adminDb.collection('produits').doc(docId).set(
     {
-      ...payload,
-      createdAt: Timestamp.fromDate(payload.createdAt),
-      achatDateCommande: Timestamp.fromDate(payload.achatDateCommande),
+      ...base,
+      trigramme: target.trigramme,
+      chineurUid: target.uid,
+      chineur: target.email,
+      createdAt: Timestamp.fromDate(base.createdAt),
+      achatDateCommande: Timestamp.fromDate(base.achatDateCommande),
     },
     { merge: true }
   )
@@ -286,17 +306,19 @@ async function findChineuseNR(): Promise<{ uid: string; email: string } | null> 
   return { uid: d.id, email: d.data().email || '' }
 }
 
-async function computeNextSkuNR(): Promise<string> {
-  return `NR${await computeNextSkuNumNR()}`
+async function computeNextSku(trigramme: string): Promise<string> {
+  return `${trigramme}${await computeNextSkuNum(trigramme)}`
 }
 
-/** Retourne juste le numéro suivant (utile quand on crée plusieurs SKU NR d'affilée). */
-async function computeNextSkuNumNR(): Promise<number> {
-  const snap = await adminDb.collection('produits').where('trigramme', '==', 'NR').get()
+/** Numéro de SKU suivant pour un trigramme (utile en boucle pour Whatnot multi-items). */
+async function computeNextSkuNum(trigramme: string): Promise<number> {
+  const tri = (trigramme || '').toUpperCase()
+  const snap = await adminDb.collection('produits').where('trigramme', '==', tri).get()
+  const skuRe = new RegExp(`^${tri}(\\d+)$`)
   let maxNum = 0
   snap.docs.forEach((d) => {
     const sku = String(d.data().sku || '')
-    const m = sku.match(/^NR(\d+)$/)
+    const m = sku.match(skuRe)
     if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10))
   })
   return maxNum + 1

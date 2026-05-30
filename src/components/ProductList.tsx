@@ -127,9 +127,9 @@
   onCustomDelete?: (id: string) => void
   /** Texte du tooltip de la poubelle quand onCustomDelete est fourni */
   customDeleteTitle?: string
-  /** Masque la boîte "Importer" (Vinted/Whatnot). Utilisé pour les chineuses
-   *  smallBatch qui ne sont pas concernées par l'import achat. */
-  hideImport?: boolean
+  /** Chineuse cible pour l'import (passée au modal). Si NR, on affiche Vinted + Whatnot.
+   *  Si pièce unique non-NR, on affiche uniquement Vinted. Si smallBatch ou absent → rien. */
+  targetChineuse?: { uid: string; email: string; trigramme: string; stockType?: string }
 }
 
     // =====================
@@ -195,7 +195,7 @@
       onProductUpdated,
       onCustomDelete,
       customDeleteTitle,
-      hideImport = false,
+      targetChineuse,
     }: ProductListProps) {
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
@@ -950,7 +950,10 @@
             <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
           </div>
           {isAdmin && importModalOpen && (
-            <ImportMailModal onClose={() => setImportModalOpen(false)} />
+            <ImportMailModal
+              onClose={() => setImportModalOpen(false)}
+              targetChineuse={targetChineuse}
+            />
           )}
 
           {/* Filtres - UTILISE FILTERBOX */}
@@ -1041,20 +1044,35 @@
                     </button>
                   </div>
                 </div>
-                {isAdmin && !hideImport && (
-                  <div className="bg-white border rounded-xl p-4 shadow-sm">
-                    <h2 className="text-lg font-semibold mb-3">Importer</h2>
-                    <div className="flex flex-col gap-2">
-                      <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
-                        Vinted
-                      </button>
-                      <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#FFCD2D] text-black rounded-lg text-sm hover:bg-[#f0c020] transition-colors">
-                        Whatnot
-                      </button>
-                      <span className="text-[11px] text-gray-400 text-center mt-1">copie colle la page (cmd+A, cmd+C, cmd+V)</span>
+                {isAdmin && (() => {
+                  // Règles d'affichage :
+                  // - smallBatch → rien
+                  // - NR → Vinted + Whatnot
+                  // - autre pièce unique → Vinted seulement
+                  const isNR = targetChineuse?.trigramme?.toUpperCase() === 'NR'
+                  const isSmallBatch = targetChineuse?.stockType === 'smallBatch'
+                  const showVinted = !!targetChineuse && !isSmallBatch
+                  const showWhatnot = isNR
+                  if (!showVinted && !showWhatnot) return null
+                  return (
+                    <div className="bg-white border rounded-xl p-4 shadow-sm">
+                      <h2 className="text-lg font-semibold mb-3">Importer</h2>
+                      <div className="flex flex-col gap-2">
+                        {showVinted && (
+                          <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
+                            Vinted
+                          </button>
+                        )}
+                        {showWhatnot && (
+                          <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#FFCD2D] text-black rounded-lg text-sm hover:bg-[#f0c020] transition-colors">
+                            Whatnot
+                          </button>
+                        )}
+                        <span className="text-[11px] text-gray-400 text-center mt-1">copie colle la page (cmd+A, cmd+C, cmd+V)</span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
             )}
           </div>

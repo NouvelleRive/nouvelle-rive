@@ -55,11 +55,19 @@ export default function NosProduits() {
     ? `PRODUITS DE ${(selectedChineuse.nom || selectedChineuse.email?.split('@')[0] || '').toUpperCase()}`
     : "TOUS LES PRODUITS"
 
-  // Import Vinted/Whatnot : créé sous NR uniquement. Donc on n'affiche les
-  // boutons que quand on est en vue globale (aucune chineuse filtrée) ou que
-  // la chineuse filtrée est NR. Pas de sens sinon — l'import irait quand même
-  // sous NR.
-  const hideImport = !!selectedChineuse && selectedChineuse.trigramme?.toUpperCase() !== 'NR'
+  // La chineuse cible pour l'import est la chineuse sélectionnée. La règle
+  // d'affichage des boutons est gérée par ProductList :
+  //   - NR        → Vinted + Whatnot
+  //   - smallBatch → rien
+  //   - autre (pièce unique) → Vinted seul
+  const targetChineuse = selectedChineuse
+    ? {
+        uid: selectedChineuse.uid,
+        email: selectedChineuse.email,
+        trigramme: selectedChineuse.trigramme,
+        stockType: (selectedChineuse as any).stockType,
+      }
+    : undefined
 
   return (
     <ProductList
@@ -69,7 +77,7 @@ export default function NosProduits() {
       isAdmin={true}
       loading={loading}
       onProductUpdated={handleProductUpdated}
-      hideImport={hideImport}
+      targetChineuse={targetChineuse}
     />
   )
 }

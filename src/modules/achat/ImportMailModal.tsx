@@ -8,9 +8,13 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
 
-type Props = { onClose: () => void }
+type Props = {
+  onClose: () => void
+  /** Chineuse cible : à laquelle le brouillon importé sera attribué. Si absent, le serveur retombe sur NR. */
+  targetChineuse?: { uid: string; email: string; trigramme: string }
+}
 
-export default function ImportMailModal({ onClose }: Props) {
+export default function ImportMailModal({ onClose, targetChineuse }: Props) {
   const [body, setBody] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
@@ -35,7 +39,7 @@ export default function ImportMailModal({ onClose }: Props) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({ body, targetChineuse: targetChineuse || null }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json.ok === false) {

@@ -230,13 +230,13 @@ export default function AdminAjouterPage() {
             onSubmit={handleCreateProduit}
             onExcelImport={handleExcelImportFromForm}
             onVintedImport={
-              // Visible uniquement quand on ajoute SOUS NR (l'import crée toujours
-              // sous NR, donc inutile de proposer le bouton pour une autre chineuse).
-              selectedChineuse?.trigramme?.toUpperCase() === 'NR'
+              // Règle : Vinted visible pour NR + toute chineuse pièce unique (pas smallBatch)
+              selectedChineuse && (selectedChineuse as any).stockType !== 'smallBatch'
                 ? () => setVintedModalOpen(true)
                 : undefined
             }
             onWhatnotImport={
+              // Règle : Whatnot visible UNIQUEMENT pour NR
               selectedChineuse?.trigramme?.toUpperCase() === 'NR'
                 ? () => setWhatnotModalOpen(true)
                 : undefined
@@ -246,8 +246,26 @@ export default function AdminAjouterPage() {
           />
         </div>
       )}
-      {vintedModalOpen && <ImportMailModal onClose={() => setVintedModalOpen(false)} />}
-      {whatnotModalOpen && <ImportMailModal onClose={() => setWhatnotModalOpen(false)} />}
+      {vintedModalOpen && selectedChineuse && (
+        <ImportMailModal
+          onClose={() => setVintedModalOpen(false)}
+          targetChineuse={{
+            uid: selectedChineuse.uid,
+            email: selectedChineuse.email,
+            trigramme: selectedChineuse.trigramme,
+          }}
+        />
+      )}
+      {whatnotModalOpen && selectedChineuse && (
+        <ImportMailModal
+          onClose={() => setWhatnotModalOpen(false)}
+          targetChineuse={{
+            uid: selectedChineuse.uid,
+            email: selectedChineuse.email,
+            trigramme: selectedChineuse.trigramme,
+          }}
+        />
+      )}
     </>
   )
 }
