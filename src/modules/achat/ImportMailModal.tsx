@@ -66,13 +66,15 @@ export default function ImportMailModal({ onClose }: Props) {
       >
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Importer un mail ou une page Vinted</h2>
+            <h2 className="text-lg font-bold text-gray-900">Importer depuis Vinted</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Colle ici soit le contenu d'un <strong>mail</strong> (Vinted "Ton reçu",
-              Chronopost, Mondial Relay, Pickup), soit la <strong>page de l'annonce
-              Vinted</strong> elle-même (Cmd+A → Copier sur l'onglet de la pièce achetée).
-              Le type est détecté automatiquement. La page donne plus d'infos (marque,
-              taille, couleur, état, description) que le mail.
+              Colle ici n'importe lequel de ces 3 formats :
+              <br />— le contenu d'un <strong>mail</strong> (Vinted "Ton reçu", Chronopost,
+              Mondial Relay, Pickup)
+              <br />— la <strong>page de l'annonce Vinted</strong> (Cmd+A → Copier sur l'onglet)
+              <br />— juste le <strong>lien</strong> de l'annonce (ex: vinted.fr/items/123-xxx)
+              <br />Le type est détecté automatiquement. La page donne plus d'infos (marque,
+              taille, couleur, état, description) que le mail ou le lien seul.
             </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg">

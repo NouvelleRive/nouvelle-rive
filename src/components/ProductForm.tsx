@@ -1478,7 +1478,7 @@ async function compressImage(file: File): Promise<string> {
                     <FileSpreadsheet size={18} />
                     <span className="font-medium text-sm">Vinted</span>
                   </div>
-                  <span className="text-[11px] text-gray-400 text-center">copier coller du mail ou de la page vinted (ctrl+C/ctrl+V)</span>
+                  <span className="text-[11px] text-gray-400 text-center">copier coller du mail, de la page vinted ou du lien (ctrl+C/ctrl+V)</span>
                 </button>
               )}
             </div>
