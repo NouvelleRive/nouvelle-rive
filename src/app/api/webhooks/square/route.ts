@@ -239,9 +239,10 @@ async function traiterProduit(opts: {
   try {
     const titre = `🛒 Vente en ligne : ${produitData.sku || produitData.nom || lineItem?.name}`
     const corps = `${produitData.prix || lineItemPrice}€ — ${clientInfo.prenom} ${clientInfo.nom}`
-    await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/commandes', tag: venteDocId })
+    const photo = produitData.images?.[0] || produitData.imageUrl || produitData.photos?.face || produitData.imageUrls?.[0] || undefined
+    await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/commandes', tag: venteDocId, image: photo })
     if (chineurUid) {
-      await sendPushToOwner(chineurUid, { title: '🎉 Vente en ligne !', body: `${produitData.sku || produitData.nom} vendu ${produitData.prix || lineItemPrice}€`, url: '/chineuse/mes-ventes', tag: venteDocId })
+      await sendPushToOwner(chineurUid, { title: '🎉 Vente en ligne !', body: `${produitData.sku || produitData.nom} vendu ${produitData.prix || lineItemPrice}€`, url: '/chineuse/mes-ventes', tag: venteDocId, image: photo })
     }
   } catch (e) { console.warn('Push notif failed:', e) }
 
@@ -414,9 +415,10 @@ export async function POST(request: Request) {
         try {
           const titre = `Vente boutique : ${sku || itemName}`
           const corps = `${prix}€${produitData?.nom ? ` — ${produitData.nom}` : ''}`
-          await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId })
+          const photo = produitData?.images?.[0] || produitData?.imageUrl || produitData?.photos?.face || produitData?.imageUrls?.[0] || undefined
+          await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId, image: photo })
           if (chineurUid) {
-            await sendPushToOwner(chineurUid, { title: '🎉 Vente !', body: `${sku || itemName} vendu ${prix}€`, url: '/chineuse/mes-ventes', tag: venteDocId })
+            await sendPushToOwner(chineurUid, { title: '🎉 Vente !', body: `${sku || itemName} vendu ${prix}€`, url: '/chineuse/mes-ventes', tag: venteDocId, image: photo })
           }
         } catch (e) { console.warn('Push notif failed:', e) }
 

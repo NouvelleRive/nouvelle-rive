@@ -230,13 +230,15 @@ async function syncEbayOrders(daysBack: number = 14) {
         try {
           const titre = `🇺🇸 Vente eBay : ${produitData.sku || produitData.nom}`
           const corps = `${prixEur.toFixed(2)}€ — ${item.title || ''}`
-          await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId })
+          const photo = produitData.images?.[0] || produitData.imageUrl || produitData.photos?.face || produitData.imageUrls?.[0] || undefined
+          await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId, image: photo })
           if (chineurUid) {
             await sendPushToOwner(chineurUid, {
               title: '🎉 Vente eBay !',
               body: `${produitData.sku || produitData.nom} — ${prixEur.toFixed(2)}€`,
               url: '/chineuse/mes-ventes',
               tag: venteDocId,
+              image: photo,
             })
           }
         } catch (e) { console.warn('Push notif failed:', e) }
