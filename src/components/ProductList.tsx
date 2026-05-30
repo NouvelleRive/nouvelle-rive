@@ -1027,10 +1027,9 @@
             />
 
             {/* Exporter (+ Importer admin) - hidden on mobile.
-                justify-between : pousse "Importer" en bas pour aligner avec le bas
-                de la boîte Filtrer à gauche. */}
+                gap-4 = même espacement vertical qu'entre les colonnes du grid parent. */}
             {!isDeposante && (
-              <div className="hidden lg:flex flex-col gap-4 justify-between">
+              <div className="hidden lg:flex flex-col gap-4">
                 <div className="bg-white border rounded-xl p-4 shadow-sm">
                   <h2 className="text-lg font-semibold mb-3">Exporter</h2>
                   <div className="flex flex-col gap-2">
