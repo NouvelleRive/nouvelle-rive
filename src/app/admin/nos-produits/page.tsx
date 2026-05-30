@@ -55,6 +55,10 @@ export default function NosProduits() {
     ? `PRODUITS DE ${(selectedChineuse.nom || selectedChineuse.email?.split('@')[0] || '').toUpperCase()}`
     : "TOUS LES PRODUITS"
 
+  // Import Vinted/Whatnot uniquement pour les chineuses pièce unique
+  // (les chineuses smallBatch n'achètent pas individuellement sur Vinted/Whatnot).
+  const hideImport = (selectedChineuse as any)?.stockType === 'smallBatch'
+
   return (
     <ProductList
       titre={titre}
@@ -63,6 +67,7 @@ export default function NosProduits() {
       isAdmin={true}
       loading={loading}
       onProductUpdated={handleProductUpdated}
+      hideImport={hideImport}
     />
   )
 }

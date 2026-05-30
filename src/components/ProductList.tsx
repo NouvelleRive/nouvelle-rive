@@ -127,6 +127,9 @@
   onCustomDelete?: (id: string) => void
   /** Texte du tooltip de la poubelle quand onCustomDelete est fourni */
   customDeleteTitle?: string
+  /** Masque la boîte "Importer" (Vinted/Whatnot). Utilisé pour les chineuses
+   *  smallBatch qui ne sont pas concernées par l'import achat. */
+  hideImport?: boolean
 }
 
     // =====================
@@ -192,6 +195,7 @@
       onProductUpdated,
       onCustomDelete,
       customDeleteTitle,
+      hideImport = false,
     }: ProductListProps) {
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
@@ -1036,7 +1040,7 @@
                     </button>
                   </div>
                 </div>
-                {isAdmin && (
+                {isAdmin && !hideImport && (
                   <div className="bg-white border rounded-xl p-4 shadow-sm">
                     <h2 className="text-lg font-semibold mb-3">Importer</h2>
                     <div className="flex flex-col gap-2">

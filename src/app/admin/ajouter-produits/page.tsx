@@ -237,8 +237,10 @@ export default function AdminAjouterPage() {
                 : undefined
             }
             onWhatnotImport={
-              // Whatnot : admin uniquement (la page admin l'est déjà, donc toujours présenté ici)
-              () => setWhatnotModalOpen(true)
+              // Whatnot : admin uniquement + chineuses pièce unique (pas smallBatch)
+              (selectedChineuse as any)?.stockType !== 'smallBatch'
+                ? () => setWhatnotModalOpen(true)
+                : undefined
             }
             loading={creatingProduct}
             showExcelImport={true}
