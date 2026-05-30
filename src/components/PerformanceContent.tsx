@@ -392,11 +392,17 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       const tri = (v as any).trigramme || 'unknown'
       const current = map.get(tri) || { ca: 0, ventes: 0, margeBrute: 0 }
       const prixVente = (v as any).prixVenteReel || (v as any).prix || 0
-      const prixAchat = (v as any).prixAchat || 0
+      const prixAchat = (v as any).prixAchat
+      // Marge brute ne compte que si prixAchat est explicitement renseigné (> 0).
+      // Sinon on n'a pas l'info → contribution 0 (sinon on additionnerait le prix
+      // de vente entier comme s'il était pure marge, ce qui est faux).
+      const margeBruteVente = typeof prixAchat === 'number' && prixAchat > 0
+        ? Math.max(prixVente - prixAchat, 0)
+        : 0
       map.set(tri, {
         ca: current.ca + prixVente,
         ventes: current.ventes + 1,
-        margeBrute: current.margeBrute + Math.max(prixVente - prixAchat, 0),
+        margeBrute: current.margeBrute + margeBruteVente,
       })
     })
 
