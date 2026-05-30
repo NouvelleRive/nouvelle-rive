@@ -1034,10 +1034,10 @@
                 <div className="bg-white border rounded-xl p-4 shadow-sm">
                   <h2 className="text-lg font-semibold mb-3">Exporter</h2>
                   <div className="flex flex-col gap-2">
-                    <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition-colors">
+                    <button onClick={exportToExcel} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1880] transition-colors">
                       <FileSpreadsheet size={14} /> Excel
                     </button>
-                    <button onClick={exportToPDF} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors">
+                    <button onClick={exportToPDF} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1880] transition-colors">
                       <Download size={14} /> PDF
                     </button>
                   </div>
@@ -1049,7 +1049,7 @@
                       <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors">
                         Vinted
                       </button>
-                      <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg text-sm hover:bg-gray-800 transition-colors">
+                      <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#FFCD2D] text-black rounded-lg text-sm hover:bg-[#f0c020] transition-colors">
                         Whatnot
                       </button>
                       <span className="text-[11px] text-gray-400 text-center mt-1">copie colle la page (cmd+A, cmd+C, cmd+V)</span>

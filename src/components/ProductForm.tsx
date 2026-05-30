@@ -1489,7 +1489,7 @@ async function compressImage(file: File): Promise<string> {
                 <button
                   type="button"
                   onClick={onWhatnotImport}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-gray-50 transition text-black"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 hover:bg-[#FFCD2D]/10 transition text-[#a08800]"
                 >
                   <FileSpreadsheet size={18} />
                   <span className="font-medium text-sm">Whatnot</span>
