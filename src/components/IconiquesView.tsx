@@ -8,6 +8,7 @@ import ProductGrid from '@/components/ProductGrid'
 import FavoriteButton from '@/components/FavoriteButton'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t } from '@/lib/i18n'
 
 export type Iconique = {
@@ -827,7 +828,7 @@ export default function IconiquesView({
                             const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
                             return (
                               <div key={p.id} className="relative flex flex-col" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
-                                <Link href={`/boutique/${p.id}`} className="flex flex-col flex-grow group">
+                                <Link href={`/${buildProduitSlug(p)}`} className="flex flex-col flex-grow group">
                                   <div className="overflow-hidden bg-white flex-grow">
                                     {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
                                   </div>
@@ -889,7 +890,7 @@ export default function IconiquesView({
                           const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
                           return (
                             <div className="relative flex flex-col bg-white h-full">
-                              <Link href={`/boutique/${p.id}`} className="flex flex-col flex-grow group">
+                              <Link href={`/${buildProduitSlug(p)}`} className="flex flex-col flex-grow group">
                                 <div className="aspect-square overflow-hidden bg-white">
                                   {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
                                 </div>

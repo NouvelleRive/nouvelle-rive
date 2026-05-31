@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { buildProduitSlug } from '@/lib/produitSlug'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
@@ -48,7 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       )
       .map(p => {
         return {
-          url: `${BASE_URL}/boutique/${p.id}`,
+          url: `${BASE_URL}/${buildProduitSlug(p)}`,
           lastModified: now,
           changeFrequency: 'weekly' as const,
           priority: 0.7,

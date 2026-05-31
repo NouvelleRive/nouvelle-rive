@@ -9,6 +9,7 @@ import { useLang, t } from '@/lib/i18n'
 import { getCreatriceI18n } from '@/lib/creatricesI18n'
 import FavoriteButton from '@/components/FavoriteButton'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
+import { buildProduitSlug } from '@/lib/produitSlug'
 
 type Creatrice = {
   nom: string
@@ -454,7 +455,7 @@ export default function CreateurPage() {
               {list.map((p) => (
                 <Link
                   key={p.id}
-                  href={'/boutique/' + p.id}
+                  href={'/' + buildProduitSlug(p)}
                   className="group flex flex-col h-full"
                   style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
                 >

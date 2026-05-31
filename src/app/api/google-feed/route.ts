@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
+import { buildProduitSlug } from '@/lib/produitSlug'
 
 if (!getApps().length) {
   initializeApp({
@@ -85,7 +86,7 @@ export async function GET() {
         description = parts.join(' ').replace(/\s+/g, ' ').trim()
       }
 
-      const url = `https://www.nouvellerive.eu/boutique/${p.id}`
+      const url = `https://www.nouvellerive.eu/${buildProduitSlug(p)}`
       const prix = typeof p.prix === 'number' ? p.prix.toFixed(2) : '0.00'
       const mpn = p.sku || p.id
 

@@ -12,6 +12,7 @@ import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
+import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 
 type ChineuseLite = {
@@ -589,7 +590,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
             style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
             <Link
-              href={`/boutique/${produit.id}`}
+              href={`/${buildProduitSlug(produit)}`}
               className="block"
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
