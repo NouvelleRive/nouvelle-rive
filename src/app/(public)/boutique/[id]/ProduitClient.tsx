@@ -425,7 +425,9 @@ export default function ProduitClient({
           <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-6 items-start sm:items-center justify-center">
             {chineuseInfo?.slug && chineuseInfo?.nom && (
               <Link href={`/nos-creatrices/${chineuseInfo.slug}`} className="uppercase hover:underline" style={{ fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600 }}>
-                {t(`Voir toutes les pièces de ${chineuseInfo.nom}`, `See all pieces by ${chineuseInfo.nom}`, lang)} →
+                {chineuseInfo.stockType === 'smallBatch'
+                  ? t(`Voir toutes les pièces de la créatrice ${chineuseInfo.nom}`, `See all pieces by designer ${chineuseInfo.nom}`, lang)
+                  : t(`Voir toutes les pièces de la curatrice ${chineuseInfo.nom}`, `See all pieces by curator ${chineuseInfo.nom}`, lang)} →
               </Link>
             )}
             {currentTypeSlug && currentTypeSlug !== 'piece' && (
