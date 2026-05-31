@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
@@ -134,6 +134,13 @@ export default function ProduitClient({
   const { addItem, hasItem, hydrated } = useCart()
   const [justAdded, setJustAdded] = useState(false)
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+
+  // Au montage de la page produit : force scrollY=0 pour que la navbar soit
+  // visible en haut (sinon Next.js peut conserver la position de la page
+  // précédente, ce qui cache la navbar).
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [produit.id])
 
   const afficherTaille = (categorie: any) => {
     const catLower = (typeof categorie === 'string' ? categorie : categorie?.label || '').toLowerCase()
