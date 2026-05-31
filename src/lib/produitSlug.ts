@@ -1,6 +1,8 @@
-// Génère et résout les slugs descriptifs pour les URLs produits.
-// Format : `{type}-{marque}-{nom}-{couleur}-{taille}-{firestoreId}`
-// Le firestoreId (20 chars, [A-Za-z0-9]) est toujours en dernier segment → extraction par split('-').pop().
+// Génère et résout les URLs produits hiérarchiques.
+// Format : `/{type}/{marque}/{nom-slug}-{firestoreId}`
+// - type : catégorie produit slugifiée (sac, robe, veste…)
+// - marque : marque slugifiée, ou "sm" si pas de marque (sans-marque)
+// - dernier segment : nom + id Firestore (20 chars [A-Za-z0-9]) après le dernier hyphen
 
 type ProduitForSlug = {
   id: string
@@ -10,6 +12,8 @@ type ProduitForSlug = {
   taille?: string
   categorie?: unknown
 }
+
+export const SANS_MARQUE = 'sm'
 
 function stripTrigramme(s: string): string {
   return s.replace(/^[A-Z]{2,10}\d{0,4}\s*[-–]\s*/i, '').trim()
@@ -35,19 +39,33 @@ function getCategorieLabel(categorie: unknown): string {
   return ''
 }
 
-export function buildProduitSlug(p: ProduitForSlug): string {
-  const type = stripTrigramme(getCategorieLabel(p.categorie))
+export function getTypeSlug(categorie: unknown): string {
+  const label = stripTrigramme(getCategorieLabel(categorie))
+  return slugifyPart(label) || 'piece'
+}
+
+export function getMarqueSlug(marque?: string): string {
+  const s = slugifyPart(marque || '')
+  return s || SANS_MARQUE
+}
+
+export function buildProduitPath(p: ProduitForSlug): string {
+  const type = getTypeSlug(p.categorie)
+  const marque = getMarqueSlug(p.marque)
   const nom = stripTrigramme(p.nom || '')
-  const parts = [type, p.marque, nom, p.color, p.taille]
+  const descParts = [p.marque, nom, p.color, p.taille]
     .map(v => (typeof v === 'string' ? v : ''))
     .filter(Boolean)
     .join(' ')
-  const base = slugifyPart(parts).slice(0, 80) || 'piece'
-  return `${base}-${p.id}`
+  const descSlug = slugifyPart(descParts).slice(0, 80) || 'piece'
+  return `${type}/${marque}/${descSlug}-${p.id}`
 }
 
-// Extrait le doc id Firestore depuis un slug (toujours dernier segment hyphen).
-// Les IDs Firestore auto sont 20 chars dans [A-Za-z0-9], donc pas d'ambiguïté avec le reste du slug.
+// Alias rétro-compat — retourne désormais le chemin complet (avec slashs).
+export const buildProduitSlug = buildProduitPath
+
+// Extrait le doc id Firestore depuis le dernier segment (ex: "sac-chanel-bandouliere-AbCdEfGh1234567890Ij").
+// Firestore auto-ID = 20 chars alphanumériques (pas de hyphen).
 export function extractIdFromSlug(slug: string): string | null {
   const segments = slug.split('-')
   const last = segments[segments.length - 1]

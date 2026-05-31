@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { buildProduitSlug } from '@/lib/produitSlug'
+import { buildProduitPath, getTypeSlug } from '@/lib/produitSlug'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
@@ -35,9 +35,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 
   let productEntries: MetadataRoute.Sitemap = []
+  const typeSet = new Set<string>()
   try {
     const snap = await adminDb.collection('produits').get()
-    productEntries = snap.docs
+    const available = snap.docs
       .map(d => ({ id: d.id, ...d.data() } as any))
       .filter(p =>
         p.statut !== 'supprime' &&
@@ -47,17 +48,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         p.prix > 0 &&
         (p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
       )
-      .map(p => {
-        return {
-          url: `${BASE_URL}/${buildProduitSlug(p)}`,
-          lastModified: now,
-          changeFrequency: 'weekly' as const,
-          priority: 0.7,
-        }
-      })
+    productEntries = available.map(p => {
+      const type = getTypeSlug(p.categorie)
+      if (type && type !== 'piece') typeSet.add(type)
+      return {
+        url: `${BASE_URL}/${buildProduitPath(p)}`,
+        lastModified: now,
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      }
+    })
   } catch (err) {
     console.error('[sitemap] Firestore fetch failed:', err)
   }
 
-  return [...staticEntries, ...productEntries]
+  const typeEntries: MetadataRoute.Sitemap = Array.from(typeSet).map(type => ({
+    url: `${BASE_URL}/${type}`,
+    lastModified: now,
+    changeFrequency: 'daily' as const,
+    priority: 0.85,
+  }))
+
+  return [...staticEntries, ...typeEntries, ...productEntries]
 }

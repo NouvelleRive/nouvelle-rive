@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebaseAdmin'
-import ProduitClient, { type Produit, type ChineuseInfo } from '../boutique/[id]/ProduitClient'
+import ProduitClient, { type Produit, type ChineuseInfo } from '../../../boutique/[id]/ProduitClient'
 import {
   SEUIL_LIVRAISON_OFFERTE,
   FRAIS_LIVRAISON_FR,
@@ -9,7 +9,7 @@ import {
   FRAIS_LIVRAISON_INTL,
   PAYS_LIVRAISON,
 } from '@/lib/shipping'
-import { buildProduitSlug, extractIdFromSlug } from '@/lib/produitSlug'
+import { buildProduitPath, extractIdFromSlug } from '@/lib/produitSlug'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
@@ -97,7 +97,7 @@ async function getProduit(id: string): Promise<ProduitDoc | null> {
     }
     return produit
   } catch (err) {
-    console.error('[(public)/[slug]] getProduit error:', err)
+    console.error('[(public)/[type]/[marque]/[slug]] getProduit error:', err)
     return null
   }
 }
@@ -133,7 +133,7 @@ async function getChineuseInfo(produit: ProduitDoc): Promise<ChineuseInfo | null
       stockType: ch.stockType,
     }
   } catch (err) {
-    console.error('[(public)/[slug]] getChineuseInfo error:', err)
+    console.error('[(public)/[type]/[marque]/[slug]] getChineuseInfo error:', err)
     return null
   }
 }
@@ -143,20 +143,22 @@ function buildTitle(produit: Produit): string {
   return produit.marque ? `${produit.marque} — ${cleanedNom}` : cleanedNom
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+type Params = Promise<{ type: string; marque: string; slug: string }>
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params
   const id = extractIdFromSlug(slug)
   if (!id) return { title: 'Produit introuvable', robots: { index: false } }
   const produit = await getProduit(id)
   if (!produit) return { title: 'Produit introuvable', robots: { index: false } }
 
-  const canonicalSlug = buildProduitSlug(produit)
+  const canonicalPath = buildProduitPath(produit)
   const titleBase = buildTitle(produit)
   const baseDescription = produit.description?.trim() || `${titleBase} — pièce vintage chinée à Paris, sélectionnée par NOUVELLE RIVE.`
   const description = baseDescription.length > 155 ? `${baseDescription.slice(0, 152).trim()}…` : baseDescription
 
   const image = produit.imageUrls?.[0] || produit.photos?.face || `${BASE_URL}/icon-512.png`
-  const url = `${BASE_URL}/${canonicalSlug}`
+  const url = `${BASE_URL}/${canonicalPath}`
   const ogTitle = `${titleBase} — NOUVELLE RIVE`
 
   return {
@@ -182,21 +184,22 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function ProduitSlugPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export default async function ProduitPage({ params }: { params: Params }) {
+  const { type, marque, slug } = await params
   const id = extractIdFromSlug(slug)
   if (!id) notFound()
   const produit = await getProduit(id)
   if (!produit) notFound()
 
-  const canonicalSlug = buildProduitSlug(produit)
-  if (slug !== canonicalSlug) {
-    permanentRedirect(`/${canonicalSlug}`)
+  const canonicalPath = buildProduitPath(produit)
+  const requestedPath = `${type}/${marque}/${slug}`
+  if (requestedPath !== canonicalPath) {
+    permanentRedirect(`/${canonicalPath}`)
   }
 
   const chineuseInfo = await getChineuseInfo(produit)
   const titleBase = buildTitle(produit)
-  const url = `${BASE_URL}/${canonicalSlug}`
+  const url = `${BASE_URL}/${canonicalPath}`
   const image = produit.imageUrls?.[0] || produit.photos?.face
 
   const jsonLd: Record<string, unknown> = {
