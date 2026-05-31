@@ -109,6 +109,35 @@ function matchCritere(raw: any, c: Critere, chineuses: Map<string, { trigramme?:
   }
 }
 
+export async function getCoupsDeCoeurServer(limit: number = 50): Promise<ProduitInitial[]> {
+  try {
+    const snap = await adminDb
+      .collection('produits')
+      .where('likesCount', '>', 0)
+      .orderBy('likesCount', 'desc')
+      .limit(limit * 2)
+      .get()
+
+    return snap.docs
+      .map(d => ({ id: d.id, raw: d.data() as any }))
+      .filter(({ raw }) =>
+        raw.statut !== 'supprime' &&
+        raw.statut !== 'retour' &&
+        raw.recu !== false &&
+        raw.hidden !== true &&
+        raw.forceDisplay !== false &&
+        raw.vendu !== true &&
+        (raw.quantite ?? 1) > 0 &&
+        (raw.imageUrls?.[0] || raw.imageUrl || raw.photos?.face)
+      )
+      .slice(0, limit)
+      .map(({ id, raw }) => serialize(id, raw))
+  } catch (err) {
+    console.error('[produitsServer] getCoupsDeCoeurServer error:', err)
+    return []
+  }
+}
+
 export async function getInitialProduitsForPage(pageId: string, limit: number = 50): Promise<ProduitInitial[]> {
   try {
     const [cfgSnap, prodSnap, chSnap] = await Promise.all([
