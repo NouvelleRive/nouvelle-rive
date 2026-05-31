@@ -76,7 +76,7 @@ function AccordionSection({ title, children, defaultOpen = false }: { title: str
   return (
     <div style={{ borderBottom: '1px solid #000' }}>
       <button onClick={() => setIsOpen(!isOpen)} className="w-full flex justify-between items-center py-5 px-0 text-left transition hover:opacity-60">
-        <span className="uppercase" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '13px', letterSpacing: '0.05em', fontWeight: '400' }}>{title}</span>
+        <h2 className="uppercase m-0" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '13px', letterSpacing: '0.05em', fontWeight: '400' }}>{title}</h2>
         <span className="transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', fontSize: '20px', fontWeight: '300' }}>∨</span>
       </button>
       <div className="overflow-hidden transition-all duration-300" style={{ maxHeight: isOpen ? '500px' : '0', opacity: isOpen ? 1 : 0 }}>
@@ -184,14 +184,16 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
       <div className="w-full lg:w-1/2 lg:h-screen lg:overflow-y-auto">
         <div className="px-6 lg:px-12 py-8 lg:py-12">
           <div className="pb-8 mb-0">
-            {produit.marque && (
-              <h1 className="uppercase mb-1" style={{ fontSize: '48px', letterSpacing: '0.05em', fontWeight: '700', lineHeight: '1.1' }}>
-                {produit.marque}
-              </h1>
-            )}
-            <h2 className="uppercase mb-4" style={{ fontSize: '20px', letterSpacing: '0.08em', fontWeight: '300', color: '#000' }}>
-              {(lang === 'en' && produit.nomEn ? produit.nomEn : produit.nom).replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
-            </h2>
+            <h1 className="uppercase mb-4">
+              {produit.marque && (
+                <span className="block mb-1" style={{ fontSize: '48px', letterSpacing: '0.05em', fontWeight: '700', lineHeight: '1.1' }}>
+                  {produit.marque}
+                </span>
+              )}
+              <span className="block" style={{ fontSize: '20px', letterSpacing: '0.08em', fontWeight: '300', color: '#000' }}>
+                {(lang === 'en' && produit.nomEn ? produit.nomEn : produit.nom).replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
+              </span>
+            </h1>
             {produit.sku && (
               <p style={{ fontSize: '0.7rem', color: '#999', marginTop: '-12px', marginBottom: '16px', letterSpacing: '0.05em' }}>
                 {produit.sku}

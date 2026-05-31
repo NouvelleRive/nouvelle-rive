@@ -212,7 +212,7 @@ export default function NavbarPublic() {
             className="absolute top-4 left-4 md:top-6 md:left-6 z-10 flex items-center"
             style={{ fontFamily: fontHelvetica }}
           >
-            <h1
+            <div
               className="uppercase whitespace-nowrap"
               style={{
                 fontSize: 'clamp(16px, 3vw, 28px)',
@@ -223,7 +223,7 @@ export default function NavbarPublic() {
               }}
             >
               NOUVELLE RIVE
-            </h1>
+            </div>
           </div>
           {/* Boutons top-right blancs sur la vidéo */}
           <div
@@ -268,7 +268,7 @@ export default function NavbarPublic() {
         <div className={`px-4 md:px-6 ${showVideo ? '' : 'pt-4 md:pt-6 pb-3 md:pb-4'} flex flex-col gap-2`}>
           {!showVideo && (
             <div className="flex justify-between items-center gap-3">
-              <h1
+              <div
                 className="uppercase whitespace-nowrap"
                 style={{
                   fontSize: 'clamp(20px, 6vw, 72px)',
@@ -279,7 +279,7 @@ export default function NavbarPublic() {
                 }}
               >
                 NOUVELLE RIVE
-              </h1>
+              </div>
               <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
                 <Link
                   href="/panier"
