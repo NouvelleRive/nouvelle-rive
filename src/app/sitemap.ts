@@ -5,7 +5,6 @@ const BASE_URL = 'https://www.nouvellerive.eu'
 
 const STATIC_PAGES: { path: string; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency']; priority: number }[] = [
   { path: '/', changeFrequency: 'daily', priority: 1.0 },
-  { path: '/new-in', changeFrequency: 'daily', priority: 0.9 },
   { path: '/femme', changeFrequency: 'daily', priority: 0.8 },
   { path: '/homme', changeFrequency: 'daily', priority: 0.8 },
   { path: '/accessoires', changeFrequency: 'daily', priority: 0.8 },
