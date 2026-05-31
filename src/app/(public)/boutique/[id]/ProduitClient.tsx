@@ -452,7 +452,7 @@ export default function ProduitClient({
               </Link>
             )}
             {isLuxuryMarque(produit.marque) && produit.marque && (
-              <Link href={`/marque/${slugifyMarqueLink(produit.marque)}`} className="uppercase hover:underline" style={{ fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600 }}>
+              <Link href={`/designer/${slugifyMarqueLink(produit.marque)}`} className="uppercase hover:underline" style={{ fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600 }}>
                 {t(`Voir toutes les pièces ${produit.marque}`, `See all ${produit.marque} pieces`, lang)} →
               </Link>
             )}

@@ -58,7 +58,7 @@ async function getProduitsByMarque(slug: string) {
       )
       .map(({ id, raw }) => serializeProduit(id, raw))
   } catch (err) {
-    console.error('[(public)/marque/[slug]] getProduitsByMarque error:', err)
+    console.error('[(public)/designer/[slug]] getProduitsByMarque error:', err)
     return []
   }
 }
@@ -77,7 +77,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const brand = prettyBrand(slug)
   const title = `${brand} vintage — pièces chinées à Paris`
   const description = `Toutes les pièces vintage et seconde main ${brand} sélectionnées par NOUVELLE RIVE, boutique du Marais à Paris. Sacs, vêtements, accessoires ${brand} authentifiés.`
-  const url = `${BASE_URL}/marque/${slug}`
+  const url = `${BASE_URL}/designer/${slug}`
   return {
     title,
     description,

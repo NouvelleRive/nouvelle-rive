@@ -82,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 
   const brandEntries: MetadataRoute.Sitemap = Array.from(luxuryBrandSet).map(slug => ({
-    url: `${BASE_URL}/marque/${slug}`,
+    url: `${BASE_URL}/designer/${slug}`,
     lastModified: now,
     changeFrequency: 'daily' as const,
     priority: 0.85,
