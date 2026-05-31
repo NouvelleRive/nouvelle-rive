@@ -10,6 +10,22 @@ import Breadcrumbs from '@/components/Breadcrumbs'
 import { useLang, t, translateCategory, translateMaterial, translateColor } from '@/lib/i18n'
 import { getTypeSlug } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
+import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+
+const DIACRITICS_PROD = /[̀-ͯ]/g
+function slugifyMarqueLink(s: string): string {
+  return (s || '')
+    .normalize('NFD')
+    .replace(DIACRITICS_PROD, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+function isLuxuryMarque(marque?: string): boolean {
+  if (!marque) return false
+  const slug = slugifyMarqueLink(marque)
+  return LUXURY_BRANDS.some(b => slugifyMarqueLink(b) === slug)
+}
 
 export type Produit = {
   id: string
@@ -433,6 +449,11 @@ export default function ProduitClient({
             {currentTypeSlug && currentTypeSlug !== 'piece' && (
               <Link href={`/${currentTypeSlug}`} className="uppercase hover:underline" style={{ fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600 }}>
                 {t(`Voir tous les ${getTypeShortLabel(currentTypeSlug, 'fr').toLowerCase()}`, `See all ${getTypeShortLabel(currentTypeSlug, 'en').toLowerCase()}`, lang)} →
+              </Link>
+            )}
+            {isLuxuryMarque(produit.marque) && produit.marque && (
+              <Link href={`/marque/${slugifyMarqueLink(produit.marque)}`} className="uppercase hover:underline" style={{ fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600 }}>
+                {t(`Voir toutes les pièces ${produit.marque}`, `See all ${produit.marque} pieces`, lang)} →
               </Link>
             )}
           </div>

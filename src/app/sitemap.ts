@@ -1,6 +1,13 @@
 import type { MetadataRoute } from 'next'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { buildProduitPath, getTypeSlug } from '@/lib/produitSlug'
+import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+
+const DIACRITICS = /[̀-ͯ]/g
+function slugifyBrandStr(s: string): string {
+  return (s || '').normalize('NFD').replace(DIACRITICS, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+const LUXURY_SLUGS = new Set(LUXURY_BRANDS.map(slugifyBrandStr))
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
@@ -36,6 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let productEntries: MetadataRoute.Sitemap = []
   const typeSet = new Set<string>()
+  const luxuryBrandSet = new Set<string>()
   try {
     const snap = await adminDb.collection('produits').get()
     const available = snap.docs
@@ -51,6 +59,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     productEntries = available.map(p => {
       const type = getTypeSlug(p.categorie)
       if (type && type !== 'piece') typeSet.add(type)
+      if (p.marque) {
+        const bSlug = slugifyBrandStr(p.marque)
+        if (LUXURY_SLUGS.has(bSlug)) luxuryBrandSet.add(bSlug)
+      }
       return {
         url: `${BASE_URL}/${buildProduitPath(p)}`,
         lastModified: now,
@@ -69,5 +81,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.85,
   }))
 
-  return [...staticEntries, ...typeEntries, ...productEntries]
+  const brandEntries: MetadataRoute.Sitemap = Array.from(luxuryBrandSet).map(slug => ({
+    url: `${BASE_URL}/marque/${slug}`,
+    lastModified: now,
+    changeFrequency: 'daily' as const,
+    priority: 0.85,
+  }))
+
+  return [...staticEntries, ...typeEntries, ...brandEntries, ...productEntries]
 }
