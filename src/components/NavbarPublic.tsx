@@ -98,6 +98,7 @@ export default function NavbarPublic() {
     { href: '/les-iconiques', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONICS', lang) },
     { href: '/iconiques-upcy', label: t('NOS PIÈCES UPCY FAVORITES', 'FAVORITE UPCYCLED PIECES', lang) },
     { href: '/luxe#titre', label: t('LE LUXE', 'LUXURY', lang) },
+    { href: '/sac', label: t('SACS DESIGNER', 'DESIGNER BAGS', lang) },
     { href: '/coups-de-coeur#titre', label: t('NOS PIÈCES PRÉFÉRÉES', 'OUR FAVORITE GEMS', lang) },
     { href: '/nos-creatrices#titre', label: t('NOS CRÉATRICES/CURATEURICES', 'OUR DESIGNERS / CURATORS', lang) },
     { href: '/femme#titre', label: t('(PLUTÔT) FEMME', '(SO-CALLED) WOMEN', lang) },
