@@ -601,7 +601,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
             style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
           >
             <Link
-              href={`/${buildProduitSlug(produit)}`}
+              href={`/${buildProduitSlug(produit)}#titre`}
               className="block"
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >

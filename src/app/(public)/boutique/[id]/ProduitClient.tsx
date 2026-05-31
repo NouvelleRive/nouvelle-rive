@@ -186,7 +186,7 @@ export default function ProduitClient({
 
   return (
     <>
-    <div className="flex flex-col lg:flex-row bg-white" style={{ fontFamily: fontHelvetica, minHeight: 'calc(100vh - 80px)' }}>
+    <div id="titre" className="flex flex-col lg:flex-row bg-white" style={{ fontFamily: fontHelvetica, minHeight: 'calc(100vh - 80px)' }}>
       {/* LEFT: Photos */}
       <div className="w-full lg:w-1/2 lg:h-screen lg:overflow-y-auto lg:sticky lg:top-0" style={{ borderRight: '1px solid #000' }}>
         {allImages.length > 0 ? (

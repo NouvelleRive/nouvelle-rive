@@ -455,7 +455,7 @@ export default function CreateurPage() {
               {list.map((p) => (
                 <Link
                   key={p.id}
-                  href={'/' + buildProduitSlug(p)}
+                  href={'/' + buildProduitSlug(p) + '#titre'}
                   className="group flex flex-col h-full"
                   style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
                 >

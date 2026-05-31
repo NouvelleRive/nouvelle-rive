@@ -828,7 +828,7 @@ export default function IconiquesView({
                             const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
                             return (
                               <div key={p.id} className="relative flex flex-col" style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
-                                <Link href={`/${buildProduitSlug(p)}`} className="flex flex-col flex-grow group">
+                                <Link href={`/${buildProduitSlug(p)}#titre`} className="flex flex-col flex-grow group">
                                   <div className="overflow-hidden bg-white flex-grow">
                                     {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
                                   </div>
@@ -890,7 +890,7 @@ export default function IconiquesView({
                           const img = p.imageUrls?.[0] || p.imageUrl || p.photos?.face
                           return (
                             <div className="relative flex flex-col bg-white h-full">
-                              <Link href={`/${buildProduitSlug(p)}`} className="flex flex-col flex-grow group">
+                              <Link href={`/${buildProduitSlug(p)}#titre`} className="flex flex-col flex-grow group">
                                 <div className="aspect-square overflow-hidden bg-white">
                                   {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
                                 </div>
