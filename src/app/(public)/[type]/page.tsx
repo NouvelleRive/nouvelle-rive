@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { adminDb } from '@/lib/firebaseAdmin'
 import ProductGrid from '@/components/ProductGrid'
+import TypeH1Title from '@/components/TypeH1Title'
 import { getTypeSlug } from '@/lib/produitSlug'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
@@ -49,13 +50,59 @@ const TYPE_H1: Record<string, string> = {
   'porte-briquet': 'Porte-briquets vintage et upcyclés',
 }
 
+const TYPE_H1_EN: Record<string, string> = {
+  haut: 'Vintage & upcycled tops',
+  'veste-manteau': 'Vintage & upcycled jackets and coats',
+  robe: 'Vintage & upcycled dresses',
+  'jupe-short': 'Vintage & upcycled skirts and shorts',
+  jupe: 'Vintage & upcycled skirts',
+  short: 'Vintage & upcycled shorts',
+  pantalon: 'Vintage & upcycled pants',
+  pull: 'Vintage & upcycled sweaters',
+  'pull-gilet': 'Vintage & upcycled sweaters and cardigans',
+  'gilet-pull': 'Vintage & upcycled cardigans and sweaters',
+  chemise: 'Vintage & upcycled shirts',
+  ensemble: 'Vintage & upcycled sets',
+  combinaison: 'Vintage & upcycled jumpsuits',
+  sac: 'Vintage & upcycled bags',
+  portefeuille: 'Vintage & upcycled wallets',
+  chaussures: 'Vintage & upcycled shoes',
+  ceinture: 'Vintage & upcycled belts',
+  chapeau: 'Vintage & upcycled hats',
+  casquette: 'Vintage & upcycled caps',
+  echarpe: 'Vintage & upcycled scarves',
+  foulard: 'Vintage & upcycled silk scarves',
+  gants: 'Vintage & upcycled gloves',
+  lunettes: 'Vintage & upcycled glasses',
+  accessoires: 'Vintage & upcycled accessories',
+  vase: 'Vintage & upcycled vases',
+  bague: 'Vintage & upcycled rings',
+  collier: 'Vintage & upcycled necklaces',
+  bracelet: 'Vintage & upcycled bracelets',
+  'boucles-d-oreilles': 'Vintage & upcycled earrings',
+  broche: 'Vintage & upcycled brooches',
+  broches: 'Vintage & upcycled brooches',
+  charms: 'Vintage & upcycled charms',
+  earcuff: 'Vintage & upcycled ear cuffs',
+  piercing: 'Vintage & upcycled piercings',
+  'bijou-de-cravates-et-foulards': 'Vintage & upcycled tie and scarf jewelry',
+  'porte-briquet': 'Vintage & upcycled lighter holders',
+}
+
 function fallbackLabel(type: string): string {
   const pretty = type.replace(/-/g, ' ')
   return `${pretty.charAt(0).toUpperCase() + pretty.slice(1)} vintage et upcyclés`
 }
+function fallbackLabelEn(type: string): string {
+  const pretty = type.replace(/-/g, ' ')
+  return `Vintage & upcycled ${pretty}`
+}
 
 function labelForType(type: string): string {
   return TYPE_H1[type] || fallbackLabel(type)
+}
+function labelForTypeEn(type: string): string {
+  return TYPE_H1_EN[type] || fallbackLabelEn(type)
 }
 
 function titleForType(type: string): string {
@@ -131,17 +178,7 @@ export default async function TypePage({ params }: { params: Params }) {
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       <div className="px-6 py-20">
-        <h1
-          style={{
-            fontSize: 'clamp(40px, 8vw, 120px)',
-            fontWeight: 700,
-            letterSpacing: '-0.03em',
-            lineHeight: 0.9,
-            textTransform: 'uppercase',
-          }}
-        >
-          {labelForType(type)}
-        </h1>
+        <TypeH1Title fr={labelForType(type)} en={labelForTypeEn(type)} />
       </div>
       <div className="w-full border-t border-black" />
       <ProductGrid produits={produits} columns={3} />
