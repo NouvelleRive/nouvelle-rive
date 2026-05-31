@@ -510,7 +510,7 @@ async function compressImage(file: File): Promise<string> {
     const [nextAvailableSku, setNextAvailableSku] = useState<string>('')
 
     // État éditeur photo
-    const [photoToEdit, setPhotoToEdit] = useState<{ file: File; type: 'face' | 'dos' } | null>(null)
+    const [photoToEdit, setPhotoToEdit] = useState<{ file: File; type: 'face' | 'dos' | 'details'; alreadyProcessed?: boolean; detailIndex?: number; initialMode?: 'view' | 'crop' } | null>(null)
     const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null)
 
     // Compteur d'uploads en cours (pour le loader)
@@ -705,7 +705,7 @@ async function compressImage(file: File): Promise<string> {
           setUploadingCount(c => c - 1)
         }
       } else if (type === 'details') {
-        // Formatter en carré 1200x1200 avant d'ajouter
+        // Upload brut puis ouvrir PhotoEditor en mode crop pour cadrer le carré
         try {
           setUploadingCount(c => c + 1)
           const base64 = await compressImage(file)
@@ -713,23 +713,18 @@ async function compressImage(file: File): Promise<string> {
           const response = await fetch('/api/detourage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ base64, uploadOnly: true, skipDetourage: true })
+            body: JSON.stringify({ base64, uploadOnly: true })
           })
           const data = await response.json()
 
-          if (data.success && data.maskUrl) {
-            setFormData(prev => ({
-              ...prev,
-              existingPhotos: {
-                ...prev.existingPhotos,
-                details: [...(prev.existingPhotos.details || []), data.maskUrl]
-              }
-            }))
-          } else {
-            throw new Error(data.error || 'Erreur formatage')
+          if (!data.success) {
+            throw new Error(data.error || 'Erreur upload')
           }
+
+          setUploadedPhotoUrl(data.maskUrl)
+          setPhotoToEdit({ file, type: 'details', alreadyProcessed: true, initialMode: 'crop' })
         } catch (err) {
-          console.error('Erreur formatage détail:', err)
+          console.error('Erreur upload détail:', err)
           alert('Erreur : FA500')
         } finally {
           setUploadingCount(c => c - 1)
@@ -759,6 +754,15 @@ async function compressImage(file: File): Promise<string> {
             existingPhotos: { ...prev.existingPhotos, faceOnModel: processedUrl },
             deletedPhotos: { ...prev.deletedPhotos, faceOnModel: false }
           }))
+        } else if (photoToEdit.type === 'details') {
+          const idx = photoToEdit.detailIndex
+          setFormData(prev => {
+            const current = prev.existingPhotos.details || []
+            const next = typeof idx === 'number'
+              ? current.map((u, i) => (i === idx ? processedUrl : u))
+              : [...current, processedUrl]
+            return { ...prev, existingPhotos: { ...prev.existingPhotos, details: next } }
+          })
         }
       }
       setPhotoToEdit(null)
@@ -2088,9 +2092,22 @@ async function compressImage(file: File): Promise<string> {
                       !isDetailDeleted(i) && (
                         <div key={i} className="relative group w-14 h-14">
                           <img src={url} alt={`Détail ${i + 1}`} className="w-full h-full object-cover rounded border" />
-                          <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'detail', index: i })} className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X size={12} />
-                          </button>
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUploadedPhotoUrl(url)
+                                setPhotoToEdit({ file: new File([], 'existing'), type: 'details', alreadyProcessed: true, detailIndex: i, initialMode: 'crop' })
+                              }}
+                              className="p-1 bg-purple-500 text-white rounded-full hover:bg-purple-600"
+                              title="Recadrer"
+                            >
+                              <ImageIcon size={12} />
+                            </button>
+                            <button type="button" onClick={() => setDeletePhotoConfirm({ type: 'detail', index: i })} className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
+                              <X size={12} />
+                            </button>
+                          </div>
                         </div>
                       )
                     ))}
@@ -2602,6 +2619,7 @@ async function compressImage(file: File): Promise<string> {
             onConfirm={handlePhotoEditorConfirm}
             onCancel={handlePhotoEditorCancel}
             alreadyProcessed={(photoToEdit as any).alreadyProcessed}
+            initialMode={(photoToEdit as any).initialMode}
             categorie={formData.categorie}
           />
         )}

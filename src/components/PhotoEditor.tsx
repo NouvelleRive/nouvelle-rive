@@ -9,17 +9,18 @@
     onConfirm: (processedUrl: string) => void
     onCancel: () => void
     alreadyProcessed?: boolean
+    initialMode?: 'view' | 'crop'
     categorie?: string
   }
 
-  export default function PhotoEditor({ imageUrl, onConfirm, onCancel, alreadyProcessed = false, categorie }: PhotoEditorProps) {
+  export default function PhotoEditor({ imageUrl, onConfirm, onCancel, alreadyProcessed = false, initialMode, categorie }: PhotoEditorProps) {
     const [processing, setProcessing] = useState(false)
     const [processedUrl, setProcessedUrl] = useState<string | null>(alreadyProcessed ? imageUrl : null)
     const [rawUrl, setRawUrl] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [rotation, setRotation] = useState(0)
     const [fineRotation, setFineRotation] = useState(0)
-    const [mode, setMode] = useState<'view' | 'erase' | 'restore' | 'crop'>('view')
+    const [mode, setMode] = useState<'view' | 'erase' | 'restore' | 'crop'>(initialMode || 'view')
     const [brushSize, setBrushSize] = useState(30)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
     const [zoom, setZoom] = useState(1)
