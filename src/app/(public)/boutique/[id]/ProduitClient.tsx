@@ -9,6 +9,7 @@ import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import { useLang, t, translateCategory, translateMaterial, translateColor } from '@/lib/i18n'
 import { getTypeSlug } from '@/lib/produitSlug'
+import { getTypeShortLabel } from '@/lib/typeLabels'
 
 export type Produit = {
   id: string
@@ -48,6 +49,19 @@ export type ChineuseInfo = {
   nom?: string
   texteEcoCirculaire?: number
   stockType?: string
+  slug?: string
+  trigramme?: string
+  authUid?: string
+}
+
+export type SimilarProduit = {
+  id: string
+  nom: string
+  marque?: string
+  prix: number
+  imageUrl: string | null
+  vendu: boolean
+  path: string
 }
 
 const categoriesSansTaille = ['bijoux', "boucles d'oreilles", 'colliers', 'bracelets', 'bagues', 'lunettes', 'lunettes de soleil', 'montres', 'accessoires']
@@ -88,7 +102,17 @@ function AccordionSection({ title, children, defaultOpen = false }: { title: str
   )
 }
 
-export default function ProduitClient({ produit, chineuseInfo }: { produit: Produit; chineuseInfo: ChineuseInfo | null }) {
+export default function ProduitClient({
+  produit,
+  chineuseInfo,
+  similarProduits = [],
+  currentTypeSlug = '',
+}: {
+  produit: Produit
+  chineuseInfo: ChineuseInfo | null
+  similarProduits?: SimilarProduit[]
+  currentTypeSlug?: string
+}) {
   const router = useRouter()
   const lang = useLang()
   const { addItem, hasItem, hydrated } = useCart()
@@ -138,6 +162,7 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
   const catClean = catRaw.replace(/^[A-Z]{2,5}\s*[-–]\s*/, '').trim()
 
   return (
+    <>
     <div className="flex flex-col lg:flex-row bg-white" style={{ fontFamily: fontHelvetica, minHeight: 'calc(100vh - 80px)' }}>
       {/* LEFT: Photos */}
       <div className="w-full lg:w-1/2 lg:h-screen lg:overflow-y-auto lg:sticky lg:top-0" style={{ borderRight: '1px solid #000' }}>
@@ -367,5 +392,51 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
         </div>
       </div>
     </div>
+    {similarProduits.length > 0 && (
+      <section style={{ borderTop: '1px solid #000', fontFamily: fontHelvetica, background: '#fff' }}>
+        <div className="px-6 lg:px-12 py-12">
+          <h2 className="uppercase mb-8" style={{ fontSize: 'clamp(20px, 3vw, 32px)', letterSpacing: '0.05em', fontWeight: 700 }}>
+            {t('Vous aimerez aussi', 'You may also like', lang)}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+            {similarProduits.map((p) => (
+              <Link key={p.id} href={`/${p.path}`} className="group flex flex-col">
+                <div className="aspect-square overflow-hidden bg-white" style={{ border: '1px solid #000' }}>
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt={p.nom} className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${p.vendu ? 'opacity-50' : ''}`} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <p className="text-xs text-gray-400 uppercase">{t('Image à venir', 'Image coming soon', lang)}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="py-3 text-center">
+                  {p.marque && (
+                    <h3 className="uppercase mb-1 line-clamp-1" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em' }}>{p.marque}</h3>
+                  )}
+                  <p className="uppercase line-clamp-2 mb-1" style={{ fontSize: '11px', color: '#666' }}>
+                    {p.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
+                  </p>
+                  <p style={{ fontSize: '11px' }}>{p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-6 items-start sm:items-center justify-center">
+            {chineuseInfo?.slug && chineuseInfo?.nom && (
+              <Link href={`/nos-creatrices/${chineuseInfo.slug}`} className="uppercase hover:underline" style={{ fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600 }}>
+                {t(`Voir toutes les pièces de ${chineuseInfo.nom}`, `See all pieces by ${chineuseInfo.nom}`, lang)} →
+              </Link>
+            )}
+            {currentTypeSlug && currentTypeSlug !== 'piece' && (
+              <Link href={`/${currentTypeSlug}`} className="uppercase hover:underline" style={{ fontSize: '11px', letterSpacing: '0.08em', fontWeight: 600 }}>
+                {t(`Voir tous les ${getTypeShortLabel(currentTypeSlug, 'fr').toLowerCase()}`, `See all ${getTypeShortLabel(currentTypeSlug, 'en').toLowerCase()}`, lang)} →
+              </Link>
+            )}
+          </div>
+        </div>
+      </section>
+    )}
+    </>
   )
 }

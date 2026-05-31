@@ -141,10 +141,81 @@ async function getChineuseInfo(produit: ProduitDoc): Promise<ChineuseInfo | null
       nom: ch.nom,
       texteEcoCirculaire: ch.texteEcoCirculaire || 1,
       stockType: ch.stockType,
+      slug: ch.slug,
+      trigramme: ch.trigramme,
+      authUid: ch.authUid,
     }
   } catch (err) {
     console.error('[(public)/[type]/[marque]/[slug]] getChineuseInfo error:', err)
     return null
+  }
+}
+
+type SimilarProduit = {
+  id: string
+  nom: string
+  marque?: string
+  prix: number
+  imageUrl: string | null
+  vendu: boolean
+  path: string
+}
+
+function serializeSimilar(id: string, raw: any): SimilarProduit {
+  const imageUrl = raw.photos?.face || (Array.isArray(raw.imageUrls) ? raw.imageUrls[0] : null) || raw.imageUrl || null
+  return {
+    id,
+    nom: raw.nom || '',
+    marque: raw.marque,
+    prix: typeof raw.prix === 'number' ? raw.prix : 0,
+    imageUrl,
+    vendu: !!raw.vendu,
+    path: buildProduitPath({
+      id,
+      nom: raw.nom,
+      marque: raw.marque,
+      color: raw.color,
+      taille: raw.taille,
+      categorie: raw.categorie,
+    }),
+  }
+}
+
+async function getSimilarProduits(currentId: string, chineuse: ChineuseInfo | null, currentTypeSlug: string): Promise<SimilarProduit[]> {
+  try {
+    const snap = await adminDb.collection('produits').get()
+    const available = snap.docs
+      .map(d => ({ id: d.id, raw: d.data() as any }))
+      .filter(({ id, raw }) =>
+        id !== currentId &&
+        raw.statut !== 'supprime' &&
+        raw.statut !== 'retour' &&
+        raw.vendu !== true &&
+        (raw.quantite ?? 1) > 0 &&
+        raw.prix > 0 &&
+        (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)
+      )
+
+    const matchesChineuse = ({ raw }: { raw: any }) => {
+      if (!chineuse) return false
+      const catRaw = typeof raw.categorie === 'string' ? raw.categorie : (raw.categorie?.label || '')
+      const triMatch = catRaw.match(/^([A-Z]{2,10})\s*[-–]/)
+      if (chineuse.trigramme && triMatch && triMatch[1] === chineuse.trigramme) return true
+      if (chineuse.authUid && raw.chineurUid === chineuse.authUid) return true
+      return false
+    }
+
+    const sameChineuse = available.filter(matchesChineuse).slice(0, 8)
+    if (sameChineuse.length >= 8) return sameChineuse.map(({ id, raw }) => serializeSimilar(id, raw))
+
+    const sameType = available
+      .filter(p => !matchesChineuse(p) && getTypeSlug(p.raw.categorie) === currentTypeSlug)
+      .slice(0, 8 - sameChineuse.length)
+
+    return [...sameChineuse, ...sameType].map(({ id, raw }) => serializeSimilar(id, raw))
+  } catch (err) {
+    console.error('[(public)/[type]/[marque]/[slug]] getSimilarProduits error:', err)
+    return []
   }
 }
 
@@ -211,6 +282,8 @@ export default async function ProduitPage({ params }: { params: Params }) {
   const titleBase = buildTitle(produit)
   const url = `${BASE_URL}/${canonicalPath}`
   const image = produit.imageUrls?.[0] || produit.photos?.face
+  const currentTypeSlug = getTypeSlug(produit.categorie)
+  const similarProduits = await getSimilarProduits(produit.id, chineuseInfo, currentTypeSlug)
 
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org/',
@@ -269,7 +342,12 @@ export default async function ProduitPage({ params }: { params: Params }) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      <ProduitClient produit={produit} chineuseInfo={chineuseInfo} />
+      <ProduitClient
+        produit={produit}
+        chineuseInfo={chineuseInfo}
+        similarProduits={similarProduits}
+        currentTypeSlug={currentTypeSlug}
+      />
     </>
   )
 }
