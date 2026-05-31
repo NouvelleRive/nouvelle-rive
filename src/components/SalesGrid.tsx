@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { Link, Pencil, Trash2 } from 'lucide-react'
 
-import { Vente } from '@/components/SalesList'
+import { Vente, formatPrix } from '@/components/SalesList'
 
 interface SalesGridProps {
   ventes: Vente[]
@@ -159,10 +159,10 @@ export default function SalesGrid({
 
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#000' }}>{prix}€</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#000' }}>{formatPrix(prix)}€</span>
                   {prixBaisse && (
                     <span style={{ fontSize: 9, color: '#aaa', textDecoration: 'line-through' }}>
-                      {prixInitial}€
+                      {formatPrix(prixInitial)}€
                     </span>
                   )}
                 </div>
@@ -210,7 +210,7 @@ export default function SalesGrid({
               style={{ padding: '2px 4px' }}>
               <span style={{ fontSize: 8, letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase', color: '#555' }}>{marque}</span>
               <span style={{ fontSize: 10, fontWeight: 700 }}>
-                {prix}€{prixBaisse && <span style={{ fontSize: 8, color: '#aaa', textDecoration: 'line-through', marginLeft: 3 }}>{prixInitial}€</span>}
+                {formatPrix(prix)}€{prixBaisse && <span style={{ fontSize: 8, color: '#aaa', textDecoration: 'line-through', marginLeft: 3 }}>{formatPrix(prixInitial)}€</span>}
               </span>
             </div>
           </div>

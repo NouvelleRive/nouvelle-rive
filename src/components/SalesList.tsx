@@ -9,6 +9,9 @@ import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square,
 import SalesFilters from '@/components/SalesFilters'
 import SalesGrid from '@/components/SalesGrid'
 
+export const formatPrix = (n: number | null | undefined) =>
+  Math.round(n || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 }).replace(/[  ]/g, ' ')
+
 // =====================
 // TYPES
 // =====================
@@ -219,12 +222,12 @@ export default function SalesList({
           
           <div className="bg-white border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
             <span className="text-xs text-blue-600">CA</span>
-            <span className="font-bold text-blue-600">{stats.ca.toFixed(2)}€</span>
+            <span className="font-bold text-blue-600">{formatPrix(stats.ca)}€</span>
           </div>
           {isDeposante && (
             <div className="bg-white border border-[#22209C]/30 rounded-lg px-3 py-2 flex items-center gap-2">
               <span className="text-xs text-[#22209C]">Ma cagnotte</span>
-              <span className="font-bold text-[#22209C]">{(stats.ca * 0.6).toFixed(2)}€</span>
+              <span className="font-bold text-[#22209C]">{formatPrix(stats.ca * 0.6)}€</span>
             </div>
           )}
         </div>
@@ -346,8 +349,8 @@ export default function SalesList({
                         </button>
                       )}
                       {vente.trigramme && <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded flex-shrink-0">{vente.trigramme}</span>}
-                      <p className="font-bold text-green-600 text-[14px] ml-auto whitespace-nowrap">{prix}€</p>
-                      {vente.prixInitial && vente.prixInitial !== prix && <p className="text-[10px] text-gray-400 whitespace-nowrap">({vente.prixInitial}€)</p>}
+                      <p className="font-bold text-green-600 text-[14px] ml-auto whitespace-nowrap">{formatPrix(prix)}€</p>
+                      {vente.prixInitial && vente.prixInitial !== prix && <p className="text-[10px] text-gray-400 whitespace-nowrap">({formatPrix(vente.prixInitial)}€)</p>}
                       {isAdmin && (
                         <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
                           {onAttribuer && <button onClick={() => onAttribuer(vente)} className={`p-1 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={13} /></button>}
@@ -393,8 +396,8 @@ export default function SalesList({
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-green-600 text-lg">{prix}€</p>
-                      {vente.prixInitial && vente.prixInitial !== prix && <p className="text-xs text-gray-400">Initial: {vente.prixInitial}€</p>}
+                      <p className="font-bold text-green-600 text-lg">{formatPrix(prix)}€</p>
+                      {vente.prixInitial && vente.prixInitial !== prix && <p className="text-xs text-gray-400">Initial: {formatPrix(vente.prixInitial)}€</p>}
                     </div>
                     {isAdmin && (
                       <div className="flex items-center gap-1 flex-shrink-0">
