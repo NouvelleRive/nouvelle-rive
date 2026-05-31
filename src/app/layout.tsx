@@ -7,11 +7,11 @@ import RegisterSW from "@/components/RegisterSW";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.nouvellerive.eu"),
   title: {
-    default: "NOUVELLE RIVE — Vintage et upcyclé chinés à Paris",
+    default: "NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais",
     template: "%s | NOUVELLE RIVE",
   },
   description:
-    "Boutique vintage et upcyclée au cœur du Marais à Paris. Pièces uniques chinées par des créatrices indépendantes — vintage de luxe, upcycling, créateurs. 8 rue des Ecouffes, 75004 Paris.",
+    "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées — vintage de luxe, upcycling, créatrices. 8 rue des Ecouffes, 75004 Paris.",
   keywords: [
     "vintage",
     "upcycling",
@@ -40,9 +40,9 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     siteName: "NOUVELLE RIVE",
     url: "https://www.nouvellerive.eu",
-    title: "NOUVELLE RIVE — Vintage et upcyclé chinés à Paris",
+    title: "NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais",
     description:
-      "Boutique vintage et upcyclée au cœur du Marais à Paris. Pièces uniques chinées par des créatrices indépendantes.",
+      "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées.",
     images: [
       {
         url: "/facade%20paysage.jpg",
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "NOUVELLE RIVE — Vintage et upcyclé chinés à Paris",
+    title: "NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais",
     description:
-      "Boutique vintage et upcyclée au cœur du Marais à Paris.",
+      "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Vintage, upcycling, créatrices indépendantes.",
     images: ["/facade%20paysage.jpg"],
   },
   alternates: {
