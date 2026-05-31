@@ -8,19 +8,62 @@ const BASE_URL = 'https://www.nouvellerive.eu'
 
 export const revalidate = 300
 
-function capitalize(s: string): string {
-  if (!s) return ''
-  return s.charAt(0).toUpperCase() + s.slice(1)
+// Libellés humains par type (FR correct, pluriel + accords masculin/féminin).
+// Si un type n'est pas listé, on tombe sur un fallback générique masculin.
+const TYPE_H1: Record<string, string> = {
+  haut: 'Hauts vintage et upcyclés',
+  'veste-manteau': 'Vestes & manteaux vintage et upcyclés',
+  robe: 'Robes vintage et upcyclées',
+  'jupe-short': 'Jupes & shorts vintage et upcyclés',
+  jupe: 'Jupes vintage et upcyclées',
+  short: 'Shorts vintage et upcyclés',
+  pantalon: 'Pantalons vintage et upcyclés',
+  pull: 'Pulls vintage et upcyclés',
+  'pull-gilet': 'Pulls & gilets vintage et upcyclés',
+  'gilet-pull': 'Gilets & pulls vintage et upcyclés',
+  chemise: 'Chemises vintage et upcyclées',
+  ensemble: 'Ensembles vintage et upcyclés',
+  combinaison: 'Combinaisons vintage et upcyclées',
+  sac: 'Sacs vintage et upcyclés',
+  portefeuille: 'Portefeuilles vintage et upcyclés',
+  chaussures: 'Chaussures vintage et upcyclées',
+  ceinture: 'Ceintures vintage et upcyclées',
+  chapeau: 'Chapeaux vintage et upcyclés',
+  casquette: 'Casquettes vintage et upcyclées',
+  echarpe: 'Écharpes vintage et upcyclées',
+  foulard: 'Foulards vintage et upcyclés',
+  gants: 'Gants vintage et upcyclés',
+  lunettes: 'Lunettes vintage et upcyclées',
+  accessoires: 'Accessoires vintage et upcyclés',
+  vase: 'Vases vintage et upcyclés',
+  bague: 'Bagues vintage et upcyclées',
+  collier: 'Colliers vintage et upcyclés',
+  bracelet: 'Bracelets vintage et upcyclés',
+  'boucles-d-oreilles': "Boucles d'oreilles vintage et upcyclées",
+  broche: 'Broches vintage et upcyclées',
+  broches: 'Broches vintage et upcyclées',
+  charms: 'Charms vintage et upcyclés',
+  earcuff: 'Earcuffs vintage et upcyclés',
+  piercing: 'Piercings vintage et upcyclés',
+  'bijou-de-cravates-et-foulards': 'Bijoux de cravate & foulard vintage et upcyclés',
+  'porte-briquet': 'Porte-briquets vintage et upcyclés',
+}
+
+function fallbackLabel(type: string): string {
+  const pretty = type.replace(/-/g, ' ')
+  return `${pretty.charAt(0).toUpperCase() + pretty.slice(1)} vintage et upcyclés`
+}
+
+function labelForType(type: string): string {
+  return TYPE_H1[type] || fallbackLabel(type)
 }
 
 function titleForType(type: string): string {
-  const pretty = capitalize(type.replace(/-/g, ' '))
-  return `Vintage ${pretty} — pièces chinées à Paris`
+  return `${labelForType(type)} chinés à Paris`
 }
 
 function descriptionForType(type: string): string {
-  const pretty = type.replace(/-/g, ' ')
-  return `Toutes les pièces vintage et upcyclées catégorie ${pretty} chez NOUVELLE RIVE. Sélection chinée dans notre boutique du Marais à Paris.`
+  return `${labelForType(type)} chez NOUVELLE RIVE, boutique du Marais à Paris. Sélection chinée par des créatrices indépendantes, pièces uniques.`
 }
 
 function serializeProduit(id: string, raw: any) {
@@ -85,8 +128,6 @@ export default async function TypePage({ params }: { params: Params }) {
   const produits = await getProduitsByType(type)
   if (produits.length === 0) notFound()
 
-  const pretty = capitalize(type.replace(/-/g, ' '))
-
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       <div className="px-6 py-20">
@@ -99,7 +140,7 @@ export default async function TypePage({ params }: { params: Params }) {
             textTransform: 'uppercase',
           }}
         >
-          Vintage {pretty}
+          {labelForType(type)}
         </h1>
       </div>
       <div className="w-full border-t border-black" />
