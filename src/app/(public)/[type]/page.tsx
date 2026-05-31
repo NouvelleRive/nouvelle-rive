@@ -23,20 +23,41 @@ function descriptionForType(type: string): string {
   return `Toutes les pièces vintage et upcyclées catégorie ${pretty} chez NOUVELLE RIVE. Sélection chinée dans notre boutique du Marais à Paris.`
 }
 
+function serializeProduit(id: string, raw: any) {
+  return {
+    id,
+    nom: raw.nom || '',
+    nomEn: raw.nomEn,
+    prix: typeof raw.prix === 'number' ? raw.prix : 0,
+    imageUrls: Array.isArray(raw.imageUrls) ? raw.imageUrls : (raw.imageUrl ? [raw.imageUrl] : []),
+    marque: raw.marque,
+    taille: raw.taille,
+    color: raw.color,
+    material: raw.material,
+    modele: raw.modele,
+    motif: raw.motif,
+    categorie: typeof raw.categorie === 'string' ? raw.categorie : (raw.categorie?.label || ''),
+    vendu: !!raw.vendu,
+    promotion: !!raw.promotion,
+    sku: raw.sku,
+  }
+}
+
 async function getProduitsByType(type: string) {
   try {
     const snap = await adminDb.collection('produits').get()
     return snap.docs
-      .map(d => ({ id: d.id, ...d.data() } as any))
-      .filter(p =>
-        p.statut !== 'supprime' &&
-        p.statut !== 'retour' &&
-        p.vendu !== true &&
-        (p.quantite ?? 1) > 0 &&
-        p.prix > 0 &&
-        (p.photos?.face || p.imageUrls?.[0] || p.imageUrl) &&
-        getTypeSlug(p.categorie) === type
+      .map(d => ({ id: d.id, raw: d.data() as any }))
+      .filter(({ raw }) =>
+        raw.statut !== 'supprime' &&
+        raw.statut !== 'retour' &&
+        raw.vendu !== true &&
+        (raw.quantite ?? 1) > 0 &&
+        raw.prix > 0 &&
+        (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl) &&
+        getTypeSlug(raw.categorie) === type
       )
+      .map(({ id, raw }) => serializeProduit(id, raw))
   } catch (err) {
     console.error('[(public)/[type]] getProduitsByType error:', err)
     return []
@@ -82,7 +103,7 @@ export default async function TypePage({ params }: { params: Params }) {
         </h1>
       </div>
       <div className="w-full border-t border-black" />
-      <ProductGrid produits={produits as any} columns={3} />
+      <ProductGrid produits={produits} columns={3} />
     </div>
   )
 }
