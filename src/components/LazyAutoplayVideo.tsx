@@ -7,6 +7,15 @@ type Props = {
   className?: string
   style?: CSSProperties
   controls?: boolean
+  poster?: string
+}
+
+function derivePoster(src: string): string | undefined {
+  if (!src) return undefined
+  if (src.includes('cloudinary.com') && /\.mp4(\?|$)/i.test(src)) {
+    return src.replace(/\.mp4(\?|$)/i, '.jpg$1')
+  }
+  return undefined
 }
 
 /**
@@ -16,9 +25,10 @@ type Props = {
  * - Si autoplay échoue (mode éco iOS, navigateur strict) : un overlay tap
  *   apparaît, et au clic on lance .play() manuellement.
  */
-export default function LazyAutoplayVideo({ src, className, style, controls = false }: Props) {
+export default function LazyAutoplayVideo({ src, className, style, controls = false, poster }: Props) {
   const ref = useRef<HTMLVideoElement | null>(null)
   const [needsTap, setNeedsTap] = useState(false)
+  const posterUrl = poster ?? derivePoster(src)
 
   const tryPlay = () => {
     const el = ref.current
@@ -41,7 +51,7 @@ export default function LazyAutoplayVideo({ src, className, style, controls = fa
         if (e.isIntersecting) tryPlay()
         else el.pause()
       })
-    }, { threshold: 0.01, rootMargin: '600px' })
+    }, { threshold: 0.01, rootMargin: '300px' })
 
     obs.observe(el)
     return () => obs.disconnect()
@@ -59,6 +69,7 @@ export default function LazyAutoplayVideo({ src, className, style, controls = fa
       <video
         ref={ref}
         src={src}
+        poster={posterUrl}
         className="w-full h-full object-cover"
         autoPlay
         muted
@@ -66,7 +77,7 @@ export default function LazyAutoplayVideo({ src, className, style, controls = fa
         loop
         playsInline
         controls={controls}
-        preload="auto"
+        preload="metadata"
         onCanPlay={tryPlay}
         onPlay={() => setNeedsTap(false)}
       />

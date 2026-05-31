@@ -600,12 +600,16 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                   <img
                     src={getCloudinaryUrl(produit.imageUrls[0])}
                     alt={produit.nom}
+                    loading="lazy"
+                    decoding="async"
                     className={`w-full h-full object-cover transition duration-500 ${produit.vendu ? 'opacity-50' : ''} ${produit.imageUrls[1] ? 'group-hover:opacity-0' : 'group-hover:scale-105'}`}
                   />
                   {produit.imageUrls[1] && (
                     <img
                       src={getCloudinaryUrl(produit.imageUrls[1])}
                       alt={`${produit.nom} 2`}
+                      loading="lazy"
+                      decoding="async"
                       className={`absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition duration-500 ${produit.vendu ? 'group-hover:opacity-50' : ''}`}
                     />
                   )}
