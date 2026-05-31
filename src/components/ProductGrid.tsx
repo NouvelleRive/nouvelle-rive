@@ -494,7 +494,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               onBlur={() => {
                 if (searchInput.trim() !== searchQuery) setSearchQuery(searchInput.trim())
               }}
-              placeholder={t('Rechercher (Entrée pour valider)', 'Search (press Enter)', lang)}
+              placeholder={t('Rechercher', 'Search', lang)}
               className="w-full px-4 py-2 pl-9 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:border-black focus:bg-white transition-colors"
               style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: '16px' }}
             />
