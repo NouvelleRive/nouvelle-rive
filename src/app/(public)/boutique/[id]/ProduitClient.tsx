@@ -144,8 +144,8 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
             <div className="flex flex-col">
               {/* 1ère photo en premier */}
               {allImages[0] && (
-                <div className="w-full" style={{ borderBottom: '1px solid #000' }}>
-                  <img src={allImages[0]} alt={`${produit.nom} - Photo 1`} className="w-full h-auto object-cover" />
+                <div className="w-full aspect-square overflow-hidden bg-white" style={{ borderBottom: '1px solid #000' }}>
+                  <img src={allImages[0]} alt={`${produit.nom} - Photo 1`} className="w-full h-full object-cover" />
                 </div>
               )}
               {/* Puis toutes les vidéos (mp4) */}
@@ -158,8 +158,8 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
                 ))}
               {/* Puis le reste des photos */}
               {allImages.slice(1).map((url, index) => (
-                <div key={`img-${index + 1}`} className="w-full" style={{ borderBottom: '1px solid #000' }}>
-                  <img src={url} alt={`${produit.nom} - Photo ${index + 2}`} className="w-full h-auto object-cover" />
+                <div key={`img-${index + 1}`} className="w-full aspect-square overflow-hidden bg-white" style={{ borderBottom: '1px solid #000' }}>
+                  <img src={url} alt={`${produit.nom} - Photo ${index + 2}`} className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
