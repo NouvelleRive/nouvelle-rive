@@ -5,9 +5,10 @@ import { useFilteredProducts } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
 import CountdownPromo from '@/components/CountdownPromo'
 import { useLang, t } from '@/lib/i18n'
+import type { ProduitInitial } from '@/lib/produitsServer'
 
-export default function BoutiqueListing() {
-  const { produits, loading, loadingMore } = useFilteredProducts('new-in')
+export default function BoutiqueListing({ initialProduits = [] }: { initialProduits?: ProduitInitial[] }) {
+  const { produits, loadingMore } = useFilteredProducts('new-in')
   const [nombreAchats, setNombreAchats] = useState(0)
   const lang = useLang()
 
@@ -16,17 +17,13 @@ export default function BoutiqueListing() {
     setNombreAchats(achats ? parseInt(achats) : 0)
   }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">{t('Chargement...', 'Loading...', lang)}</p>
-      </div>
-    )
-  }
+  // Affiche les produits pré-rendus côté serveur tant que le client n'a pas fini son fetch.
+  // Dès que useFilteredProducts a des résultats, on bascule sur la liste complète.
+  const displayProduits = (produits.length > 0 ? produits : initialProduits) as any
 
   return (
     <div className="min-h-screen bg-white">
-      <ProductGrid produits={produits} columns={3} />
+      <ProductGrid produits={displayProduits} columns={3} />
 
       {loadingMore && (
         <div className="py-8 text-center">

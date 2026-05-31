@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import BoutiqueListing from '@/components/BoutiqueListing'
+import { getRecentProduitsServer } from '@/lib/produitsServer'
+
+export const revalidate = 60
 
 export const metadata: Metadata = {
   title: 'Vintage et upcyclé chinés à Paris',
@@ -23,6 +26,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function HomePage() {
-  return <BoutiqueListing />
+export default async function HomePage() {
+  const initialProduits = await getRecentProduitsServer(50)
+  return <BoutiqueListing initialProduits={initialProduits} />
 }
