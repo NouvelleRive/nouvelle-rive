@@ -64,13 +64,18 @@ export function buildProduitPath(p: ProduitForSlug): string {
 // Alias rétro-compat — retourne désormais le chemin complet (avec slashs).
 export const buildProduitSlug = buildProduitPath
 
-// Extrait le doc id Firestore depuis le dernier segment (ex: "sac-chanel-bandouliere-AbCdEfGh1234567890Ij").
-// Firestore auto-ID = 20 chars alphanumériques (pas de hyphen).
+// Extrait le doc id Firestore depuis le dernier segment.
+// Deux formats coexistent en base : auto-ID 20 chars (ex: AbCdEfGhIjKlMnOpQrSt)
+// OU SKU comme doc id (ex: PRI171, MAK22) pour ~23% des produits.
 export function extractIdFromSlug(slug: string): string | null {
   const segments = slug.split('-')
   const last = segments[segments.length - 1]
   if (!last) return null
+  // Firestore auto-ID : 20 chars alphanumériques (case-sensitive)
   if (/^[A-Za-z0-9]{20}$/.test(last)) return last
+  // SKU-format id : 2-10 lettres + 1-5 chiffres (PRI171, MAK22, IP123…)
+  if (/^[A-Za-z]{2,10}\d{1,5}$/.test(last)) return last
+  // Fallback générique
   if (/^[A-Za-z0-9]{15,30}$/.test(last)) return last
   return null
 }

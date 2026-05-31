@@ -65,10 +65,19 @@ export const revalidate = 60
 
 type ProduitDoc = Produit & { chineurUid?: string; chineur?: string }
 
+async function fetchDoc(id: string) {
+  const snap = await adminDb.collection('produits').doc(id).get()
+  return snap.exists ? snap : null
+}
+
 async function getProduit(id: string): Promise<ProduitDoc | null> {
   try {
-    const snap = await adminDb.collection('produits').doc(id).get()
-    if (!snap.exists) return null
+    let snap = await fetchDoc(id)
+    // SKU-format ids are uppercase in Firestore — retry uppercase if direct lookup miss
+    if (!snap && /^[A-Za-z]{2,10}\d{1,5}$/.test(id) && id !== id.toUpperCase()) {
+      snap = await fetchDoc(id.toUpperCase())
+    }
+    if (!snap) return null
     const raw = snap.data() as any
     const produit: ProduitDoc = {
       id: snap.id,
