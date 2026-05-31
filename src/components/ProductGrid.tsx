@@ -482,7 +482,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               pas à chaque frappe — sinon laggy sur 3500 produits. */}
           <div className="relative flex-1 max-w-md mx-auto w-full">
             <input
-              type="search"
+              type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => {
