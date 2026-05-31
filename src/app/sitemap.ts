@@ -15,7 +15,6 @@ const STATIC_PAGES: { path: string; changeFrequency: MetadataRoute.Sitemap[numbe
   { path: '/coups-de-coeur', changeFrequency: 'weekly', priority: 0.7 },
   { path: '/soiree', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/ete', changeFrequency: 'weekly', priority: 0.6 },
-  { path: '/hiver', changeFrequency: 'weekly', priority: 0.6 },
   { path: '/nous-rencontrer', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/manifesto', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/nos-creatrices', changeFrequency: 'monthly', priority: 0.6 },
