@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
 import { useCart } from '@/lib/cart'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import { useLang, t, translateCategory, translateMaterial, translateColor } from '@/lib/i18n'
+import { getTypeSlug } from '@/lib/produitSlug'
 
 export type Produit = {
   id: string
@@ -184,6 +186,11 @@ export default function ProduitClient({ produit, chineuseInfo }: { produit: Prod
       <div className="w-full lg:w-1/2 lg:h-screen lg:overflow-y-auto">
         <div className="px-6 lg:px-12 py-8 lg:py-12">
           <div className="pb-8 mb-0">
+            <Breadcrumbs
+              typeSlug={getTypeSlug(produit.categorie)}
+              marque={produit.marque}
+              nom={(lang === 'en' && produit.nomEn ? produit.nomEn : produit.nom).replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
+            />
             <h1 className="uppercase mb-4">
               {produit.marque && (
                 <span className="block mb-1" style={{ fontSize: '48px', letterSpacing: '0.05em', fontWeight: '700', lineHeight: '1.1' }}>

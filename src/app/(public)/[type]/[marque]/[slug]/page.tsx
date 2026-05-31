@@ -9,7 +9,8 @@ import {
   FRAIS_LIVRAISON_INTL,
   PAYS_LIVRAISON,
 } from '@/lib/shipping'
-import { buildProduitPath, extractIdFromSlug } from '@/lib/produitSlug'
+import { buildProduitPath, extractIdFromSlug, getTypeSlug } from '@/lib/produitSlug'
+import { getTypeShortLabel } from '@/lib/typeLabels'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
@@ -232,9 +233,42 @@ export default async function ProduitPage({ params }: { params: Params }) {
   if (image) jsonLd.image = [image]
   if (produit.marque) jsonLd.brand = { '@type': 'Brand', name: produit.marque }
 
+  const typeSlug = getTypeSlug(produit.categorie)
+  const cleanedNom = produit.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '').trim()
+  const breadcrumbItems: Array<Record<string, unknown>> = [
+    { '@type': 'ListItem', position: 1, name: 'Accueil', item: BASE_URL + '/' },
+  ]
+  if (typeSlug && typeSlug !== 'piece') {
+    breadcrumbItems.push({
+      '@type': 'ListItem',
+      position: 2,
+      name: getTypeShortLabel(typeSlug, 'fr'),
+      item: `${BASE_URL}/${typeSlug}`,
+    })
+  }
+  if (produit.marque) {
+    breadcrumbItems.push({
+      '@type': 'ListItem',
+      position: breadcrumbItems.length + 1,
+      name: produit.marque,
+    })
+  }
+  breadcrumbItems.push({
+    '@type': 'ListItem',
+    position: breadcrumbItems.length + 1,
+    name: cleanedNom,
+    item: url,
+  })
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: breadcrumbItems,
+  }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <ProduitClient produit={produit} chineuseInfo={chineuseInfo} />
     </>
   )
