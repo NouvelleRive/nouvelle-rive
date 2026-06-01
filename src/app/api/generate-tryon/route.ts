@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         product_image: imageUrl,
         resolution: '1k',
         prompt: prompt,
-        aspect_ratio: '3:4',
+        aspect_ratio: '1:1',
 ...(seed ? { seed } : {}),
       }
     }),
