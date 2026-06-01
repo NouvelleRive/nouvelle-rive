@@ -319,17 +319,10 @@ export default async function ProduitPage({ params }: { params: Params }) {
       item: `${BASE_URL}/${typeSlug}`,
     })
   }
-  if (produit.marque) {
-    breadcrumbItems.push({
-      '@type': 'ListItem',
-      position: breadcrumbItems.length + 1,
-      name: produit.marque,
-    })
-  }
   breadcrumbItems.push({
     '@type': 'ListItem',
     position: breadcrumbItems.length + 1,
-    name: cleanedNom,
+    name: produit.marque ? `${produit.marque} — ${cleanedNom}` : cleanedNom,
     item: url,
   })
   const breadcrumbJsonLd = {
