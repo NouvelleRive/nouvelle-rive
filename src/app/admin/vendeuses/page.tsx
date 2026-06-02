@@ -701,10 +701,9 @@ dailyCA={dailyCA}
                             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: v.couleur }} />
                             <span className="text-sm font-bold">{v.prenom.toUpperCase()}</span>
                           </div>
-                          <span className="text-xs text-gray-400">{prevues}h prévues</span>
                         </div>
                         <div className="flex items-center justify-between text-xs pl-5">
-                          <span>Réel : {Math.round(reelles)}h</span>
+                          <span>Réel : {Math.round(reelles)}h <span className="text-gray-400">/ {prevues}h prévues</span></span>
                           {cp > 0 && <span className="font-bold">CP : {Math.round(cp)}h</span>}
                         </div>
                         {stats && (
