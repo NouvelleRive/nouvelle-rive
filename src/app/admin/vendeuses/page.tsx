@@ -7,7 +7,7 @@
     collection, getDocs, addDoc, updateDoc, deleteDoc, doc,
     serverTimestamp, getDoc, setDoc, Timestamp, onSnapshot
   } from 'firebase/firestore'
-  import { db } from '@/lib/firebaseConfig'
+  import { db, auth } from '@/lib/firebaseConfig'
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
   import PlanningCalendar from '@/components/PlanningCalendar'
   import PointagesSection from '@/components/admin/PointagesSection'
@@ -687,7 +687,35 @@ dailyCA={dailyCA}
           {activeVendeuses.length > 0 && (
             <div className="mt-6 lg:mt-0">
               <div className="bg-white rounded-xl border p-4 sticky top-20">
-                <h3 className="text-sm font-bosld text-[#22209C] mb-3">Récap — {monthLabel}</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bosld text-[#22209C]">Récap — {monthLabel}</h3>
+                  <button
+                    onClick={async () => {
+                      if (!auth.currentUser) { alert('Connecte-toi en admin'); return }
+                      const fromDate = prompt('Date de début (YYYY-MM-DD)', `${monthKey}-01`)
+                      if (!fromDate) return
+                      const toDate = prompt('Date de fin (YYYY-MM-DD)', `${monthKey}-05`)
+                      if (!toDate) return
+                      const token = await auth.currentUser.getIdToken()
+                      const res = await fetch('/api/pointage/backfill', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ mois: monthKey, fromDate, toDate }),
+                      })
+                      const data = await res.json()
+                      if (data.success) {
+                        alert(`${data.created} pointages créés, ${data.skipped} ignorés (déjà présents).`)
+                        window.location.reload()
+                      } else {
+                        alert(data.error || 'Erreur')
+                      }
+                    }}
+                    className="text-[10px] text-gray-500 underline hover:text-[#22209C]"
+                    title="Crée des pointages basés sur le planning pour les dates choisies"
+                  >
+                    Importer depuis planning
+                  </button>
+                </div>
                 <div className="space-y-3">
                   {activeVendeuses.map(v => {
                     const prevues = heuresSupposees(v)
