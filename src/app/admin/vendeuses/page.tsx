@@ -293,7 +293,8 @@
       return total
     }
 
-    // Heures réelles (depuis les pointages : somme de depart - arrivee)
+    // Heures réelles : pointages à partir du 06/05/2026, planning avant
+    const POINTAGE_START = '2026-05-06'
     const heuresReelles = (vendeuseId: string) => {
       let total = 0
       for (const p of pointages) {
@@ -301,6 +302,12 @@
         if (!p.arrivee || !p.depart) continue
         total += (new Date(p.depart).getTime() - new Date(p.arrivee).getTime()) / 3600000
       }
+      Object.entries(planningSlots).forEach(([key, vid]) => {
+        if (vid !== vendeuseId) return
+        const [dateStr, cr] = key.split('_')
+        if (dateStr >= POINTAGE_START) return
+        total += heuresCreneau(cr)
+      })
       return total
     }
 
