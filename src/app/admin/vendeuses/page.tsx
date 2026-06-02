@@ -293,15 +293,14 @@
       return total
     }
 
-    // Heures réelles (depuis le planning)
+    // Heures réelles (depuis les pointages : somme de depart - arrivee)
     const heuresReelles = (vendeuseId: string) => {
       let total = 0
-      Object.entries(planningSlots).forEach(([key, vid]) => {
-        if (vid === vendeuseId) {
-          const cr = key.split('_')[1]
-          total += heuresCreneau(cr)
-        }
-      })
+      for (const p of pointages) {
+        if (p.vendeuseId !== vendeuseId) continue
+        if (!p.arrivee || !p.depart) continue
+        total += (new Date(p.depart).getTime() - new Date(p.arrivee).getTime()) / 3600000
+      }
       return total
     }
 
