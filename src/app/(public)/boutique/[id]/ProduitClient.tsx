@@ -136,11 +136,15 @@ export default function ProduitClient({
   const [justAdded, setJustAdded] = useState(false)
   const fontHelvetica = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
-  // Au montage de la page produit : force scrollY=0 pour que la navbar soit
-  // visible en haut (sinon Next.js peut conserver la position de la page
-  // précédente, ce qui cache la navbar).
+  // Au montage de la page produit : scroll directement sur le produit (#titre),
+  // pas sur la navbar en haut de page.
   useEffect(() => {
-    window.scrollTo(0, 0)
+    const el = document.getElementById('titre')
+    if (el) {
+      el.scrollIntoView({ block: 'start' })
+    } else {
+      window.scrollTo(0, 0)
+    }
   }, [produit.id])
 
   const afficherTaille = (categorie: any) => {
