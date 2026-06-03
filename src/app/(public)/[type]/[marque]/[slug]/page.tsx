@@ -304,7 +304,7 @@ export default async function ProduitPage({ params }: { params: Params }) {
     },
   }
   if (image) jsonLd.image = [image]
-  if (produit.marque) jsonLd.brand = { '@type': 'Brand', name: produit.marque }
+  jsonLd.brand = { '@type': 'Brand', name: produit.marque || 'Sans marque' }
 
   const typeSlug = getTypeSlug(produit.categorie)
   const cleanedNom = produit.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '').trim()
