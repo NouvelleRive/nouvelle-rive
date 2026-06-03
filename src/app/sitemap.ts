@@ -11,6 +11,8 @@ const LUXURY_SLUGS = new Set(LUXURY_BRANDS.map(slugifyBrandStr))
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
+export const revalidate = 3600
+
 const STATIC_PAGES: { path: string; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency']; priority: number }[] = [
   { path: '/', changeFrequency: 'daily', priority: 1.0 },
   { path: '/femme', changeFrequency: 'daily', priority: 0.8 },
