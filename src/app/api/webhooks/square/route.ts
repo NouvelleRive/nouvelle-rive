@@ -232,19 +232,23 @@ async function traiterProduit(opts: {
     createdAt: saleTimestamp,
   }
   const venteDocId = `${orderId}_${lineItem?.uid || productId}`
-  await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
-  console.log('✅ Vente créée:', produitData.sku, `[${venteDocId}]`)
+  const venteRef = adminDb.collection('ventes').doc(venteDocId)
+  const venteSnapBefore = await venteRef.get()
+  const isNewVente = !venteSnapBefore.exists
+  await venteRef.set(venteData, { merge: true })
+  console.log(`✅ Vente ${isNewVente ? 'créée' : 're-livrée (skip notif)'}:`, produitData.sku, `[${venteDocId}]`)
 
-  // Push notif
-  try {
-    const titre = `🛒 Vente en ligne : ${produitData.sku || produitData.nom || lineItem?.name}`
-    const corps = `${produitData.prix || lineItemPrice}€ — ${clientInfo.prenom} ${clientInfo.nom}`
-    const photo = produitData.images?.[0] || produitData.imageUrl || produitData.photos?.face || produitData.imageUrls?.[0] || undefined
-    await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/commandes', tag: venteDocId, image: photo })
-    if (chineurUid) {
-      await sendPushToOwner(chineurUid, { title: '🎉 Vente en ligne !', body: `${produitData.sku || produitData.nom} vendu ${produitData.prix || lineItemPrice}€`, url: '/chineuse/mes-ventes', tag: venteDocId, image: photo })
-    }
-  } catch (e) { console.warn('Push notif failed:', e) }
+  if (isNewVente) {
+    try {
+      const titre = `🛒 Vente en ligne : ${produitData.sku || produitData.nom || lineItem?.name}`
+      const corps = `${produitData.prix || lineItemPrice}€ — ${clientInfo.prenom} ${clientInfo.nom}`
+      const photo = produitData.images?.[0] || produitData.imageUrl || produitData.photos?.face || produitData.imageUrls?.[0] || undefined
+      await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/commandes', tag: venteDocId, image: photo })
+      if (chineurUid) {
+        await sendPushToOwner(chineurUid, { title: '🎉 Vente en ligne !', body: `${produitData.sku || produitData.nom} vendu ${produitData.prix || lineItemPrice}€`, url: '/chineuse/mes-ventes', tag: venteDocId, image: photo })
+      }
+    } catch (e) { console.warn('Push notif failed:', e) }
+  }
 
   return {
     commandeId,
@@ -409,18 +413,23 @@ export async function POST(request: Request) {
           createdAt: saleTimestamp,
         }
 
-        await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
-        console.log(`✅ Vente caisse créée: ${sku || itemName} (${prix}€) [${venteDocId}]`)
+        const venteRef = adminDb.collection('ventes').doc(venteDocId)
+        const venteSnapBefore = await venteRef.get()
+        const isNewVente = !venteSnapBefore.exists
+        await venteRef.set(venteData, { merge: true })
+        console.log(`✅ Vente caisse ${isNewVente ? 'créée' : 're-livrée (skip notif)'}: ${sku || itemName} (${prix}€) [${venteDocId}]`)
 
-        try {
-          const titre = `Vente boutique : ${sku || itemName}`
-          const corps = `${prix}€${produitData?.nom ? ` — ${produitData.nom}` : ''}`
-          const photo = produitData?.images?.[0] || produitData?.imageUrl || produitData?.photos?.face || produitData?.imageUrls?.[0] || undefined
-          await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId, image: photo })
-          if (chineurUid) {
-            await sendPushToOwner(chineurUid, { title: '🎉 Vente !', body: `${sku || itemName} vendu ${prix}€`, url: '/chineuse/mes-ventes', tag: venteDocId, image: photo })
-          }
-        } catch (e) { console.warn('Push notif failed:', e) }
+        if (isNewVente) {
+          try {
+            const titre = `Vente boutique : ${sku || itemName}`
+            const corps = `${prix}€${produitData?.nom ? ` — ${produitData.nom}` : ''}`
+            const photo = produitData?.images?.[0] || produitData?.imageUrl || produitData?.photos?.face || produitData?.imageUrls?.[0] || undefined
+            await sendPushToOwner('boutique', { title: titre, body: corps, url: '/admin/nos-ventes', tag: venteDocId, image: photo })
+            if (chineurUid) {
+              await sendPushToOwner(chineurUid, { title: '🎉 Vente !', body: `${sku || itemName} vendu ${prix}€`, url: '/chineuse/mes-ventes', tag: venteDocId, image: photo })
+            }
+          } catch (e) { console.warn('Push notif failed:', e) }
+        }
 
         if (produitDoc) {
           const qty = parseInt(item.quantity) || 1

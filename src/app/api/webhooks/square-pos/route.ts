@@ -259,7 +259,10 @@ export async function POST(request: Request) {
         // Un seul doc par line item, partagé avec le webhook /webhooks/square via venteDocId
         const itemNote = (item as any).note || null
         const remarque = itemNote || orderNote || null
-        await adminDb.collection('ventes').doc(venteDocId).set({
+        const venteRef = adminDb.collection('ventes').doc(venteDocId)
+        const venteSnapBefore = await venteRef.get()
+        const isNewVente = !venteSnapBefore.exists
+        await venteRef.set({
           produitId: produitId,
           nom: produitData.nom || itemName,
           remarque,
@@ -280,30 +283,31 @@ export async function POST(request: Request) {
           attribue: true,
           createdAt: saleTimestamp,
         }, { merge: true })
-        console.log(`✅ [POS] Vente enregistrée (qté ${quantiteVendue}) [${venteDocId}]`)
+        console.log(`✅ [POS] Vente ${isNewVente ? 'enregistrée' : 're-livrée (skip notif)'} (qté ${quantiteVendue}) [${venteDocId}]`)
 
-        // Push notif boutique + chineuse
-        try {
-          const sku = produitData.sku || itemName
-          const photo = produitData.imageUrls?.[0] || produitData.imageUrl || produitData.photos?.face || undefined
-          const prixVal = prixVenteReel || produitData.prix || 0
-          await sendPushToOwner('boutique', {
-            title: `🤑 YOU RICH +${prixVal}€`,
-            body: `${sku}${produitData.nom ? ` — ${produitData.nom}` : ''}`,
-            url: '/admin/nos-ventes',
-            tag: venteDocId,
-            image: photo,
-          })
-          if (produitData.chineurUid) {
-            await sendPushToOwner(produitData.chineurUid, {
+        if (isNewVente) {
+          try {
+            const sku = produitData.sku || itemName
+            const photo = produitData.imageUrls?.[0] || produitData.imageUrl || produitData.photos?.face || undefined
+            const prixVal = prixVenteReel || produitData.prix || 0
+            await sendPushToOwner('boutique', {
               title: `🤑 YOU RICH +${prixVal}€`,
-              body: `${sku} vient de partir !`,
-              url: '/chineuse/mes-ventes',
+              body: `${sku}${produitData.nom ? ` — ${produitData.nom}` : ''}`,
+              url: '/admin/nos-ventes',
               tag: venteDocId,
               image: photo,
             })
-          }
-        } catch (e) { console.warn('Push notif failed:', e) }
+            if (produitData.chineurUid) {
+              await sendPushToOwner(produitData.chineurUid, {
+                title: `🤑 YOU RICH +${prixVal}€`,
+                body: `${sku} vient de partir !`,
+                url: '/chineuse/mes-ventes',
+                tag: venteDocId,
+                image: photo,
+              })
+            }
+          } catch (e) { console.warn('Push notif failed:', e) }
+        }
 
         nbProduitsTraites++
 
