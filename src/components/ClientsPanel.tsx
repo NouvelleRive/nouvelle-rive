@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { Search, Download, Users, RefreshCw } from 'lucide-react'
+import { formatPrix } from '@/lib/formatPrix'
 
 interface ClientAggrege {
   email: string
@@ -147,11 +148,11 @@ export default function ClientsPanel() {
         </div>
         <div className="border rounded p-4">
           <p className="text-xs text-gray-500 uppercase">Revenu total</p>
-          <p className="text-2xl font-bold">{totalRevenu.toFixed(0)} €</p>
+          <p className="text-2xl font-bold">{formatPrix(totalRevenu)} €</p>
         </div>
         <div className="border rounded p-4">
           <p className="text-xs text-gray-500 uppercase">Panier moyen</p>
-          <p className="text-2xl font-bold">{moyenneParClient.toFixed(0)} €</p>
+          <p className="text-2xl font-bold">{formatPrix(moyenneParClient)} €</p>
         </div>
       </div>
 
@@ -204,7 +205,7 @@ export default function ClientsPanel() {
                     {c.nombreCommandes}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right font-medium text-sm">{c.totalDepense.toFixed(2)} €</td>
+                <td className="px-4 py-3 text-right font-medium text-sm">{formatPrix(c.totalDepense, { decimals: 2 })} €</td>
                 <td className="px-4 py-3 text-right text-sm text-gray-500">{formatDate(c.derniereCommande)}</td>
               </tr>
             ))}

@@ -17,6 +17,7 @@ import {
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { CheckCircle, AlertTriangle, Filter, Plus, Lock, Unlock } from 'lucide-react'
+import { formatPrix } from '@/lib/formatPrix'
 
 type Inventaire = {
   id: string
@@ -360,7 +361,7 @@ export default function AdminInventairesPage() {
               <span className="text-red-500 ml-1 text-sm">manquants</span>
             </div>
             <div className="px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
-              <span className="text-orange-600 font-semibold">{stats.valeurTotale.toFixed(0)}€</span>
+              <span className="text-orange-600 font-semibold">{formatPrix(stats.valeurTotale)} €</span>
               <span className="text-orange-500 ml-1 text-sm">valeur</span>
             </div>
           </div>

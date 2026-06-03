@@ -14,6 +14,7 @@ import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
+import { formatPrix } from '@/lib/formatPrix'
 
 type ChineuseLite = {
   uid: string
@@ -700,7 +701,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                     color: '#000'
                   }}
                 >
-                  {produit.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
+                  {formatPrix(produit.prix)} €
                 </p>
               </div>
             </Link>

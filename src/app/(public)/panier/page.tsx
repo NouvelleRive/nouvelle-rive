@@ -6,6 +6,7 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useCart, SEUIL_LIVRAISON_OFFERTE } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
+import { formatPrix } from '@/lib/formatPrix'
 
 const bleuElectrique = '#0000FF'
 const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i, '')
@@ -128,7 +129,7 @@ export default function PanierPage() {
                     </p>
                   )}
                   <p style={{ fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>{cleanProductName(item.nom)}</p>
-                  <p style={{ fontSize: '14px', fontWeight: '600' }}>{item.prix.toFixed(2)} €</p>
+                  <p style={{ fontSize: '14px', fontWeight: '600' }}>{formatPrix(item.prix, { decimals: 2 })} €</p>
                 </div>
                 <button
                   onClick={() => removeItem(item.id)}
@@ -154,7 +155,7 @@ export default function PanierPage() {
                   ? `Subtotal (${count} item${count > 1 ? 's' : ''})`
                   : `Sous-total (${count} article${count > 1 ? 's' : ''})`}
               </span>
-              <span>{sousTotal.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+              <span>{formatPrix(sousTotal, { decimals: 2 })} €</span>
             </div>
             <div className="flex justify-between" style={{ color: '#666', fontSize: '12px' }}>
               <span>{t('Livraison', 'Shipping', lang)}</span>
@@ -166,11 +167,11 @@ export default function PanierPage() {
             <div className="p-4 border border-black" style={{ fontSize: '12px', lineHeight: '1.5' }}>
               {lang === 'en' ? (
                 <>
-                  Just <strong style={{ color: bleuElectrique }}>{manqueLivraisonOfferte.toFixed(2)} €</strong> more to unlock <strong>free shipping</strong>.
+                  Just <strong style={{ color: bleuElectrique }}>{formatPrix(manqueLivraisonOfferte, { decimals: 2 })} €</strong> more to unlock <strong>free shipping</strong>.
                 </>
               ) : (
                 <>
-                  Plus que <strong style={{ color: bleuElectrique }}>{manqueLivraisonOfferte.toFixed(2)} €</strong> pour bénéficier de la <strong>livraison offerte</strong>.
+                  Plus que <strong style={{ color: bleuElectrique }}>{formatPrix(manqueLivraisonOfferte, { decimals: 2 })} €</strong> pour bénéficier de la <strong>livraison offerte</strong>.
                 </>
               )}
             </div>
@@ -186,7 +187,7 @@ export default function PanierPage() {
               {t('SOUS-TOTAL', 'SUBTOTAL', lang)}
             </span>
             <span style={{ fontSize: '24px', fontWeight: '600' }}>
-              {sousTotal.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+              {formatPrix(sousTotal, { decimals: 2 })} €
             </span>
           </div>
 

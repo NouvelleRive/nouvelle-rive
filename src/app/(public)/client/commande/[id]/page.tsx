@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { doc, getDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
+import { formatPrix } from '@/lib/formatPrix'
 
 type Article = {
   id: string
@@ -218,7 +219,7 @@ export default function CommandeDetailPage() {
                     </p>
                   )}
                   <p className="font-semibold mb-2">{article.nom}</p>
-                  <p className="text-lg font-bold">{article.prix.toFixed(2)} €</p>
+                  <p className="text-lg font-bold">{formatPrix(article.prix, { decimals: 2 })} €</p>
                 </div>
               </div>
             ))}
@@ -310,7 +311,7 @@ export default function CommandeDetailPage() {
             className="text-3xl font-bold"
             style={{ color: bleuElectrique }}
           >
-            {commande.total.toFixed(2)} €
+            {formatPrix(commande.total, { decimals: 2 })} €
           </p>
         </div>
 

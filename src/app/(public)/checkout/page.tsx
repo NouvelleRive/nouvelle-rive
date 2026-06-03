@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCart, calculerLivraison, PAYS_LIVRAISON } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
+import { formatPrix } from '@/lib/formatPrix'
 
 type ClientInfo = {
   prenom: string
@@ -138,7 +139,7 @@ function CheckoutContent() {
                     {item.marque && <p style={{ fontSize: '10px', letterSpacing: '0.15em', color: '#999' }}>{item.marque.toUpperCase()}</p>}
                     <p style={{ fontSize: '13px', fontWeight: '500' }}>{cleanProductName(item.nom)}</p>
                   </div>
-                  <p style={{ fontSize: '13px', fontWeight: '500' }}>{item.prix.toFixed(2)} €</p>
+                  <p style={{ fontSize: '13px', fontWeight: '500' }}>{formatPrix(item.prix, { decimals: 2 })} €</p>
                 </div>
               ))}
             </div>
@@ -146,21 +147,21 @@ function CheckoutContent() {
             <div className="space-y-2 mb-4" style={{ fontSize: '14px' }}>
               <div className="flex justify-between">
                 <span>{t('Sous-total', 'Subtotal', lang)}</span>
-                <span>{sousTotal.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                <span>{formatPrix(sousTotal, { decimals: 2 })} €</span>
               </div>
               {modeLivraison === 'livraison' && (
                 <div className="flex justify-between">
                   <span>{t('Livraison', 'Shipping', lang)}</span>
                   {fraisLivraison === 0
                     ? <span style={{ color: bleuElectrique }}>{t('Offerte', 'Free', lang)}</span>
-                    : <span>{fraisLivraison.toFixed(2)} €</span>}
+                    : <span>{formatPrix(fraisLivraison, { decimals: 2 })} €</span>}
                 </div>
               )}
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t border-black">
               <span style={{ fontSize: '11px', letterSpacing: '0.15em' }}>{t('TOTAL', 'TOTAL', lang)}</span>
-              <span style={{ fontSize: '28px', fontWeight: '600' }}>{total.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+              <span style={{ fontSize: '28px', fontWeight: '600' }}>{formatPrix(total, { decimals: 2 })} €</span>
             </div>
           </div>
 
@@ -275,7 +276,7 @@ function CheckoutContent() {
               <button type="submit" disabled={processing} className="w-full py-4 text-white transition-opacity hover:opacity-80 disabled:opacity-50" style={{ backgroundColor: bleuElectrique, fontSize: '11px', letterSpacing: '0.2em', fontWeight: '600' }}>
                 {processing
                   ? t('TRAITEMENT...', 'PROCESSING...', lang)
-                  : `${t('PAYER', 'PAY', lang)} ${total.toFixed(2)} €`}
+                  : `${t('PAYER', 'PAY', lang)} ${formatPrix(total, { decimals: 2 })} €`}
               </button>
               <p className="text-center mt-4" style={{ fontSize: '10px', color: '#999' }}>
                 {t('Paiement 100% sécurisé', '100% secure payment', lang)}

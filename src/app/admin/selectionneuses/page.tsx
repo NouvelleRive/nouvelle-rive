@@ -9,6 +9,7 @@
   import { db } from '@/lib/firebaseConfig'
   import PlanningCalendar from '@/components/PlanningCalendar'
   import { getPlacesDisponibles } from '@/lib/capaciteDepot'
+  import { formatPrix } from '@/lib/formatPrix'
 
   const CATEGORIES_DEPOSANTE = [
     { label: 'TODO', idsquare: 'TODO' },
@@ -829,7 +830,7 @@
                       </div>
                       <div className={`text-center px-3 py-2 ${caBgClass} rounded-lg`}>
                         <p className="text-gray-500 text-xs">CA</p>
-                        <p className={`font-bold text-lg ${accentColor}`}>{caTotal.toFixed(0)} €</p>
+                        <p className={`font-bold text-lg ${accentColor}`}>{formatPrix(caTotal)} €</p>
                       </div>
                     </div>
 

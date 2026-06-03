@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { collection, getDocs, getDoc, doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, getDocs, getDoc, doc, setDoc, updateDoc, onSnapshot, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { db, auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -155,7 +155,15 @@ export default function VendeuseCalendrierPage() {
     if (vendeuseId === '') delete newSlots[key]
     else newSlots[key] = vendeuseId
     setPlanningSlots(newSlots)
-    await setDoc(doc(db, 'planning', monthKey), { slots: newSlots }, { merge: true })
+    const ref = doc(db, 'planning', monthKey)
+    const snap = await getDoc(ref)
+    if (snap.exists()) {
+      // updateDoc remplace le champ slots entièrement — setDoc + merge fusionnerait
+      // et les clés retirées localement resteraient côté serveur.
+      await updateDoc(ref, { slots: newSlots })
+    } else {
+      await setDoc(ref, { slots: newSlots })
+    }
   }
 
   const handleAddTask = async (dateStr: string, texte: string) => {

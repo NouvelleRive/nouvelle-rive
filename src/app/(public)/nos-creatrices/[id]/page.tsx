@@ -10,6 +10,7 @@ import { getCreatriceI18n } from '@/lib/creatricesI18n'
 import FavoriteButton from '@/components/FavoriteButton'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { buildProduitSlug } from '@/lib/produitSlug'
+import { formatPrix } from '@/lib/formatPrix'
 
 type Creatrice = {
   nom: string
@@ -486,7 +487,7 @@ export default function CreateurPage() {
                       {creatrice.nom}
                     </p>
                     <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-                      {p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
+                      {formatPrix(p.prix)} €
                     </p>
                   </div>
                 </Link>

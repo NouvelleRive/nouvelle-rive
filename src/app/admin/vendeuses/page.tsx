@@ -195,7 +195,14 @@
     const savePlanning = async (newSlots: PlanningSlots) => {
       setPlanningSlots(newSlots)
       const docRef = doc(db, 'planning', monthKey)
-      await setDoc(docRef, { slots: newSlots }, { merge: true })
+      const snap = await getDoc(docRef)
+      if (snap.exists()) {
+        // updateDoc remplace le champ slots entièrement — setDoc + merge le fusionnerait
+        // et les clés retirées localement resteraient côté serveur.
+        await updateDoc(docRef, { slots: newSlots })
+      } else {
+        await setDoc(docRef, { slots: newSlots })
+      }
     }
 
     // =====================

@@ -7,6 +7,7 @@ import { db, auth } from '@/lib/firebaseConfig'
 import Link from 'next/link'
 import { useCart } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
+import { formatPrix } from '@/lib/formatPrix'
 
 const bleuElectrique = '#0000FF'
 const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i, '')
@@ -151,7 +152,7 @@ function ConfirmationContent() {
                       </p>
                     )}
                     <p style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>{cleanProductName(produit.nom)}</p>
-                    <p style={{ fontSize: '20px', fontWeight: '600' }}>{Number(produit.prix).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</p>
+                    <p style={{ fontSize: '20px', fontWeight: '600' }}>{formatPrix(produit.prix, { decimals: 2 })} €</p>
                   </div>
                 </div>
               ))}
@@ -162,7 +163,7 @@ function ConfirmationContent() {
                   {t('SOUS-TOTAL', 'SUBTOTAL', lang)}
                 </span>
                 <span style={{ fontSize: '24px', fontWeight: '600' }}>
-                  {total.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                  {formatPrix(total, { decimals: 2 })} €
                 </span>
               </div>
             )}

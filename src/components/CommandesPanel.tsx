@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { collection, query, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { Package, Clock, CheckCircle, Truck, XCircle, RefreshCw, FileText, ShoppingBag } from 'lucide-react'
+import { formatPrix } from '@/lib/formatPrix'
 
 // =====================
 // TYPES
@@ -478,7 +479,7 @@ export default function CommandesPanel({
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xl font-bold text-orange-900">{groupe.totalPrix.toFixed(2)} €</p>
+                      <p className="text-xl font-bold text-orange-900">{formatPrix(groupe.totalPrix, { decimals: 2 })} €</p>
                     </div>
                   </div>
                 </div>
@@ -498,7 +499,7 @@ export default function CommandesPanel({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-sm">{commande.prix.toFixed(2)} €</p>
+                        <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
                         <Badge statut={commande.statut} />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -569,7 +570,7 @@ export default function CommandesPanel({
                 </div>
                 
                 <div className="text-right">
-                  <p className="font-bold text-sm">{commande.prix.toFixed(2)} €</p>
+                  <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
                   <Badge statut={commande.statut} />
                 </div>
                 
@@ -631,7 +632,7 @@ export default function CommandesPanel({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-sm">{commande.prix.toFixed(2)} €</p>
+                  <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
                   <Badge statut={commande.statut} />
                   {commande.numeroSuivi && (
                     <p className="text-xs text-gray-500 mt-1">Suivi: {commande.numeroSuivi}</p>

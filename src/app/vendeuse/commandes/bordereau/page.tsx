@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { formatPrix } from '@/lib/formatPrix'
 
 interface Commande {
   id: string
@@ -173,7 +174,7 @@ export default function BordereauPage() {
                       {commande.productSku || '-'}
                     </td>
                     <td className="px-3 py-3 text-sm text-right font-medium">
-                      {commande.prix.toFixed(2)} €
+                      {formatPrix(commande.prix, { decimals: 2 })} €
                     </td>
                   </tr>
                 ))}
@@ -184,7 +185,7 @@ export default function BordereauPage() {
                     TOTAL ({totalArticles} article{totalArticles > 1 ? 's' : ''})
                   </td>
                   <td className="px-3 py-3 text-sm text-right">
-                    {totalPrix.toFixed(2)} €
+                    {formatPrix(totalPrix, { decimals: 2 })} €
                   </td>
                 </tr>
               </tfoot>

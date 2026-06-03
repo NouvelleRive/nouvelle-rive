@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { onAuthStateChanged, User } from 'firebase/auth'
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebaseConfig'
+import { formatPrix } from '@/lib/formatPrix'
 
 type Commande = {
   id: string
@@ -94,7 +95,7 @@ export default function CommandesPage() {
                     <p className="text-sm">{commande.modeLivraison === 'livraison' ? 'Livraison' : 'Retrait en boutique'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{commande.prix} €</p>
+                    <p className="font-bold">{formatPrix(commande.prix)} €</p>
                     <span 
                       className="inline-block px-2 py-1 text-xs uppercase"
                       style={{

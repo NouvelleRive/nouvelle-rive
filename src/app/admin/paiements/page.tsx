@@ -12,6 +12,7 @@ import {
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { CheckCircle, Download, ExternalLink, Mail } from 'lucide-react'
+import { formatPrix } from '@/lib/formatPrix'
 
 type Chineuse = {
   id: string
@@ -260,19 +261,19 @@ export default function AdminPaiementsPage() {
       {/* Stats */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
-          <span className="text-orange-600 font-semibold">{totalDu.toFixed(2)}€</span>
+          <span className="text-orange-600 font-semibold">{formatPrix(totalDu, { decimals: 2 })} €</span>
           <span className="text-orange-500 ml-1 text-sm">total dû</span>
         </div>
         <div className="px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-          <span className="text-green-600 font-semibold">{totalPaye.toFixed(2)}€</span>
+          <span className="text-green-600 font-semibold">{formatPrix(totalPaye, { decimals: 2 })} €</span>
           <span className="text-green-500 ml-1 text-sm">payé</span>
         </div>
         <div className="px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
-          <span className="text-red-600 font-semibold">{(totalDu - totalPaye).toFixed(2)}€</span>
+          <span className="text-red-600 font-semibold">{formatPrix(totalDu - totalPaye, { decimals: 2 })} €</span>
           <span className="text-red-500 ml-1 text-sm">restant</span>
         </div>
         <div className="px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-          <span className="text-blue-600 font-semibold">{totalTva.toFixed(2)}€</span>
+          <span className="text-blue-600 font-semibold">{formatPrix(totalTva, { decimals: 2 })} €</span>
           <span className="text-blue-500 ml-1 text-sm">TVA collectée</span>
         </div>
         <button
@@ -316,12 +317,12 @@ export default function AdminPaiementsPage() {
                       <div className="font-medium text-gray-900">{(chineuse.nom || chineuse.email || '').toUpperCase()}</div>
                       <div className="text-xs text-gray-400">{nbVentes} vente{nbVentes > 1 ? 's' : ''}</div>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">{ca.toFixed(2)}€</td>
+                    <td className="px-4 py-3 text-right text-gray-600">{formatPrix(ca, { decimals: 2 })} €</td>
                     <td className="px-4 py-3 text-right text-blue-600">
-                      <div>{tva.toFixed(2)}€</div>
+                      <div>{formatPrix(tva, { decimals: 2 })} €</div>
                       <div className="text-xs text-gray-400">marge {Math.round(taux * 100)}%</div>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">{net.toFixed(2)}€</td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatPrix(net, { decimals: 2 })} €</td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">{ref}</td>
                     <td className="px-4 py-3 text-center">
                       {statut.paye ? (

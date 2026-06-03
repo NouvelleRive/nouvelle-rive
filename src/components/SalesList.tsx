@@ -8,9 +8,8 @@ import { fr } from 'date-fns/locale'
 import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil, LayoutGrid, List } from 'lucide-react'
 import SalesFilters from '@/components/SalesFilters'
 import SalesGrid from '@/components/SalesGrid'
-
-export const formatPrix = (n: number | null | undefined) =>
-  Math.round(n || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 }).replace(/[  ]/g, ' ')
+export { formatPrix } from '@/lib/formatPrix'
+import { formatPrix } from '@/lib/formatPrix'
 
 // =====================
 // TYPES

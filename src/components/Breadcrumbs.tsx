@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useLang, t } from '@/lib/i18n'
 import { getTypeShortLabel } from '@/lib/typeLabels'
+import { getMarqueSlug, SANS_MARQUE } from '@/lib/produitSlug'
 
 type Crumb = { label: string; href?: string }
 
@@ -26,7 +27,9 @@ export default function Breadcrumbs({
     })
   }
   if (marque) {
-    crumbs.push({ label: marque })
+    const marqueSlug = getMarqueSlug(marque)
+    const marqueHref = typeSlug && marqueSlug !== SANS_MARQUE ? `/${typeSlug}/${marqueSlug}` : undefined
+    crumbs.push({ label: marque, href: marqueHref })
   }
   if (nom) {
     crumbs.push({ label: nom })

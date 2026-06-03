@@ -9,7 +9,7 @@ import {
   FRAIS_LIVRAISON_INTL,
   PAYS_LIVRAISON,
 } from '@/lib/shipping'
-import { buildProduitPath, extractIdFromSlug, getTypeSlug } from '@/lib/produitSlug'
+import { buildProduitPath, extractIdFromSlug, getTypeSlug, getMarqueSlug, SANS_MARQUE } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
@@ -319,10 +319,21 @@ export default async function ProduitPage({ params }: { params: Params }) {
       item: `${BASE_URL}/${typeSlug}`,
     })
   }
+  if (produit.marque && typeSlug && typeSlug !== 'piece') {
+    const marqueSlug = getMarqueSlug(produit.marque)
+    if (marqueSlug !== SANS_MARQUE) {
+      breadcrumbItems.push({
+        '@type': 'ListItem',
+        position: breadcrumbItems.length + 1,
+        name: produit.marque,
+        item: `${BASE_URL}/${typeSlug}/${marqueSlug}`,
+      })
+    }
+  }
   breadcrumbItems.push({
     '@type': 'ListItem',
     position: breadcrumbItems.length + 1,
-    name: produit.marque ? `${produit.marque} — ${cleanedNom}` : cleanedNom,
+    name: cleanedNom,
     item: url,
   })
   const breadcrumbJsonLd = {

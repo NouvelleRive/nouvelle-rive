@@ -11,6 +11,7 @@ import { useLang, t, translateCategory, translateMaterial, translateColor } from
 import { getTypeSlug } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+import { formatPrix } from '@/lib/formatPrix'
 
 const DIACRITICS_PROD = /[̀-ͯ]/g
 function slugifyMarqueLink(s: string): string {
@@ -255,7 +256,7 @@ export default function ProduitClient({
               </p>
             )}
             <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>
-              {produit.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €
+              {formatPrix(produit.prix)} €
             </p>
             {(lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description) && (
               <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>
@@ -440,7 +441,7 @@ export default function ProduitClient({
                   <p className="uppercase line-clamp-2 mb-1" style={{ fontSize: '11px', color: '#666' }}>
                     {p.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
                   </p>
-                  <p style={{ fontSize: '11px' }}>{p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
+                  <p style={{ fontSize: '11px' }}>{formatPrix(p.prix)} €</p>
                 </div>
               </Link>
             ))}

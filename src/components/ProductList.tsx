@@ -19,6 +19,7 @@
     import { libelleAchatStatut, libelleTransporteur, suggestPrixVente, type AchatStatut } from '@/modules/achat/types'
     import ImportMailModal from '@/modules/achat/ImportMailModal'
     import { calcMargeNette } from '@/lib/marge'
+    import { formatPrix } from '@/lib/formatPrix'
 
     // Conversion base64 robuste pour gros fichiers
     function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -1268,7 +1269,7 @@
                     )}
                     {getPriceBadgeStatus(p) === 'blue' && (
                       <span className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full mt-1">
-                        💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {p.ancienPrix} €)
+                        💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
                       </span>
                     )}
                     {getPriceBadgeStatus(p) === 'red' && (
@@ -1280,20 +1281,20 @@
                     {/* Ligne info bas : Prix · Qté · Achat · Marge */}
                     <div className="flex flex-wrap items-center gap-3 mt-2 pt-2 border-t border-gray-100 text-[12px]">
                       <span><span className="text-gray-400">Prix:</span> {typeof p.prix === 'number' ? (
-                        <span className="font-medium">{p.prix} €</span>
+                        <span className="font-medium">{formatPrix(p.prix)} €</span>
                       ) : typeof p.prixAchat === 'number' ? (
-                        <span className="font-medium text-gray-400 italic" title={`Suggéré (achat ${p.prixAchat} € × 2.5)`}>{suggestPrixVente(p.prixAchat)} €</span>
+                        <span className="font-medium text-gray-400 italic" title={`Suggéré (achat ${formatPrix(p.prixAchat)} € × 2.5)`}>{formatPrix(suggestPrixVente(p.prixAchat))} €</span>
                       ) : (
                         <span className="font-medium">—</span>
                       )}</span>
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
                       {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
-                        <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{typeof p.prixAchat === 'number' ? `${p.prixAchat} €` : '—'}</span></span>
+                        <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></span>
                       )}
                       {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
                         return (
-                          <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m !== null ? `${m} €` : '—'}</span></span>
+                          <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m !== null ? `${formatPrix(m)} €` : '—'}</span></span>
                         )
                       })()}
                       {p.statut === 'outOfStock' && (
@@ -1381,7 +1382,7 @@
 )}
 {getPriceBadgeStatus(p) === 'blue' && (
   <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
-    💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {p.ancienPrix} €)
+    💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
   </span>
 )}
 {getPriceBadgeStatus(p) === 'red' && (
@@ -1416,19 +1417,19 @@
                     </div>
                     <div className="hidden md:flex flex-col items-end text-sm text-gray-600 space-y-1 min-w-[100px]">
                       <p><span className="text-gray-400">Prix:</span> {typeof p.prix === 'number' ? (
-                        <span className="font-medium text-gray-700">{p.prix} €</span>
+                        <span className="font-medium text-gray-700">{formatPrix(p.prix)} €</span>
                       ) : typeof p.prixAchat === 'number' ? (
-                        <span className="font-medium text-gray-400 italic" title={`Suggéré (achat ${p.prixAchat} € × 2.5)`}>{suggestPrixVente(p.prixAchat)} €</span>
+                        <span className="font-medium text-gray-400 italic" title={`Suggéré (achat ${formatPrix(p.prixAchat)} € × 2.5)`}>{formatPrix(suggestPrixVente(p.prixAchat))} €</span>
                       ) : (
                         <span className="font-medium text-gray-700">—</span>
                       )}</p>
                       {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
-                        <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{typeof p.prixAchat === 'number' ? `${p.prixAchat} €` : '—'}</span></p>
+                        <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></p>
                       )}
                       {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
                         return (
-                          <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m !== null ? `${m} €` : '—'}</span></p>
+                          <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m !== null ? `${formatPrix(m)} €` : '—'}</span></p>
                         )
                       })()}
                       {p.statut === 'outOfStock' && (
@@ -1507,7 +1508,7 @@
                               {p.sku && ' - '}
                               {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
                             </h4>
-                            <p className="text-sm text-gray-500">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</p>
+                            <p className="text-sm text-gray-500">{typeof p.prix === 'number' ? `${formatPrix(p.prix)} €` : '—'}</p>
                           </div>
                         </div>
                       )
@@ -1566,7 +1567,7 @@
                         {/* Infos droite */}
                         <div className="hidden sm:flex flex-col items-end text-sm text-gray-500 space-y-1 min-w-[120px]">
                           <p><span className="text-gray-400">SKU:</span> <span className="font-medium">{p.sku || '—'}</span></p>
-                          <p><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${p.prix} €` : '—'}</span></p>
+                          <p><span className="text-gray-400">Prix:</span> <span className="font-medium">{typeof p.prix === 'number' ? `${formatPrix(p.prix)} €` : '—'}</span></p>
                           <p><span className="text-gray-400">Cat:</span> <span className="font-medium">{cat || '—'}</span></p>
                         </div>
                       </div>

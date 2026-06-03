@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { formatPrix } from '@/lib/formatPrix'
 
 interface Commande {
   id: string
@@ -145,14 +146,14 @@ function BordereauContent() {
                       <p className="font-medium">{c.produit}</p>
                       {c.marque && <p className="text-xs text-gray-500">{c.marque}</p>}
                     </td>
-                    <td className="px-3 py-3 text-sm text-right font-medium">{c.prix.toFixed(2)} €</td>
+                    <td className="px-3 py-3 text-sm text-right font-medium">{formatPrix(c.prix, { decimals: 2 })} €</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="bg-gray-200 font-bold">
                   <td className="px-3 py-3 text-sm">TOTAL ({commandes.length} article{commandes.length > 1 ? 's' : ''})</td>
-                  <td className="px-3 py-3 text-sm text-right">{totalPrix.toFixed(2)} €</td>
+                  <td className="px-3 py-3 text-sm text-right">{formatPrix(totalPrix, { decimals: 2 })} €</td>
                 </tr>
               </tfoot>
             </table>

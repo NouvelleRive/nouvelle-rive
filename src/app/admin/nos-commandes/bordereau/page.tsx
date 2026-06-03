@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { formatPrix } from '@/lib/formatPrix'
 
 function BordereauContent() {
   const searchParams = useSearchParams()
@@ -65,14 +66,14 @@ function BordereauContent() {
                 <p className="font-medium">{c.sku || c.productSku}</p>
                 <p className="text-sm text-gray-600">{c.produit || c.productName}</p>
               </td>
-              <td className="text-right py-2">{(c.prix || 0).toFixed(2)} €</td>
+              <td className="text-right py-2">{formatPrix(c.prix || 0, { decimals: 2 })} €</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="font-bold">
             <td className="py-2">TOTAL ({commandes.length} article{commandes.length > 1 ? 's' : ''})</td>
-            <td className="text-right py-2">{total.toFixed(2)} €</td>
+            <td className="text-right py-2">{formatPrix(total, { decimals: 2 })} €</td>
           </tr>
         </tfoot>
       </table>

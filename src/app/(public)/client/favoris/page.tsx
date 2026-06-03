@@ -8,6 +8,7 @@ import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firesto
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
 import FavoriteButton from '@/components/FavoriteButton'
+import { formatPrix } from '@/lib/formatPrix'
 
 type Produit = {
   id: string
@@ -156,7 +157,7 @@ export default function FavorisPage() {
                   )}
 
                   <h3 className="font-medium mb-2 line-clamp-2">{produit.nom}</h3>
-                  <p className="text-lg font-bold">{produit.prix.toFixed(2)} €</p>
+                  <p className="text-lg font-bold">{formatPrix(produit.prix, { decimals: 2 })} €</p>
                 </Link>
 
                 {/* Bouton Favori */}
