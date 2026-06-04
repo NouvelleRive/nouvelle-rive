@@ -304,7 +304,22 @@ export async function POST(request: Request) {
       console.log('⚠️ Pas d\'order_id dans le paiement')
       return NextResponse.json({ received: true })
     }
-    console.log('✅ payment.created reçu pour order:', orderId, '— status:', payment.status)
+
+    // Filtrer paiements échoués / annulés (anti-doublons retry client).
+    // On re-fetch via l'API Square pour avoir le statut frais — le webhook peut
+    // arriver avec status=APPROVED puis basculer FAILED quelques ms plus tard.
+    let paymentStatus = payment.status
+    try {
+      const freshRes = await squareClient.paymentsApi.getPayment(paymentId)
+      paymentStatus = freshRes.result.payment?.status || payment.status
+    } catch (e: any) {
+      console.warn('⚠️ getPayment KO, fallback event payload:', e?.message)
+    }
+    if (paymentStatus === 'FAILED' || paymentStatus === 'CANCELED') {
+      console.log(`⏭️ payment.created ignoré (statut ${paymentStatus}):`, paymentId)
+      return NextResponse.json({ received: true, skipped: paymentStatus })
+    }
+    console.log('✅ payment.created reçu pour order:', orderId, '— status:', paymentStatus)
 
     const { result } = await squareClient.ordersApi.retrieveOrder(orderId)
     const order = result.order
