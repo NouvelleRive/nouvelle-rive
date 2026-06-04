@@ -33,6 +33,8 @@ type Vente = {
   prix?: number
   dateVente?: any
   sku?: string
+  source?: string
+  venteFamiliale?: boolean
 }
 
 type PaiementStatus = {
@@ -118,13 +120,16 @@ export default function AdminPaiementsPage() {
         return d >= start && d <= end
       })
       const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
+      const caFamiliale = ventesDuMois
+        .filter(v => v.venteFamiliale === true || v.source === 'familiale')
+        .reduce((s, v) => s + getPrix(v), 0)
       const taux = typeof ch.taux === 'number' ? ch.taux / 100 : 0.40
       const commissionHT = ca * taux
       const tva = commissionHT * 0.2
       const commissionTTC = commissionHT * 1.2
       const net = ca - commissionTTC
       const ref = `NR${String(m).padStart(2, '0')}${String(y).slice(-2)}-${(ch.trigramme || '').toUpperCase()}`
-      return { chineuse: ch, ca, net, tva, taux, ref, nbVentes: ventesDuMois.length }
+      return { chineuse: ch, ca, caFamiliale, net, tva, taux, ref, nbVentes: ventesDuMois.length }
     }).filter(p => p.nbVentes > 0)
   }, [chineuses, ventes, moisSelectionne])
 
@@ -148,6 +153,9 @@ export default function AdminPaiementsPage() {
   const totalDu = paiementsParChineuse.reduce((s, p) => s + p.net, 0)
   const totalPaye = paiementsParChineuse.filter(p => statuts[p.chineuse.id]?.paye).reduce((s, p) => s + p.net, 0)
   const totalTva = paiementsParChineuse.reduce((s, p) => s + p.tva, 0)
+  const totalCa = paiementsParChineuse.reduce((s, p) => s + p.ca, 0)
+  const totalCaFamiliale = paiementsParChineuse.reduce((s, p) => s + p.caFamiliale, 0)
+  const totalCaSquare = totalCa - totalCaFamiliale
 
   const exporterSepaXML = () => {
     const aExporter = paiementsParChineuse.filter(p => {
@@ -276,6 +284,15 @@ export default function AdminPaiementsPage() {
           <span className="text-blue-600 font-semibold">{formatPrix(totalTva, { decimals: 2 })} €</span>
           <span className="text-blue-500 ml-1 text-sm">TVA collectée</span>
         </div>
+        {totalCaFamiliale > 0 && (
+          <div className="px-3 py-1.5 bg-pink-50 border border-pink-200 rounded-lg">
+            <span className="text-pink-600 font-semibold">{formatPrix(totalCaFamiliale, { decimals: 2 })} €</span>
+            <span className="text-pink-500 ml-1 text-sm">
+              CA familial
+              <span className="text-pink-400"> · Square : {formatPrix(totalCaSquare, { decimals: 2 })} €</span>
+            </span>
+          </div>
+        )}
         <button
           onClick={exporterSepaXML}
           className="ml-auto flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
@@ -306,7 +323,7 @@ export default function AdminPaiementsPage() {
               </tr>
             </thead>
             <tbody>
-              {paiementsParChineuse.map(({ chineuse, ca, net, tva, taux, ref, nbVentes }) => {
+              {paiementsParChineuse.map(({ chineuse, ca, caFamiliale, net, tva, taux, ref, nbVentes }) => {
                 const statut = statuts[chineuse.id] || { factureRecue: false, paye: false }
                 return (
                   <tr
@@ -317,7 +334,14 @@ export default function AdminPaiementsPage() {
                       <div className="font-medium text-gray-900">{(chineuse.nom || chineuse.email || '').toUpperCase()}</div>
                       <div className="text-xs text-gray-400">{nbVentes} vente{nbVentes > 1 ? 's' : ''}</div>
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">{formatPrix(ca, { decimals: 2 })} €</td>
+                    <td className="px-4 py-3 text-right text-gray-600">
+                      <div>{formatPrix(ca, { decimals: 2 })} €</div>
+                      {caFamiliale > 0 && (
+                        <div className="text-xs text-pink-500">
+                          dont familial {formatPrix(caFamiliale, { decimals: 2 })} €
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right text-blue-600">
                       <div>{formatPrix(tva, { decimals: 2 })} €</div>
                       <div className="text-xs text-gray-400">marge {Math.round(taux * 100)}%</div>

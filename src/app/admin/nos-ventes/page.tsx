@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import { auth } from '@/lib/firebaseConfig'
 import SalesList, { Vente } from '@/components/SalesList'
-import { X, Search, Link, Trash2 } from 'lucide-react'
+import { X, Search, Link, Trash2, Heart } from 'lucide-react'
+import { formatPrix } from '@/lib/formatPrix'
 
 // Helper pour récupérer le token
 const getAuthToken = async () => {
@@ -46,6 +47,15 @@ export default function AdminNosVentesPage() {
   const [prixVente, setPrixVente] = useState('')
   const [dateVente, setDateVente] = useState(new Date().toISOString().split('T')[0])
   const [ajoutLoading, setAjoutLoading] = useState(false)
+
+  // Form vente familiale
+  const [showModalFamiliale, setShowModalFamiliale] = useState(false)
+  const [familialeSearch, setFamilialeSearch] = useState('')
+  const [familialeProduitId, setFamilialeProduitId] = useState('')
+  const [familialePrix, setFamilialePrix] = useState('')
+  const [familialeDate, setFamilialeDate] = useState(new Date().toISOString().split('T')[0])
+  const [familialeBeneficiaire, setFamilialeBeneficiaire] = useState('')
+  const [familialeLoading, setFamilialeLoading] = useState(false)
 
   // Tous les produits (pour attribution)
   const [allProduits, setAllProduits] = useState<any[]>([])
@@ -376,6 +386,67 @@ export default function AdminNosVentesPage() {
     }
   }
 
+  // ==================== VENTE FAMILIALE ====================
+  const familialeResults = useMemo(() => {
+    const term = familialeSearch.trim().toLowerCase()
+    if (!term) return []
+    return allProduits
+      .filter(p =>
+        !p.vendu && (p.quantite ?? 1) > 0 && p.statut !== 'supprime' && p.statut !== 'retour' &&
+        (
+          p.sku?.toLowerCase().includes(term) ||
+          p.nom?.toLowerCase().includes(term) ||
+          p.trigramme?.toLowerCase().includes(term)
+        )
+      )
+      .slice(0, 50)
+  }, [allProduits, familialeSearch])
+
+  const familialeProduit = useMemo(
+    () => allProduits.find(p => p.id === familialeProduitId) || null,
+    [allProduits, familialeProduitId]
+  )
+
+  const handleFamilialeSelect = (p: any) => {
+    setFamilialeProduitId(p.id)
+    if (p?.prix && !familialePrix) setFamilialePrix(String(p.prix))
+  }
+
+  const handleVenteFamiliale = async () => {
+    if (!familialeProduitId || familialePrix === '') return
+    setFamilialeLoading(true)
+    try {
+      const res = await fetch('/api/admin-family-sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          produitId: familialeProduitId,
+          prixVenteReel: parseFloat(familialePrix),
+          dateVente: new Date(familialeDate).toISOString(),
+          beneficiaire: familialeBeneficiaire || null,
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setShowModalFamiliale(false)
+        setFamilialeSearch('')
+        setFamilialeProduitId('')
+        setFamilialePrix('')
+        setFamilialeBeneficiaire('')
+        setFamilialeDate(new Date().toISOString().split('T')[0])
+        await loadVentes()
+        await loadData()
+        await loadAllProduits()
+      } else {
+        alert(data?.error || 'Erreur : FI')
+      }
+    } catch {
+      alert('Erreur : FI')
+    } finally {
+      setFamilialeLoading(false)
+    }
+  }
+
   const handleSkuChange = (sku: string) => {
     setSelectedSku(sku)
     const produit = produitsDisponibles.find(p => p.sku === sku)
@@ -396,7 +467,16 @@ export default function AdminNosVentesPage() {
 
   return (
     <>
-      
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-2 sm:pt-4 flex justify-end">
+        <button
+          onClick={() => setShowModalFamiliale(true)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-pink-50 text-pink-700 border border-pink-200 rounded-lg text-sm font-medium hover:bg-pink-100 transition-colors"
+          title="Vente au personnel, non encaissée côté Square"
+        >
+          <Heart size={14} />
+          Vente familiale
+        </button>
+      </div>
 
       <SalesList
         titre={titre}
@@ -602,6 +682,130 @@ export default function AdminNosVentesPage() {
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50 hover:bg-blue-600"
               >
                 {modifierPrixLoading ? '...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Vente familiale */}
+      {showModalFamiliale && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-2">
+                <Heart size={18} className="text-pink-600" />
+                <h3 className="font-semibold text-lg">Vente familiale</h3>
+              </div>
+              <button onClick={() => setShowModalFamiliale(false)}><X size={20} /></button>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4">
+              Vente au personnel : non encaissée côté Square. La pièce est marquée vendue
+              et compte normalement dans le CA + facture de la chineuse.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Rechercher la pièce</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="SKU, nom, trigramme…"
+                    value={familialeSearch}
+                    onChange={(e) => setFamilialeSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg"
+                    autoFocus
+                  />
+                </div>
+                <div className="border rounded-lg max-h-52 overflow-y-auto mt-2">
+                  {familialeResults.length === 0 ? (
+                    <p className="p-3 text-gray-400 text-sm">
+                      {familialeSearch ? 'Aucun produit disponible' : 'Tapez pour rechercher…'}
+                    </p>
+                  ) : (
+                    familialeResults.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleFamilialeSelect(p)}
+                        className={`w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 ${
+                          familialeProduitId === p.id ? 'bg-pink-50 border-l-4 border-l-pink-500' : ''
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs text-gray-500">[{p.trigramme}]</span>
+                              <span className="font-medium text-sm">{p.sku}</span>
+                            </div>
+                            <p className="text-gray-600 text-xs truncate">{p.nom}</p>
+                          </div>
+                          <span className="text-gray-600 text-sm ml-2">{formatPrix(p.prix || 0)}€</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {familialeProduit && (
+                <div className="bg-pink-50 border border-pink-200 rounded-lg p-3 text-sm">
+                  <strong>Sélectionné :</strong> {familialeProduit.sku} — {familialeProduit.nom}
+                  <span className="text-gray-500"> (prix initial {formatPrix(familialeProduit.prix || 0)}€)</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Prix de vente (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={familialePrix}
+                    onChange={(e) => setFamilialePrix(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date de vente</label>
+                  <input
+                    type="date"
+                    value={familialeDate}
+                    onChange={(e) => setFamilialeDate(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Bénéficiaire <span className="text-gray-400 font-normal">(optionnel)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: prénom de la personne"
+                  value={familialeBeneficiaire}
+                  onChange={(e) => setFamilialeBeneficiaire(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowModalFamiliale(false)}
+                className="px-4 py-2 border rounded-lg"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleVenteFamiliale}
+                disabled={!familialeProduitId || familialePrix === '' || familialeLoading}
+                className="px-4 py-2 bg-pink-600 text-white rounded-lg disabled:opacity-50 hover:bg-pink-700"
+              >
+                {familialeLoading ? '...' : 'Créer la vente'}
               </button>
             </div>
           </div>
