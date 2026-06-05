@@ -376,13 +376,17 @@
         const hour = date.getHours()
         const montant = p.prixVenteReel || 0
 
-        if (hour >= 12 && hour < 20) {
-          ca1220.set(dateStr, (ca1220.get(dateStr) || 0) + montant)
+        // Les ventes affectées explicitement à une vendeuse (familiales) n'entrent
+        // PAS dans le bonus slot/pointage — leur 1% est attribué directement plus bas.
+        if (!p.vendeuseId) {
+          if (hour >= 12 && hour < 20) {
+            ca1220.set(dateStr, (ca1220.get(dateStr) || 0) + montant)
+          }
+          if (hour >= 11 && hour < 17) {
+            ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
+          }
         }
-        if (hour >= 11 && hour < 17) {
-          ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
-        }
-        // CA jour : on prend toutes les ventes de la journée, y compris après 20h
+        // CA jour : on prend TOUTES les ventes (familiales incluses) pour le seuil 1000€
         caJour.set(dateStr, (caJour.get(dateStr) || 0) + montant)
       })
 
@@ -402,9 +406,21 @@
         if ((caJour.get(dateStr) || 0) < 1000) continue
         const ptsToday = pointagesByDay.get(dateStr) || []
 
+        // Ventes affectées explicitement (familiales) → 1% direct à la vendeuse affectée
+        const ventesAffectees = ventesAll.filter(v => {
+          if (!v.vendeuseId) return false
+          if (!(v.dateVente instanceof Timestamp)) return false
+          return format(v.dateVente.toDate(), 'yyyy-MM-dd') === dateStr
+        })
+        for (const v of ventesAffectees) {
+          const cur = map.get(v.vendeuseId!)
+          if (cur) map.set(v.vendeuseId!, { ...cur, bonus: cur.bonus + (v.prixVenteReel || 0) * 0.01 })
+        }
+
         if (ptsToday.length > 0) {
-          // Logique pointage : pour chaque vente du jour, attribuer aux vendeuses présentes
+          // Logique pointage : pour chaque vente NON-affectée du jour, attribuer aux vendeuses présentes
           const ventesDuJour = ventesAll.filter(v => {
+            if (v.vendeuseId) return false
             if (!(v.dateVente instanceof Timestamp)) return false
             const d = v.dateVente.toDate()
             return format(d, 'yyyy-MM-dd') === dateStr
