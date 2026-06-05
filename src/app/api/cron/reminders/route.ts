@@ -41,6 +41,21 @@ function inWindow(h: number, m: number, targetH: number, targetM: number): boole
   return Math.abs(cur - t) <= 4
 }
 
+// Recherche une chineuse à partir du nom (uppercase dans les slots) ou trigramme
+async function findChineuse(nom: string | undefined, trigramme?: string): Promise<{ authUid?: string; email?: string; emails?: string[]; prenom?: string; nom?: string } | null> {
+  if (trigramme) {
+    const snap = await adminDb.collection('chineuse').where('trigramme', '==', trigramme.toUpperCase()).limit(1).get()
+    if (!snap.empty) return snap.docs[0].data() as any
+  }
+  if (nom) {
+    const snap = await adminDb.collection('chineuse').get()
+    const target = nom.toUpperCase()
+    const match = snap.docs.find(d => ((d.data() as any).nom || '').toUpperCase() === target)
+    if (match) return match.data() as any
+  }
+  return null
+}
+
 export async function GET(req: NextRequest) {
   // Vercel Cron : envoie Authorization: Bearer ${CRON_SECRET}
   const auth = req.headers.get('authorization') || ''
@@ -191,6 +206,30 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Rappel chineuse — 30 min avant son restock (12h30 / 15h30 / 17h30 → restock 13h / 16h / 18h)
+  // Push uniquement, à la chineuse elle-même (ownerId = authUid).
+  const chineuseRestockTargets = [
+    { trigH: 12, trigM: 30, slot: '13h' },
+    { trigH: 15, trigM: 30, slot: '16h' },
+    { trigH: 17, trigM: 30, slot: '18h' },
+  ]
+  for (const r of chineuseRestockTargets) {
+    if (!inWindow(h, m, r.trigH, r.trigM)) continue
+    const restockSnap = await adminDb.collection('restocks').doc(monthKey).get()
+    const restockSlots = restockSnap.exists ? (restockSnap.data()?.slots || {}) : {}
+    const data = restockSlots[`${dateStr}_${r.slot}`]
+    if (!data?.nom || data?.type !== 'chineuse') continue
+    const chin = await findChineuse(data.nom, data.trigramme)
+    if (!chin?.authUid) continue
+    await sendPushToOwner(chin.authUid, {
+      title: `📦 Ton restock dans 30 min`,
+      body: `Rendez-vous à ${r.slot} en boutique 💙`,
+      url: '/chineuse/calendrier',
+      tag: `chineuse-restock-30-${dateStr}-${r.slot}`,
+    })
+    actions.push(`chineuse-restock-30-${r.slot}`)
+  }
+
   // 18h00 — rappel J-1 aux déposantes dont le RDV est confirmé pour demain
   if (inWindow(h, m, 18, 0)) {
     const tomorrow = new Date()
@@ -276,6 +315,74 @@ export async function GET(req: NextRequest) {
         uids: Array.from(new Set([...Array.from(alreadySent), ...newlySent])),
       }, { merge: true })
       actions.push(`rappel-deposantes-${newlySent.length}`)
+    }
+
+    // Rappel J-1 chineuse — mail + push pour son restock du lendemain
+    const sentChinSnap = await adminDb.collection('rdvReminders').doc(tomorrowStr).get()
+    const alreadySentChin = new Set<string>(sentChinSnap.exists ? (sentChinSnap.data()?.chineuseUids || []) : [])
+    const newlySentChin: string[] = []
+
+    for (const [key, slot] of Object.entries(slots as Record<string, any>)) {
+      if (!key.startsWith(tomorrowStr + '_')) continue
+      if (slot?.type !== 'chineuse') continue
+      if (!slot?.nom) continue
+      const creneau = key.slice(tomorrowStr.length + 1)
+      const chin = await findChineuse(slot.nom, slot.trigramme) as any
+      if (!chin) continue
+      const chinKey = (chin.authUid || chin.email || slot.nom) as string
+      if (alreadySentChin.has(chinKey)) continue
+      const dateFr = new Date(tomorrowStr + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+      // Email
+      const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
+      if (emails.length > 0) {
+        try {
+          await resend.emails.send({
+            from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+            to: emails,
+            bcc: 'nouvelleriveparis@gmail.com',
+            subject: `Rappel — ton restock demain à ${creneau} 💙`,
+            html: `
+              <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+                <h1 style="color:#22209C;">À demain 💙</h1>
+                <p>Hello ${chin.prenom || chin.nom || ''},</p>
+                <p>Petit rappel : ton restock est prévu <strong>${dateFr} à ${creneau}</strong>, en boutique au 8 rue des Écouffes, 75004 Paris.</p>
+                <p style="margin-top:20px;"><strong>As-tu bien préparé ton restock ?</strong></p>
+                <ul style="padding-left:20px;line-height:1.7;">
+                  <li>produits créés dans l'app</li>
+                  <li>photos détourées proprement et portés vérifiés</li>
+                  <li>produits étiquetés avec prix et SKU</li>
+                </ul>
+                <p style="margin-top:24px;">
+                  <a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mon RDV</a>
+                </p>
+                <p style="font-size:12px;color:#888;margin-top:32px;">À demain 🌊</p>
+              </div>
+            `,
+          })
+        } catch (e: any) {
+          console.error(`[cron/reminders] rappel chineuse mail échoué ${chinKey}:`, e?.message)
+        }
+      }
+
+      // Push
+      if (chin.authUid) {
+        await sendPushToOwner(chin.authUid, {
+          title: `📦 Restock demain à ${creneau}`,
+          body: `Rdv ${dateFr} en boutique 💙`,
+          url: '/chineuse/calendrier',
+          tag: `chineuse-restock-j1-${tomorrowStr}-${creneau}`,
+        })
+      }
+
+      newlySentChin.push(chinKey)
+    }
+
+    if (newlySentChin.length > 0) {
+      await adminDb.collection('rdvReminders').doc(tomorrowStr).set({
+        chineuseUids: Array.from(new Set([...Array.from(alreadySentChin), ...newlySentChin])),
+      }, { merge: true })
+      actions.push(`rappel-chineuses-${newlySentChin.length}`)
     }
   }
 
