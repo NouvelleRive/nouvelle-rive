@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil, LayoutGrid, List } from 'lucide-react'
+import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil, LayoutGrid, List, Heart } from 'lucide-react'
 import SalesFilters from '@/components/SalesFilters'
 import SalesGrid from '@/components/SalesGrid'
 export { formatPrix } from '@/lib/formatPrix'
@@ -67,6 +67,7 @@ interface SalesListProps {
   onSupprimer?: (vente: Vente) => void
   onSupprimerBatch?: (ids: string[]) => void
   onAjouterVente?: () => void
+  onVenteFamiliale?: () => void
   // Refresh
   onRefresh?: () => void
 }
@@ -89,6 +90,7 @@ export default function SalesList({
   onSupprimer,
   onSupprimerBatch,
   onAjouterVente,
+  onVenteFamiliale,
   onRefresh,
 }: SalesListProps) {
 
@@ -287,15 +289,25 @@ export default function SalesList({
           </button>
         </div>
         {isAdmin && (
-          <button onClick={selectAll} className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
+          <button onClick={selectAll} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700">
             {selectedIds.size === ventesFiltrées.length && ventesFiltrées.length > 0 ? (
-              <CheckSquare size={20} />
+              <CheckSquare size={18} />
             ) : (
-              <Square size={20} />
+              <Square size={18} />
             )}
-            <span className="text-sm">
+            <span className="text-xs sm:text-sm">
               {selectedIds.size === 0 ? 'Tout sélectionner' : `${selectedIds.size} sélectionnée(s)`}
             </span>
+          </button>
+        )}
+        {isAdmin && onVenteFamiliale && (
+          <button
+            onClick={onVenteFamiliale}
+            className="ml-auto flex items-center gap-1 px-2 py-1 bg-pink-50 text-pink-700 border border-pink-200 rounded-md text-[11px] sm:text-xs font-medium hover:bg-pink-100 transition-colors whitespace-nowrap"
+            title="Vente au personnel, non encaissée côté Square"
+          >
+            <Heart size={12} />
+            Vente familiale
           </button>
         )}
       </div>

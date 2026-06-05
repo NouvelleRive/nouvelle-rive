@@ -467,17 +467,6 @@ export default function AdminNosVentesPage() {
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 pt-2 sm:pt-4 flex justify-end">
-        <button
-          onClick={() => setShowModalFamiliale(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-pink-50 text-pink-700 border border-pink-200 rounded-lg text-sm font-medium hover:bg-pink-100 transition-colors"
-          title="Vente au personnel, non encaissée côté Square"
-        >
-          <Heart size={14} />
-          Vente familiale
-        </button>
-      </div>
-
       <SalesList
         titre={titre}
         ventes={ventesFiltrees}
@@ -495,6 +484,7 @@ export default function AdminNosVentesPage() {
         onSupprimer={handleSupprimer}
         onSupprimerBatch={handleSupprimerBatch}
         onAjouterVente={() => setShowModalAjout(true)}
+        onVenteFamiliale={() => setShowModalFamiliale(true)}
         onRefresh={loadVentes}
       />
 
