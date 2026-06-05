@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useAdmin } from '@/lib/admin/context'
-import { auth } from '@/lib/firebaseConfig'
+import { auth, db } from '@/lib/firebaseConfig'
+import { collection, getDocs } from 'firebase/firestore'
 import SalesList, { Vente } from '@/components/SalesList'
 import { X, Search, Link, Trash2, Heart } from 'lucide-react'
 import { formatPrix } from '@/lib/formatPrix'
@@ -54,8 +55,25 @@ export default function AdminNosVentesPage() {
   const [familialeProduitId, setFamilialeProduitId] = useState('')
   const [familialePrix, setFamilialePrix] = useState('')
   const [familialeDate, setFamilialeDate] = useState(new Date().toISOString().split('T')[0])
+  // Affectation : '' (aucune) | id d'une vendeuse | 'autre'
+  const [familialeAffectation, setFamilialeAffectation] = useState<string>('')
   const [familialeBeneficiaire, setFamilialeBeneficiaire] = useState('')
   const [familialeLoading, setFamilialeLoading] = useState(false)
+
+  // Vendeuses (équipe) — pour le dropdown affectation
+  const [vendeuses, setVendeuses] = useState<{ id: string; prenom: string; actif?: boolean }[]>([])
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, 'vendeuses'))
+        const list = snap.docs
+          .map(d => ({ id: d.id, ...(d.data() as any) }))
+          .filter((v: any) => v.actif !== false)
+          .sort((a: any, b: any) => a.prenom.localeCompare(b.prenom))
+        setVendeuses(list as any)
+      } catch (e) { console.error('Vendeuses fetch KO', e) }
+    })()
+  }, [])
 
   // Tous les produits (pour attribution)
   const [allProduits, setAllProduits] = useState<any[]>([])
@@ -414,6 +432,12 @@ export default function AdminNosVentesPage() {
 
   const handleVenteFamiliale = async () => {
     if (!familialeProduitId || familialePrix === '') return
+    // Si "autre" sélectionné, le commentaire est requis
+    if (familialeAffectation === 'autre' && !familialeBeneficiaire.trim()) {
+      alert('Merci de renseigner le commentaire pour "Autre"')
+      return
+    }
+    const vendeuse = vendeuses.find(v => v.id === familialeAffectation)
     setFamilialeLoading(true)
     try {
       const res = await fetch('/api/admin-family-sale', {
@@ -423,7 +447,11 @@ export default function AdminNosVentesPage() {
           produitId: familialeProduitId,
           prixVenteReel: parseFloat(familialePrix),
           dateVente: new Date(familialeDate).toISOString(),
-          beneficiaire: familialeBeneficiaire || null,
+          vendeuseId: vendeuse ? vendeuse.id : null,
+          vendeusePrenom: vendeuse ? vendeuse.prenom : null,
+          beneficiaire: familialeAffectation === 'autre'
+            ? (familialeBeneficiaire || null)
+            : (vendeuse ? vendeuse.prenom : null),
         })
       })
       const data = await res.json()
@@ -432,6 +460,7 @@ export default function AdminNosVentesPage() {
         setFamilialeSearch('')
         setFamilialeProduitId('')
         setFamilialePrix('')
+        setFamilialeAffectation('')
         setFamilialeBeneficiaire('')
         setFamilialeDate(new Date().toISOString().split('T')[0])
         await loadVentes()
@@ -770,16 +799,28 @@ export default function AdminNosVentesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Bénéficiaire <span className="text-gray-400 font-normal">(optionnel)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: prénom de la personne"
-                  value={familialeBeneficiaire}
-                  onChange={(e) => setFamilialeBeneficiaire(e.target.value)}
+                <label className="block text-sm font-medium mb-1">Affecter à</label>
+                <select
+                  value={familialeAffectation}
+                  onChange={(e) => setFamilialeAffectation(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2"
-                />
+                >
+                  <option value="">— Aucune —</option>
+                  {vendeuses.map(v => (
+                    <option key={v.id} value={v.id}>{v.prenom}</option>
+                  ))}
+                  <option value="autre">Autre…</option>
+                </select>
+                {familialeAffectation === 'autre' && (
+                  <input
+                    type="text"
+                    placeholder="Commentaire (prénom, lien, contexte…)"
+                    value={familialeBeneficiaire}
+                    onChange={(e) => setFamilialeBeneficiaire(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 mt-2"
+                    autoFocus
+                  />
+                )}
               </div>
             </div>
 

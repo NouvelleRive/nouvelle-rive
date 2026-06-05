@@ -36,6 +36,12 @@
     dateVente?: Timestamp
     updatedAt?: Timestamp
     createdAt?: Timestamp
+    vendeuseId?: string | null
+    vendeusePrenom?: string | null
+    venteFamiliale?: boolean
+    source?: string
+    sku?: string | null
+    nom?: string | null
   }
 
   const CRENEAUX = ['12-20', '11-17'] as const
@@ -436,6 +442,24 @@
       return map
     }, [ventesAll, planningSlots, currentMonth, pointages])
 
+    // Ventes familiales attribuées à une vendeuse (mois courant)
+    const ventesFamilialesParVendeuse = useMemo(() => {
+      const map = new Map<string, { total: number; count: number; items: ProduitVente[] }>()
+      ventesAll.forEach(v => {
+        if (!(v.venteFamiliale === true || v.source === 'familiale')) return
+        if (!v.vendeuseId) return
+        if (!(v.dateVente instanceof Timestamp)) return
+        const d = v.dateVente.toDate()
+        if (d.getMonth() !== currentMonth.month || d.getFullYear() !== currentMonth.year) return
+        const cur = map.get(v.vendeuseId) || { total: 0, count: 0, items: [] }
+        cur.total += v.prixVenteReel || 0
+        cur.count += 1
+        cur.items.push(v)
+        map.set(v.vendeuseId, cur)
+      })
+      return map
+    }, [ventesAll, currentMonth])
+
     const dailyCA = useMemo(() => {
   const ca: Record<string, number> = {}
   ventesAll.forEach(p => {
@@ -701,6 +725,7 @@ dailyCA={dailyCA}
                     const reelles = heuresReelles(v.id)
                     const cp = joursCP(v)
                     const stats = caParVendeuse.get(v.id)
+                    const fam = ventesFamilialesParVendeuse.get(v.id)
                     return (
                       <div key={v.id} className="py-3 border-b border-gray-100 last:border-0">
                         <div className="flex items-center justify-between mb-1">
@@ -730,6 +755,22 @@ dailyCA={dailyCA}
                               </div>
                             )}
                           </>
+                        )}
+                        {fam && fam.total > 0 && (
+                          <div className="pl-5 mt-1 pt-1 border-t border-gray-100">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-pink-600">Ventes familiales</span>
+                              <span className="font-bold text-pink-600">
+                                {fam.total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-gray-400 mt-0.5">
+                              {fam.count} pièce{fam.count > 1 ? 's' : ''} : {fam.items
+                                .map(i => i.sku || i.nom)
+                                .filter(Boolean)
+                                .join(', ')}
+                            </div>
+                          </div>
                         )}
                       </div>
                     )

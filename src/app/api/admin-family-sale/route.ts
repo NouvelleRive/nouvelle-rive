@@ -13,7 +13,7 @@ import { sendPushToOwner } from '@/lib/webpush'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { produitId, prixVenteReel, dateVente, beneficiaire } = body
+    const { produitId, prixVenteReel, dateVente, beneficiaire, vendeuseId, vendeusePrenom } = body
 
     if (!produitId) {
       return NextResponse.json({ success: false, error: 'ID du produit requis' }, { status: 400 })
@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
       categorie: produit.categorie || null,
       marque: produit.marque || null,
       beneficiaire: beneficiaire || null,
+      vendeuseId: vendeuseId || null,
+      vendeusePrenom: vendeusePrenom || null,
       createdAt: dateVenteTimestamp,
     }
     const venteRef = adminDb.collection('ventes').doc(venteDocId)
