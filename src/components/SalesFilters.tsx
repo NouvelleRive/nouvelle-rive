@@ -42,6 +42,7 @@ export default function SalesFilters({
   const [filtreChineuse, setFiltreChineuse] = useState('')
   const [filtrePrix, setFiltrePrix] = useState('')
   const [filtreStatut, setFiltreStatut] = useState<'all' | 'attribue' | 'non-attribue'>('all')
+  const [filtreFamilialeOnly, setFiltreFamilialeOnly] = useState(false)
   const [tri, setTri] = useState<'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'>('date-desc')
   const [showMonthSelect, setShowMonthSelect] = useState(false)
   const [showAttestationModal, setShowAttestationModal] = useState(false)
@@ -151,6 +152,9 @@ export default function SalesFilters({
     if (isAdmin && filtreStatut !== 'all') {
       result = result.filter(v => filtreStatut === 'attribue' ? v.isAttribue : !v.isAttribue)
     }
+    if (isAdmin && filtreFamilialeOnly) {
+      result = result.filter(v => v.source === 'familiale' || (v as any).venteFamiliale === true)
+    }
     return [...result].sort((a, b) => {
       if (tri === 'alpha') return (a.nom || '').localeCompare(b.nom || '')
       if (tri === 'prix-asc') return getPrix(a) - getPrix(b)
@@ -158,15 +162,15 @@ export default function SalesFilters({
       const dA = getDateFromVente(a).getTime(), dB = getDateFromVente(b).getTime()
       return tri === 'date-asc' ? dA - dB : dB - dA
     })
-  }, [ventes, recherche, filtreMois, filtreChineuse, filtrePrix, filtreStatut, tri, isAdmin])
+  }, [ventes, recherche, filtreMois, filtreChineuse, filtrePrix, filtreStatut, filtreFamilialeOnly, tri, isAdmin])
 
   useEffect(() => { onFiltered(ventesFiltrées) }, [ventesFiltrées])
 
   const resetFilters = () => {
     setRecherche(''); setFiltreMois(''); setFiltreChineuse('')
-    setFiltrePrix(''); setFiltreStatut('all'); setTri('date-desc')
+    setFiltrePrix(''); setFiltreStatut('all'); setFiltreFamilialeOnly(false); setTri('date-desc')
   }
-  const hasActiveFilters = !!(recherche || filtreMois || (isAdmin && filtreChineuse) || filtrePrix || filtreStatut !== 'all')
+  const hasActiveFilters = !!(recherche || filtreMois || (isAdmin && filtreChineuse) || filtrePrix || filtreStatut !== 'all' || (isAdmin && filtreFamilialeOnly))
 
   // =====================
   // EXPORT CSV
@@ -410,6 +414,19 @@ export default function SalesFilters({
             ...(isAdmin && { statut: { value: filtreStatut, onChange: (v) => setFiltreStatut(v as any), options: [{ value: 'all', label: 'Tous statuts' }, { value: 'attribue', label: 'Attribuées' }, { value: 'non-attribue', label: 'Non attribuées' }] } }),
           }}
         />
+        {isAdmin && (
+          <label className="flex items-center gap-2 mt-2 text-sm cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={filtreFamilialeOnly}
+              onChange={(e) => setFiltreFamilialeOnly(e.target.checked)}
+              className="rounded accent-pink-600"
+            />
+            <span className={filtreFamilialeOnly ? 'text-pink-700 font-medium' : 'text-gray-600'}>
+              Ventes familiales uniquement
+            </span>
+          </label>
+        )}
         {/* Toggle vue déplacé dans SalesList, juste au-dessus des articles */}
       </div>
 
