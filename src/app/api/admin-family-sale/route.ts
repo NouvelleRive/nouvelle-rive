@@ -8,6 +8,7 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
+import { sendPushToOwner } from '@/lib/webpush'
 
 export async function POST(req: NextRequest) {
   try {
@@ -96,7 +97,25 @@ export async function POST(req: NextRequest) {
       beneficiaire: beneficiaire || null,
       createdAt: dateVenteTimestamp,
     }
-    await adminDb.collection('ventes').doc(venteDocId).set(venteData, { merge: true })
+    const venteRef = adminDb.collection('ventes').doc(venteDocId)
+    const venteSnapBefore = await venteRef.get()
+    const isNewVente = !venteSnapBefore.exists
+    await venteRef.set(venteData, { merge: true })
+
+    // Notif chineuse : exactement le même format qu'une vente normale (caisse) —
+    // pas de mention "familiale" pour qu'elle ne voit aucune différence.
+    if (isNewVente && chineurUid) {
+      try {
+        const photo = produit?.images?.[0] || produit?.imageUrl || produit?.photos?.face || produit?.imageUrls?.[0] || undefined
+        await sendPushToOwner(chineurUid, {
+          title: '🎉 Vente !',
+          body: `${produit.sku || produit.nom} vendu ${prixVenteReel}€`,
+          url: '/chineuse/mes-ventes',
+          tag: venteDocId,
+          image: photo,
+        })
+      } catch (e) { console.warn('Push notif chineuse failed:', e) }
+    }
 
     // Retrait des canaux externes (le produit n'est plus en stock)
     await removeFromAllChannels({
