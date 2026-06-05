@@ -5,10 +5,10 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { Timestamp, FieldValue } from 'firebase-admin/firestore'
-import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
+import { Timestamp } from 'firebase-admin/firestore'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 import { sendPushToOwner } from '@/lib/webpush'
+import { markProduitSold } from '@/lib/markProduitSold'
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,16 +58,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Marquer le produit comme vendu (famille)
-    await produitRef.update({
-      vendu: true,
-      quantite: 0,
-      statut: 'vendu',
+    // Décrémentation du stock via helper partagé avec le webhook Square
+    const { nouvelleQuantite } = await markProduitSold(adminDb, produitRef, produit, {
+      saleTimestamp: dateVenteTimestamp,
       prixVenteReel,
-      dateVente: dateVenteTimestamp,
-      venteManuelle: true,
-      venteFamiliale: true,
-      updatedAt: FieldValue.serverTimestamp(),
+      trigramme,
+      extraFields: { venteManuelle: true, venteFamiliale: true },
     })
 
     // Créer le doc vente (ID déterministe : un produit ne peut être vendu qu'une fois)
@@ -119,15 +115,7 @@ export async function POST(req: NextRequest) {
       } catch (e) { console.warn('Push notif chineuse failed:', e) }
     }
 
-    // Retrait des canaux externes (le produit n'est plus en stock)
-    await removeFromAllChannels({
-      id: produitId,
-      sku: produit?.sku,
-      ebayOfferId: produit?.ebayOfferId,
-      ebayListingId: produit?.ebayListingId,
-    }).catch(e => console.error('⚠️ Retrait multi-canal (vente familiale) KO:', e?.message))
-
-    console.log(`✅ Vente familiale créée pour produit ${produitId} [${venteDocId}]`)
+    console.log(`✅ Vente familiale créée pour produit ${produitId} [${venteDocId}] — stock restant: ${nouvelleQuantite}`)
     return NextResponse.json({ success: true, venteId: venteDocId })
   } catch (error: any) {
     console.error('❌ [API ADMIN FAMILY SALE]', error?.message || error)
