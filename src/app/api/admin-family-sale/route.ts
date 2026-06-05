@@ -66,8 +66,10 @@ export async function POST(req: NextRequest) {
       extraFields: { venteManuelle: true, venteFamiliale: true },
     })
 
-    // Créer le doc vente (ID déterministe : un produit ne peut être vendu qu'une fois)
-    const venteDocId = `familiale_${produitId}`
+    // ID déterministe basé sur l'horodatage : permet plusieurs ventes familiales
+    // sur un produit multi-stock sans écraser les précédentes (respecte la règle
+    // "jamais .add()" tout en évitant la collision familiale_${produitId}).
+    const venteDocId = `familiale_${produitId}_${Date.now()}`
     const venteData = {
       paymentId: null,
       orderId: null,
