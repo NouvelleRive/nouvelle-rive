@@ -438,6 +438,14 @@ export default function AdminNosVentesPage() {
       return
     }
     const vendeuse = vendeuses.find(v => v.id === familialeAffectation)
+    // Date locale : si jour J → heure courante (sinon vente apparaît à minuit UTC
+    // donc AVANT toutes celles d'aujourd'hui). Sinon → midi local du jour choisi.
+    const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    const todayLocal = ymd(new Date())
+    const venteDateISO = (familialeDate === todayLocal
+      ? new Date()
+      : new Date(`${familialeDate}T12:00:00`)
+    ).toISOString()
     setFamilialeLoading(true)
     try {
       const res = await fetch('/api/admin-family-sale', {
@@ -446,7 +454,7 @@ export default function AdminNosVentesPage() {
         body: JSON.stringify({
           produitId: familialeProduitId,
           prixVenteReel: parseFloat(familialePrix),
-          dateVente: new Date(familialeDate).toISOString(),
+          dateVente: venteDateISO,
           vendeuseId: vendeuse ? vendeuse.id : null,
           vendeusePrenom: vendeuse ? vendeuse.prenom : null,
           beneficiaire: familialeAffectation === 'autre'
