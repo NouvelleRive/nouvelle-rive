@@ -353,6 +353,7 @@ export async function GET(req: NextRequest) {
                   <li>photos détourées proprement et portés vérifiés</li>
                   <li>produits étiquetés avec prix et SKU</li>
                 </ul>
+                <p style="margin-top:20px;">Les filles en surface organisent leur temps de travail et leurs pauses autour des restocks, donc si tu arrives avec plus de 10 mn de retard, pense à leur ramener un cookie !</p>
                 <p style="margin-top:24px;">
                   <a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mon RDV</a>
                 </p>
