@@ -439,12 +439,12 @@ export default function ProduitClient({
                   )}
                 </div>
                 <div className="py-3 text-center">
-                  {p.marque && (
-                    <h3 className="uppercase mb-1 line-clamp-1" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em' }}>{p.marque}</h3>
-                  )}
-                  <p className="uppercase line-clamp-2 mb-1" style={{ fontSize: '11px', color: '#666' }}>
+                  <h3 className="uppercase line-clamp-2 mb-1" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em' }}>
                     {p.nom.replace(/^[A-Z]{2,10}\d{1,4}\s*[-–]\s*/i, '')}
-                  </p>
+                  </h3>
+                  {p.marque && (
+                    <p className="uppercase mb-1 line-clamp-1" style={{ fontSize: '11px', color: '#666', letterSpacing: '0.05em' }}>{p.marque}</p>
+                  )}
                   <p style={{ fontSize: '11px' }}>{formatPrix(p.prix)} €</p>
                 </div>
               </Link>
