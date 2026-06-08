@@ -686,17 +686,16 @@ export async function GET(req: NextRequest) {
       const piecesOranges: PieceInfo[] = []
       const piecesRouges: PieceInfo[] = []
       let stockActif = 0
-      let ventes30j = 0
-      const ventesRecentes: Array<{ sku: string; nom: string; imageUrl: string; prix: number; dateVente: Date }> = []
-      const thirtyDaysAgo = new Date(today); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      let dateLastRestock: Date | null = null
+      type VenteInfo = { sku: string; nom: string; imageUrl: string; prix: number; dateVente: Date }
+      const toutesVentes: VenteInfo[] = []
       for (const d of prodsSnap.docs) {
         const p = d.data() as any
-        // Compter les ventes des 30 derniers jours + collecter
+        // Collecter toutes les ventes ; on filtrera par "depuis le dernier restock" après la boucle
         if (p.vendu === true || p.statut === 'vendu') {
           const dv = p.dateVente?.toDate?.()
-          if (dv instanceof Date && dv >= thirtyDaysAgo) {
-            ventes30j++
-            ventesRecentes.push({
+          if (dv instanceof Date) {
+            toutesVentes.push({
               sku: p.sku || '',
               nom: (p.nom || '').replace(`${p.sku || ''} - `, ''),
               imageUrl: p.imageUrl || p.photos?.face || '',
@@ -708,7 +707,11 @@ export async function GET(req: NextRequest) {
         }
         if (p.statut === 'supprime' || p.statut === 'retour') continue
         if (p.statutRecuperation === 'aRecuperer') continue
-        if (p.recu === true) stockActif++
+        if (p.recu === true) {
+          stockActif++
+          const dr = p.dateReception?.toDate?.()
+          if (dr instanceof Date && (!dateLastRestock || dr > dateLastRestock)) dateLastRestock = dr
+        }
         if (p.prixBaisseLe) {
           const bd = p.prixBaisseLe?.toDate?.()
           if (!(bd instanceof Date)) continue
@@ -721,9 +724,13 @@ export async function GET(req: NextRequest) {
           if (c < twoMonthsAgo) piecesOranges.push(toInfo(p))
         }
       }
-      // Tri par date de vente desc, top 3
-      ventesRecentes.sort((a, b) => b.dateVente.getTime() - a.dateVente.getTime())
-      const top3 = ventesRecentes.slice(0, 3)
+      // Ventes depuis le dernier restock (fallback 30j si jamais reçu)
+      const cutoff30j = new Date(today); cutoff30j.setDate(cutoff30j.getDate() - 30)
+      const ventesCutoff = dateLastRestock || cutoff30j
+      const ventesDepuisRestock = toutesVentes.filter(v => v.dateVente >= ventesCutoff)
+      ventesDepuisRestock.sort((a, b) => b.dateVente.getTime() - a.dateVente.getTime())
+      const ventesCount = ventesDepuisRestock.length
+      const top3 = ventesDepuisRestock.slice(0, 3)
 
       const rdvs = futureRdvByTri[tri] || []
       const hasRdvWithinDays = (n: number) => rdvs.some(r => {
@@ -799,15 +806,15 @@ export async function GET(req: NextRequest) {
                 from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
                 to: emails,
                 bcc: 'nouvelleriveparis@gmail.com',
-                subject: ventes30j > 0
-                  ? `WOUAOU t'as vendu ${ventes30j} pièce${ventes30j > 1 ? 's' : ''}, time to restock 🌊`
+                subject: ventesCount > 0
+                  ? `WOUAOU t'as vendu ${ventesCount} pièce${ventesCount > 1 ? 's' : ''}, time to restock 🌊`
                   : `Viens nous amener tes pépites ma vie 🌊`,
                 html: `
                   <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
-                    <h1 style="color:#22209C;">${ventes30j > 0 ? `WOUAOU bravo ${prenom} 🦾` : `Viens nous amener tes pépites 🌊`}</h1>
+                    <h1 style="color:#22209C;">${ventesCount > 0 ? `WOUAOU bravo ${prenom} 🦾` : `Viens nous amener tes pépites 🌊`}</h1>
                     <p>Hello ${prenom},</p>
-                    ${ventes30j > 0
-                      ? `<p>Tu as vendu <strong>${ventes30j} pièce${ventes30j > 1 ? 's' : ''}</strong> ces 30 derniers jours, c'est ouf 💙</p>`
+                    ${ventesCount > 0
+                      ? `<p>Tu as vendu <strong>${ventesCount} pièce${ventesCount > 1 ? 's' : ''}</strong> depuis ton dernier restock, c'est ouf 💙</p>`
                       : ''}
                     <p>Il te reste <strong>${stockActif} pièce${stockActif > 1 ? 's' : ''}</strong> en boutique (cible : ${cible}). ${manquantesText}</p>
                     ${top3Html}
