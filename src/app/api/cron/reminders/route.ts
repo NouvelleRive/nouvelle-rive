@@ -544,7 +544,7 @@ export async function GET(req: NextRequest) {
       const rappelsDoc = await adminDb.collection('rappelsChineuse').doc(chinDoc.id).get()
       const rappels = rappelsDoc.exists ? (rappelsDoc.data() as any) : {}
       const fieldKey = stage === 'j10' ? 'j10SentAt' : stage === 'j7' ? 'j7SentAt' : 'orangeSentAt'
-      const cooldownDays = stage === 'orange' ? 2 : 5
+      const cooldownDays = stage === 'orange' ? 2 : 30
       const lastSent = rappels[fieldKey]?.toDate?.() as Date | undefined
       if (lastSent && (today.getTime() - lastSent.getTime()) < cooldownDays * 24 * 3600 * 1000) continue
 
