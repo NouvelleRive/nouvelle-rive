@@ -1421,17 +1421,20 @@
           </div>
         )}
 
-        {/* Popup : restock chineuse fini → 2 questions affichées d'un coup */}
+        {/* Popup : restock chineuse fini */}
         {restockFiniChineuse && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Restock terminé 💙</h3>
-              <p className="text-xs text-gray-500 mb-4">
-                Toutes les pièces de <strong>{restockFiniChineuse.nom}</strong> sont réceptionnées.
+              <h3 className="text-lg font-semibold mb-3 text-[#22209C]">
+                Bravo pr le restock beautey 🎉
+              </h3>
+              <p className="text-sm text-gray-700 mb-4">
+                On sait que c'est pas toujours gagné mdr 💙
               </p>
+              <p className="text-sm font-medium text-gray-800 mb-2">As-tu bien vérifié que :</p>
               <ul className="text-sm text-gray-700 mb-5 space-y-2 list-disc pl-5">
-                <li>Y a-t-il des pièces à rendre ou des prix à baisser ?</li>
-                <li>Les photos sont-elles correctes ?</li>
+                <li>il n'y a pas de pièces à rendre ou des prix à baisser ?</li>
+                <li>les photos sont correctes ?</li>
               </ul>
               <div className="flex gap-3">
                 <button
