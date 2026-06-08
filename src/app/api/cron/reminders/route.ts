@@ -461,13 +461,16 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 10h00 — rappels chineuses "faire tourner" (J-10, J-7, orange)
-  // J-10 / J-7 : si pas de RDV restock dans la fenêtre → push "prends rdv"
-  // orange (au moins 1 pièce +2 mois sans baisse) : si pas de RDV dans 10j → mail liste + push,
-  // relance tous les 2j tant qu'il reste des oranges. Notif admin par chineuse à chaque envoi.
+  // 10h00 — rappels chineuses "faire tourner" + "récupérer"
+  // Deux cycles parallèles, mêmes règles :
+  // - orange : pièces sans prixBaisseLe, datePivot = createdAt + 2 mois (passage en "à baisser")
+  // - rouge  : pièces avec prixBaisseLe, datePivot = prixBaisseLe + 1 mois (passage en "à récupérer")
+  // Par cycle : J-10 / J-7 (push+mail "prends rdv" si pas de RDV dans la fenêtre, 1 envoi par pivot),
+  // puis jour J (mail liste + push, relance 2j si pas de RDV dans 10j, notif/mail admin par chineuse).
   if (inWindow(h, m, 10, 0)) {
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const twoMonthsAgo = new Date(today); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+    const oneMonthAgo = new Date(today); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
     const daysBetween = (a: Date, b: Date) => Math.ceil((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24))
 
     // Index des RDV futurs (≤ 11 jours) par trigramme
@@ -492,128 +495,133 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const chineusesSnap = await adminDb.collection('chineuse').get()
-    for (const chinDoc of chineusesSnap.docs) {
-      const chin = chinDoc.data() as any
-      const tri = (chin.trigramme || '').toString().toUpperCase()
-      if (!tri) continue
+    const toInfo = (p: any): PieceInfo => ({
+      sku: p.sku || '',
+      nom: (p.nom || '').replace(`${p.sku || ''} - `, ''),
+      imageUrl: p.imageUrl || p.photos?.face || '',
+      categorie: typeof p.categorie === 'object' ? (p.categorie?.label || '') : (p.categorie || ''),
+      prix: p.prix,
+      ancienPrix: p.ancienPrix,
+    })
 
-      // Pièces actives de la chineuse, exclusion baissées / récup demandée
-      const prodsSnap = await adminDb.collection('produits').where('trigramme', '==', tri).get()
-      let dateMinCreated: Date | null = null
-      const piecesOranges: PieceInfo[] = []
-      for (const d of prodsSnap.docs) {
-        const p = d.data() as any
-        if (p.vendu === true) continue
-        if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
-        if (p.statutRecuperation === 'aRecuperer') continue
-        if (p.prixBaisseLe) continue
-        const c = p.createdAt?.toDate?.()
-        if (!(c instanceof Date)) continue
-        if (!dateMinCreated || c < dateMinCreated) dateMinCreated = c
-        if (c < twoMonthsAgo) {
-          piecesOranges.push({
-            sku: p.sku || '',
-            nom: (p.nom || '').replace(`${p.sku || ''} - `, ''),
-            imageUrl: p.imageUrl || p.photos?.face || '',
-            categorie: typeof p.categorie === 'object' ? (p.categorie?.label || '') : (p.categorie || ''),
-            prix: p.prix,
-          })
-        }
-      }
-      if (!dateMinCreated) continue
+    type CycleKind = 'orange' | 'rouge'
+    type CycleStage = 'jour-j' | 'j7' | 'j10'
 
-      const datePivot = new Date(dateMinCreated); datePivot.setMonth(datePivot.getMonth() + 2)
-      const daysToOrange = daysBetween(datePivot, today)
+    const piecesHtmlOf = (pieces: PieceInfo[]) => `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${pieces.map(p => `
+      <td style="padding:6px;vertical-align:top;text-align:center;width:120px;">
+        ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" width="100" height="100" style="display:block;object-fit:cover;border:1px solid #eee;border-radius:6px;margin:0 auto 6px;" />` : ''}
+        <div style="font-size:11px;font-weight:bold;color:#22209C;">${p.sku}</div>
+        <div style="font-size:11px;color:#444;">${p.nom}</div>
+        ${typeof p.prix === 'number' ? `<div style="font-size:11px;color:#888;">${p.prix}€</div>` : ''}
+      </td>`).join('')}</tr></table>`
 
-      let stage: 'orange' | 'j7' | 'j10' | null = null
-      if (piecesOranges.length > 0) stage = 'orange'
-      else if (daysToOrange >= 1 && daysToOrange <= 7) stage = 'j7'
-      else if (daysToOrange >= 8 && daysToOrange <= 10) stage = 'j10'
-      if (!stage) continue
-
-      const rdvs = futureRdvByTri[tri] || []
-      const hasRdvWithinDays = (n: number) => rdvs.some(r => {
-        const days = daysBetween(r, today)
-        return days >= 0 && days <= n
-      })
-      const rdvWindow = stage === 'j7' ? 7 : 10
-      if (hasRdvWithinDays(rdvWindow)) continue
-
-      // Anti-spam :
-      // - J-10 / J-7 : 1 envoi par cycle (identifié par la date pivot YYYY-MM-DD)
-      // - orange : cooldown 2j tant que pas de RDV
-      const rappelsDoc = await adminDb.collection('rappelsChineuse').doc(chinDoc.id).get()
-      const rappels = rappelsDoc.exists ? (rappelsDoc.data() as any) : {}
-      const pivotISO = `${datePivot.getFullYear()}-${String(datePivot.getMonth() + 1).padStart(2, '0')}-${String(datePivot.getDate()).padStart(2, '0')}`
-      if (stage === 'j10' && rappels.j10SentForPivot === pivotISO) continue
-      if (stage === 'j7' && rappels.j7SentForPivot === pivotISO) continue
-      if (stage === 'orange') {
-        const lastSent = rappels.orangeSentAt?.toDate?.() as Date | undefined
-        if (lastSent && (today.getTime() - lastSent.getTime()) < 2 * 24 * 3600 * 1000) continue
-      }
-
-      const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
+    async function runCycle(opts: {
+      kind: CycleKind
+      stage: CycleStage
+      pivotISO: string
+      pieces: PieceInfo[]
+      chin: any
+      chinId: string
+      tri: string
+      rappels: any
+    }): Promise<Record<string, any> | null> {
+      const { kind, stage, pivotISO, pieces, chin, chinId, tri, rappels } = opts
       const prenom = chin.prenom || chin.nom || ''
       const nomCourt = chin.prenom || chin.nom || tri
+      const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
 
+      // Cooldown / anti-spam
+      const keyForPivot = kind === 'orange'
+        ? (stage === 'j10' ? 'orangeJ10ForPivot' : stage === 'j7' ? 'orangeJ7ForPivot' : null)
+        : (stage === 'j10' ? 'rougeJ10ForPivot' : stage === 'j7' ? 'rougeJ7ForPivot' : null)
+      const keyForJourJ = kind === 'orange' ? 'orangeJourJSentAt' : 'rougeJourJSentAt'
+
+      if (keyForPivot && rappels[keyForPivot] === pivotISO) return null
+      if (stage === 'jour-j') {
+        const lastSent = rappels[keyForJourJ]?.toDate?.() as Date | undefined
+        if (lastSent && (today.getTime() - lastSent.getTime()) < 2 * 24 * 3600 * 1000) return null
+      }
+
+      // Textes
       let subject = ''
       let html = ''
       let pushTitle = ''
       let pushBody = ''
       let pushUrl = '/chineuse/calendrier'
-      let piecesHtml = ''
 
-      if (stage === 'j10') {
+      if (stage === 'j10' && kind === 'orange') {
         subject = `Tu nous amènes de nouvelles pépites ? 💙`
         html = `
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Tu nous amènes de nouvelles pépites ? 💙</h1>
             <p>Hello ${prenom},</p>
             <p>Tes plus anciennes pièces atteignent bientôt 2 mois en boutique. Il est temps de prendre rdv pour faire tourner ton stock 🌊</p>
-            <p style="margin-top:24px;">
-              <a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a>
-            </p>
+            <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
           </div>`
         pushTitle = `🌊 Tu nous amènes des pépites ?`
         pushBody = `Il est temps de prendre rdv pour faire tourner ton stock`
-      } else if (stage === 'j7') {
+      } else if (stage === 'j7' && kind === 'orange') {
         subject = `Plus que 7j pour prendre rdv ma vie ! 💙`
         html = `
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Plus que 7j ma vie ! ⏰</h1>
             <p>Hello ${prenom},</p>
             <p>Tes plus anciennes pièces vont passer en "à faire tourner" dans une semaine. Prends rdv au plus vite pour les renouveler 🌊</p>
-            <p style="margin-top:24px;">
-              <a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a>
-            </p>
+            <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
           </div>`
         pushTitle = `⏰ Plus que 7j ma vie !`
         pushBody = `Prends rdv au plus vite pour faire tourner ton stock`
-      } else {
-        piecesHtml = `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${piecesOranges.map(p => `
-          <td style="padding:6px;vertical-align:top;text-align:center;width:120px;">
-            ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" width="100" height="100" style="display:block;object-fit:cover;border:1px solid #eee;border-radius:6px;margin:0 auto 6px;" />` : ''}
-            <div style="font-size:11px;font-weight:bold;color:#22209C;">${p.sku}</div>
-            <div style="font-size:11px;color:#444;">${p.nom}</div>
-            ${typeof p.prix === 'number' ? `<div style="font-size:11px;color:#888;">${p.prix}€</div>` : ''}
-          </td>`).join('')}</tr></table>`
+      } else if (stage === 'jour-j' && kind === 'orange') {
         subject = `Il est temps de baisser les prix 💸`
         html = `
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Il est temps de baisser les prix 💸</h1>
             <p>Hello ${prenom},</p>
-            <p>Les ${piecesOranges.length} pièce${piecesOranges.length > 1 ? 's' : ''} ci-dessous ${piecesOranges.length > 1 ? 'sont' : 'est'} en boutique depuis +2 mois. Il est temps de baisser leur prix (ou de prendre rdv pour venir les chercher) 🌊</p>
-            ${piecesHtml}
-            <p style="margin-top:24px;">
-              <a href="https://www.nouvellerive.eu/chineuse/mes-produits" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mes pièces</a>
-            </p>
+            <p>Les ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} ci-dessous ${pieces.length > 1 ? 'sont' : 'est'} en boutique depuis +2 mois. Il est temps de baisser leur prix (ou de prendre rdv pour venir les chercher) 🌊</p>
+            ${piecesHtmlOf(pieces)}
+            <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/mes-produits" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mes pièces</a></p>
           </div>`
-        pushTitle = `💸 ${piecesOranges.length} prix à baisser`
+        pushTitle = `💸 ${pieces.length} prix à baisser`
         pushBody = `Il est temps de faire tourner ton stock en boutique`
         pushUrl = '/chineuse/mes-produits'
+      } else if (stage === 'j10' && kind === 'rouge') {
+        subject = `Tes pièces baissées arrivent à échéance 💙`
+        html = `
+          <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+            <h1 style="color:#22209C;">Pense à venir chercher tes pièces 💙</h1>
+            <p>Hello ${prenom},</p>
+            <p>Plusieurs de tes pièces baissées passent à "à récupérer" dans 10 jours. Prends rdv pour les emporter (et nous amener de nouvelles pépites en passant !) 🌊</p>
+            <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
+          </div>`
+        pushTitle = `💙 Pense à venir chercher tes pièces`
+        pushBody = `Tes pièces baissées passent à "à récupérer" dans 10 jours`
+      } else if (stage === 'j7' && kind === 'rouge') {
+        subject = `Plus que 7j pour venir chercher tes pièces ma vie ! 💙`
+        html = `
+          <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+            <h1 style="color:#22209C;">Plus que 7j ma vie ! ⏰</h1>
+            <p>Hello ${prenom},</p>
+            <p>Tes pièces baissées passent à "à récupérer" dans une semaine. Prends rdv au plus vite pour venir les chercher 🌊</p>
+            <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
+          </div>`
+        pushTitle = `⏰ Plus que 7j pour venir chercher !`
+        pushBody = `Prends rdv au plus vite pour récupérer tes pièces`
+      } else {
+        // jour-j rouge
+        subject = `Il est temps de venir chercher tes pièces 💙`
+        html = `
+          <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+            <h1 style="color:#22209C;">Il est temps de venir chercher tes pièces 💙</h1>
+            <p>Hello ${prenom},</p>
+            <p>Les ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} ci-dessous ${pieces.length > 1 ? 'sont' : 'est'} baissée${pieces.length > 1 ? 's' : ''} depuis +1 mois et ${pieces.length > 1 ? 'doivent' : 'doit'} être récupérée${pieces.length > 1 ? 's' : ''}. Prends rdv pour les emporter 🌊</p>
+            ${piecesHtmlOf(pieces)}
+            <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
+          </div>`
+        pushTitle = `💙 ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} à récupérer`
+        pushBody = `Prends rdv pour venir les chercher en boutique`
       }
 
+      // Mail chineuse
       if (emails.length > 0) {
         try {
           await resend.emails.send({
@@ -624,46 +632,122 @@ export async function GET(req: NextRequest) {
             html,
           })
         } catch (e: any) {
-          console.error(`[cron/reminders] ${stage} mail échoué ${chinDoc.id}:`, e?.message)
+          console.error(`[cron/reminders] ${kind}-${stage} mail échoué ${chinId}:`, e?.message)
         }
       }
 
+      // Push chineuse
       if (chin.authUid) {
         await sendPushToOwner(chin.authUid, {
           title: pushTitle,
           body: pushBody,
           url: pushUrl,
-          tag: `chineuse-${stage}-${chinDoc.id}-${dateStr}`,
+          tag: `chineuse-${kind}-${stage}-${chinId}-${dateStr}`,
         })
       }
 
-      // Notif + mail admin uniquement pour le stage orange
-      if (stage === 'orange') {
+      // Notif + mail admin uniquement pour le jour J
+      if (stage === 'jour-j') {
+        const verb = kind === 'orange' ? 'à baisser' : 'à récupérer'
+        const intro = kind === 'orange' ? 'Mail "baisse de prix" envoyé' : 'Mail "récupération" envoyé'
         await sendPushToOwner('boutique', {
-          title: `💸 ${piecesOranges.length} prix ${nomCourt} à baisser`,
-          body: `Mail envoyé à la chineuse — relance dans 2j si rien ne bouge`,
+          title: `${kind === 'orange' ? '💸' : '💙'} ${pieces.length} ${kind === 'orange' ? 'prix' : 'pièces'} ${nomCourt} ${verb}`,
+          body: `${intro} à la chineuse — relance dans 2j si rien ne bouge`,
           url: '/admin/nos-produits',
-          tag: `admin-orange-${chinDoc.id}-${dateStr}`,
+          tag: `admin-${kind}-jour-j-${chinId}-${dateStr}`,
         })
         try {
           await resend.emails.send({
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: 'nouvelleriveparis@gmail.com',
-            subject: `${piecesOranges.length} prix ${nomCourt} à baisser`,
-            html: `<p>Mail "baisse de prix" envoyé à ${nomCourt}. Pièces concernées :</p>${piecesHtml}`,
+            subject: `${pieces.length} ${kind === 'orange' ? 'prix' : 'pièces'} ${nomCourt} ${verb}`,
+            html: `<p>${intro} à ${nomCourt}. Pièces concernées :</p>${piecesHtmlOf(pieces)}`,
           })
         } catch {}
       }
 
-      const sentUpdate: Record<string, any> =
-        stage === 'orange'
-          ? { orangeSentAt: FieldValue.serverTimestamp() }
-          : stage === 'j10'
-            ? { j10SentForPivot: pivotISO, j10SentAt: FieldValue.serverTimestamp() }
-            : { j7SentForPivot: pivotISO, j7SentAt: FieldValue.serverTimestamp() }
-      await adminDb.collection('rappelsChineuse').doc(chinDoc.id).set(sentUpdate, { merge: true })
+      actions.push(`chineuse-${kind}-${stage}-${chinId}`)
 
-      actions.push(`chineuse-${stage}-${chinDoc.id}`)
+      if (stage === 'jour-j') return { [keyForJourJ]: FieldValue.serverTimestamp() }
+      if (keyForPivot) return { [keyForPivot]: pivotISO }
+      return null
+    }
+
+    const chineusesSnap = await adminDb.collection('chineuse').get()
+    for (const chinDoc of chineusesSnap.docs) {
+      const chin = chinDoc.data() as any
+      const tri = (chin.trigramme || '').toString().toUpperCase()
+      if (!tri) continue
+
+      // Charger les produits actifs une seule fois et trier par cycle
+      const prodsSnap = await adminDb.collection('produits').where('trigramme', '==', tri).get()
+      let dateMinCreated: Date | null = null
+      let dateMinBaisse: Date | null = null
+      const piecesOranges: PieceInfo[] = []
+      const piecesRouges: PieceInfo[] = []
+      for (const d of prodsSnap.docs) {
+        const p = d.data() as any
+        if (p.vendu === true) continue
+        if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
+        if (p.statutRecuperation === 'aRecuperer') continue
+        if (p.prixBaisseLe) {
+          const bd = p.prixBaisseLe?.toDate?.()
+          if (!(bd instanceof Date)) continue
+          if (!dateMinBaisse || bd < dateMinBaisse) dateMinBaisse = bd
+          if (bd < oneMonthAgo) piecesRouges.push(toInfo(p))
+        } else {
+          const c = p.createdAt?.toDate?.()
+          if (!(c instanceof Date)) continue
+          if (!dateMinCreated || c < dateMinCreated) dateMinCreated = c
+          if (c < twoMonthsAgo) piecesOranges.push(toInfo(p))
+        }
+      }
+
+      const rdvs = futureRdvByTri[tri] || []
+      const hasRdvWithinDays = (n: number) => rdvs.some(r => {
+        const days = daysBetween(r, today)
+        return days >= 0 && days <= n
+      })
+
+      const rappelsDoc = await adminDb.collection('rappelsChineuse').doc(chinDoc.id).get()
+      const rappels = rappelsDoc.exists ? (rappelsDoc.data() as any) : {}
+      const updates: Record<string, any> = {}
+
+      const cycles: Array<{ kind: CycleKind; dateMin: Date | null; offsetMonths: number; pieces: PieceInfo[] }> = [
+        { kind: 'orange', dateMin: dateMinCreated, offsetMonths: 2, pieces: piecesOranges },
+        { kind: 'rouge', dateMin: dateMinBaisse, offsetMonths: 1, pieces: piecesRouges },
+      ]
+
+      for (const cyc of cycles) {
+        if (!cyc.dateMin) continue
+        const datePivot = new Date(cyc.dateMin); datePivot.setMonth(datePivot.getMonth() + cyc.offsetMonths)
+        const daysToPivot = daysBetween(datePivot, today)
+        let stage: CycleStage | null = null
+        if (cyc.pieces.length > 0) stage = 'jour-j'
+        else if (daysToPivot >= 1 && daysToPivot <= 7) stage = 'j7'
+        else if (daysToPivot >= 8 && daysToPivot <= 10) stage = 'j10'
+        if (!stage) continue
+
+        const rdvWindow = stage === 'j7' ? 7 : 10
+        if (hasRdvWithinDays(rdvWindow)) continue
+
+        const pivotISO = `${datePivot.getFullYear()}-${String(datePivot.getMonth() + 1).padStart(2, '0')}-${String(datePivot.getDate()).padStart(2, '0')}`
+        const update = await runCycle({
+          kind: cyc.kind,
+          stage,
+          pivotISO,
+          pieces: cyc.pieces,
+          chin,
+          chinId: chinDoc.id,
+          tri,
+          rappels: { ...rappels, ...updates },
+        })
+        if (update) Object.assign(updates, update)
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await adminDb.collection('rappelsChineuse').doc(chinDoc.id).set(updates, { merge: true })
+      }
     }
   }
 
