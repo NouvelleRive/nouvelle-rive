@@ -5,7 +5,7 @@
   import { useEffect, useState, useMemo } from 'react'
   import {
     collection, getDocs, addDoc, updateDoc, deleteDoc, doc,
-    serverTimestamp, getDoc, setDoc, Timestamp, onSnapshot
+    serverTimestamp, getDoc, setDoc, Timestamp, onSnapshot, deleteField
   } from 'firebase/firestore'
   import { db } from '@/lib/firebaseConfig'
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
@@ -196,33 +196,41 @@
     }
 
     // =====================
-    // SAUVEGARDER PLANNING
+    // SAUVEGARDER PLANNING (full overwrite, utilisé par autoFill + bouton Enregistrer)
     // =====================
     const savePlanning = async (newSlots: PlanningSlots) => {
       setPlanningSlots(newSlots)
       const docRef = doc(db, 'planning', monthKey)
-      const snap = await getDoc(docRef)
-      if (snap.exists()) {
-        // updateDoc remplace le champ slots entièrement — setDoc + merge le fusionnerait
-        // et les clés retirées localement resteraient côté serveur.
-        await updateDoc(docRef, { slots: newSlots })
-      } else {
-        await setDoc(docRef, { slots: newSlots })
-      }
+      await setDoc(docRef, { slots: newSlots })
     }
 
     // =====================
-    // ASSIGNER UN CRÉNEAU
+    // ASSIGNER UN CRÉNEAU — écriture atomique par slot (évite la race condition
+    // qui réinjectait les vendeuses supprimées quand on en retirait plusieurs vite)
     // =====================
-    const assignSlot = (dateStr: string, creneau: string, vendeuseId: string | '') => {
+    const assignSlot = async (dateStr: string, creneau: string, vendeuseId: string | '') => {
       const key = `${dateStr}_${creneau}`
-      const newSlots = { ...planningSlots }
+      setPlanningSlots(prev => {
+        const next = { ...prev }
+        if (vendeuseId === '') delete next[key]
+        else next[key] = vendeuseId
+        return next
+      })
+      const docRef = doc(db, 'planning', monthKey)
       if (vendeuseId === '') {
-        delete newSlots[key]
+        try {
+          await updateDoc(docRef, { [`slots.${key}`]: deleteField() })
+        } catch {
+          // Doc absent ou champ inexistant — rien à supprimer
+        }
       } else {
-        newSlots[key] = vendeuseId
+        await setDoc(docRef, { slots: { [key]: vendeuseId } }, { merge: true })
       }
-      savePlanning(newSlots)
+    }
+
+    // Re-sauvegarde complète du planning courant (bouton Enregistrer manuel)
+    const handleManualSave = async () => {
+      await savePlanning(planningSlots)
     }
 
     // =====================
@@ -714,7 +722,8 @@
               onAssign={assignSlot}
               onAutoFill={autoFill}
               showAutoFill={true}
-dailyCA={dailyCA}
+              onSaveAll={handleManualSave}
+              dailyCA={dailyCA}
               dailyCAByCreneau={dailyCAByCreneau}
             />
           </div>

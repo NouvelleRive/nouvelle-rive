@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { collection, getDocs, getDoc, doc, setDoc, updateDoc, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { db, auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -151,19 +151,29 @@ export default function VendeuseCalendrierPage() {
 
   const assignSlot = async (dateStr: string, creneau: string, vendeuseId: string | '') => {
     const key = `${dateStr}_${creneau}`
-    const newSlots = { ...planningSlots }
-    if (vendeuseId === '') delete newSlots[key]
-    else newSlots[key] = vendeuseId
-    setPlanningSlots(newSlots)
+    // Écriture atomique par slot pour éviter les race conditions quand plusieurs
+    // modifications s'enchaînent rapidement.
+    setPlanningSlots(prev => {
+      const next = { ...prev }
+      if (vendeuseId === '') delete next[key]
+      else next[key] = vendeuseId
+      return next
+    })
     const ref = doc(db, 'planning', monthKey)
-    const snap = await getDoc(ref)
-    if (snap.exists()) {
-      // updateDoc remplace le champ slots entièrement — setDoc + merge fusionnerait
-      // et les clés retirées localement resteraient côté serveur.
-      await updateDoc(ref, { slots: newSlots })
+    if (vendeuseId === '') {
+      try {
+        await updateDoc(ref, { [`slots.${key}`]: deleteField() })
+      } catch {
+        // Doc ou champ inexistant — rien à supprimer
+      }
     } else {
-      await setDoc(ref, { slots: newSlots })
+      await setDoc(ref, { slots: { [key]: vendeuseId } }, { merge: true })
     }
+  }
+
+  const handleManualSave = async () => {
+    const ref = doc(db, 'planning', monthKey)
+    await setDoc(ref, { slots: planningSlots })
   }
 
   const handleAddTask = async (dateStr: string, texte: string) => {
@@ -312,6 +322,7 @@ export default function VendeuseCalendrierPage() {
             currentMonth={currentMonth}
             onNavigate={navigateMonth}
             onAssign={assignSlot}
+            onSaveAll={handleManualSave}
             participants={participants}
             userType="admin"
             tasksData={tasksData}

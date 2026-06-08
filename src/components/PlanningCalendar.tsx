@@ -1,9 +1,9 @@
 // src/components/PlanningCalendar.tsx
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Wand2, Plus, Check } from 'lucide-react'
-import { doc, getDoc, setDoc, updateDoc, getDocs, collection } from 'firebase/firestore'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { ChevronLeft, ChevronRight, Wand2, Plus, Check, Save } from 'lucide-react'
+import { doc, getDoc, setDoc, updateDoc, getDocs, collection, deleteField } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
 const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
@@ -22,7 +22,7 @@ interface PlanningCalendarProps {
   vendeuses?: Vendeuse[]
   planningSlots?: PlanningSlots
   planningLoading?: boolean
-  onAssign?: (dateStr: string, creneau: string, vendeuseId: string | '') => void
+  onAssign?: (dateStr: string, creneau: string, vendeuseId: string | '') => void | Promise<void>
   onAutoFill?: () => void
   showAutoFill?: boolean
   participants?: Participant[]
@@ -45,6 +45,9 @@ interface PlanningCalendarProps {
   // ID de la vendeuse connectée : si elle se retire d'un de ses propres slots planning,
   // on affiche une modale de confirmation au lieu de sauvegarder direct.
   currentVendeuseId?: string
+  // Bouton "Enregistrer" manuel : si fourni, ajoute un bouton en haut qui re-sauvegarde
+  // l'état courant (idempotent, sert de filet de sécurité psychologique).
+  onSaveAll?: () => void | Promise<void>
 }
 
 export default function PlanningCalendar({
@@ -70,7 +73,29 @@ export default function PlanningCalendar({
   dailyCAByCreneau = {},
   onRestockSlotPick,
   currentVendeuseId = '',
+  onSaveAll,
 }: PlanningCalendarProps) {
+
+  // ── Feedback "Enregistré ✓" affiché brièvement après chaque sauvegarde ─────
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flashSaved = () => {
+    if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current)
+    setSaveStatus('saved')
+    savedTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
+  }
+  const runSave = async (op: () => Promise<void> | void) => {
+    setSaveStatus('saving')
+    try {
+      await op()
+      flashSaved()
+    } catch {
+      if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current)
+      setSaveStatus('error')
+      savedTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 3000)
+    }
+  }
+  useEffect(() => () => { if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current) }, [])
 
   const [internalMonth, setInternalMonth] = useState(() => {
     const now = new Date()
@@ -128,29 +153,34 @@ export default function PlanningCalendar({
 
   const saveRestockSlot = async (dateStr: string, creneau: string, nom: string, type: 'chineuse' | 'deposante' | '', trigramme?: string) => {
     const key = `${dateStr}_${creneau}`
-    const newSlots = { ...restockSlots }
-    if (!nom) delete newSlots[key]
-    else newSlots[key] = { nom, type: type as 'chineuse' | 'deposante', ...(trigramme ? { trigramme } : {}) }
-    setRestockSlots(newSlots)
-    const ref = doc(db, 'restocks', monthKey)
-    const snap = await getDoc(ref)
-    if (snap.exists()) {
-      // updateDoc remplace le champ slots entièrement (contrairement à setDoc + merge qui fusionne en profondeur)
-      await updateDoc(ref, { slots: newSlots })
-    } else {
-      await setDoc(ref, { slots: newSlots })
-    }
-    // Notif admin : uniquement quand une chineuse crée/modifie un slot (les déposantes
-    // passent par /api/deposante/rdv-demande qui envoie déjà sa propre push).
-    if (nom && userType === 'chineuse') {
-      try {
-        await fetch('/api/notif/annonce-restock', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dateStr, creneau, nom, type: 'chineuse' }),
-        })
-      } catch {}
-    }
+    // Écriture atomique par slot : évite la race condition qui faisait "revenir"
+    // des slots supprimés quand plusieurs modifications se croisaient.
+    await runSave(async () => {
+      const ref = doc(db, 'restocks', monthKey)
+      if (!nom) {
+        setRestockSlots(prev => { const c = { ...prev }; delete c[key]; return c })
+        try {
+          await updateDoc(ref, { [`slots.${key}`]: deleteField() })
+        } catch {
+          // Doc ou champ inexistant — rien à supprimer
+        }
+      } else {
+        const slotData: RestockSlotData = { nom, type: type as 'chineuse' | 'deposante', ...(trigramme ? { trigramme } : {}) }
+        setRestockSlots(prev => ({ ...prev, [key]: slotData }))
+        await setDoc(ref, { slots: { [key]: slotData } }, { merge: true })
+      }
+      // Notif admin : uniquement quand une chineuse crée/modifie un slot (les déposantes
+      // passent par /api/deposante/rdv-demande qui envoie déjà sa propre push).
+      if (nom && userType === 'chineuse') {
+        try {
+          await fetch('/api/notif/annonce-restock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dateStr, creneau, nom, type: 'chineuse' }),
+          })
+        } catch {}
+      }
+    })
   }
 
   const handleRestockChange = (ds: string, cr: string, val: string) => {
@@ -185,13 +215,14 @@ export default function PlanningCalendar({
       setPendingRemoval({ ds, cr })
       return
     }
-    onAssign?.(ds, cr, value)
+    if (onAssign) runSave(async () => { await onAssign(ds, cr, value) })
   }
 
   const confirmRemoval = () => {
     if (!pendingRemoval) return
-    onAssign?.(pendingRemoval.ds, pendingRemoval.cr, '')
+    const { ds, cr } = pendingRemoval
     setPendingRemoval(null)
+    if (onAssign) runSave(async () => { await onAssign(ds, cr, '') })
   }
 
   const handleSubmitTask = (dateStr: string) => {
@@ -398,8 +429,28 @@ export default function PlanningCalendar({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div />
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div className="flex items-center gap-2 min-h-[32px]">
+          <button
+            onClick={() => {
+              if (onSaveAll) runSave(async () => { await onSaveAll() })
+              else flashSaved()
+            }}
+            className="flex items-center gap-1.5 bg-[#22209C] text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-[#1a1878] transition disabled:opacity-50"
+            disabled={saveStatus === 'saving'}
+          >
+            <Save size={14} />
+            {saveStatus === 'saving' ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+          {saveStatus === 'saved' && (
+            <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+              <Check size={14} /> Enregistré
+            </span>
+          )}
+          {saveStatus === 'error' && (
+            <span className="text-xs font-medium text-red-600">Erreur de sauvegarde</span>
+          )}
+        </div>
         {mode === 'planning' && showAutoFill && onAutoFill && (
           <button onClick={onAutoFill} className="flex items-center gap-2 border border-[#22209C] text-[#22209C] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#22209C] hover:text-white transition">
             <Wand2 size={16} /> Auto-remplir
