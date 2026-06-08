@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
       texteEcoCirculaire,
       wearType,
       stockType,
+      cibleStock,
       taux,
     } = body
 
@@ -154,6 +155,7 @@ export async function POST(req: NextRequest) {
       texteEcoCirculaire: texteEcoCirculaire || 1,
       wearType: wearType || 'womenswear',
       stockType: stockType || 'unique',
+      cibleStock: typeof cibleStock === 'number' ? cibleStock : 0,
       taux: typeof taux === 'number' ? taux : 0,
     }
 

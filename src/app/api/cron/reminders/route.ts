@@ -685,11 +685,30 @@ export async function GET(req: NextRequest) {
       let dateMinBaisse: Date | null = null
       const piecesOranges: PieceInfo[] = []
       const piecesRouges: PieceInfo[] = []
+      let stockActif = 0
+      let ventes30j = 0
+      const ventesRecentes: Array<{ sku: string; nom: string; imageUrl: string; prix: number; dateVente: Date }> = []
+      const thirtyDaysAgo = new Date(today); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       for (const d of prodsSnap.docs) {
         const p = d.data() as any
-        if (p.vendu === true) continue
-        if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
+        // Compter les ventes des 30 derniers jours + collecter
+        if (p.vendu === true || p.statut === 'vendu') {
+          const dv = p.dateVente?.toDate?.()
+          if (dv instanceof Date && dv >= thirtyDaysAgo) {
+            ventes30j++
+            ventesRecentes.push({
+              sku: p.sku || '',
+              nom: (p.nom || '').replace(`${p.sku || ''} - `, ''),
+              imageUrl: p.imageUrl || p.photos?.face || '',
+              prix: p.prixVenteReel || p.prix || 0,
+              dateVente: dv,
+            })
+          }
+          continue
+        }
+        if (p.statut === 'supprime' || p.statut === 'retour') continue
         if (p.statutRecuperation === 'aRecuperer') continue
+        if (p.recu === true) stockActif++
         if (p.prixBaisseLe) {
           const bd = p.prixBaisseLe?.toDate?.()
           if (!(bd instanceof Date)) continue
@@ -702,6 +721,9 @@ export async function GET(req: NextRequest) {
           if (c < twoMonthsAgo) piecesOranges.push(toInfo(p))
         }
       }
+      // Tri par date de vente desc, top 3
+      ventesRecentes.sort((a, b) => b.dateVente.getTime() - a.dateVente.getTime())
+      const top3 = ventesRecentes.slice(0, 3)
 
       const rdvs = futureRdvByTri[tri] || []
       const hasRdvWithinDays = (n: number) => rdvs.some(r => {
@@ -743,6 +765,89 @@ export async function GET(req: NextRequest) {
           rappels: { ...rappels, ...updates },
         })
         if (update) Object.assign(updates, update)
+      }
+
+      // Stock bas : nb pièces en boutique < cibleStock * 0.8 + pas de RDV dans 10j
+      // Cooldown 7j pour ne pas spammer. Cible 0 = désactivé.
+      const cible = typeof chin.cibleStock === 'number' ? chin.cibleStock : 0
+      if (cible > 0 && stockActif < cible * 0.8 && !hasRdvWithinDays(10)) {
+        const stockBasLastSent = (rappels.stockBasSentAt?.toDate?.() as Date | undefined)
+        const cooldownOK = !stockBasLastSent || (today.getTime() - stockBasLastSent.getTime()) >= 7 * 24 * 3600 * 1000
+        if (cooldownOK) {
+          const prenom = chin.prenom || chin.nom || ''
+          const nomCourt = chin.prenom || chin.nom || tri
+          const manquantes = cible - stockActif
+          const pct = Math.round((1 - stockActif / cible) * 100)
+          const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
+
+          const top3Html = top3.length === 0 ? '' : `
+            <p style="margin-top:24px;"><strong>Tes ${top3.length > 1 ? `${top3.length} dernières` : 'dernière'} ventes :</strong></p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${top3.map(v => `
+              <td style="padding:6px;vertical-align:top;text-align:center;width:120px;">
+                ${v.imageUrl ? `<img src="${v.imageUrl}" alt="" width="100" height="100" style="display:block;object-fit:cover;border:1px solid #eee;border-radius:6px;margin:0 auto 6px;" />` : ''}
+                <div style="font-size:11px;font-weight:bold;color:#22209C;">${v.sku}</div>
+                <div style="font-size:11px;color:#444;">${v.nom}</div>
+                ${v.prix > 0 ? `<div style="font-size:11px;color:#888;">${v.prix}€</div>` : ''}
+              </td>`).join('')}</tr></table>`
+          const manquantesText = manquantes > 0
+            ? `Amène-nous <strong>${manquantes} nouvelle${manquantes > 1 ? 's' : ''} pépite${manquantes > 1 ? 's' : ''}</strong> pour remplir le portant !`
+            : `Time to restock !`
+
+          if (emails.length > 0) {
+            try {
+              await resend.emails.send({
+                from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+                to: emails,
+                bcc: 'nouvelleriveparis@gmail.com',
+                subject: ventes30j > 0
+                  ? `WOUAOU t'as vendu ${ventes30j} pièce${ventes30j > 1 ? 's' : ''}, time to restock 🌊`
+                  : `Viens nous amener tes pépites ma vie 🌊`,
+                html: `
+                  <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+                    <h1 style="color:#22209C;">${ventes30j > 0 ? `WOUAOU bravo ${prenom} 🦾` : `Viens nous amener tes pépites 🌊`}</h1>
+                    <p>Hello ${prenom},</p>
+                    ${ventes30j > 0
+                      ? `<p>Tu as vendu <strong>${ventes30j} pièce${ventes30j > 1 ? 's' : ''}</strong> ces 30 derniers jours, c'est ouf 💙</p>`
+                      : ''}
+                    <p>Il te reste <strong>${stockActif} pièce${stockActif > 1 ? 's' : ''}</strong> en boutique (cible : ${cible}). ${manquantesText}</p>
+                    ${top3Html}
+                    <p style="margin-top:24px;font-size:13px;color:#666;">Pour info, tu peux consulter tes best sellers et tes stats sur ta <a href="https://www.nouvellerive.eu/chineuse/performance" style="color:#22209C;font-weight:bold;">page performance</a> 🌊</p>
+                    <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV restock</a></p>
+                  </div>`,
+              })
+            } catch (e: any) {
+              console.error(`[cron/reminders] stock-bas mail échoué ${chinDoc.id}:`, e?.message)
+            }
+          }
+
+          if (chin.authUid) {
+            await sendPushToOwner(chin.authUid, {
+              title: `🌊 Viens nous amener tes pépites`,
+              body: `Il te reste ${stockActif} pièces en boutique (cible ${cible})`,
+              url: '/chineuse/calendrier',
+              tag: `chineuse-stock-bas-${chinDoc.id}-${dateStr}`,
+            })
+          }
+
+          // Notif + mail admin
+          await sendPushToOwner('boutique', {
+            title: `📉 Stock ${nomCourt} bas`,
+            body: `${stockActif} pièces (cible ${cible}, -${pct}%) — il en manque ${manquantes}`,
+            url: '/admin/selectionneuses',
+            tag: `admin-stock-bas-${chinDoc.id}-${dateStr}`,
+          })
+          try {
+            await resend.emails.send({
+              from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+              to: 'nouvelleriveparis@gmail.com',
+              subject: `Stock ${nomCourt} bas : ${stockActif}/${cible} (-${pct}%)`,
+              html: `<p>Stock ${nomCourt} bas : <strong>${stockActif} pièces en boutique</strong> (cible ${cible}, manque ${manquantes}). Mail "viens restocker" envoyé à la chineuse, relance dans 7j si rien ne bouge.</p>`,
+            })
+          } catch {}
+
+          updates.stockBasSentAt = FieldValue.serverTimestamp()
+          actions.push(`chineuse-stock-bas-${chinDoc.id}`)
+        }
       }
 
       if (Object.keys(updates).length > 0) {

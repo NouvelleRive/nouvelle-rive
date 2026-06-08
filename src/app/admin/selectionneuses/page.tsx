@@ -113,6 +113,7 @@
     texteEcoCirculaire: 1,
     wearType: 'womenswear',
     stockType: 'unique',
+    cibleStock: 0,
   }
 
   const EMPTY_DEPOSANTE_FORM = {
@@ -253,6 +254,7 @@
         texteEcoCirculaire: (d as any).texteEcoCirculaire || 1,
         wearType: (d as any).wearType || 'womenswear',
         stockType: (d as any).stockType || 'unique',
+        cibleStock: (d as any).cibleStock || 0,
       })
       setImageFile(null)
       setImagePreview(d.imageUrl || null)
@@ -357,6 +359,7 @@
           texteEcoCirculaire: formData.texteEcoCirculaire,
           wearType: formData.wearType,
           stockType: formData.stockType,
+          cibleStock: formData.cibleStock,
           taux: formData.taux,
           // categorieRapport = JUSTE label + idsquare
           categorieRapport: {
@@ -1037,6 +1040,25 @@
                         <option value="unique">Pièce unique</option>
                         <option value="smallBatch">Petite série</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Cible stock boutique
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formData.cibleStock}
+                        onChange={(e) => setFormData({ ...formData, cibleStock: parseInt(e.target.value) || 0 })}
+                        placeholder="Ex : 40 (ou 80 pour 2 portants)"
+                        className="w-full border rounded px-3 py-2"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Nb idéal de pièces en boutique. Alerte restock si sous -20%. Laisser à 0 pour désactiver.
+                      </p>
                     </div>
                   </div>
 
