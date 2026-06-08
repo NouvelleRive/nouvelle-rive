@@ -419,7 +419,7 @@ export async function GET(req: NextRequest) {
               <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
                 <h1 style="color:#22209C;">À demain 💙</h1>
                 <p>Hello ${chin.prenom || chin.nom || ''},</p>
-                <p>Petit rappel : ton restock est prévu <strong>${dateFr} à ${creneau}</strong>, en boutique au 8 rue des Écouffes, 75004 Paris.</p>
+                <p>Petit rappel : ton restock est prévu <strong>${dateFr} à ${creneau}</strong>, en boutique au 8 rue des Écouffes, 75004 Paris. On a hâte de te voir !!! 💙</p>
                 <p style="margin-top:20px;"><strong>As-tu bien préparé ton restock ?</strong></p>
                 <ul style="padding-left:20px;line-height:1.7;">
                   <li>produits créés dans l'app</li>
