@@ -540,13 +540,18 @@ export async function GET(req: NextRequest) {
       const rdvWindow = stage === 'j7' ? 7 : 10
       if (hasRdvWithinDays(rdvWindow)) continue
 
-      // Cooldown anti-spam
+      // Anti-spam :
+      // - J-10 / J-7 : 1 envoi par cycle (identifié par la date pivot YYYY-MM-DD)
+      // - orange : cooldown 2j tant que pas de RDV
       const rappelsDoc = await adminDb.collection('rappelsChineuse').doc(chinDoc.id).get()
       const rappels = rappelsDoc.exists ? (rappelsDoc.data() as any) : {}
-      const fieldKey = stage === 'j10' ? 'j10SentAt' : stage === 'j7' ? 'j7SentAt' : 'orangeSentAt'
-      const cooldownDays = stage === 'orange' ? 2 : 30
-      const lastSent = rappels[fieldKey]?.toDate?.() as Date | undefined
-      if (lastSent && (today.getTime() - lastSent.getTime()) < cooldownDays * 24 * 3600 * 1000) continue
+      const pivotISO = `${datePivot.getFullYear()}-${String(datePivot.getMonth() + 1).padStart(2, '0')}-${String(datePivot.getDate()).padStart(2, '0')}`
+      if (stage === 'j10' && rappels.j10SentForPivot === pivotISO) continue
+      if (stage === 'j7' && rappels.j7SentForPivot === pivotISO) continue
+      if (stage === 'orange') {
+        const lastSent = rappels.orangeSentAt?.toDate?.() as Date | undefined
+        if (lastSent && (today.getTime() - lastSent.getTime()) < 2 * 24 * 3600 * 1000) continue
+      }
 
       const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
       const prenom = chin.prenom || chin.nom || ''
@@ -650,9 +655,13 @@ export async function GET(req: NextRequest) {
         } catch {}
       }
 
-      await adminDb.collection('rappelsChineuse').doc(chinDoc.id).set({
-        [fieldKey]: FieldValue.serverTimestamp(),
-      }, { merge: true })
+      const sentUpdate: Record<string, any> =
+        stage === 'orange'
+          ? { orangeSentAt: FieldValue.serverTimestamp() }
+          : stage === 'j10'
+            ? { j10SentForPivot: pivotISO, j10SentAt: FieldValue.serverTimestamp() }
+            : { j7SentForPivot: pivotISO, j7SentAt: FieldValue.serverTimestamp() }
+      await adminDb.collection('rappelsChineuse').doc(chinDoc.id).set(sentUpdate, { merge: true })
 
       actions.push(`chineuse-${stage}-${chinDoc.id}`)
     }
