@@ -131,6 +131,8 @@
   /** Chineuse cible pour l'import (passée au modal). Si NR, on affiche Vinted + Whatnot.
    *  Si pièce unique non-NR, on affiche uniquement Vinted. Si smallBatch ou absent → rien. */
   targetChineuse?: { uid: string; email: string; trigramme: string; stockType?: string }
+  /** Trigramme initial pour le filtre "déposant" — utilisé quand on arrive via /vendeuse/produits?chineuse=XXX */
+  initialFiltreDeposant?: string
 }
 
     // =====================
@@ -197,6 +199,7 @@
       onCustomDelete,
       customDeleteTitle,
       targetChineuse,
+      initialFiltreDeposant,
     }: ProductListProps) {
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
@@ -225,7 +228,7 @@
       const [importModalOpen, setImportModalOpen] = useState(false)
       const [recherche, setRecherche] = useState('')
       const [filtreCategorie, setFiltreCategorie] = useState('')
-      const [filtreDeposant, setFiltreDeposant] = useState('')
+      const [filtreDeposant, setFiltreDeposant] = useState(initialFiltreDeposant || '')
       const [filtreMois, setFiltreMois] = useState('')
       const [filtrePrix, setFiltrePrix] = useState('')
       const [tri, setTri] = useState<'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'>('date-desc')

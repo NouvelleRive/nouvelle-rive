@@ -41,32 +41,42 @@ function inWindow(h: number, m: number, targetH: number, targetM: number): boole
   return Math.abs(cur - t) <= 4
 }
 
-// Compte les pièces "à récupérer" (pastille rouge) et "prix à baisser" (pastille orange)
+type PieceInfo = { sku: string; nom: string; imageUrl: string; categorie: string; prix?: number; ancienPrix?: number }
+
+// Liste les pièces "à récupérer" (pastille rouge) et "prix à baisser" (pastille orange)
 // pour une chineuse donnée, évaluées à la date du restock (refDate).
 // - rouge : statutRecuperation = 'aRecuperer' OU prix baissé il y a +1 mois
 // - orange : créé il y a +2 mois, jamais baissé, sans statut de récupération
-async function countActionsChineuse(
+async function actionsChineuse(
   trigramme: string,
   refDate: Date,
-): Promise<{ aRecuperer: number; prixABaisser: number }> {
-  if (!trigramme) return { aRecuperer: 0, prixABaisser: 0 }
+): Promise<{ aRecuperer: PieceInfo[]; prixABaisser: PieceInfo[] }> {
+  if (!trigramme) return { aRecuperer: [], prixABaisser: [] }
   const snap = await adminDb.collection('produits').where('trigramme', '==', trigramme.toUpperCase()).get()
   const oneMonthAgo = new Date(refDate); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
   const twoMonthsAgo = new Date(refDate); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-  let aRecuperer = 0
-  let prixABaisser = 0
+  const aRecuperer: PieceInfo[] = []
+  const prixABaisser: PieceInfo[] = []
+  const toInfo = (p: any): PieceInfo => ({
+    sku: p.sku || '',
+    nom: (p.nom || '').replace(`${p.sku || ''} - `, ''),
+    imageUrl: p.imageUrl || p.photos?.face || '',
+    categorie: typeof p.categorie === 'object' ? (p.categorie?.label || '') : (p.categorie || ''),
+    prix: p.prix,
+    ancienPrix: p.ancienPrix,
+  })
   for (const d of snap.docs) {
     const p = d.data() as any
     if (p.vendu === true) continue
     if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
-    if (p.statutRecuperation === 'aRecuperer') { aRecuperer++; continue }
+    if (p.statutRecuperation === 'aRecuperer') { aRecuperer.push(toInfo(p)); continue }
     const baisseDate = p.prixBaisseLe?.toDate?.()
     if (baisseDate instanceof Date) {
-      if (baisseDate < oneMonthAgo) aRecuperer++
+      if (baisseDate < oneMonthAgo) aRecuperer.push(toInfo(p))
       continue
     }
     const createdDate = p.createdAt?.toDate?.()
-    if (createdDate instanceof Date && createdDate < twoMonthsAgo) prixABaisser++
+    if (createdDate instanceof Date && createdDate < twoMonthsAgo) prixABaisser.push(toInfo(p))
   }
   return { aRecuperer, prixABaisser }
 }
@@ -230,10 +240,10 @@ export async function GET(req: NextRequest) {
       if (data?.type === 'chineuse') {
         const tri = (data.trigramme || '').toString().toUpperCase()
         if (tri) {
-          const { aRecuperer, prixABaisser } = await countActionsChineuse(tri, new Date())
+          const { aRecuperer, prixABaisser } = await actionsChineuse(tri, new Date())
           const parts: string[] = []
-          if (aRecuperer > 0) parts.push(`${aRecuperer} à récupérer`)
-          if (prixABaisser > 0) parts.push(`${prixABaisser} prix à baisser`)
+          if (aRecuperer.length > 0) parts.push(`${aRecuperer.length} à récupérer`)
+          if (prixABaisser.length > 0) parts.push(`${prixABaisser.length} prix à baisser`)
           if (parts.length > 0) bodySuffix = ` — ${parts.join(', ')}`
         }
       }
@@ -377,13 +387,23 @@ export async function GET(req: NextRequest) {
       // Compte les actions à prévoir, évaluées à la date du restock (demain)
       const triForCount = (slot.trigramme || chin.trigramme || '').toString().toUpperCase()
       const refDate = new Date(tomorrowStr + 'T12:00:00')
-      const { aRecuperer, prixABaisser } = await countActionsChineuse(triForCount, refDate)
-      const actionsHtml = (aRecuperer > 0 || prixABaisser > 0) ? `
-                <p style="margin-top:20px;"><strong>À prévoir côté stock en boutique :</strong></p>
-                <ul style="padding-left:20px;line-height:1.7;">
-                  ${aRecuperer > 0 ? `<li>${aRecuperer} pièce${aRecuperer > 1 ? 's' : ''} à récupérer</li>` : ''}
-                  ${prixABaisser > 0 ? `<li>${prixABaisser} pièce${prixABaisser > 1 ? 's' : ''} dont le prix doit être baissé</li>` : ''}
-                </ul>` : ''
+      const { aRecuperer, prixABaisser } = await actionsChineuse(triForCount, refDate)
+      const renderPieces = (pieces: PieceInfo[]) => pieces.length === 0 ? '' : `
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${pieces.map(p => `
+                  <td style="padding:6px;vertical-align:top;text-align:center;width:120px;">
+                    ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" width="100" height="100" style="display:block;object-fit:cover;border:1px solid #eee;border-radius:6px;margin:0 auto 6px;" />` : ''}
+                    <div style="font-size:11px;font-weight:bold;color:#22209C;">${p.sku}</div>
+                    <div style="font-size:11px;color:#444;">${p.nom}</div>
+                    ${p.categorie ? `<div style="font-size:10px;color:#888;">${p.categorie}</div>` : ''}
+                  </td>`).join('')}</tr></table>`
+      const actionsHtml = (aRecuperer.length > 0 || prixABaisser.length > 0) ? `
+                <p style="margin-top:24px;"><strong>À prévoir côté stock en boutique :</strong></p>
+                ${aRecuperer.length > 0 ? `
+                <p style="margin-top:16px;margin-bottom:4px;">🚨 <strong>${aRecuperer.length} pièce${aRecuperer.length > 1 ? 's' : ''} à récupérer</strong></p>
+                ${renderPieces(aRecuperer)}` : ''}
+                ${prixABaisser.length > 0 ? `
+                <p style="margin-top:16px;margin-bottom:4px;">💸 <strong>${prixABaisser.length} pièce${prixABaisser.length > 1 ? 's' : ''} dont le prix doit être baissé</strong></p>
+                ${renderPieces(prixABaisser)}` : ''}` : ''
 
       // Email
       const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])

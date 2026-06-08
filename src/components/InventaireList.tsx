@@ -2,6 +2,7 @@
   'use client'
 
   import { useState, useMemo, useRef, useEffect } from 'react'
+  import { useRouter } from 'next/navigation'
   import { db, auth } from '@/lib/firebaseConfig'
   import { doc, updateDoc, Timestamp } from 'firebase/firestore'
   import {
@@ -163,6 +164,10 @@
     // Popup "Générer bon de dépôt" quand toutes les pièces DEP du trigramme sont reçues
     const [bonDepotTrigramme, setBonDepotTrigramme] = useState<string | null>(null)
     const [bonDepotGenerating, setBonDepotGenerating] = useState(false)
+    // Popup "pièces à rendre ou prix à baisser ?" + "photos correctes ?" quand toutes les pièces chineuse en réception sont acceptées
+    const [restockFiniChineuse, setRestockFiniChineuse] = useState<{ trigramme: string; nom: string } | null>(null)
+    const [restockPopupStep, setRestockPopupStep] = useState<'pieces' | 'photos'>('pieces')
+    const router = useRouter()
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
     const loaderRef = useRef<HTMLDivElement>(null)
@@ -250,28 +255,24 @@
     }, [produits, recherche, filtreCategorie, filtreDeposant, filtreStatut, filtrePrix, mode, inventaireId])
 
     const produitsParChineuse = useMemo(() => {
-      if (mode !== 'inventaire') return null
       const grouped: Record<string, Produit[]> = {}
       for (const p of produitsFiltres) {
         const key = p.chineur || 'Sans chineuse'
         if (!grouped[key]) grouped[key] = []
         grouped[key].push(p)
       }
-      
-      // Trier chaque groupe : non trouvés en premier, puis par SKU
+
       for (const key in grouped) {
         grouped[key].sort((a, b) => {
-          const aFound = isProductFound(a)
-          const bFound = isProductFound(b)
-          
-          if (aFound !== bFound) {
-            return aFound ? 1 : -1
+          if (mode === 'inventaire') {
+            const aFound = isProductFound(a)
+            const bFound = isProductFound(b)
+            if (aFound !== bFound) return aFound ? 1 : -1
           }
-          
           return extractSkuNumber(a.sku) - extractSkuNumber(b.sku)
         })
       }
-      
+
       return grouped
     }, [produitsFiltres, mode, inventaireId])
 
@@ -415,6 +416,22 @@
           body: JSON.stringify({ productId: p.id }),
         }).catch(() => {})
         onProductUpdate?.()
+
+        // Si c'était la dernière pièce de cette chineuse à recevoir en mode réception :
+        // proposer de vérifier pièces à rendre / prix à baisser
+        if (mode === 'reception' && p.chineur) {
+          const remaining = produits.filter(o =>
+            o.id !== p.id &&
+            o.chineur === p.chineur &&
+            o.statut !== 'supprime' &&
+            (((o as any).statutRestock === 'enAttente') || o.recu === false)
+          )
+          if (remaining.length === 0) {
+            const tri = (p.trigramme || p.sku?.match(/^[A-Za-z]+/)?.[0] || '').toUpperCase()
+            setRestockPopupStep('pieces')
+            setRestockFiniChineuse({ trigramme: tri, nom: getChineurName(p.chineur) })
+          }
+        }
       } catch (err) {
         console.error('Erreur réception:', err)
         alert('Erreur : FI')
@@ -1073,24 +1090,32 @@
         </div>
 
         {/* Liste des produits */}
-        {mode === 'inventaire' && produitsParChineuse ? (
+        {produitsParChineuse ? (
           <div className="space-y-6">
             {Object.entries(produitsParChineuse)
-              .sort(([a], [b]) => a.localeCompare(b))
+              .sort(([a], [b]) => getChineurName(a).localeCompare(getChineurName(b), 'fr'))
               .map(([chineur, prods]) => {
-                const chineuseNonTrouves = prods.filter(p => !isProductFound(p)).length
-                const chineuseTrouves = prods.filter(p => isProductFound(p)).length
-                
+                const chineuseNonTrouves = mode === 'inventaire' ? prods.filter(p => !isProductFound(p)).length : 0
+                const chineuseTrouves = mode === 'inventaire' ? prods.filter(p => isProductFound(p)).length : 0
+
                 return (
                   <div key={chineur}>
                     <h2 className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-2">
                       <span>{getChineurName(chineur)}</span>
-                      <span className="text-xs font-normal text-gray-400">
-                        ({chineuseTrouves}/{prods.length})
-                      </span>
-                      {chineuseNonTrouves > 0 && (
-                        <span className="text-xs font-normal text-amber-600">
-                          • {chineuseNonTrouves} restant{chineuseNonTrouves > 1 ? 's' : ''}
+                      {mode === 'inventaire' ? (
+                        <>
+                          <span className="text-xs font-normal text-gray-400">
+                            ({chineuseTrouves}/{prods.length})
+                          </span>
+                          {chineuseNonTrouves > 0 && (
+                            <span className="text-xs font-normal text-amber-600">
+                              • {chineuseNonTrouves} restant{chineuseNonTrouves > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs font-normal text-gray-400">
+                          ({prods.length})
                         </span>
                       )}
                     </h2>
@@ -1394,6 +1419,69 @@
                   {receptionSaving ? '...' : 'Confirmer réception'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Popup : restock chineuse fini → 2 questions séquentielles */}
+        {restockFiniChineuse && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Restock terminé 💙</h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Toutes les pièces de <strong>{restockFiniChineuse.nom}</strong> sont réceptionnées.
+              </p>
+              {restockPopupStep === 'pieces' ? (
+                <>
+                  <p className="text-sm text-gray-700 mb-5">
+                    Y a-t-il des pièces à rendre ou des prix à baisser ?
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setRestockPopupStep('photos')}
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      Non
+                    </button>
+                    <button
+                      onClick={() => {
+                        const tri = restockFiniChineuse.trigramme
+                        setRestockFiniChineuse(null)
+                        if (tri) router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
+                        else router.push('/vendeuse/produits')
+                      }}
+                      className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                    >
+                      Oui, vérifier
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-700 mb-5">
+                    Les photos sont-elles correctes ?
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        const tri = restockFiniChineuse.trigramme
+                        setRestockFiniChineuse(null)
+                        if (tri) router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
+                        else router.push('/vendeuse/produits')
+                      }}
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      Non, vérifier
+                    </button>
+                    <button
+                      onClick={() => setRestockFiniChineuse(null)}
+                      className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                    >
+                      Oui, c'est bon
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
