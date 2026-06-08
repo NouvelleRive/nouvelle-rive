@@ -166,7 +166,6 @@
     const [bonDepotGenerating, setBonDepotGenerating] = useState(false)
     // Popup "pièces à rendre ou prix à baisser ?" + "photos correctes ?" quand toutes les pièces chineuse en réception sont acceptées
     const [restockFiniChineuse, setRestockFiniChineuse] = useState<{ trigramme: string; nom: string } | null>(null)
-    const [restockPopupStep, setRestockPopupStep] = useState<'pieces' | 'photos'>('pieces')
     const router = useRouter()
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
@@ -428,7 +427,6 @@
           )
           if (remaining.length === 0) {
             const tri = (p.trigramme || p.sku?.match(/^[A-Za-z]+/)?.[0] || '').toUpperCase()
-            setRestockPopupStep('pieces')
             setRestockFiniChineuse({ trigramme: tri, nom: getChineurName(p.chineur) })
           }
         }
@@ -1423,7 +1421,7 @@
           </div>
         )}
 
-        {/* Popup : restock chineuse fini → 2 questions séquentielles */}
+        {/* Popup : restock chineuse fini → 2 questions affichées d'un coup */}
         {restockFiniChineuse && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -1431,57 +1429,29 @@
               <p className="text-xs text-gray-500 mb-4">
                 Toutes les pièces de <strong>{restockFiniChineuse.nom}</strong> sont réceptionnées.
               </p>
-              {restockPopupStep === 'pieces' ? (
-                <>
-                  <p className="text-sm text-gray-700 mb-5">
-                    Y a-t-il des pièces à rendre ou des prix à baisser ?
-                  </p>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setRestockPopupStep('photos')}
-                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      Non
-                    </button>
-                    <button
-                      onClick={() => {
-                        const tri = restockFiniChineuse.trigramme
-                        setRestockFiniChineuse(null)
-                        if (tri) router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
-                        else router.push('/vendeuse/produits')
-                      }}
-                      className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
-                    >
-                      Oui, vérifier
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-gray-700 mb-5">
-                    Les photos sont-elles correctes ?
-                  </p>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        const tri = restockFiniChineuse.trigramme
-                        setRestockFiniChineuse(null)
-                        if (tri) router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
-                        else router.push('/vendeuse/produits')
-                      }}
-                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      Non, vérifier
-                    </button>
-                    <button
-                      onClick={() => setRestockFiniChineuse(null)}
-                      className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
-                    >
-                      Oui, c'est bon
-                    </button>
-                  </div>
-                </>
-              )}
+              <ul className="text-sm text-gray-700 mb-5 space-y-2 list-disc pl-5">
+                <li>Y a-t-il des pièces à rendre ou des prix à baisser ?</li>
+                <li>Les photos sont-elles correctes ?</li>
+              </ul>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRestockFiniChineuse(null)}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  Tout va bien
+                </button>
+                <button
+                  onClick={() => {
+                    const tri = restockFiniChineuse.trigramme
+                    setRestockFiniChineuse(null)
+                    if (tri) router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
+                    else router.push('/vendeuse/produits')
+                  }}
+                  className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                >
+                  Je vérifie
+                </button>
+              </div>
             </div>
           </div>
         )}
