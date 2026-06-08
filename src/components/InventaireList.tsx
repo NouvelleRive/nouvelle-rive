@@ -1426,7 +1426,7 @@
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-md w-full p-6">
               <h3 className="text-lg font-semibold mb-3 text-[#22209C]">
-                Bravo pr le restock beautey 🎉
+                Bravo pr le restock beautey 🦾
               </h3>
               <p className="text-sm text-gray-700 mb-4">
                 On sait que c'est pas toujours gagné mdr 💙
