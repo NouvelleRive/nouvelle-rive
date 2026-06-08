@@ -41,8 +41,38 @@ function inWindow(h: number, m: number, targetH: number, targetM: number): boole
   return Math.abs(cur - t) <= 4
 }
 
+// Compte les pièces "à récupérer" (pastille rouge) et "prix à baisser" (pastille orange)
+// pour une chineuse donnée, évaluées à la date du restock (refDate).
+// - rouge : statutRecuperation = 'aRecuperer' OU prix baissé il y a +1 mois
+// - orange : créé il y a +2 mois, jamais baissé, sans statut de récupération
+async function countActionsChineuse(
+  trigramme: string,
+  refDate: Date,
+): Promise<{ aRecuperer: number; prixABaisser: number }> {
+  if (!trigramme) return { aRecuperer: 0, prixABaisser: 0 }
+  const snap = await adminDb.collection('produits').where('trigramme', '==', trigramme.toUpperCase()).get()
+  const oneMonthAgo = new Date(refDate); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+  const twoMonthsAgo = new Date(refDate); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+  let aRecuperer = 0
+  let prixABaisser = 0
+  for (const d of snap.docs) {
+    const p = d.data() as any
+    if (p.vendu === true) continue
+    if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
+    if (p.statutRecuperation === 'aRecuperer') { aRecuperer++; continue }
+    const baisseDate = p.prixBaisseLe?.toDate?.()
+    if (baisseDate instanceof Date) {
+      if (baisseDate < oneMonthAgo) aRecuperer++
+      continue
+    }
+    const createdDate = p.createdAt?.toDate?.()
+    if (createdDate instanceof Date && createdDate < twoMonthsAgo) prixABaisser++
+  }
+  return { aRecuperer, prixABaisser }
+}
+
 // Recherche une chineuse à partir du nom (uppercase dans les slots) ou trigramme
-async function findChineuse(nom: string | undefined, trigramme?: string): Promise<{ authUid?: string; email?: string; emails?: string[]; prenom?: string; nom?: string } | null> {
+async function findChineuse(nom: string | undefined, trigramme?: string): Promise<{ authUid?: string; email?: string; emails?: string[]; prenom?: string; nom?: string; trigramme?: string } | null> {
   if (trigramme) {
     const snap = await adminDb.collection('chineuse').where('trigramme', '==', trigramme.toUpperCase()).limit(1).get()
     if (!snap.empty) return snap.docs[0].data() as any
@@ -196,9 +226,20 @@ export async function GET(req: NextRequest) {
     const restockSlots = restockSnap.exists ? (restockSnap.data()?.slots || {}) : {}
     const data = restockSlots[`${dateStr}_${r.slot}`]
     if (data?.nom) {
+      let bodySuffix = ''
+      if (data?.type === 'chineuse') {
+        const tri = (data.trigramme || '').toString().toUpperCase()
+        if (tri) {
+          const { aRecuperer, prixABaisser } = await countActionsChineuse(tri, new Date())
+          const parts: string[] = []
+          if (aRecuperer > 0) parts.push(`${aRecuperer} à récupérer`)
+          if (prixABaisser > 0) parts.push(`${prixABaisser} prix à baisser`)
+          if (parts.length > 0) bodySuffix = ` — ${parts.join(', ')}`
+        }
+      }
       await sendPushToOwner('boutique', {
         title: `📦 ${data.nom} arrive dans 10 min`,
-        body: `Restock prévu à ${r.slot}`,
+        body: `Restock prévu à ${r.slot}${bodySuffix}`,
         url: '/vendeuse/restock',
         tag: `restock-${dateStr}-${r.slot}`,
       })
@@ -333,6 +374,17 @@ export async function GET(req: NextRequest) {
       if (alreadySentChin.has(chinKey)) continue
       const dateFr = new Date(tomorrowStr + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
+      // Compte les actions à prévoir, évaluées à la date du restock (demain)
+      const triForCount = (slot.trigramme || chin.trigramme || '').toString().toUpperCase()
+      const refDate = new Date(tomorrowStr + 'T12:00:00')
+      const { aRecuperer, prixABaisser } = await countActionsChineuse(triForCount, refDate)
+      const actionsHtml = (aRecuperer > 0 || prixABaisser > 0) ? `
+                <p style="margin-top:20px;"><strong>À prévoir côté stock en boutique :</strong></p>
+                <ul style="padding-left:20px;line-height:1.7;">
+                  ${aRecuperer > 0 ? `<li>${aRecuperer} pièce${aRecuperer > 1 ? 's' : ''} à récupérer</li>` : ''}
+                  ${prixABaisser > 0 ? `<li>${prixABaisser} pièce${prixABaisser > 1 ? 's' : ''} dont le prix doit être baissé</li>` : ''}
+                </ul>` : ''
+
       // Email
       const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
       if (emails.length > 0) {
@@ -353,6 +405,7 @@ export async function GET(req: NextRequest) {
                   <li>photos détourées proprement et portés vérifiés</li>
                   <li>produits étiquetés avec prix et SKU</li>
                 </ul>
+                ${actionsHtml}
                 <p style="margin-top:20px;">Les filles en surface organisent leur temps de travail et leurs pauses autour des restocks, donc si tu arrives avec plus de 10 mn de retard, pense à leur ramener un cookie !</p>
                 <p style="margin-top:24px;">
                   <a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mon RDV</a>
