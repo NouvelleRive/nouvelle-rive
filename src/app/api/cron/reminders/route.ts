@@ -8,6 +8,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { sendPushToOwner } from '@/lib/webpush'
 import { Resend } from 'resend'
 
@@ -457,6 +458,203 @@ export async function GET(req: NextRequest) {
         chineuseUids: Array.from(new Set([...Array.from(alreadySentChin), ...newlySentChin])),
       }, { merge: true })
       actions.push(`rappel-chineuses-${newlySentChin.length}`)
+    }
+  }
+
+  // 10h00 — rappels chineuses "faire tourner" (J-10, J-7, orange)
+  // J-10 / J-7 : si pas de RDV restock dans la fenêtre → push "prends rdv"
+  // orange (au moins 1 pièce +2 mois sans baisse) : si pas de RDV dans 10j → mail liste + push,
+  // relance tous les 2j tant qu'il reste des oranges. Notif admin par chineuse à chaque envoi.
+  if (inWindow(h, m, 10, 0)) {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const twoMonthsAgo = new Date(today); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+    const daysBetween = (a: Date, b: Date) => Math.ceil((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24))
+
+    // Index des RDV futurs (≤ 11 jours) par trigramme
+    const futureRdvByTri: Record<string, Date[]> = {}
+    const monthsToCheck = new Set<string>()
+    for (let i = 0; i <= 11; i++) {
+      const d = new Date(today); d.setDate(d.getDate() + i)
+      monthsToCheck.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+    }
+    for (const mk of monthsToCheck) {
+      const sn = await adminDb.collection('restocks').doc(mk).get()
+      if (!sn.exists) continue
+      const slots = (sn.data()?.slots || {}) as Record<string, any>
+      for (const [key, slot] of Object.entries(slots)) {
+        if (slot?.type !== 'chineuse') continue
+        const dStr = key.split('_')[0]
+        const slotDate = new Date(dStr + 'T12:00:00')
+        if (slotDate < today) continue
+        const tri = (slot.trigramme || '').toString().toUpperCase()
+        if (!tri) continue
+        ;(futureRdvByTri[tri] ||= []).push(slotDate)
+      }
+    }
+
+    const chineusesSnap = await adminDb.collection('chineuse').get()
+    for (const chinDoc of chineusesSnap.docs) {
+      const chin = chinDoc.data() as any
+      const tri = (chin.trigramme || '').toString().toUpperCase()
+      if (!tri) continue
+
+      // Pièces actives de la chineuse, exclusion baissées / récup demandée
+      const prodsSnap = await adminDb.collection('produits').where('trigramme', '==', tri).get()
+      let dateMinCreated: Date | null = null
+      const piecesOranges: PieceInfo[] = []
+      for (const d of prodsSnap.docs) {
+        const p = d.data() as any
+        if (p.vendu === true) continue
+        if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
+        if (p.statutRecuperation === 'aRecuperer') continue
+        if (p.prixBaisseLe) continue
+        const c = p.createdAt?.toDate?.()
+        if (!(c instanceof Date)) continue
+        if (!dateMinCreated || c < dateMinCreated) dateMinCreated = c
+        if (c < twoMonthsAgo) {
+          piecesOranges.push({
+            sku: p.sku || '',
+            nom: (p.nom || '').replace(`${p.sku || ''} - `, ''),
+            imageUrl: p.imageUrl || p.photos?.face || '',
+            categorie: typeof p.categorie === 'object' ? (p.categorie?.label || '') : (p.categorie || ''),
+            prix: p.prix,
+          })
+        }
+      }
+      if (!dateMinCreated) continue
+
+      const datePivot = new Date(dateMinCreated); datePivot.setMonth(datePivot.getMonth() + 2)
+      const daysToOrange = daysBetween(datePivot, today)
+
+      let stage: 'orange' | 'j7' | 'j10' | null = null
+      if (piecesOranges.length > 0) stage = 'orange'
+      else if (daysToOrange >= 1 && daysToOrange <= 7) stage = 'j7'
+      else if (daysToOrange >= 8 && daysToOrange <= 10) stage = 'j10'
+      if (!stage) continue
+
+      const rdvs = futureRdvByTri[tri] || []
+      const hasRdvWithinDays = (n: number) => rdvs.some(r => {
+        const days = daysBetween(r, today)
+        return days >= 0 && days <= n
+      })
+      const rdvWindow = stage === 'j7' ? 7 : 10
+      if (hasRdvWithinDays(rdvWindow)) continue
+
+      // Cooldown anti-spam
+      const rappelsDoc = await adminDb.collection('rappelsChineuse').doc(chinDoc.id).get()
+      const rappels = rappelsDoc.exists ? (rappelsDoc.data() as any) : {}
+      const fieldKey = stage === 'j10' ? 'j10SentAt' : stage === 'j7' ? 'j7SentAt' : 'orangeSentAt'
+      const cooldownDays = stage === 'orange' ? 2 : 5
+      const lastSent = rappels[fieldKey]?.toDate?.() as Date | undefined
+      if (lastSent && (today.getTime() - lastSent.getTime()) < cooldownDays * 24 * 3600 * 1000) continue
+
+      const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
+      const prenom = chin.prenom || chin.nom || ''
+      const nomCourt = chin.prenom || chin.nom || tri
+
+      let subject = ''
+      let html = ''
+      let pushTitle = ''
+      let pushBody = ''
+      let pushUrl = '/chineuse/calendrier'
+      let piecesHtml = ''
+
+      if (stage === 'j10') {
+        subject = `Tu nous amènes de nouvelles pépites ? 💙`
+        html = `
+          <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+            <h1 style="color:#22209C;">Tu nous amènes de nouvelles pépites ? 💙</h1>
+            <p>Hello ${prenom},</p>
+            <p>Tes plus anciennes pièces atteignent bientôt 2 mois en boutique. Il est temps de prendre rdv pour faire tourner ton stock 🌊</p>
+            <p style="margin-top:24px;">
+              <a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a>
+            </p>
+          </div>`
+        pushTitle = `🌊 Tu nous amènes des pépites ?`
+        pushBody = `Il est temps de prendre rdv pour faire tourner ton stock`
+      } else if (stage === 'j7') {
+        subject = `Plus que 7j pour prendre rdv ma vie ! 💙`
+        html = `
+          <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+            <h1 style="color:#22209C;">Plus que 7j ma vie ! ⏰</h1>
+            <p>Hello ${prenom},</p>
+            <p>Tes plus anciennes pièces vont passer en "à faire tourner" dans une semaine. Prends rdv au plus vite pour les renouveler 🌊</p>
+            <p style="margin-top:24px;">
+              <a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a>
+            </p>
+          </div>`
+        pushTitle = `⏰ Plus que 7j ma vie !`
+        pushBody = `Prends rdv au plus vite pour faire tourner ton stock`
+      } else {
+        piecesHtml = `<table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${piecesOranges.map(p => `
+          <td style="padding:6px;vertical-align:top;text-align:center;width:120px;">
+            ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" width="100" height="100" style="display:block;object-fit:cover;border:1px solid #eee;border-radius:6px;margin:0 auto 6px;" />` : ''}
+            <div style="font-size:11px;font-weight:bold;color:#22209C;">${p.sku}</div>
+            <div style="font-size:11px;color:#444;">${p.nom}</div>
+            ${typeof p.prix === 'number' ? `<div style="font-size:11px;color:#888;">${p.prix}€</div>` : ''}
+          </td>`).join('')}</tr></table>`
+        subject = `Il est temps de baisser les prix 💸`
+        html = `
+          <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+            <h1 style="color:#22209C;">Il est temps de baisser les prix 💸</h1>
+            <p>Hello ${prenom},</p>
+            <p>Les ${piecesOranges.length} pièce${piecesOranges.length > 1 ? 's' : ''} ci-dessous ${piecesOranges.length > 1 ? 'sont' : 'est'} en boutique depuis +2 mois. Il est temps de baisser leur prix (ou de prendre rdv pour venir les chercher) 🌊</p>
+            ${piecesHtml}
+            <p style="margin-top:24px;">
+              <a href="https://www.nouvellerive.eu/chineuse/mes-produits" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mes pièces</a>
+            </p>
+          </div>`
+        pushTitle = `💸 ${piecesOranges.length} prix à baisser`
+        pushBody = `Il est temps de faire tourner ton stock en boutique`
+        pushUrl = '/chineuse/mes-produits'
+      }
+
+      if (emails.length > 0) {
+        try {
+          await resend.emails.send({
+            from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+            to: emails,
+            bcc: 'nouvelleriveparis@gmail.com',
+            subject,
+            html,
+          })
+        } catch (e: any) {
+          console.error(`[cron/reminders] ${stage} mail échoué ${chinDoc.id}:`, e?.message)
+        }
+      }
+
+      if (chin.authUid) {
+        await sendPushToOwner(chin.authUid, {
+          title: pushTitle,
+          body: pushBody,
+          url: pushUrl,
+          tag: `chineuse-${stage}-${chinDoc.id}-${dateStr}`,
+        })
+      }
+
+      // Notif + mail admin uniquement pour le stage orange
+      if (stage === 'orange') {
+        await sendPushToOwner('boutique', {
+          title: `💸 ${piecesOranges.length} prix ${nomCourt} à baisser`,
+          body: `Mail envoyé à la chineuse — relance dans 2j si rien ne bouge`,
+          url: '/admin/nos-produits',
+          tag: `admin-orange-${chinDoc.id}-${dateStr}`,
+        })
+        try {
+          await resend.emails.send({
+            from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+            to: 'nouvelleriveparis@gmail.com',
+            subject: `${piecesOranges.length} prix ${nomCourt} à baisser`,
+            html: `<p>Mail "baisse de prix" envoyé à ${nomCourt}. Pièces concernées :</p>${piecesHtml}`,
+          })
+        } catch {}
+      }
+
+      await adminDb.collection('rappelsChineuse').doc(chinDoc.id).set({
+        [fieldKey]: FieldValue.serverTimestamp(),
+      }, { merge: true })
+
+      actions.push(`chineuse-${stage}-${chinDoc.id}`)
     }
   }
 
