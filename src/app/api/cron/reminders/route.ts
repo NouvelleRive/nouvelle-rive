@@ -783,12 +783,13 @@ export async function GET(req: NextRequest) {
         if (update) Object.assign(updates, update)
       }
 
-      // Phase 3 : 1 seul rappel "prends rdv" par exécution (le plus urgent)
-      // Priorité : j7 > j10, puis rouge > orange (urgent côté action)
+      // Phase 3 : 1 seul rappel "prends rdv" par exécution
+      // Priorité : J-10 d'abord (s'il est candidat) — J-7 ne tourne jamais en même temps.
+      // À stage égal : rouge > orange (urgent côté action).
       const rdvCands = candidates.filter(c => c.stage === 'j7' || c.stage === 'j10')
       if (rdvCands.length > 0) {
         rdvCands.sort((a, b) => {
-          if (a.stage !== b.stage) return a.stage === 'j7' ? -1 : 1
+          if (a.stage !== b.stage) return a.stage === 'j10' ? -1 : 1
           return a.cyc.kind === 'rouge' ? -1 : 1
         })
         const c = rdvCands[0]
