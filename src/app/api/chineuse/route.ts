@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
       wearType,
       stockType,
       cibleStock,
+      mailingRestockActif,
       taux,
     } = body
 
@@ -156,6 +157,7 @@ export async function POST(req: NextRequest) {
       wearType: wearType || 'womenswear',
       stockType: stockType || 'unique',
       cibleStock: typeof cibleStock === 'number' ? cibleStock : 0,
+      mailingRestockActif: typeof mailingRestockActif === 'boolean' ? mailingRestockActif : true,
       taux: typeof taux === 'number' ? taux : 0,
     }
 

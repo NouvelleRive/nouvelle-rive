@@ -381,6 +381,7 @@ export async function GET(req: NextRequest) {
       const creneau = key.slice(tomorrowStr.length + 1)
       const chin = await findChineuse(slot.nom, slot.trigramme) as any
       if (!chin) continue
+      if (chin.mailingRestockActif === false) continue
       const chinKey = (chin.authUid || chin.email || slot.nom) as string
       if (alreadySentChin.has(chinKey)) continue
       const dateFr = new Date(tomorrowStr + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -679,6 +680,8 @@ export async function GET(req: NextRequest) {
       const chin = chinDoc.data() as any
       const tri = (chin.trigramme || '').toString().toUpperCase()
       if (!tri) continue
+      // Chineuse en pause : aucun mail/push automatique
+      if (chin.mailingRestockActif === false) continue
       // Petites séries : pas de cycle "faire tourner" (normal qu'elles gardent les refs longtemps),
       // mais le mail "stock bas" reste actif (cf. bloc plus bas)
       const isSmallBatch = chin.stockType === 'smallBatch'

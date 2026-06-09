@@ -114,6 +114,7 @@
     wearType: 'womenswear',
     stockType: 'unique',
     cibleStock: 0,
+    mailingRestockActif: true,
   }
 
   const EMPTY_DEPOSANTE_FORM = {
@@ -255,6 +256,7 @@
         wearType: (d as any).wearType || 'womenswear',
         stockType: (d as any).stockType || 'unique',
         cibleStock: (d as any).cibleStock || 0,
+        mailingRestockActif: (d as any).mailingRestockActif !== false,
       })
       setImageFile(null)
       setImagePreview(d.imageUrl || null)
@@ -360,6 +362,7 @@
           wearType: formData.wearType,
           stockType: formData.stockType,
           cibleStock: formData.cibleStock,
+          mailingRestockActif: formData.mailingRestockActif,
           taux: formData.taux,
           // categorieRapport = JUSTE label + idsquare
           categorieRapport: {
@@ -1058,6 +1061,23 @@
                       />
                       <p className="text-xs text-gray-400 mt-1">
                         Nb idéal de pièces en boutique. Alerte restock si sous -20%. Laisser à 0 pour désactiver.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Mailing restock</label>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, mailingRestockActif: !formData.mailingRestockActif })}
+                        className={`w-full border rounded px-3 py-2 text-sm font-medium transition-colors ${
+                          formData.mailingRestockActif
+                            ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100'
+                            : 'bg-gray-50 border-gray-300 text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        {formData.mailingRestockActif ? '✅ Activé' : '⏸️ Désactivé'}
+                      </button>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Active/désactive tous les mails+push automatiques de restock (J-1, faire tourner, stock bas).
                       </p>
                     </div>
                   </div>
