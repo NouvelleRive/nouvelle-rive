@@ -679,6 +679,8 @@ export async function GET(req: NextRequest) {
       const chin = chinDoc.data() as any
       const tri = (chin.trigramme || '').toString().toUpperCase()
       if (!tri) continue
+      // Petites séries : c'est normal qu'elles gardent les mêmes refs longtemps, pas de rappel
+      if (chin.stockType === 'smallBatch') continue
 
       // Charger les produits actifs une seule fois et trier par cycle
       const prodsSnap = await adminDb.collection('produits').where('trigramme', '==', tri).get()
