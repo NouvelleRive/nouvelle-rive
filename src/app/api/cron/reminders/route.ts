@@ -748,6 +748,9 @@ export async function GET(req: NextRequest) {
         { kind: 'rouge', dateMin: dateMinBaisse, offsetMonths: 1, pieces: piecesRouges },
       ]
 
+      // Phase 1 : identifier les stages candidats pour chaque cycle
+      type Candidate = { cyc: typeof cycles[number]; stage: CycleStage; pivotISO: string }
+      const candidates: Candidate[] = []
       for (const cyc of cycles) {
         if (!cyc.dateMin) continue
         const datePivot = new Date(cyc.dateMin); datePivot.setMonth(datePivot.getMonth() + cyc.offsetMonths)
@@ -762,11 +765,38 @@ export async function GET(req: NextRequest) {
         if (hasRdvWithinDays(rdvWindow)) continue
 
         const pivotISO = `${datePivot.getFullYear()}-${String(datePivot.getMonth() + 1).padStart(2, '0')}-${String(datePivot.getDate()).padStart(2, '0')}`
+        candidates.push({ cyc, stage, pivotISO })
+      }
+
+      // Phase 2 : envoyer tous les "jour-j" (orange et rouge peuvent coexister, c'est légitime)
+      for (const c of candidates.filter(c => c.stage === 'jour-j')) {
         const update = await runCycle({
-          kind: cyc.kind,
-          stage,
-          pivotISO,
-          pieces: cyc.pieces,
+          kind: c.cyc.kind,
+          stage: c.stage,
+          pivotISO: c.pivotISO,
+          pieces: c.cyc.pieces,
+          chin,
+          chinId: chinDoc.id,
+          tri,
+          rappels: { ...rappels, ...updates },
+        })
+        if (update) Object.assign(updates, update)
+      }
+
+      // Phase 3 : 1 seul rappel "prends rdv" par exécution (le plus urgent)
+      // Priorité : j7 > j10, puis rouge > orange (urgent côté action)
+      const rdvCands = candidates.filter(c => c.stage === 'j7' || c.stage === 'j10')
+      if (rdvCands.length > 0) {
+        rdvCands.sort((a, b) => {
+          if (a.stage !== b.stage) return a.stage === 'j7' ? -1 : 1
+          return a.cyc.kind === 'rouge' ? -1 : 1
+        })
+        const c = rdvCands[0]
+        const update = await runCycle({
+          kind: c.cyc.kind,
+          stage: c.stage,
+          pivotISO: c.pivotISO,
+          pieces: c.cyc.pieces,
           chin,
           chinId: chinDoc.id,
           tri,
