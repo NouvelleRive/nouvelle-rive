@@ -153,17 +153,6 @@ export default function AdminPaiementsPage() {
     return json
   }
 
-  const payerViaPennylane = async (chineumseId: string, montant: number, ref: string) => {
-    try { await navigator.clipboard.writeText(ref) } catch {}
-    window.open(`https://app.pennylane.com/companies/${PENNYLANE_COMPANY_ID}/clients/transactions`, '_blank', 'noopener')
-    if (!confirm(`Référence "${ref}" copiée dans le presse-papier.\n\nConfirmer le paiement comme effectué ?`)) return
-    try {
-      await markPaidApi([{ chineuseId: chineumseId, montant }])
-    } catch (e: any) {
-      console.error(e)
-      alert(`Impossible de marquer comme payé : ${e?.message || e}`)
-    }
-  }
 
   const totalDu = paiementsParChineuse.reduce((s, p) => s + p.net, 0)
   const totalPaye = paiementsParChineuse.filter(p => statuts[p.chineuse.id]?.paye).reduce((s, p) => s + p.net, 0)
@@ -255,32 +244,19 @@ export default function AdminPaiementsPage() {
     link.download = `virements_${moisSelectionne}.xml`
     link.click()
     URL.revokeObjectURL(link.href)
-
-    setTimeout(() => {
-      if (confirm(`XML téléchargé (${aExporter.length} virements).\n\nUne fois le XML uploadé dans Shine et les virements lancés, marquer ces ${aExporter.length} chineuses comme payées ?`)) {
-        markPaidApi(aExporter.map(p => ({ chineuseId: p.chineuse.id, montant: p.net })))
-          .then(() => alert(`${aExporter.length} paiements marqués comme effectués.`))
-          .catch((e: any) => alert(`Erreur : ${e?.message || e}`))
-      }
-    }, 500)
   }
 
-  const marquerToutPaye = async () => {
-    const aMarquer = paiementsParChineuse.filter(p => {
-      const s = statuts[p.chineuse.id]
-      return s?.factureRecue && !s?.paye
-    })
-    if (aMarquer.length === 0) {
-      alert('Aucun paiement à marquer (toutes les chineuses avec facture reçue sont déjà payées)')
-      return
-    }
-    if (!confirm(`Marquer ${aMarquer.length} chineuse(s) comme payées pour ${moisSelectionne} ?`)) return
+  const marquerPaye = async (chineuseId: string, montant: number) => {
     try {
-      await markPaidApi(aMarquer.map(p => ({ chineuseId: p.chineuse.id, montant: p.net })))
-      alert(`${aMarquer.length} paiements marqués comme effectués.`)
+      await markPaidApi([{ chineuseId, montant }])
     } catch (e: any) {
       alert(`Erreur : ${e?.message || e}`)
     }
+  }
+
+  const ouvrirPennylane = async (ref: string) => {
+    try { await navigator.clipboard.writeText(ref) } catch {}
+    window.open(`https://app.pennylane.com/companies/${PENNYLANE_COMPANY_ID}/clients/transactions`, '_blank', 'noopener')
   }
 
   if (loading) return (
@@ -334,23 +310,13 @@ export default function AdminPaiementsPage() {
             </span>
           </div>
         )}
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={marquerToutPaye}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-            title="À cliquer après upload du XML dans Shine"
-          >
-            <CheckCircle size={16} />
-            Marquer tout payé
-          </button>
-          <button
-            onClick={exporterSepaXML}
-            className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
-          >
-            <Download size={16} />
-            Exporter SEPA XML
-          </button>
-        </div>
+        <button
+          onClick={exporterSepaXML}
+          className="ml-auto flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
+        >
+          <Download size={16} />
+          Exporter SEPA XML
+        </button>
       </div>
 
       {/* Liste */}
@@ -401,43 +367,39 @@ export default function AdminPaiementsPage() {
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">{ref}</td>
                     <td className="px-4 py-3 text-center">
                       {statut.paye ? (
-                        <CheckCircle size={18} className="inline text-green-500" />
+                        <button
+                          onClick={() => marquerPaye(chineuse.id, net)}
+                          className="flex items-center gap-1.5 mx-auto px-2.5 py-1 rounded-lg text-xs font-medium bg-green-500 text-white border border-green-600"
+                          title={`Payé ${statut.datePaiement ? format(statut.datePaiement.toDate(), 'dd/MM', { locale: fr }) : ''}`}
+                        >
+                          <CheckCircle size={13} /> Payé {statut.datePaiement ? format(statut.datePaiement.toDate(), 'dd/MM', { locale: fr }) : ''}
+                        </button>
+                      ) : statut.factureRecue ? (
+                        <button
+                          onClick={() => marquerPaye(chineuse.id, net)}
+                          className="flex items-center gap-1.5 mx-auto px-2.5 py-1 rounded-lg text-xs font-medium bg-green-100 text-green-700 border border-green-200 hover:bg-green-200"
+                          title="Cliquer pour marquer comme payé"
+                        >
+                          <CheckCircle size={13} /> Reçue
+                        </button>
                       ) : (
                         <button
                           onClick={() => toggleFactureRecue(chineuse.id, statut.factureRecue)}
-                          className={`flex items-center gap-1.5 mx-auto px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                            statut.factureRecue
-                              ? 'bg-green-100 text-green-700 border border-green-200'
-                              : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
-                          }`}
+                          className="flex items-center gap-1.5 mx-auto px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200"
                         >
-                          {statut.factureRecue ? (
-                            <><CheckCircle size={13} /> Reçue</>
-                          ) : (
-                            <><Mail size={13} /> En attente</>
-                          )}
+                          <Mail size={13} /> En attente
                         </button>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {statut.paye ? (
-                        <span className="text-xs text-green-600 font-medium">
-                          Payé {statut.datePaiement ? format(statut.datePaiement.toDate(), 'dd/MM', { locale: fr }) : ''}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => payerViaPennylane(chineuse.id, net, ref)}
-                          disabled={!statut.factureRecue}
-                          className={`flex items-center gap-1.5 mx-auto px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            statut.factureRecue
-                              ? 'bg-[#22209C] text-white hover:bg-[#1a1878]'
-                              : 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                          }`}
-                        >
-                          <ExternalLink size={13} />
-                          Payer via Pennylane
-                        </button>
-                      )}
+                      <button
+                        onClick={() => ouvrirPennylane(ref)}
+                        className="flex items-center gap-1.5 mx-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-[#22209C] text-white hover:bg-[#1a1878]"
+                        title={`Ouvre Pennylane (ref ${ref} copiée)`}
+                      >
+                        <ExternalLink size={13} />
+                        Pennylane
+                      </button>
                     </td>
                   </tr>
                 )
