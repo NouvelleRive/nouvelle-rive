@@ -9,6 +9,7 @@ import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle, Trash2 } from 'lucide-react'
 import { getMonthEvents } from '@/lib/retailEvents'
+import { formatPrix } from '@/lib/formatPrix'
 
 type Produit = {
   id: string
@@ -324,11 +325,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const previousVentesProrata = Math.round(previousVentes * prorata)
   const previousPanierMoyenProrata = previousVentesProrata > 0 ? Math.round(previousCAProrata / previousVentesProrata) : 0
 
-  const caEvolution = previousCAProrata > 0 ? ((totalCA - previousCAProrata) / previousCAProrata * 100).toFixed(1) : null
-  const ventesEvolution = previousVentesProrata > 0 ? ((totalVentes - previousVentesProrata) / previousVentesProrata * 100).toFixed(1) : null
+  const caEvolution = previousCAProrata > 0 ? String(Math.round((totalCA - previousCAProrata) / previousCAProrata * 100)) : null
+  const ventesEvolution = previousVentesProrata > 0 ? String(Math.round((totalVentes - previousVentesProrata) / previousVentesProrata * 100)) : null
   const panierMoyen = totalVentes > 0 ? Math.round(totalCA / totalVentes) : 0
   const panierEvolution = previousPanierMoyenProrata > 0
-    ? ((panierMoyen - previousPanierMoyenProrata) / previousPanierMoyenProrata * 100).toFixed(1)
+    ? String(Math.round((panierMoyen - previousPanierMoyenProrata) / previousPanierMoyenProrata * 100))
     : null
 
   // CA par jour (admin only)
@@ -619,21 +620,22 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   }, [ventesCurrentMonth, deposants, isAdmin])
 
   const topMarques = useMemo(() => {
-    const map = new Map<string, { ca: number; count: number }>()
+    const map = new Map<string, { ca: number; count: number; displayName: string }>()
     ventesCurrentMonth.forEach(v => {
       const produit = v.produitId ? produitsMap.get(v.produitId) : null
       const m = produit?.marque || ''
       if (!m || m.length < 2) return
-      const ml = m.toLowerCase()
+      const ml = m.toLowerCase().trim()
       if (ml.startsWith('made in') || ml.startsWith('vintage') || ml === 'bombardier' || ml === 'morgan' || ml === 'âge paris' || ml === 'age paris') return
       const isChineuse = deposants.some(d => d.nom?.toLowerCase() === ml || d.email?.split('@')[0]?.toLowerCase() === ml)
       if (isChineuse) return
-      const cur = map.get(m) || { ca: 0, count: 0 }
-      map.set(m, { ca: cur.ca + (v.prixVenteReel || v.prix || 0), count: cur.count + 1 })
+      const display = ml.replace(/\b\p{L}/gu, c => c.toUpperCase())
+      const cur = map.get(ml) || { ca: 0, count: 0, displayName: display }
+      map.set(ml, { ca: cur.ca + (v.prixVenteReel || (v as any).prix || 0), count: cur.count + 1, displayName: cur.displayName })
     })
     const sorted = Array.from(map.entries()).sort((a, b) => b[1].ca - a[1].ca).slice(0, 12)
     const maxCA = sorted[0]?.[1].ca || 1
-    return sorted.map(([name, data]) => ({ name, ...data, pct: Math.round((data.ca / maxCA) * 100) }))
+    return sorted.map(([, data]) => ({ name: data.displayName, ca: data.ca, count: data.count, pct: Math.round((data.ca / maxCA) * 100) }))
   }, [ventesCurrentMonth, deposants])
 
   const topCouleurs = useMemo(() => {
@@ -798,11 +800,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
       {/* KPIs */}
       <div className={`grid ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-3'} gap-3`}>
-        <KpiCard title="Chiffre d'affaires" value={totalCA.toLocaleString('fr-FR')} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
+        <KpiCard title="Chiffre d'affaires" value={formatPrix(totalCA)} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
         <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
         <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
         {isAdmin && (
-          <KpiCard title="Marge" value={classementChineuses.reduce((s, c) => s + c.benef, 0).toLocaleString('fr-FR')} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+          <KpiCard title="Marge" value={formatPrix(classementChineuses.reduce((s, c) => s + c.benef, 0))} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         )}
       </div>
 
@@ -937,9 +939,9 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                                   <span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span>
                                 </div>
                               </td>
-                              <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900"><span className="whitespace-nowrap">{c.ca.toLocaleString('fr-FR')}€</span></td>
+                              <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900"><span className="whitespace-nowrap">{formatPrix(c.ca)} €</span></td>
                               <td className="py-1.5 px-1.5 text-right text-gray-600">{c.ventes}</td>
-                              <td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{c.benef.toLocaleString('fr-FR')} €</td>
+                              <td className="py-1.5 px-1.5 text-right font-semibold text-green-600">{formatPrix(c.benef)} €</td>
                             </tr>
                           )
                         })}
@@ -968,9 +970,9 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                             <span className="font-medium text-gray-900">{c.nom.toUpperCase()}</span>
                           </div>
                         </td>
-                        <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900 whitespace-nowrap">{c.ca.toLocaleString('fr-FR').replace(/[  ]/g, ' ')} €</td>
+                        <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900 whitespace-nowrap">{formatPrix(c.ca)} €</td>
                         <td className="py-1.5 px-1 text-right text-gray-600">{c.ventes}</td>
-                        <td className="py-1.5 px-1.5 text-right font-semibold text-green-600 whitespace-nowrap">{c.benef.toLocaleString('fr-FR').replace(/[  ]/g, ' ')} €</td>
+                        <td className="py-1.5 px-1.5 text-right font-semibold text-green-600 whitespace-nowrap">{formatPrix(c.benef)} €</td>
                       </tr>
                     ))}
                   </tbody>
@@ -998,7 +1000,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between text-xs mb-0.5">
                         <span className="text-gray-700 font-medium truncate">{item.cat}</span>
-                        <span className="text-gray-500 shrink-0 ml-2">{item.ca.toLocaleString('fr-FR')} €</span>
+                        <span className="text-gray-500 shrink-0 ml-2">{formatPrix(item.ca)} €</span>
                       </div>
                       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
@@ -1025,7 +1027,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.cat}</span>
-                      <span className="text-gray-500 shrink-0 ml-2">{item.ca.toLocaleString('fr-FR')} €</span>
+                      <span className="text-gray-500 shrink-0 ml-2">{formatPrix(item.ca)} €</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
@@ -1043,11 +1045,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
             <div className="w-[420px] h-[420px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                  <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {formatPrix(value)} €</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
                     {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
-                    <Label value={`${totalCA.toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
+                    <Label value={`${formatPrix(totalCA)} €`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
                   </Pie>
-                  <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
+                  <Tooltip formatter={(v: number) => `${formatPrix(v)} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -1079,7 +1081,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     <p className="text-xs font-medium text-gray-900 line-clamp-2 leading-tight">{item.nom}</p>
                     {item.marque && <p className="text-gray-400 truncate" style={{ fontSize: '9px' }}>{item.marque}</p>}
                     <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
+                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{formatPrix(item.prix)} €</span>
                       <span className={`text-xs font-semibold px-1 py-0.5 rounded ${item.jours === 0 ? 'bg-green-100 text-green-700' : item.jours <= 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
                         {item.jours === 0 ? '0j' : `${item.jours}j`}
                       </span>
@@ -1113,7 +1115,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     <p className="text-xs font-medium text-gray-900 line-clamp-2 leading-tight">{item.nom}</p>
                     {item.marque && <p className="text-gray-400 truncate" style={{ fontSize: '9px' }}>{item.marque}</p>}
                     <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{item.prix.toLocaleString('fr-FR')} €</span>
+                      <span className="text-gray-500" style={{ fontSize: '10px' }}>{formatPrix(item.prix)} €</span>
                       <span className="text-xs font-semibold px-1 py-0.5 rounded bg-red-100 text-red-700">
                         {item.jours !== null ? `${item.jours}j` : '—'}
                       </span>
@@ -1135,11 +1137,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
               <div className="w-[420px] h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {value.toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    <Pie data={prixParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {formatPrix(value)} €</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
                       {prixParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
-                      <Label value={`${totalCA.toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
+                      <Label value={`${formatPrix(totalCA)} €`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
                     </Pie>
-                    <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
+                    <Tooltip formatter={(v: number) => `${formatPrix(v)} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -1152,11 +1154,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
               <div className="w-[420px] h-[420px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={benefParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; if (pct < 4) return null; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {Math.round(value).toLocaleString('fr-FR')}€</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    <Pie data={benefParTranche} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={100} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 28; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; if (pct < 4) return null; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {formatPrix(value)} €</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
                       {benefParTranche.map((d, i) => <Cell key={i} fill={d.color} />)}
-                      <Label value={`${benefParTranche.reduce((s, d) => s + d.ca, 0).toLocaleString('fr-FR')}€`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
+                      <Label value={`${formatPrix(benefParTranche.reduce((s, d) => s + d.ca, 0))} €`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
                     </Pie>
-                    <Tooltip formatter={(v: number) => `${v.toLocaleString('fr-FR')} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
+                    <Tooltip formatter={(v: number) => `${formatPrix(v)} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -1183,7 +1185,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {formatPrix(item.ca)} €</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-[#22209C] rounded-full" style={{ width: `${item.pct}%` }} />
@@ -1211,7 +1213,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between text-xs mb-0.5">
                         <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                        <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
+                        <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {formatPrix(item.ca)} €</span>
                       </div>
                       <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                         <div className="h-full bg-gray-800 rounded-full" style={{ width: `${item.pct}%` }} />
@@ -1236,7 +1238,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {formatPrix(item.ca)} €</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-amber-500 rounded-full" style={{ width: `${item.pct}%` }} />
@@ -1260,7 +1262,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {formatPrix(item.ca)} €</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-purple-500 rounded-full" style={{ width: `${item.pct}%` }} />
@@ -1284,7 +1286,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between text-xs mb-0.5">
                       <span className="text-gray-700 font-medium truncate">{item.name}</span>
-                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {item.ca.toLocaleString('fr-FR')}€</span>
+                      <span className="text-gray-400 shrink-0 ml-1" style={{ fontSize: '10px' }}>{item.count}p · {formatPrix(item.ca)} €</span>
                     </div>
                     <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div className="h-full bg-pink-500 rounded-full" style={{ width: `${item.pct}%` }} />
@@ -1334,7 +1336,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                         <span className="font-medium text-gray-900">{v.nom}</span>
                       </div>
                     </td>
-                    <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{v.ca.toLocaleString('fr-FR')} €</td>
+                    <td className="py-1.5 px-1.5 text-right font-semibold text-gray-900">{formatPrix(v.ca)} €</td>
                     <td className="py-1.5 px-1.5 text-right text-gray-600">{v.ventes}</td>
                     <td className="py-1.5 px-1.5 text-right text-gray-600">{v.ventes > 0 ? Math.round(v.ca / v.ventes) : 0} €</td>
                   </tr>
@@ -1365,7 +1367,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                     <div className="flex-1 h-4 bg-gray-50 rounded overflow-hidden">
                       <div className="h-full bg-amber-400 rounded" style={{ width: `${Math.round((day.moyenne / maxMoy) * 100)}%` }} />
                     </div>
-                    <span className="text-xs font-bold text-gray-900 w-14 text-right">{day.moyenne.toLocaleString('fr-FR')} €</span>
+                    <span className="text-xs font-bold text-gray-900 w-14 text-right">{formatPrix(day.moyenne)} €</span>
                   </div>
                 )
               })}
