@@ -383,12 +383,22 @@ export default function AdminPaiementsPage() {
                           <CheckCircle size={13} /> Reçue
                         </button>
                       ) : (
-                        <button
-                          onClick={() => toggleFactureRecue(chineuse.id, statut.factureRecue)}
-                          className="flex items-center gap-1.5 mx-auto px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200"
-                        >
-                          <Mail size={13} /> En attente
-                        </button>
+                        <div className="flex items-center gap-1 justify-center">
+                          <button
+                            onClick={() => toggleFactureRecue(chineuse.id, statut.factureRecue)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200"
+                            title="Cliquer pour marquer la facture comme reçue"
+                          >
+                            <Mail size={13} /> En attente
+                          </button>
+                          <button
+                            onClick={() => { if (confirm('Marquer comme payé sans facture reçue ?')) marquerPaye(chineuse.id, net) }}
+                            className="flex items-center justify-center w-6 h-6 rounded-lg text-xs font-medium bg-green-100 text-green-700 border border-green-200 hover:bg-green-200"
+                            title="Marquer directement comme payé (hors flow facture)"
+                          >
+                            <CheckCircle size={13} />
+                          </button>
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
