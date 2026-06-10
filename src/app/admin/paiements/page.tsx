@@ -140,14 +140,29 @@ export default function AdminPaiementsPage() {
     }, { merge: true })
   }
 
-  const marquerPaye = async (chineumseId: string, montant: number) => {
-    if (!confirm('Confirmer le paiement ?')) return
-    await setDoc(doc(db, 'paiements', moisSelectionne, 'statuts', chineumseId), {
-      factureRecue: true,
-      paye: true,
-      datePaiement: Timestamp.now(),
-      montant,
-    }, { merge: true })
+  const PENNYLANE_COMPANY_ID = '22358154'
+
+  const markPaidApi = async (items: { chineuseId: string; montant: number }[]) => {
+    const res = await fetch('/api/paiements/mark-paid', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mois: moisSelectionne, items }),
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.error || 'Erreur API')
+    return json
+  }
+
+  const payerViaPennylane = async (chineumseId: string, montant: number, ref: string) => {
+    try { await navigator.clipboard.writeText(ref) } catch {}
+    window.open(`https://app.pennylane.com/companies/${PENNYLANE_COMPANY_ID}/clients/transactions`, '_blank', 'noopener')
+    if (!confirm(`Référence "${ref}" copiée dans le presse-papier.\n\nConfirmer le paiement comme effectué ?`)) return
+    try {
+      await markPaidApi([{ chineuseId: chineumseId, montant }])
+    } catch (e: any) {
+      console.error(e)
+      alert(`Impossible de marquer comme payé : ${e?.message || e}`)
+    }
   }
 
   const totalDu = paiementsParChineuse.reduce((s, p) => s + p.net, 0)
@@ -240,6 +255,32 @@ export default function AdminPaiementsPage() {
     link.download = `virements_${moisSelectionne}.xml`
     link.click()
     URL.revokeObjectURL(link.href)
+
+    setTimeout(() => {
+      if (confirm(`XML téléchargé (${aExporter.length} virements).\n\nUne fois le XML uploadé dans Shine et les virements lancés, marquer ces ${aExporter.length} chineuses comme payées ?`)) {
+        markPaidApi(aExporter.map(p => ({ chineuseId: p.chineuse.id, montant: p.net })))
+          .then(() => alert(`${aExporter.length} paiements marqués comme effectués.`))
+          .catch((e: any) => alert(`Erreur : ${e?.message || e}`))
+      }
+    }, 500)
+  }
+
+  const marquerToutPaye = async () => {
+    const aMarquer = paiementsParChineuse.filter(p => {
+      const s = statuts[p.chineuse.id]
+      return s?.factureRecue && !s?.paye
+    })
+    if (aMarquer.length === 0) {
+      alert('Aucun paiement à marquer (toutes les chineuses avec facture reçue sont déjà payées)')
+      return
+    }
+    if (!confirm(`Marquer ${aMarquer.length} chineuse(s) comme payées pour ${moisSelectionne} ?`)) return
+    try {
+      await markPaidApi(aMarquer.map(p => ({ chineuseId: p.chineuse.id, montant: p.net })))
+      alert(`${aMarquer.length} paiements marqués comme effectués.`)
+    } catch (e: any) {
+      alert(`Erreur : ${e?.message || e}`)
+    }
   }
 
   if (loading) return (
@@ -293,13 +334,23 @@ export default function AdminPaiementsPage() {
             </span>
           </div>
         )}
-        <button
-          onClick={exporterSepaXML}
-          className="ml-auto flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
-        >
-          <Download size={16} />
-          Exporter SEPA XML
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={marquerToutPaye}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+            title="À cliquer après upload du XML dans Shine"
+          >
+            <CheckCircle size={16} />
+            Marquer tout payé
+          </button>
+          <button
+            onClick={exporterSepaXML}
+            className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
+          >
+            <Download size={16} />
+            Exporter SEPA XML
+          </button>
+        </div>
       </div>
 
       {/* Liste */}
@@ -375,7 +426,7 @@ export default function AdminPaiementsPage() {
                         </span>
                       ) : (
                         <button
-                          onClick={() => marquerPaye(chineuse.id, net)}
+                          onClick={() => payerViaPennylane(chineuse.id, net, ref)}
                           disabled={!statut.factureRecue}
                           className={`flex items-center gap-1.5 mx-auto px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                             statut.factureRecue
