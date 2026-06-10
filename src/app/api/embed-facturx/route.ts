@@ -18,9 +18,6 @@ interface InvoiceData {
 
 function generateFacturXML(d: InvoiceData): string {
   const dateStr = d.dateEmission.replace(/-/g, '')
-  const dueDate = new Date(d.dateEmission)
-  dueDate.setDate(dueDate.getDate() + 30)
-  const dueStr = dueDate.toISOString().slice(0, 10).replace(/-/g, '')
   const siretClean = d.siret?.replace(/\s/g, '') || ''
   const ibanClean = d.iban?.replace(/\s/g, '') || ''
 
@@ -121,7 +118,7 @@ function generateFacturXML(d: InvoiceData): string {
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradePaymentTerms>
         <ram:DueDateDateTime>
-          <udt:DateTimeString format="102">${dueStr}</udt:DateTimeString>
+          <udt:DateTimeString format="102">${dateStr}</udt:DateTimeString>
         </ram:DueDateDateTime>
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
