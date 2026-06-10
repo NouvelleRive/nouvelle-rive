@@ -286,27 +286,27 @@ export default function AdminPaiementsPage() {
       {/* Stats */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg">
-          <span className="text-orange-600 font-semibold">{formatPrix(totalDu, { decimals: 2 })} €</span>
+          <span className="text-orange-600 font-semibold">{formatPrix(totalDu)} €</span>
           <span className="text-orange-500 ml-1 text-sm">total dû</span>
         </div>
         <div className="px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-          <span className="text-green-600 font-semibold">{formatPrix(totalPaye, { decimals: 2 })} €</span>
+          <span className="text-green-600 font-semibold">{formatPrix(totalPaye)} €</span>
           <span className="text-green-500 ml-1 text-sm">payé</span>
         </div>
         <div className="px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
-          <span className="text-red-600 font-semibold">{formatPrix(totalDu - totalPaye, { decimals: 2 })} €</span>
+          <span className="text-red-600 font-semibold">{formatPrix(totalDu - totalPaye)} €</span>
           <span className="text-red-500 ml-1 text-sm">restant</span>
         </div>
         <div className="px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-          <span className="text-blue-600 font-semibold">{formatPrix(totalTva, { decimals: 2 })} €</span>
+          <span className="text-blue-600 font-semibold">{formatPrix(totalTva)} €</span>
           <span className="text-blue-500 ml-1 text-sm">TVA collectée</span>
         </div>
         {totalCaFamiliale > 0 && (
           <div className="px-3 py-1.5 bg-pink-50 border border-pink-200 rounded-lg">
-            <span className="text-pink-600 font-semibold">{formatPrix(totalCaFamiliale, { decimals: 2 })} €</span>
+            <span className="text-pink-600 font-semibold">{formatPrix(totalCaFamiliale)} €</span>
             <span className="text-pink-500 ml-1 text-sm">
               CA familial
-              <span className="text-pink-400"> · Square : {formatPrix(totalCaSquare, { decimals: 2 })} €</span>
+              <span className="text-pink-400"> · Square : {formatPrix(totalCaSquare)} €</span>
             </span>
           </div>
         )}
