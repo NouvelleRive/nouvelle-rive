@@ -1508,7 +1508,7 @@ async function compressImage(file: File): Promise<string> {
                 <button
                   type="button"
                   onClick={onFleekImport}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#F59E0B] text-white rounded-lg text-sm hover:bg-[#d98a09] transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#F5C842] text-black rounded-lg text-sm hover:bg-[#e5b832] transition-colors"
                 >
                   Fleek
                 </button>

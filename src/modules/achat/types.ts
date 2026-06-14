@@ -123,5 +123,5 @@ export const ACHAT_BORDER_COLOR: Record<AchatProvenance, string> = {
   vinted: '#09B1BA',
   vestiaire: '#000000',
   drouot: '#B8860B',
-  fleek: '#F59E0B',
+  fleek: '#F5C842',
 }
