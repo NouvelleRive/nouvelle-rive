@@ -16,6 +16,27 @@ const fmtTime = (iso: string | null) => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+// Convertit un ISO UTC en valeur locale pour <input type="datetime-local">
+// Sans ça, .slice(0,16) injecte l'heure UTC comme si c'était locale → décalage à chaque save
+const toLocalInput = (iso: string | null): string => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Devine un départ par défaut : même jour que l'arrivée, horaire du slot prévu (ou arrivée + 8h)
+const guessDepart = (arriveeIso: string | null, slot: '12-20' | '11-17' | null): string => {
+  if (!arriveeIso) return ''
+  const a = new Date(arriveeIso)
+  const dep = new Date(a)
+  if (slot === '12-20') dep.setHours(20, 0, 0, 0)
+  else if (slot === '11-17') dep.setHours(17, 0, 0, 0)
+  else dep.setHours(a.getHours() + 8, a.getMinutes(), 0, 0)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${dep.getFullYear()}-${pad(dep.getMonth() + 1)}-${pad(dep.getDate())}T${pad(dep.getHours())}:${pad(dep.getMinutes())}`
+}
+
 // Renvoie le créneau prévu pour une vendeuse à une date (ou null)
 const getSlot = (planningSlots: PlanningSlots, date: string, vendeuseId: string): '12-20' | '11-17' | null => {
   if (planningSlots[`${date}_12-20`] === vendeuseId) return '12-20'
@@ -93,8 +114,13 @@ export default function PointagesSection({
 
   const startEdit = (p: Pointage) => {
     setEditingId(p.id)
-    setEditArrivee(p.arrivee ? p.arrivee.slice(0, 16) : '')
-    setEditDepart(p.depart ? p.depart.slice(0, 16) : '')
+    setEditArrivee(toLocalInput(p.arrivee))
+    if (p.depart) {
+      setEditDepart(toLocalInput(p.depart))
+    } else {
+      const slot = getSlot(planningSlots, p.date, p.vendeuseId)
+      setEditDepart(guessDepart(p.arrivee, slot))
+    }
   }
 
   const createPointage = async () => {
