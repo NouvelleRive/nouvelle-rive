@@ -1220,7 +1220,7 @@
               return (
                 <div
                   key={p.id}
-                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : achatBorderClass || 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false || isAchatBrouillon || (p as any).statutRestock === 'enAttente' || (p as any).statutDestock === 'enAttente' ? 'opacity-50 bg-gray-50' : ''} ${needsEtiquetteMaj(p) ? 'border-[#22209C] border-2' : ''} p-2.5 sm:p-4 shadow-sm hover:shadow-md transition-all`}
+                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : achatBorderClass || 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false || isAchatBrouillon || (p as any).statutRestock === 'enAttente' || (p as any).statutDestock === 'enAttente' ? 'opacity-50 bg-gray-50' : ''} p-2.5 sm:p-4 shadow-sm hover:shadow-md transition-all`}
                 >
                   {/* MOBILE */}
                   <div className="sm:hidden">
@@ -1294,22 +1294,32 @@
                       </button>
                     )}
                     {getPriceBadgeStatus(p) === 'blue' && (
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full mt-1">
-                        💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
-                      </span>
-                    )}
-                    {needsEtiquetteMaj(p) && (
-                      <button
-                        onClick={() => handleMajEtiquette(p)}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#22209C] border-2 border-[#22209C] px-2 py-0.5 rounded-full mt-1 hover:bg-[#22209C] hover:text-white transition-colors"
-                      >
-                        MÀJ étiquette
-                      </button>
+                      needsEtiquetteMaj(p) ? (
+                        <button
+                          onClick={() => handleMajEtiquette(p)}
+                          className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 border border-[#22209C] px-2 py-0.5 rounded-full mt-1 hover:bg-blue-200 transition-colors"
+                        >
+                          💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €) · <span className="font-semibold">MÀJ étiquette</span>
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full mt-1">
+                          💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
+                        </span>
+                      )
                     )}
                     {getPriceBadgeStatus(p) === 'red' && (
-                      <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
-                        🚨 À récupérer – prix baissé il y a 1 mois+
-                      </span>
+                      needsEtiquetteMaj(p) ? (
+                        <button
+                          onClick={() => handleMajEtiquette(p)}
+                          className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 border border-[#22209C] px-2 py-0.5 rounded-full mt-1 hover:bg-red-200 transition-colors"
+                        >
+                          🚨 À récupérer – prix baissé il y a 1 mois+ · <span className="font-semibold">MÀJ étiquette</span>
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
+                          🚨 À récupérer – prix baissé il y a 1 mois+
+                        </span>
+                      )
                     )}
 
                     {/* Ligne info bas : Prix · Qté · Achat · Marge */}
@@ -1415,22 +1425,32 @@
   </button>
 )}
 {getPriceBadgeStatus(p) === 'blue' && (
-  <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
-    💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
-  </span>
-)}
-{needsEtiquetteMaj(p) && (
-  <button
-    onClick={() => handleMajEtiquette(p)}
-    className="inline-flex items-center gap-1 text-xs font-semibold text-[#22209C] border-2 border-[#22209C] px-2 py-1 rounded-full mt-1 hover:bg-[#22209C] hover:text-white transition-colors"
-  >
-    MÀJ étiquette
-  </button>
+  needsEtiquetteMaj(p) ? (
+    <button
+      onClick={() => handleMajEtiquette(p)}
+      className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 border border-[#22209C] px-2 py-1 rounded-full mt-1 hover:bg-blue-200 transition-colors"
+    >
+      💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €) · <span className="font-semibold">MÀJ étiquette</span>
+    </button>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
+      💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
+    </span>
+  )
 )}
 {getPriceBadgeStatus(p) === 'red' && (
-  <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
-    🚨 À récupérer – prix baissé il y a 1 mois+
-  </span>
+  needsEtiquetteMaj(p) ? (
+    <button
+      onClick={() => handleMajEtiquette(p)}
+      className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 border border-[#22209C] px-2 py-1 rounded-full mt-1 hover:bg-red-200 transition-colors"
+    >
+      🚨 À récupérer – prix baissé il y a 1 mois+ · <span className="font-semibold">MÀJ étiquette</span>
+    </button>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
+      🚨 À récupérer – prix baissé il y a 1 mois+
+    </span>
+  )
 )}
                       {/* Encart Livraison desktop — même règle d'affichage que mobile */}
                       {p.source?.startsWith('achat-') && (
