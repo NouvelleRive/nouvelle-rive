@@ -870,7 +870,7 @@
             
       } catch (err: any) {
         console.error('Erreur sauvegarde:', err)
-        alert(`Erreur : ${err?.code || 'inconnu'}\n${err?.message || err}`)
+        alert('Erreur : FI')
       } finally {
         setSavingProduct(false)  // <-- ajoute cette ligne
       }
