@@ -76,8 +76,9 @@ async function actionsChineuse(
       if (baisseDate < oneMonthAgo) aRecuperer.push(toInfo(p))
       continue
     }
-    const createdDate = p.createdAt?.toDate?.()
-    if (createdDate instanceof Date && createdDate < twoMonthsAgo) prixABaisser.push(toInfo(p))
+    // Cycle orange basé sur la date de réception en boutique (pas createdAt)
+    const receptionDate = p.dateReception?.toDate?.()
+    if (receptionDate instanceof Date && receptionDate < twoMonthsAgo) prixABaisser.push(toInfo(p))
   }
   return { aRecuperer, prixABaisser }
 }
@@ -465,7 +466,7 @@ export async function GET(req: NextRequest) {
 
   // 10h00 — rappels chineuses "faire tourner" + "récupérer"
   // Deux cycles parallèles, mêmes règles :
-  // - orange : pièces sans prixBaisseLe, datePivot = createdAt + 2 mois (passage en "à baisser")
+  // - orange : pièces sans prixBaisseLe, datePivot = dateReception + 2 mois (passage en "à baisser")
   // - rouge  : pièces avec prixBaisseLe, datePivot = prixBaisseLe + 1 mois (passage en "à récupérer")
   // Par cycle : J-10 / J-7 (push+mail "prends rdv" si pas de RDV dans la fenêtre, 1 envoi par pivot),
   // puis jour J (mail liste + push, relance 2j si pas de RDV dans 10j, notif/mail admin par chineuse).
@@ -725,10 +726,11 @@ export async function GET(req: NextRequest) {
           if (!dateMinBaisse || bd < dateMinBaisse) dateMinBaisse = bd
           if (bd < oneMonthAgo) piecesRouges.push(toInfo(p))
         } else {
-          const c = p.createdAt?.toDate?.()
-          if (!(c instanceof Date)) continue
-          if (!dateMinCreated || c < dateMinCreated) dateMinCreated = c
-          if (c < twoMonthsAgo) piecesOranges.push(toInfo(p))
+          // Cycle orange basé sur la date de réception en boutique (pas createdAt)
+          const recep = p.dateReception?.toDate?.()
+          if (!(recep instanceof Date)) continue
+          if (!dateMinCreated || recep < dateMinCreated) dateMinCreated = recep
+          if (recep < twoMonthsAgo) piecesOranges.push(toInfo(p))
         }
       }
       // Ventes depuis le dernier restock (fallback 30j si jamais reçu)
