@@ -374,6 +374,8 @@ async function compressImage(file: File): Promise<string> {
     onVintedImport?: () => void
     /** Si fourni, affiche un bouton "Import Whatnot" — admin only, à mettre uniquement quand isAdmin=true. */
     onWhatnotImport?: () => void
+    /** Si fourni, affiche un bouton "Import Fleek" (facture marketplace lots) — admin only. */
+    onFleekImport?: () => void
     onCancel?: () => void
     
     // État
@@ -448,6 +450,7 @@ async function compressImage(file: File): Promise<string> {
     onExcelImport,
     onVintedImport,
     onWhatnotImport,
+    onFleekImport,
     onCancel,
     loading = false,
     submitLabel,
@@ -1461,11 +1464,19 @@ async function compressImage(file: File): Promise<string> {
         {/* === GUIDE PHOTO === */}
         <PhotoGuideModal />
         
-        {/* === ENCART IMPORTER (Excel + Vinted + Whatnot) === */}
-        {mode === 'create' && showExcelImport && onExcelImport && (
+        {/* === ENCART IMPORTER (Excel + Vinted + Whatnot + Fleek) === */}
+        {mode === 'create' && showExcelImport && onExcelImport && (() => {
+          // Excel (toujours) + boutons optionnels → on calcule le nb de colonnes.
+          const nbCols = 1 + (onVintedImport ? 1 : 0) + (onWhatnotImport ? 1 : 0) + (onFleekImport ? 1 : 0)
+          const gridClass =
+            nbCols === 4 ? 'grid-cols-4'
+            : nbCols === 3 ? 'grid-cols-3'
+            : nbCols === 2 ? 'grid-cols-2'
+            : 'grid-cols-1'
+          return (
           <div className="bg-white border rounded-lg p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Importer</h3>
-            <div className={`grid gap-x-2 gap-y-1 ${onWhatnotImport ? 'grid-cols-3' : onVintedImport ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className={`grid gap-x-2 gap-y-1 ${gridClass}`}>
               {/* Ligne 1 : les boutons */}
               <button
                 type="button"
@@ -1493,17 +1504,28 @@ async function compressImage(file: File): Promise<string> {
                   Whatnot
                 </button>
               )}
+              {onFleekImport && (
+                <button
+                  type="button"
+                  onClick={onFleekImport}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#F59E0B] text-white rounded-lg text-sm hover:bg-[#d98a09] transition-colors"
+                >
+                  Fleek
+                </button>
+              )}
               {/* Ligne 2 : helper uniquement sous Vinted (cellule vide ailleurs) */}
               {onVintedImport && (
                 <>
                   <div />
                   <p className="text-[11px] text-gray-400 text-center">copie colle la page (cmd+A, cmd+C, cmd+V)</p>
                   {onWhatnotImport && <div />}
+                  {onFleekImport && <div />}
                 </>
               )}
             </div>
           </div>
-        )}
+          )
+        })()}
         {mode === 'create' && showExcelImport && onExcelImport && showExcelSection && (
           <div className="bg-white border rounded-lg overflow-hidden">
             <div className="px-4 pb-4 bg-gray-50">

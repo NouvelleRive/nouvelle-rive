@@ -21,7 +21,7 @@ type Props = {
 }
 
 type ItemFields = {
-  provenance: 'vinted' | 'whatnot'
+  provenance: 'vinted' | 'whatnot' | 'fleek'
   itemId?: string | null
   achatOrderId?: string | null
   titre: string
@@ -38,6 +38,9 @@ type ItemFields = {
   prixSuggere: number | null
   categorie: { label?: string; idsquare?: string } | null
   prixVente: string // saisi par l'admin, requis
+  // Spécifique Fleek : un item = un LOT de N pièces.
+  quantiteLot?: number
+  prixLot?: number
 }
 
 type Step = 'paste' | 'preview' | 'creating' | 'done'
@@ -79,9 +82,10 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
         return
       }
       // Normaliser en tableau d'items
-      const raw: ItemFields[] = json.kind === 'whatnot-purchase'
-        ? json.items.map((it: any) => ({ ...it, prixVente: it.prixSuggere ? String(it.prixSuggere) : '' }))
-        : [{ ...json.fields, prixVente: json.fields.prixSuggere ? String(json.fields.prixSuggere) : '' }]
+      const raw: ItemFields[] =
+        json.kind === 'whatnot-purchase' || json.kind === 'fleek-invoice'
+          ? json.items.map((it: any) => ({ ...it, prixVente: it.prixSuggere ? String(it.prixSuggere) : '' }))
+          : [{ ...json.fields, prixVente: json.fields.prixSuggere ? String(json.fields.prixSuggere) : '' }]
       setItems(raw)
       setStep('preview')
     } catch (e: any) {
@@ -95,7 +99,8 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
     // validation : tous les champs obligatoires doivent être remplis avant création
     for (let i = 0; i < items.length; i++) {
       const it = items[i]
-      const prefix = items.length > 1 ? `Pièce ${i + 1} : ` : ''
+      const isFleek = it.provenance === 'fleek'
+      const prefix = items.length > 1 ? (isFleek ? `Lot ${i + 1} : ` : `Pièce ${i + 1} : `) : ''
       if (!it.titre?.trim()) {
         setErrorMsg(`${prefix}le titre est obligatoire.`)
         return
@@ -104,13 +109,24 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
         setErrorMsg(`${prefix}la catégorie est obligatoire (non détectée auto, à compléter à la main après création).`)
         return
       }
-      if (!it.marque?.trim()) {
-        setErrorMsg(`${prefix}la marque est obligatoire.`)
-        return
+      // Pour Fleek : la marque/taille/etc. seront renseignées pièce par pièce
+      // après réception (lot générique style "Premium Ralph Lauren Polo Shirts").
+      if (!isFleek) {
+        if (!it.marque?.trim()) {
+          setErrorMsg(`${prefix}la marque est obligatoire.`)
+          return
+        }
+        if (!it.taille?.trim()) {
+          setErrorMsg(`${prefix}la taille est obligatoire.`)
+          return
+        }
       }
-      if (!it.taille?.trim()) {
-        setErrorMsg(`${prefix}la taille est obligatoire.`)
-        return
+      if (isFleek) {
+        const qty = Number(it.quantiteLot)
+        if (!Number.isFinite(qty) || qty <= 0) {
+          setErrorMsg(`${prefix}quantité du lot manquante.`)
+          return
+        }
       }
       const pv = parseFloat(it.prixVente || '')
       if (!Number.isFinite(pv) || pv <= 0) {
@@ -159,11 +175,11 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
         <div className="flex items-start justify-between mb-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              {step === 'preview' ? 'Vérifie avant création' : 'Importer depuis Vinted / Whatnot'}
+              {step === 'preview' ? 'Vérifie avant création' : 'Importer depuis Vinted / Whatnot / Fleek'}
             </h2>
             {step === 'paste' && (
               <p className="text-sm text-gray-500 mt-1">
-                Colle ici la page complète ou le mail (cmd+A, cmd+C, cmd+V).
+                Colle ici la page Vinted, le mail Whatnot ou le texte de la facture Fleek.
               </p>
             )}
             {step === 'preview' && (
@@ -206,22 +222,46 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
         {step === 'preview' && (
           <>
             <div className="overflow-y-auto flex-1 -mx-2 px-2 space-y-4">
-              {items.map((it, i) => (
+              {items.map((it, i) => {
+                const isFleek = it.provenance === 'fleek'
+                return (
                 <div key={i} className="border rounded-xl p-4 bg-gray-50">
                   {items.length > 1 && (
-                    <div className="text-xs font-semibold text-[#09B1BA] mb-2">Pièce {i + 1}/{items.length}</div>
+                    <div className="text-xs font-semibold text-[#09B1BA] mb-2">
+                      {isFleek ? `Lot ${i + 1}/${items.length}` : `Pièce ${i + 1}/${items.length}`}
+                    </div>
+                  )}
+                  {isFleek && (
+                    <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
+                      <div>
+                        <span className="font-semibold">Lot Fleek</span> · {it.quantiteLot ?? '?'} pièces ·
+                        <span className="ml-1">prix lot {it.prixLot != null ? `${it.prixLot.toFixed(2)} €` : '—'}</span> ·
+                        <span className="ml-1">unitaire {it.prixAchat != null ? `${it.prixAchat.toFixed(2)} €` : '—'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <label className="text-xs text-amber-900">Qté reçue</label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={it.quantiteLot ?? ''}
+                          onChange={(e) => updateItem(i, { quantiteLot: parseInt(e.target.value || '0', 10) || 0 })}
+                          className="w-16 border border-amber-300 rounded px-2 py-0.5 text-xs bg-white"
+                        />
+                      </div>
+                    </div>
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
-                      <label className="text-xs text-gray-500">Titre</label>
+                      <label className="text-xs text-gray-500">{isFleek ? 'Libellé du lot' : 'Titre'}</label>
                       <input value={it.titre} onChange={(e) => updateItem(i, { titre: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500">Marque</label>
+                      <label className="text-xs text-gray-500">Marque {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
                       <input value={it.marque} onChange={(e) => updateItem(i, { marque: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500">Taille</label>
+                      <label className="text-xs text-gray-500">Taille {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
                       <input value={it.taille} onChange={(e) => updateItem(i, { taille: e.target.value })} placeholder={it.tailleOriginale ? `orig: ${it.tailleOriginale}` : ''} className="w-full border rounded px-2 py-1.5 text-sm" />
                     </div>
                     <div>
@@ -241,11 +281,13 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
                       <input value={it.categorie?.label || ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500">Prix d'achat (€)</label>
+                      <label className="text-xs text-gray-500">Prix d'achat unitaire (€)</label>
                       <input value={it.prixAchat != null ? String(it.prixAchat) : ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
                     </div>
                     <div className="col-span-2">
-                      <label className="text-xs text-gray-500 font-semibold">Prix de vente (€) *</label>
+                      <label className="text-xs text-gray-500 font-semibold">
+                        Prix de vente {isFleek ? 'par pièce ' : ''}(€) *
+                      </label>
                       <input
                         type="number"
                         step="0.01"
@@ -259,7 +301,8 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
             {errorMsg && (
               <div className="mt-3 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-800 border border-red-200">

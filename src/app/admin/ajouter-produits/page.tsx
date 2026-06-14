@@ -29,6 +29,7 @@ export default function AdminAjouterPage() {
   const [creatingProduct, setCreatingProduct] = useState(false)
   const [vintedModalOpen, setVintedModalOpen] = useState(false)
   const [whatnotModalOpen, setWhatnotModalOpen] = useState(false)
+  const [fleekModalOpen, setFleekModalOpen] = useState(false)
 
   // Convertir les catégories de la chineuse pour ProductForm
   const chineuseCategories = useMemo(() => {
@@ -241,6 +242,12 @@ export default function AdminAjouterPage() {
                 ? () => setWhatnotModalOpen(true)
                 : undefined
             }
+            onFleekImport={
+              // Règle : Fleek visible UNIQUEMENT pour NR (rachat marketplace en lots)
+              selectedChineuse?.trigramme?.toUpperCase() === 'NR'
+                ? () => setFleekModalOpen(true)
+                : undefined
+            }
             loading={creatingProduct}
             showExcelImport={true}
           />
@@ -259,6 +266,16 @@ export default function AdminAjouterPage() {
       {whatnotModalOpen && selectedChineuse && (
         <ImportMailModal
           onClose={() => setWhatnotModalOpen(false)}
+          targetChineuse={{
+            uid: selectedChineuse.uid,
+            email: selectedChineuse.email,
+            trigramme: selectedChineuse.trigramme,
+          }}
+        />
+      )}
+      {fleekModalOpen && selectedChineuse && (
+        <ImportMailModal
+          onClose={() => setFleekModalOpen(false)}
           targetChineuse={{
             uid: selectedChineuse.uid,
             email: selectedChineuse.email,

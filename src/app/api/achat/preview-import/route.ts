@@ -12,6 +12,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { parseVintedPage } from '@/modules/achat/parser/vintedPage'
 import { parseWhatnotPurchase } from '@/modules/achat/parser/whatnot'
+import { parseFleekInvoice } from '@/modules/achat/parser/fleek'
 import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
 import { mapTailleVintedVersNR } from '@/modules/achat/mapTaille'
 
@@ -86,6 +87,43 @@ export async function POST(req: NextRequest) {
         achatOrderId: null, // pas connu côté page
       },
     })
+  }
+
+  // --- Fleek (facture marketplace lots) ----------------------------------
+  // Détection robuste avant Whatnot car Fleek a un format texte différent
+  // (Order Number: #X, ligne "N / piece", aucun chevauchement avec Whatnot).
+  if (/Fleek/i.test(body) && /Order\s*Number:\s*#?\s*\d+/i.test(body) && /\d+\s*\/\s*piece/i.test(body)) {
+    const invoice = parseFleekInvoice(body)
+    if (!invoice.ok) return NextResponse.json({ ok: false, reason: invoice.reason })
+
+    const items = []
+    for (const lot of invoice.lots) {
+      const categorieEntry = await detectCategorie(targetChineuseUid, lot.titre)
+      // Pas de cleanWithClaude ici : les titres Fleek sont génériques
+      // ("Premium Ralph Lauren Polo Shirts") et seront retravaillés à la main
+      // pièce par pièce après réception.
+      items.push({
+        provenance: 'fleek',
+        achatOrderId: invoice.orderId,
+        titre: lot.titre,
+        titreOriginal: lot.titre,
+        marque: '',
+        taille: '',
+        couleur: '',
+        etat: '',
+        description: '',
+        descriptionOriginale: '',
+        vendeur: 'Fleek',
+        prixAchat: lot.prixUnitaire,
+        prixSuggere: Math.round(lot.prixUnitaire * 2.5),
+        categorie: categorieEntry,
+        // Champs spécifiques Fleek pour la modal :
+        quantiteLot: lot.qtyParLot,
+        prixLot: lot.prixLot,
+      })
+    }
+
+    return NextResponse.json({ ok: true, kind: 'fleek-invoice', items })
   }
 
   // --- Whatnot (1 mail = potentiellement plusieurs items) ----------------

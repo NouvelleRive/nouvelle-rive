@@ -14,7 +14,7 @@
 
 import type { Timestamp } from 'firebase/firestore'
 
-export type AchatProvenance = 'vinted' | 'vestiaire' | 'drouot'
+export type AchatProvenance = 'vinted' | 'vestiaire' | 'drouot' | 'fleek'
 
 /**
  * Cycle de vie d'une pièce achetée :
@@ -123,4 +123,5 @@ export const ACHAT_BORDER_COLOR: Record<AchatProvenance, string> = {
   vinted: '#09B1BA',
   vestiaire: '#000000',
   drouot: '#B8860B',
+  fleek: '#F59E0B',
 }

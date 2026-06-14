@@ -16,6 +16,7 @@ import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
 import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
 import { parseVintedPage, vintedPageDocId } from '@/modules/achat/parser/vintedPage'
 import { parseWhatnotPurchase, whatnotDocId } from '@/modules/achat/parser/whatnot'
+import { fleekPieceDocId } from '@/modules/achat/parser/fleek'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
 
@@ -121,64 +122,92 @@ export async function POST(req: NextRequest) {
  * Mode pré-validé : l'admin a déjà revu les champs dans le modal et a saisi
  * le prix de vente. On écrit directement chaque item en Firestore avec un
  * SKU incrémenté sur la chineuse cible.
+ *
+ * Cas Fleek : chaque item est un LOT et porte `quantiteLot`. On crée alors
+ * N brouillons identiques (mêmes champs sauf SKU + docId déterministe par pièce).
  */
 async function handleValidatedItems(
   items: any[],
   target: { uid: string; email: string; trigramme: string }
 ) {
-  const startNum = await computeNextSkuNum(target.trigramme)
+  let skuCursor = await computeNextSkuNum(target.trigramme)
   const created: { docId: string; sku: string }[] = []
 
   for (let i = 0; i < items.length; i++) {
     const it = items[i]
-    const sku = `${target.trigramme}${startNum + i}`
-
-    // ID déterministe : si on a un itemId Vinted ou un orderId Whatnot, on
-    // l'utilise pour anti-doublon. Sinon, doc auto-id.
     const provenance: string = it.provenance || 'vinted'
-    let docId: string | null = null
-    if (it.itemId) docId = `vinted_item_${it.itemId}`
-    else if (it.achatOrderId && provenance === 'vinted') docId = `vinted_${it.achatOrderId}`
-    else if (it.achatOrderId && provenance === 'whatnot') docId = `whatnot_${it.achatOrderId}`
+
+    // Détermine combien de pièces ce "lot" représente. Fleek = N, autres = 1.
+    const quantiteLot =
+      provenance === 'fleek' && Number.isFinite(Number(it.quantiteLot)) && Number(it.quantiteLot) > 0
+        ? Math.floor(Number(it.quantiteLot))
+        : 1
 
     const prixVente = parseFloat(String(it.prixVente || '')) || 0
-    const prixAchat = typeof it.prixAchat === 'number' ? it.prixAchat : (parseFloat(String(it.prixAchat || '')) || null)
+    const prixAchat =
+      typeof it.prixAchat === 'number'
+        ? it.prixAchat
+        : parseFloat(String(it.prixAchat || '')) || null
 
-    const payload: Record<string, unknown> = {
-      nom: `${sku} - ${it.titre || ''}`,
-      description: it.description || '',
-      categorie: it.categorie || '',
-      marque: it.marque || '',
-      taille: it.taille || '',
-      color: it.couleur || null,
-      etat: it.etat || '',
-      sku,
-      trigramme: target.trigramme,
-      chineurUid: target.uid,
-      chineur: target.email,
-      imageUrls: [],
-      imageUrl: '',
-      photosReady: false,
-      vendu: false,
-      recu: false,
-      quantite: 1,
-      createdAt: Timestamp.now(),
-      prix: prixVente,
-      ...(prixAchat != null ? { prixAchat } : {}),
-      source: provenance === 'whatnot' ? 'achat-whatnot' : 'achat-vinted',
-      achatProvenance: provenance,
-      achatStatut: 'commande',
-      achatVendeur: it.vendeur || '',
-      achatTitreOriginal: it.titreOriginal || it.titre || '',
-      ...(it.achatOrderId ? { achatOrderId: String(it.achatOrderId) } : {}),
-    }
+    for (let p = 0; p < quantiteLot; p++) {
+      const sku = `${target.trigramme}${skuCursor}`
+      skuCursor++
 
-    if (docId) {
-      await adminDb.collection('produits').doc(docId).set(payload, { merge: true })
-      created.push({ docId, sku })
-    } else {
-      const ref = await adminDb.collection('produits').add(payload)
-      created.push({ docId: ref.id, sku })
+      // ID déterministe par provenance (anti-doublon strict si re-import).
+      let docId: string | null = null
+      if (provenance === 'fleek' && it.achatOrderId) {
+        docId = fleekPieceDocId(String(it.achatOrderId), i, p)
+      } else if (it.itemId) {
+        docId = `vinted_item_${it.itemId}`
+      } else if (it.achatOrderId && provenance === 'vinted') {
+        docId = `vinted_${it.achatOrderId}`
+      } else if (it.achatOrderId && provenance === 'whatnot') {
+        docId = `whatnot_${it.achatOrderId}`
+      }
+
+      const sourceField =
+        provenance === 'whatnot'
+          ? 'achat-whatnot'
+          : provenance === 'fleek'
+            ? 'achat-fleek'
+            : 'achat-vinted'
+
+      const payload: Record<string, unknown> = {
+        nom: `${sku} - ${it.titre || ''}`,
+        description: it.description || '',
+        categorie: it.categorie || '',
+        marque: it.marque || '',
+        taille: it.taille || '',
+        color: it.couleur || null,
+        etat: it.etat || '',
+        sku,
+        trigramme: target.trigramme,
+        chineurUid: target.uid,
+        chineur: target.email,
+        imageUrls: [],
+        imageUrl: '',
+        photosReady: false,
+        vendu: false,
+        recu: false,
+        quantite: 1,
+        createdAt: Timestamp.now(),
+        prix: prixVente,
+        ...(prixAchat != null ? { prixAchat } : {}),
+        source: sourceField,
+        achatProvenance: provenance,
+        achatStatut: 'commande',
+        achatVendeur: it.vendeur || '',
+        achatTitreOriginal: it.titreOriginal || it.titre || '',
+        ...(it.achatOrderId ? { achatOrderId: String(it.achatOrderId) } : {}),
+      }
+
+      if (docId) {
+        await adminDb.collection('produits').doc(docId).set(payload, { merge: true })
+        created.push({ docId, sku })
+      } else {
+        const ref = await adminDb.collection('produits').add(payload)
+        created.push({ docId: ref.id, sku })
+      }
     }
   }
 
