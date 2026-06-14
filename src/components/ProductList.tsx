@@ -1308,18 +1308,9 @@
                       )
                     )}
                     {getPriceBadgeStatus(p) === 'red' && (
-                      needsEtiquetteMaj(p) ? (
-                        <button
-                          onClick={() => handleMajEtiquette(p)}
-                          className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 border border-[#22209C] px-2 py-0.5 rounded-full mt-1 hover:bg-red-200 transition-colors"
-                        >
-                          🚨 À récupérer – prix baissé il y a 1 mois+ · <span className="font-semibold">MÀJ étiquette</span>
-                        </button>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
-                          🚨 À récupérer – prix baissé il y a 1 mois+
-                        </span>
-                      )
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
+                        🚨 À récupérer – prix baissé il y a 1 mois+
+                      </span>
                     )}
 
                     {/* Ligne info bas : Prix · Qté · Achat · Marge */}
@@ -1439,18 +1430,9 @@
   )
 )}
 {getPriceBadgeStatus(p) === 'red' && (
-  needsEtiquetteMaj(p) ? (
-    <button
-      onClick={() => handleMajEtiquette(p)}
-      className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 border border-[#22209C] px-2 py-1 rounded-full mt-1 hover:bg-red-200 transition-colors"
-    >
-      🚨 À récupérer – prix baissé il y a 1 mois+ · <span className="font-semibold">MÀJ étiquette</span>
-    </button>
-  ) : (
-    <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
-      🚨 À récupérer – prix baissé il y a 1 mois+
-    </span>
-  )
+  <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
+    🚨 À récupérer – prix baissé il y a 1 mois+
+  </span>
 )}
                       {/* Encart Livraison desktop — même règle d'affichage que mobile */}
                       {p.source?.startsWith('achat-') && (
