@@ -86,6 +86,7 @@
       forceDisplay?: boolean
       prixBaisseLe?: Timestamp
       ancienPrix?: number
+      etiquetteMaj?: boolean
       source?: 'chineuse' | 'deposante' | 'achat-vinted' | 'achat-vestiaire' | 'achat-drouot'
       ebayListingId?: string | null
       ebayOfferId?: string | null
@@ -235,7 +236,8 @@
       const [filtrePhotoManquante, setFiltrePhotoManquante] = useState(false)
       const [filtreDeposanteOnly, setFiltreDeposanteOnly] = useState(false)
       const [filtrePrixBaisse, setFiltrePrixBaisse] = useState(false)
-      
+      const [filtreARecuperer, setFiltreARecuperer] = useState(false)
+
 
       // Sélection interne
       const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -254,7 +256,7 @@
       // Reset quand les filtres changent
       useEffect(() => {
         setVisibleCount(20)
-      }, [recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, filtreDeposanteOnly, filtrePrixBaisse, tri])
+      }, [recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, filtreDeposanteOnly, filtrePrixBaisse, filtreARecuperer, tri])
 
       // Modals
       const [showForm, setShowForm] = useState(false)
@@ -270,6 +272,17 @@
       const [savingProduct, setSavingProduct] = useState(false)
       const [saveMessage, setSaveMessage] = useState<string | null>(null)
       const [localHidden, setLocalHidden] = useState<Record<string, boolean>>({})
+      const [localEtiquetteMaj, setLocalEtiquetteMaj] = useState<Record<string, boolean>>({})
+      const needsEtiquetteMaj = (p: Produit) => !!p.prixBaisseLe && !(localEtiquetteMaj[p.id] ?? p.etiquetteMaj)
+      const handleMajEtiquette = async (p: Produit) => {
+        setLocalEtiquetteMaj(prev => ({ ...prev, [p.id]: true }))
+        try {
+          await updateDoc(doc(db, 'produits', p.id), { etiquetteMaj: true })
+        } catch (err) {
+          console.error('Erreur MÀJ étiquette:', err)
+          setLocalEtiquetteMaj(prev => ({ ...prev, [p.id]: false }))
+        }
+      }
 
       const isHidden = (p: Produit) => localHidden[p.id] ?? (p as any).hidden ?? false
 
@@ -320,7 +333,13 @@
       const needle = recherche.trim().toLowerCase()
       return produits.filter((p) => {
         if (p.statut === 'supprime') return false
-        if (p.statut === 'retour' || p.statutRecuperation === 'aRecuperer') return false
+        if (p.statut === 'retour') return false
+        // Filtre "à récupérer" : si actif, on ne garde QUE ces pièces ; sinon on les exclut.
+        if (filtreARecuperer) {
+          if (p.statutRecuperation !== 'aRecuperer') return false
+        } else {
+          if (p.statutRecuperation === 'aRecuperer') return false
+        }
         if ((p.quantite ?? 1) <= 0 && p.statut !== 'outOfStock') return false
 
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
@@ -368,7 +387,7 @@
 
           return true
         })
-      }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, filtreDeposanteOnly, filtrePrixBaisse])
+      }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix, filtrePhotoManquante, filtreDeposanteOnly, filtrePrixBaisse, filtreARecuperer])
 
       const produitsTriés = useMemo(() => {
       return [...produitsFiltres].sort((a, b) => {
@@ -934,7 +953,7 @@
       setFiltrePrixBaisse(false)
     }
 
-      const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix || filtrePhotoManquante || filtreDeposanteOnly || filtrePrixBaisse)
+      const hasActiveFilters = !!(recherche || filtreCategorie || filtreDeposant || filtreMois || filtrePrix || filtrePhotoManquante || filtreDeposanteOnly || filtrePrixBaisse || filtreARecuperer)
 
       // =====================
       // RENDER
@@ -1031,6 +1050,10 @@
                 prixBaisse: {
                   value: filtrePrixBaisse,
                   onChange: setFiltrePrixBaisse,
+                },
+                aRecuperer: {
+                  value: filtreARecuperer,
+                  onChange: setFiltreARecuperer,
                 },
               }}
             />
@@ -1197,7 +1220,7 @@
               return (
                 <div
                   key={p.id}
-                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : achatBorderClass || 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false || isAchatBrouillon || (p as any).statutRestock === 'enAttente' || (p as any).statutDestock === 'enAttente' ? 'opacity-50 bg-gray-50' : ''} p-2.5 sm:p-4 shadow-sm hover:shadow-md transition-all`}
+                  className={`bg-white rounded-xl border ${isSelected ? 'border-[#22209C] ring-2 ring-[#22209C]/20' : achatBorderClass || 'border-gray-200'} ${isDirty ? 'border-l-4 border-l-amber-400' : ''} ${p.recu === false || isAchatBrouillon || (p as any).statutRestock === 'enAttente' || (p as any).statutDestock === 'enAttente' ? 'opacity-50 bg-gray-50' : ''} ${needsEtiquetteMaj(p) ? 'border-[#22209C] border-2' : ''} p-2.5 sm:p-4 shadow-sm hover:shadow-md transition-all`}
                 >
                   {/* MOBILE */}
                   <div className="sm:hidden">
@@ -1274,6 +1297,14 @@
                       <span className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full mt-1">
                         💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
                       </span>
+                    )}
+                    {needsEtiquetteMaj(p) && (
+                      <button
+                        onClick={() => handleMajEtiquette(p)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#22209C] border-2 border-[#22209C] px-2 py-0.5 rounded-full mt-1 hover:bg-[#22209C] hover:text-white transition-colors"
+                      >
+                        MÀJ étiquette
+                      </button>
                     )}
                     {getPriceBadgeStatus(p) === 'red' && (
                       <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
@@ -1387,6 +1418,14 @@
   <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
     💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
   </span>
+)}
+{needsEtiquetteMaj(p) && (
+  <button
+    onClick={() => handleMajEtiquette(p)}
+    className="inline-flex items-center gap-1 text-xs font-semibold text-[#22209C] border-2 border-[#22209C] px-2 py-1 rounded-full mt-1 hover:bg-[#22209C] hover:text-white transition-colors"
+  >
+    MÀJ étiquette
+  </button>
 )}
 {getPriceBadgeStatus(p) === 'red' && (
   <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">

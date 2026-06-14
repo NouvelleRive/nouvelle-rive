@@ -64,6 +64,10 @@ export interface FilterConfig {
     value: boolean
     onChange: (value: boolean) => void
   }
+  aRecuperer?: {
+    value: boolean
+    onChange: (value: boolean) => void
+  }
 }
 
 interface FilterBoxProps {
@@ -298,6 +302,20 @@ export default function FilterBox({
               className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
             />
             <label htmlFor="prixBaisse" className="text-sm">Prix baissé (récent en premier)</label>
+          </div>
+        )}
+
+        {/* À récupérer */}
+        {filters.aRecuperer && (
+          <div className="flex items-center gap-2" onClick={stopPropagation} onTouchStart={stopPropagation}>
+            <input
+              type="checkbox"
+              id="aRecuperer"
+              checked={filters.aRecuperer.value}
+              onChange={(e) => filters.aRecuperer!.onChange(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+            />
+            <label htmlFor="aRecuperer" className="text-sm">À récupérer</label>
           </div>
         )}
 
