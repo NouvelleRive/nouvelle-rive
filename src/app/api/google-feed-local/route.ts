@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
-const STORE_CODE = 'nouvelle-rive-marais'
+const STORE_CODE = '10929298200958467105'
 
 if (!getApps().length) {
   initializeApp({
