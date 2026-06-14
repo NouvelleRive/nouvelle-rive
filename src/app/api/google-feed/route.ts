@@ -1,5 +1,5 @@
 // src/app/api/google-feed/route.ts
-export const revalidate = 3600
+export const revalidate = 43200
 
 import { NextResponse } from 'next/server'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'

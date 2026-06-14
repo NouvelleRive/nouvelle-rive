@@ -7,7 +7,7 @@ import { getTypeSlug } from '@/lib/produitSlug'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
-export const revalidate = 300
+export const revalidate = 43200
 
 // Libellés humains par type (FR correct, pluriel + accords masculin/féminin).
 // Si un type n'est pas listé, on tombe sur un fallback générique masculin.

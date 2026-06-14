@@ -63,7 +63,7 @@ const RETURN_POLICY = {
   returnFees: 'https://schema.org/FreeReturn',
 }
 
-export const revalidate = 60
+export const revalidate = 43200
 
 type ProduitDoc = Produit & { chineurUid?: string; chineur?: string }
 

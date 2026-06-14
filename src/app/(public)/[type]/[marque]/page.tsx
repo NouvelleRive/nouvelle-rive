@@ -7,7 +7,7 @@ import { getTypeShortLabel } from '@/lib/typeLabels'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
-export const revalidate = 300
+export const revalidate = 43200
 
 function serializeProduit(id: string, raw: any) {
   return {
