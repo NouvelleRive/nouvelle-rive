@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { unstable_cache } from 'next/cache'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebaseAdmin'
 import ProduitClient, { type Produit, type ChineuseInfo } from '../../../boutique/[id]/ProduitClient'
@@ -181,13 +182,12 @@ function serializeSimilar(id: string, raw: any): SimilarProduit {
   }
 }
 
-async function getSimilarProduits(currentId: string, chineuse: ChineuseInfo | null, currentTypeSlug: string): Promise<SimilarProduit[]> {
-  try {
+const getAllAvailableProduits = unstable_cache(
+  async () => {
     const snap = await adminDb.collection('produits').get()
-    const available = snap.docs
+    return snap.docs
       .map(d => ({ id: d.id, raw: d.data() as any }))
-      .filter(({ id, raw }) =>
-        id !== currentId &&
+      .filter(({ raw }) =>
         raw.statut !== 'supprime' &&
         raw.statut !== 'retour' &&
         raw.vendu !== true &&
@@ -195,6 +195,15 @@ async function getSimilarProduits(currentId: string, chineuse: ChineuseInfo | nu
         raw.prix > 0 &&
         (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)
       )
+  },
+  ['all-available-produits-similar'],
+  { revalidate: 300 }
+)
+
+async function getSimilarProduits(currentId: string, chineuse: ChineuseInfo | null, currentTypeSlug: string): Promise<SimilarProduit[]> {
+  try {
+    const all = await getAllAvailableProduits()
+    const available = all.filter(({ id }) => id !== currentId)
 
     const matchesChineuse = ({ raw }: { raw: any }) => {
       if (!chineuse) return false
