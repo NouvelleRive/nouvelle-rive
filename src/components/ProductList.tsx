@@ -156,11 +156,11 @@
       return true
     }
 
-    function isOlderThan2Months(createdAt: Timestamp | undefined): boolean {
-      if (!createdAt) return false
+    function isOlderThan2Months(date: Timestamp | undefined): boolean {
+      if (!date) return false
       const twoMonthsAgo = new Date()
       twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-      return createdAt.toDate() < twoMonthsAgo
+      return date.toDate() < twoMonthsAgo
   }
 
   function getPriceBadgeStatus(p: Produit): 'none' | 'orange' | 'blue' | 'red' {
@@ -171,8 +171,8 @@
       if (p.prixBaisseLe.toDate() < oneMonthAgo) return 'red'
       return 'blue'
     }
-    // Sinon, vérifier si > 2 mois
-    if (isOlderThan2Months(p.createdAt) && !p.statutRecuperation) return 'orange'
+    // Orange = en boutique depuis +2 mois (basé sur dateReception, pas createdAt)
+    if (isOlderThan2Months(p.dateReception) && !p.statutRecuperation) return 'orange'
     return 'none'
   }
 
