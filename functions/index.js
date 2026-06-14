@@ -534,7 +534,7 @@ exports.pingReminders = functions
 // =============================================================================
 exports.pingEbaySync = functions
   .region("europe-west1")
-  .pubsub.schedule("every 10 minutes")
+  .pubsub.schedule("every 60 minutes")
   .timeZone("Europe/Paris")
   .onRun(async () => {
     const fetch = require('node-fetch')

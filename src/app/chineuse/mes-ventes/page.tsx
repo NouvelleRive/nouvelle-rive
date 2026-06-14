@@ -87,6 +87,7 @@ async function fetchVentes(trigramme: string, email: string) {
   useEffect(() => {
     if (!user?.email) return
     const interval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return
       fetchVentes(chineuse?.codeChineuse || '', user.email!)
     }, 5 * 60 * 1000)
     const onFocus = () => fetchVentes(chineuse?.codeChineuse || '', user.email!)

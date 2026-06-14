@@ -258,7 +258,10 @@ export default function CommandesPanel({
 
   useEffect(() => {
     chargerCommandes()
-    const interval = setInterval(() => chargerCommandes(true), 30000)
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      chargerCommandes(true)
+    }, 30000)
     return () => clearInterval(interval)
   }, [mode, vendeuseEmail, filterProduitIds])
 
