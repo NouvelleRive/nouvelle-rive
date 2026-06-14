@@ -165,6 +165,8 @@
   }
 
   function getPriceBadgeStatus(p: Produit): 'none' | 'orange' | 'blue' | 'red' {
+    // Pas de badge tant que la pièce n'est pas physiquement reçue en boutique
+    if (p.recu !== true) return 'none'
     // Si prix baissé, vérifier le délai depuis la baisse
     if (p.prixBaisseLe) {
       const oneMonthAgo = new Date()
