@@ -3,7 +3,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
-import { Timestamp } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 
@@ -108,25 +108,45 @@ export async function POST(req: NextRequest) {
     const venteRef = adminDb.collection('ventes').doc(venteId)
     const venteDoc = await venteRef.get()
     const venteData = venteDoc.data()
-    
+
+    // Ré-attribution : si la vente pointait déjà sur un AUTRE produit, on le restaure
+    // (vendu=false, qté+1, dateVente/prixVenteReel reset, statut outOfStock retiré)
+    const ancienProduitId = venteData?.produitId
+    if (ancienProduitId && ancienProduitId !== produitId) {
+      const ancienRef = adminDb.collection('produits').doc(ancienProduitId)
+      const ancienDoc = await ancienRef.get()
+      if (ancienDoc.exists) {
+        const a = ancienDoc.data() as any
+        const restoreData: any = {
+          vendu: false,
+          quantite: (a.quantite || 0) + 1,
+          dateVente: FieldValue.delete(),
+          prixVenteReel: FieldValue.delete(),
+        }
+        if (a.statut === 'outOfStock') restoreData.statut = FieldValue.delete()
+        await ancienRef.update(restoreData)
+        console.log(`↩️  Ancien produit ${ancienProduitId} restauré (réattribution)`)
+      }
+    }
+
     const updateVente: any = {
       produitId,
       nom: p.nom || '',
       sku: p.sku || '',
       attribue: true,
     }
-    
+
     // Ajouter seulement les champs définis
     if (p.chineur) updateVente.chineur = p.chineur
     if (p.chineurUid) updateVente.chineurUid = p.chineurUid
     if (p.trigramme) updateVente.trigramme = p.trigramme
     if (p.prix) updateVente.prixInitial = p.prix
-    
+
     // Si nouveau prix fourni, le mettre à jour
     if (prixVenteReel !== undefined) {
       updateVente.prixVenteReel = prixVenteReel
     }
-    
+
     await venteRef.update(updateVente)
 
     // Mettre à jour le produit (marquer comme vendu)
@@ -270,25 +290,44 @@ export async function PUT(req: NextRequest) {
     const venteRef = adminDb.collection('ventes').doc(venteId)
     const venteDoc = await venteRef.get()
     const venteData = venteDoc.data()
-    
+
+    // Ré-attribution : restaurer l'ancien produit si différent
+    const ancienProduitId = venteData?.produitId
+    if (ancienProduitId && ancienProduitId !== produitId) {
+      const ancienRef = adminDb.collection('produits').doc(ancienProduitId)
+      const ancienDoc = await ancienRef.get()
+      if (ancienDoc.exists) {
+        const a = ancienDoc.data() as any
+        const restoreData: any = {
+          vendu: false,
+          quantite: (a.quantite || 0) + 1,
+          dateVente: FieldValue.delete(),
+          prixVenteReel: FieldValue.delete(),
+        }
+        if (a.statut === 'outOfStock') restoreData.statut = FieldValue.delete()
+        await ancienRef.update(restoreData)
+        console.log(`↩️  Ancien produit ${ancienProduitId} restauré (réattribution PUT)`)
+      }
+    }
+
     const updateVente: any = {
       produitId,
       nom: p.nom || '',
       sku: p.sku || '',
       attribue: true,
     }
-    
+
     // Ajouter seulement les champs définis
     if (p.chineur) updateVente.chineur = p.chineur
     if (p.chineurUid) updateVente.chineurUid = p.chineurUid
     if (p.trigramme) updateVente.trigramme = p.trigramme
     if (p.prix) updateVente.prixInitial = p.prix
-    
+
     // Si nouveau prix fourni, le mettre à jour
     if (prixVenteReel !== undefined) {
       updateVente.prixVenteReel = prixVenteReel
     }
-    
+
     await venteRef.update(updateVente)
 
     // Mettre à jour le produit (marquer comme vendu)
