@@ -330,23 +330,27 @@ export default function SalesList({
           ) : (() => {
             const today = new Date(); today.setHours(0, 0, 0, 0)
             const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
-            let lastSection: 'auj' | 'hier' | 'older' | null = null
+            const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+            let lastSection: string | null = null
             return ventesFiltrées.slice(0, visibleCount).map(vente => {
               const cat = getCategorie(vente)
               const prix = getPrix(vente)
               const isSelected = selectedIds.has(vente.id)
               const d = getDateFromVente(vente); d.setHours(0, 0, 0, 0)
-              const section: 'auj' | 'hier' | 'older' =
+              const section: string =
                 d.getTime() === today.getTime() ? 'auj'
                 : d.getTime() === yesterday.getTime() ? 'hier'
-                : 'older'
-              const showHeader = section !== lastSection && (section === 'auj' || section === 'hier')
+                : `m-${d.getFullYear()}-${d.getMonth()}`
+              const showHeader = section !== lastSection
+              const headerLabel = section === 'auj' ? 'Auj'
+                : section === 'hier' ? 'Hier'
+                : `${MOIS[d.getMonth()]} ${d.getFullYear()}`
               lastSection = section
               return (
                 <React.Fragment key={vente.id}>
                   {showHeader && (
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mt-4 first:mt-0 mb-1">
-                      {section === 'auj' ? 'Auj' : 'Hier'}
+                      {headerLabel}
                     </h3>
                   )}
                 <div className={`bg-white rounded-xl border p-2.5 sm:p-4 shadow-sm ${isAdmin && vente.isAttribue ? 'border-l-4 border-l-green-500' : ''} ${isAdmin && !vente.isAttribue ? 'border-l-4 border-l-amber-500' : ''} ${isSelected ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}>
