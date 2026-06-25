@@ -66,41 +66,52 @@ export function parseFleekInvoice(rawBody: string): FleekInvoiceResult {
   }
 
   const lines = block.split('\n').map((l) => l.trim()).filter(Boolean)
-  const lots: FleekLot[] = []
 
-  // Format de chaque item (3 zones de lignes consécutives) :
-  //   <titre — peut tenir sur 1 ou 2 lignes>
-  //   <N> / piece
-  //   1 €PRIX_LOT 0% €0.00 €SUBTOTAL
+  // Le PDF Fleek se copie soit en triplets (titre → qty → prix), soit en
+  // 2 colonnes (tous les titres+qtys d'abord, puis toutes les lignes de prix).
+  // On collecte les 3 informations en 3 passes indépendantes puis on zippe
+  // par index — ça marche dans les deux cas.
+
+  const PIECE_RE = /^(\d+)\s*\/\s*piece$/i
+  const PRICE_RE = /^\d+\s+€\s*([\d.,]+)\s+\d+%\s+€\s*[\d.,]+\s+€\s*([\d.,]+)$/
+
+  type QtyHit = { idx: number; qty: number }
+  const qtyHits: QtyHit[] = []
+  const priceHits: { prixLot: number }[] = []
   for (let i = 0; i < lines.length; i++) {
-    const qtyMatch = lines[i].match(/^(\d+)\s*\/\s*piece$/i)
-    if (!qtyMatch) continue
-    const qtyParLot = parseInt(qtyMatch[1], 10)
-    if (qtyParLot <= 0) continue
-
-    const priceLine = lines[i + 1] || ''
-    const priceMatch = priceLine.match(
-      /^\d+\s+€\s*([\d.,]+)\s+\d+%\s+€\s*[\d.,]+\s+€\s*([\d.,]+)$/
-    )
-    if (!priceMatch) continue
-    const prixLot = toNumber(priceMatch[2])
-    if (prixLot <= 0) continue
-
-    // Titre = jusqu'à 2 lignes juste avant. On s'arrête si on retombe sur
-    // un marqueur d'item précédent (X / piece ou ligne de prix).
-    const titreLines: string[] = []
-    for (let j = i - 1; j >= 0 && titreLines.length < 2; j--) {
-      const prev = lines[j]
-      if (/^\d+\s*\/\s*piece$/i.test(prev)) break
-      if (/^\d+\s+€\s*[\d.,]+\s+\d+%/i.test(prev)) break
-      titreLines.unshift(prev)
+    const qm = lines[i].match(PIECE_RE)
+    if (qm) {
+      const q = parseInt(qm[1], 10)
+      if (q > 0) qtyHits.push({ idx: i, qty: q })
+      continue
     }
-    const titre = titreLines.join(' ').replace(/\s+/g, ' ').trim()
-    if (!titre) continue
+    const pm = lines[i].match(PRICE_RE)
+    if (pm) {
+      const subtotal = toNumber(pm[2])
+      if (subtotal > 0) priceHits.push({ prixLot: subtotal })
+    }
+  }
 
+  // Titre = ce qui précède chaque "N / piece", jusqu'au précédent "N / piece"
+  // (ou début de bloc), en filtrant les lignes prix qui auraient pu s'intercaler.
+  const titres: string[] = []
+  let lastIdx = -1
+  for (const { idx } of qtyHits) {
+    const slice = lines.slice(lastIdx + 1, idx).filter((l) => !PRICE_RE.test(l))
+    titres.push(slice.join(' ').replace(/\s+/g, ' ').trim())
+    lastIdx = idx
+  }
+
+  // Zip strict : on n'avance que si on a les 3 (titre, qty, prix) au même index.
+  const lots: FleekLot[] = []
+  const count = Math.min(qtyHits.length, priceHits.length, titres.length)
+  for (let i = 0; i < count; i++) {
+    const titre = titres[i]
+    const qtyParLot = qtyHits[i].qty
+    const prixLot = priceHits[i].prixLot
+    if (!titre || qtyParLot <= 0 || prixLot <= 0) continue
     const prixUnitaire = Math.round((prixLot / qtyParLot) * 100) / 100
     lots.push({ titre, qtyParLot, prixLot, prixUnitaire })
-    i += 1
   }
 
   if (lots.length === 0) {

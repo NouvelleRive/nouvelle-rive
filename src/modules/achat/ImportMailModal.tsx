@@ -11,9 +11,30 @@
 
 'use client'
 
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { X, Upload } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
+
+/**
+ * Extrait le texte brut d'un PDF côté client via pdfjs-dist. On charge la lib
+ * en dynamic import pour ne pas plomber le bundle initial (~2 Mo de worker).
+ */
+async function extractPdfText(file: File): Promise<string> {
+  const pdfjs: any = await import('pdfjs-dist')
+  // Worker chargé via CDN unpkg — évite la config webpack/Next pour résoudre
+  // l'asset interne. Ça fonctionne en dev comme en prod.
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+  const buf = await file.arrayBuffer()
+  const pdf = await pdfjs.getDocument({ data: buf }).promise
+  const pages: string[] = []
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p)
+    const content = await page.getTextContent()
+    const text = content.items.map((it: any) => ('str' in it ? it.str : '')).join('\n')
+    pages.push(text)
+  }
+  return pages.join('\n')
+}
 
 type Props = {
   onClose: () => void
@@ -52,14 +73,14 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
   const [items, setItems] = useState<ItemFields[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [resultMsg, setResultMsg] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [extractingPdf, setExtractingPdf] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const updateItem = (i: number, patch: Partial<ItemFields>) => {
-    setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
-  }
-
-  const handleVerify = async () => {
-    if (!pasted.trim()) {
-      setErrorMsg('Colle un contenu d\'abord.')
+  // Hoisted pour pouvoir être appelée depuis handlePdfFile (auto-trigger après extraction).
+  const verifyWithBody = async (body: string) => {
+    if (!body.trim()) {
+      setErrorMsg('Le PDF est vide ou illisible.')
       return
     }
     setVerifying(true)
@@ -74,14 +95,13 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
       const res = await fetch('/api/achat/preview-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ body: pasted, targetChineuse: targetChineuse || null }),
+        body: JSON.stringify({ body, targetChineuse: targetChineuse || null }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json.ok === false) {
         setErrorMsg(json.reason || json.error || `Erreur ${res.status}`)
         return
       }
-      // Normaliser en tableau d'items
       const raw: ItemFields[] =
         json.kind === 'whatnot-purchase' || json.kind === 'fleek-invoice'
           ? json.items.map((it: any) => ({ ...it, prixVente: it.prixSuggere ? String(it.prixSuggere) : '' }))
@@ -94,6 +114,30 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
       setVerifying(false)
     }
   }
+
+  const handlePdfFile = async (file: File) => {
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErrorMsg('Le fichier doit être un PDF.')
+      return
+    }
+    setExtractingPdf(true)
+    setErrorMsg(null)
+    try {
+      const text = await extractPdfText(file)
+      setPasted(text)
+      await verifyWithBody(text)
+    } catch (e: any) {
+      setErrorMsg(`Lecture PDF impossible : ${e?.message || e}`)
+    } finally {
+      setExtractingPdf(false)
+    }
+  }
+
+  const updateItem = (i: number, patch: Partial<ItemFields>) => {
+    setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
+  }
+
+  const handleVerify = () => verifyWithBody(pasted)
 
   const handleCreate = async () => {
     // validation : tous les champs obligatoires doivent être remplis avant création
@@ -195,11 +239,48 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
 
         {step === 'paste' && (
           <>
+            {/* Zone drag&drop / parcourir (Fleek = facture PDF) */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setIsDragging(false)
+                const file = e.dataTransfer.files?.[0]
+                if (file) void handlePdfFile(file)
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`mb-3 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                isDragging ? 'border-[#F5C842] bg-[#fffbe6]' : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+              }`}
+            >
+              <Upload size={20} className="mx-auto text-gray-400 mb-1" />
+              <div className="text-sm text-gray-700">
+                {extractingPdf ? 'Lecture du PDF…' : (
+                  <>
+                    Glisse une facture <strong>Fleek (PDF)</strong> ici, ou{' '}
+                    <span className="text-[#09B1BA] underline">parcourir</span>
+                  </>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handlePdfFile(file)
+                  e.target.value = ''
+                }}
+              />
+            </div>
+            <div className="text-xs text-gray-400 mb-2 text-center">— ou colle le contenu ci-dessous —</div>
             <textarea
               value={pasted}
               onChange={(e) => setPasted(e.target.value)}
               placeholder="Colle ici le mail ou la page Vinted/Whatnot…"
-              className="flex-1 min-h-[280px] w-full border border-gray-300 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#09B1BA] resize-none"
+              className="flex-1 min-h-[200px] w-full border border-gray-300 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#09B1BA] resize-none"
             />
             {errorMsg && (
               <div className="mt-3 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-800 border border-red-200">
@@ -210,7 +291,7 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
               <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Fermer</button>
               <button
                 onClick={handleVerify}
-                disabled={verifying || !pasted.trim()}
+                disabled={verifying || extractingPdf || !pasted.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-[#09B1BA] hover:bg-[#078a91] disabled:opacity-50 rounded-lg"
               >
                 {verifying ? 'Vérification…' : 'Vérifier'}
