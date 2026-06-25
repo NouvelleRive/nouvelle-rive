@@ -1708,7 +1708,12 @@ async function compressImage(file: File): Promise<string> {
                 <label className="block text-xs font-medium mb-1">Catégorie</label>
                 <select
                   value={formData.categorie}
-                  onChange={(e) => setFormData({ ...formData, categorie: e.target.value, taille: '', modele: '' })}
+                  onChange={(e) => {
+                    const newCat = e.target.value
+                    const tailles = getTaillesPourCategorie(newCat)
+                    const defaultTaille = tailles.length === 1 ? tailles[0] : ''
+                    setFormData({ ...formData, categorie: newCat, taille: defaultTaille, modele: '' })
+                  }}
                   required
                   disabled={isAdmin && chineuses.length > 0 && !selectedChineuse}
                   className="w-full border rounded px-2 py-1.5 text-sm disabled:bg-gray-100"

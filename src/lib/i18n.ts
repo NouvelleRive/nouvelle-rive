@@ -113,6 +113,8 @@ const MATERIAL_EN: Record<string, string> = {
   'argent': 'silver',
   'fantaisie': 'costume',
   'laiton': 'brass',
+  'laiton recyclé': 'recycled brass',
+  'laiton recyclé plaqué or': 'gold-plated recycled brass',
   'or': 'gold',
   "perles d'eau douce": 'freshwater pearls',
   'perles de culture': 'cultured pearls',

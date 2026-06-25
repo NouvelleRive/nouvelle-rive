@@ -97,6 +97,8 @@ export const MATERIALS: Record<string, string> = {
   'PVC': 'PVC',
   'métal': 'Metal',
   'laiton': 'Brass',
+  'laiton recyclé': 'Recycled Brass',
+  'laiton recyclé plaqué or': 'Gold Plated Recycled Brass',
   'or': 'Gold',
   'argent': 'Silver',
   'plaqué or': 'Gold Plated',
