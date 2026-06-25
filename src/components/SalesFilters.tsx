@@ -41,7 +41,15 @@ export default function SalesFilters({
   const [filtreMois, setFiltreMois] = useState('')
   const [filtreChineuse, setFiltreChineuse] = useState('')
   const [filtrePrix, setFiltrePrix] = useState('')
-  const [filtreStatut, setFiltreStatut] = useState<'all' | 'attribue' | 'non-attribue'>('all')
+  const [filtreStatut, setFiltreStatut] = useState<'all' | 'attribue' | 'non-attribue'>(() => {
+    if (!isAdmin || typeof window === 'undefined') return 'all'
+    const saved = sessionStorage.getItem('salesFiltreStatut')
+    return saved === 'attribue' || saved === 'non-attribue' ? saved : 'all'
+  })
+  useEffect(() => {
+    if (!isAdmin || typeof window === 'undefined') return
+    sessionStorage.setItem('salesFiltreStatut', filtreStatut)
+  }, [filtreStatut, isAdmin])
   const [filtreFamilialeOnly, setFiltreFamilialeOnly] = useState(false)
   const [tri, setTri] = useState<'date-desc' | 'date-asc' | 'alpha' | 'prix-asc' | 'prix-desc'>('date-desc')
   const [showMonthSelect, setShowMonthSelect] = useState(false)

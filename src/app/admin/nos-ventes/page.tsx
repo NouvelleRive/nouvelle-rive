@@ -518,7 +518,7 @@ export default function AdminNosVentesPage() {
         chineuses={deposants.map(d => ({ trigramme: d.trigramme || '', nom: d.nom || '' }))}
       
         isAdmin={true}
-        loading={loading || loadingVentes}
+        loading={(loading || loadingVentes) && ventes.length === 0}
         onAttribuer={handleAttribuer}
         onModifierPrix={handleModifierPrix}
         onSupprimer={handleSupprimer}
