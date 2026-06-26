@@ -90,6 +90,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const [planningSlots, setPlanningSlots] = useState<Record<string, string>>({})
   const [ventesData, setVentesData] = useState<VenteDoc[]>([])
   const [noteText, setNoteText] = useState('')
+  const [newNoteText, setNewNoteText] = useState('')
   const [noteSaving, setNoteSaving] = useState(false)
   const [noteLoaded, setNoteLoaded] = useState(false)
   const [selectedNoteTrigramme, setSelectedNoteTrigramme] = useState('')
@@ -180,6 +181,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   useEffect(() => {
     if (!noteTrigramme) {
       setNoteText('')
+      setNewNoteText('')
       setNoteLoaded(false)
       return
     }
@@ -188,10 +190,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       if (snap.exists()) {
         const data = snap.data()
         setNoteText(data.message || '')
+        setNewNoteText('')
         setNoteUpdatedBy(data.updatedBy || '')
         setNoteUpdatedAt(data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : null)
       } else {
         setNoteText('')
+        setNewNoteText('')
         setNoteUpdatedBy('')
         setNoteUpdatedAt(null)
       }
@@ -202,30 +206,31 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
   const saveNote = async () => {
     if (!noteTrigramme) return
+    if (!newNoteText.trim()) return
     setNoteSaving(true)
     try {
-      // Archiver la note existante si elle existe
-      if (noteText !== '' || noteUpdatedAt) {
-        const existing = await getDoc(doc(db, 'notes-chineuses', noteTrigramme))
-        if (existing.exists()) {
-          const d = existing.data()
-          if (d.message) {
-            await addDoc(collection(db, 'notes-chineuses', noteTrigramme, 'historique'), {
-              message: d.message,
-              updatedBy: d.updatedBy || '',
-              updatedAt: d.updatedAt || new Date(),
-            })
-          }
+      // Archiver la note actuelle si elle existe
+      const existing = await getDoc(doc(db, 'notes-chineuses', noteTrigramme))
+      if (existing.exists()) {
+        const d = existing.data()
+        if (d.message) {
+          await addDoc(collection(db, 'notes-chineuses', noteTrigramme, 'historique'), {
+            message: d.message,
+            updatedBy: d.updatedBy || '',
+            updatedAt: d.updatedAt || new Date(),
+          })
         }
       }
       await setDoc(doc(db, 'notes-chineuses', noteTrigramme), {
-        message: noteText,
+        message: newNoteText,
         updatedBy: isAdmin ? 'admin' : 'vendeuse',
         updatedAt: new Date(),
       })
     } catch (err) {
       console.error('Erreur sauvegarde note:', err)
     }
+    setNoteText(newNoteText)
+    setNewNoteText('')
     setNoteSaving(false)
     setNoteUpdatedBy(isAdmin ? 'admin' : 'vendeuse')
     setNoteUpdatedAt(new Date())
@@ -829,19 +834,25 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           </div>
           {selectedNoteTrigramme && noteLoaded && (
             <div className="space-y-2">
+              {noteText && (
+                <div className="bg-gray-50 rounded-md px-3 py-2 border border-gray-100">
+                  <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Note actuelle</p>
+                  <p className="text-xs text-gray-700 whitespace-pre-wrap">{noteText}</p>
+                  {noteUpdatedAt && (
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Modifié par {noteUpdatedBy} le {format(noteUpdatedAt, 'd MMM yyyy à HH:mm', { locale: fr })}
+                    </p>
+                  )}
+                </div>
+              )}
               <textarea
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder="Écrire un mot pour cette chineuse…"
+                value={newNoteText}
+                onChange={(e) => setNewNoteText(e.target.value)}
+                placeholder={noteText ? 'Écrire une nouvelle note (remplacera l’actuelle)…' : 'Écrire un mot pour cette chineuse…'}
                 className="w-full border border-gray-200 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 resize-none"
                 rows={3}
               />
-              <div className="flex items-center justify-between">
-                {noteUpdatedAt && (
-                  <span className="text-xs text-gray-400">
-                    Modifié par {noteUpdatedBy} le {format(noteUpdatedAt, 'd MMM yyyy à HH:mm', { locale: fr })}
-                  </span>
-                )}
+              <div className="flex items-center justify-end">
                 <div className="ml-auto flex gap-2">
                   <button
                     onClick={async () => { setShowHistorique(!showHistorique); if (!showHistorique) await loadHistorique(noteTrigramme) }}
@@ -851,7 +862,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                   </button>
                   <button
                     onClick={saveNote}
-                    disabled={noteSaving}
+                    disabled={noteSaving || !newNoteText.trim()}
                     className="px-4 py-1.5 bg-[#22209C] text-white text-xs font-medium rounded-md hover:bg-[#22209C]/90 disabled:opacity-50"
                   >
                     {noteSaving ? 'Enregistrement…' : 'Enregistrer'}
