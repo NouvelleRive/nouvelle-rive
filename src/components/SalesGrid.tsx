@@ -102,11 +102,21 @@ export default function SalesGrid({
         const prixBaisse = prixInitial && prixInitial !== prix && prixInitial > prix
         const isActive = activeCard === vente.id
 
+        const href = vente.produitId ? `/boutique/${vente.produitId}` : undefined
+
         return (
-          <div
+          <a
             key={vente.id}
-            className="relative bg-white cursor-pointer group"
-            onClick={() => setActiveCard(isActive ? null : vente.id)}
+            href={href || '#'}
+            target={href ? '_blank' : undefined}
+            rel={href ? 'noopener noreferrer' : undefined}
+            onClick={(e) => {
+              if (!href) {
+                e.preventDefault()
+                setActiveCard(isActive ? null : vente.id)
+              }
+            }}
+            className="relative bg-white cursor-pointer group block"
           >
             {/* Photo */}
             <div className="aspect-square overflow-hidden bg-gray-100">
@@ -175,7 +185,7 @@ export default function SalesGrid({
                   <div className="flex gap-1 mt-1">
                     {onAttribuer && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); onAttribuer(vente) }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAttribuer(vente) }}
                         className="p-1 rounded"
                         style={{ background: vente.isAttribue ? '#f3f4f6' : '#fef3c7' }}
                       >
@@ -184,7 +194,7 @@ export default function SalesGrid({
                     )}
                     {onModifierPrix && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); onModifierPrix(vente) }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onModifierPrix(vente) }}
                         className="p-1 rounded"
                         style={{ background: '#dbeafe' }}
                       >
@@ -193,7 +203,7 @@ export default function SalesGrid({
                     )}
                     {onSupprimer && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); onSupprimer(vente) }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSupprimer(vente) }}
                         className="p-1 rounded"
                         style={{ background: '#fee2e2' }}
                       >
@@ -213,7 +223,7 @@ export default function SalesGrid({
                 {formatPrix(prix)}€{prixBaisse && <span style={{ fontSize: 8, color: '#aaa', textDecoration: 'line-through', marginLeft: 3 }}>{formatPrix(prixInitial)}€</span>}
               </span>
             </div>
-          </div>
+          </a>
         )
       })}
     </div>
