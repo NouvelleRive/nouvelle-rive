@@ -29,21 +29,37 @@ function serializeProduit(id: string, raw: any) {
   }
 }
 
+// Les pièces vendues restent visibles 3 semaines avec badge "Vendu" (cf. siteConfig.ts).
+const TROIS_SEMAINES_MS = 21 * 24 * 60 * 60 * 1000
+
+function getDateVenteMs(raw: any): number | null {
+  const dv = raw.dateVente
+  if (!dv) return null
+  if (typeof dv.toMillis === 'function') return dv.toMillis()
+  if (typeof dv === 'string') return new Date(dv).getTime()
+  if (dv?.seconds) return dv.seconds * 1000
+  return null
+}
+
 async function getProduitsByTypeMarque(type: string, marque: string) {
   try {
     const snap = await adminDb.collection('produits').get()
+    const seuilVendu = Date.now() - TROIS_SEMAINES_MS
     const docs = snap.docs
       .map(d => ({ id: d.id, raw: d.data() as any }))
-      .filter(({ raw }) =>
-        raw.statut !== 'supprime' &&
-        raw.statut !== 'retour' &&
-        raw.vendu !== true &&
-        (raw.quantite ?? 1) > 0 &&
-        raw.prix > 0 &&
-        (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl) &&
-        getTypeSlug(raw.categorie) === type &&
-        getMarqueSlug(raw.marque) === marque
-      )
+      .filter(({ raw }) => {
+        if (raw.statut === 'supprime' || raw.statut === 'retour') return false
+        if (!(raw.prix > 0)) return false
+        if (!(raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)) return false
+        if (getTypeSlug(raw.categorie) !== type) return false
+        if (getMarqueSlug(raw.marque) !== marque) return false
+        if (raw.vendu === true) {
+          const dvMs = getDateVenteMs(raw)
+          return dvMs !== null && dvMs >= seuilVendu
+        }
+        return (raw.quantite ?? 1) > 0
+      })
+    docs.sort((a, b) => Number(!!a.raw.vendu) - Number(!!b.raw.vendu))
     let marqueLabel = ''
     if (docs.length > 0 && marque !== SANS_MARQUE) {
       marqueLabel = (docs[0].raw.marque || '').trim()
