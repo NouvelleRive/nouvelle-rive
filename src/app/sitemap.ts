@@ -47,7 +47,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const typeSet = new Set<string>()
   const luxuryBrandSet = new Set<string>()
   try {
-    const snap = await adminDb.collection('produits').get()
+    const snap = await adminDb.collection('produits')
+      .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
+      .get()
     const available = snap.docs
       .map(d => ({ id: d.id, ...d.data() } as any))
       .filter(p =>
