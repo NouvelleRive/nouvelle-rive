@@ -215,9 +215,9 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto overscroll-contain" onClick={onClose}>
-      <div className="min-h-full flex items-start sm:items-center justify-center p-4">
+      <div className="flex items-start justify-center p-4">
       <div
-        className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl my-4 flex flex-col"
+        className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-3">
