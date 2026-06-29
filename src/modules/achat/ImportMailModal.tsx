@@ -211,9 +211,10 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto overscroll-contain" onClick={onClose}>
+      <div className="min-h-full flex items-start sm:items-center justify-center p-4">
       <div
-        className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl max-h-[92vh] flex flex-col"
+        className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl my-4 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-3">
@@ -302,7 +303,7 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
 
         {step === 'preview' && (
           <>
-            <div className="overflow-y-auto flex-1 -mx-2 px-2 space-y-4">
+            <div className="-mx-2 px-2 space-y-4">
               {items.map((it, i) => {
                 const isFleek = it.provenance === 'fleek'
                 return (
@@ -429,6 +430,7 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   )
