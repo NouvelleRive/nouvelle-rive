@@ -11,7 +11,7 @@
 
 'use client'
 
-import { useRef, useState } from 'react'
+import { memo, useCallback, useRef, useState } from 'react'
 import { X, Upload } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
 
@@ -42,9 +42,13 @@ type Props = {
   /** Catégories de la chineuse cible (pour le select de catégorie). Si vide,
    *  le champ reste en lecture seule avec uniquement la valeur auto-détectée. */
   categories?: { label: string; idsquare?: string }[]
+  /** Si fourni, appelé avec les items extraits dès qu'ils sont prêts pour
+   *  l'aperçu — la modal se ferme et le parent rend l'éditeur en flow de page
+   *  (pas dans une modal) pour éviter les sauts de scroll. */
+  onItemsReady?: (items: ItemFields[]) => void
 }
 
-type ItemFields = {
+export type ItemFields = {
   provenance: 'vinted' | 'whatnot' | 'fleek'
   itemId?: string | null
   achatOrderId?: string | null
@@ -69,7 +73,120 @@ type ItemFields = {
 
 type Step = 'paste' | 'preview' | 'creating' | 'done'
 
-export default function ImportMailModal({ onClose, targetChineuse, categories = [] }: Props) {
+// Card d'un item dans l'aperçu, isolée + memoizée : édition du lot N
+// ne re-render plus les autres lots → plus de focus glitch / scroll jump.
+export const ItemCard = memo(function ItemCard({
+  item,
+  index,
+  total,
+  categories,
+  onPatch,
+}: {
+  item: ItemFields
+  index: number
+  total: number
+  categories: { label: string; idsquare?: string }[]
+  onPatch: (i: number, patch: Partial<ItemFields>) => void
+}) {
+  const isFleek = item.provenance === 'fleek'
+  return (
+    <div className="border rounded-xl p-4 bg-gray-50">
+      {total > 1 && (
+        <div className="text-xs font-semibold text-[#09B1BA] mb-2">
+          {isFleek ? `Lot ${index + 1}/${total}` : `Pièce ${index + 1}/${total}`}
+        </div>
+      )}
+      {isFleek && (
+        <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
+          <div>
+            <span className="font-semibold">Lot Fleek</span> · {item.quantiteLot ?? '?'} pièces ·
+            <span className="ml-1">prix lot {item.prixLot != null ? `${item.prixLot.toFixed(2)} €` : '—'}</span> ·
+            <span className="ml-1">unitaire {item.prixAchat != null ? `${item.prixAchat.toFixed(2)} €` : '—'}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <label className="text-xs text-amber-900">Qté reçue</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={item.quantiteLot ?? ''}
+              onChange={(e) => onPatch(index, { quantiteLot: parseInt(e.target.value || '0', 10) || 0 })}
+              className="w-16 border border-amber-300 rounded px-2 py-0.5 text-xs bg-white"
+            />
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="text-xs text-gray-500">{isFleek ? 'Libellé du lot' : 'Titre'}</label>
+          <input value={item.titre} onChange={(e) => onPatch(index, { titre: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Marque {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
+          <input value={item.marque} onChange={(e) => onPatch(index, { marque: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Taille {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
+          <input value={item.taille} onChange={(e) => onPatch(index, { taille: e.target.value })} placeholder={item.tailleOriginale ? `orig: ${item.tailleOriginale}` : ''} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Couleur</label>
+          <input value={item.couleur} onChange={(e) => onPatch(index, { couleur: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">État</label>
+          <input value={item.etat} onChange={(e) => onPatch(index, { etat: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs text-gray-500">Description {item.descriptionOriginale ? '(corrigée)' : ''}</label>
+          <textarea value={item.description} onChange={(e) => onPatch(index, { description: e.target.value })} rows={3} className="w-full border rounded px-2 py-1.5 text-sm resize-none" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Catégorie *</label>
+          {categories.length > 0 ? (
+            <select
+              value={item.categorie?.label || ''}
+              onChange={(e) => {
+                const label = e.target.value
+                const match = categories.find((c) => c.label === label) || null
+                onPatch(index, { categorie: match ? { label: match.label, idsquare: match.idsquare } : null })
+              }}
+              className="w-full border rounded px-2 py-1.5 text-sm bg-white"
+            >
+              <option value="">Choisir…</option>
+              {categories.map((c) => (
+                <option key={c.label} value={c.label}>{c.label}</option>
+              ))}
+            </select>
+          ) : (
+            <input value={item.categorie?.label || ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
+          )}
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Prix d'achat unitaire (€)</label>
+          <input value={item.prixAchat != null ? String(item.prixAchat) : ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs text-gray-500 font-semibold">
+            Prix de vente {isFleek ? 'par pièce ' : ''}(€) *
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={item.prixVente}
+            onChange={(e) => onPatch(index, { prixVente: e.target.value })}
+            placeholder={item.prixSuggere ? `suggéré : ${item.prixSuggere}` : ''}
+            className="w-full border rounded px-2 py-1.5 text-sm border-[#09B1BA]/40"
+            required
+          />
+        </div>
+      </div>
+    </div>
+  )
+})
+
+export default function ImportMailModal({ onClose, targetChineuse, categories = [], onItemsReady }: Props) {
   const [step, setStep] = useState<Step>('paste')
   const [pasted, setPasted] = useState('')
   const [verifying, setVerifying] = useState(false)
@@ -109,6 +226,13 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         json.kind === 'whatnot-purchase' || json.kind === 'fleek-invoice'
           ? json.items.map((it: any) => ({ ...it, prixVente: it.prixSuggere ? String(it.prixSuggere) : '' }))
           : [{ ...json.fields, prixVente: json.fields.prixSuggere ? String(json.fields.prixSuggere) : '' }]
+      // Si le parent gère le preview en flow page (recommandé pour éviter les
+      // sauts de scroll), on lui passe la main et on ferme la modal.
+      if (onItemsReady) {
+        onItemsReady(raw)
+        onClose()
+        return
+      }
       setItems(raw)
       setStep('preview')
     } catch (e: any) {
@@ -136,9 +260,11 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
     }
   }
 
-  const updateItem = (i: number, patch: Partial<ItemFields>) => {
+  // Stable via useCallback pour que ItemCard memoizé ne re-render pas
+  // quand une autre card est modifiée.
+  const updateItem = useCallback((i: number, patch: Partial<ItemFields>) => {
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
-  }
+  }, [])
 
   const handleVerify = () => verifyWithBody(pasted)
 

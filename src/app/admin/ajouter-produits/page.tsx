@@ -6,7 +6,8 @@ import { collection, getDocs, query, where, addDoc, updateDoc, doc, serverTimest
 import { db } from '@/lib/firebaseConfig'
 import { AdminProvider, useAdmin } from '@/lib/admin/context'
 import ProductForm, { ProductFormData, ExcelImportData } from '@/components/ProductForm'
-import ImportMailModal from '@/modules/achat/ImportMailModal'
+import ImportMailModal, { type ItemFields } from '@/modules/achat/ImportMailModal'
+import AchatPreviewSection from '@/modules/achat/AchatPreviewSection'
 import {
   computeNextSkuForTrigram,
   readCategorieRapportLabel,
@@ -30,6 +31,9 @@ export default function AdminAjouterPage() {
   const [vintedModalOpen, setVintedModalOpen] = useState(false)
   const [whatnotModalOpen, setWhatnotModalOpen] = useState(false)
   const [fleekModalOpen, setFleekModalOpen] = useState(false)
+  /** Items extraits par la modal d'import, en attente de validation par
+   *  l'admin (rendu en flow page, pas en modal, pour le scroll natif). */
+  const [pendingPreview, setPendingPreview] = useState<ItemFields[] | null>(null)
 
   // Convertir les catégories de la chineuse pour ProductForm
   const chineuseCategories = useMemo(() => {
@@ -218,14 +222,33 @@ export default function AdminAjouterPage() {
         </div>
       )}
       
-      {selectedChineuse && (
+      {selectedChineuse && pendingPreview && (
+        <div className="p-2 sm:p-4">
+          <AchatPreviewSection
+            initialItems={pendingPreview}
+            targetChineuse={{
+              uid: selectedChineuse.uid,
+              email: selectedChineuse.email || '',
+              trigramme: selectedChineuse.trigramme || '',
+            }}
+            categories={chineuseCategories}
+            onCancel={() => setPendingPreview(null)}
+            onCreated={async () => {
+              setPendingPreview(null)
+              await loadData()
+            }}
+          />
+        </div>
+      )}
+
+      {selectedChineuse && !pendingPreview && (
         <div className="p-2 sm:p-4">
           <ProductForm
             key={autoSku}
-            mode="create" 
+            mode="create"
             isAdmin={true}
-            categories={chineuseCategories} 
-            sku={autoSku} 
+            categories={chineuseCategories}
+            sku={autoSku}
             userName={selectedChineuse.nom || selectedChineuse.email}
             trigramme={selectedChineuse.trigramme}
             onSubmit={handleCreateProduit}
@@ -262,6 +285,7 @@ export default function AdminAjouterPage() {
             trigramme: selectedChineuse.trigramme,
           }}
           categories={chineuseCategories}
+          onItemsReady={(items) => setPendingPreview(items)}
         />
       )}
       {whatnotModalOpen && selectedChineuse && (
@@ -273,6 +297,7 @@ export default function AdminAjouterPage() {
             trigramme: selectedChineuse.trigramme,
           }}
           categories={chineuseCategories}
+          onItemsReady={(items) => setPendingPreview(items)}
         />
       )}
       {fleekModalOpen && selectedChineuse && (
@@ -284,6 +309,7 @@ export default function AdminAjouterPage() {
             trigramme: selectedChineuse.trigramme,
           }}
           categories={chineuseCategories}
+          onItemsReady={(items) => setPendingPreview(items)}
         />
       )}
     </>
