@@ -39,6 +39,9 @@ async function extractPdfText(file: File): Promise<string> {
 type Props = {
   onClose: () => void
   targetChineuse?: { uid: string; email: string; trigramme: string }
+  /** Catégories de la chineuse cible (pour le select de catégorie). Si vide,
+   *  le champ reste en lecture seule avec uniquement la valeur auto-détectée. */
+  categories?: { label: string; idsquare?: string }[]
 }
 
 type ItemFields = {
@@ -66,7 +69,7 @@ type ItemFields = {
 
 type Step = 'paste' | 'preview' | 'creating' | 'done'
 
-export default function ImportMailModal({ onClose, targetChineuse }: Props) {
+export default function ImportMailModal({ onClose, targetChineuse, categories = [] }: Props) {
   const [step, setStep] = useState<Step>('paste')
   const [pasted, setPasted] = useState('')
   const [verifying, setVerifying] = useState(false)
@@ -359,8 +362,25 @@ export default function ImportMailModal({ onClose, targetChineuse }: Props) {
                       <textarea value={it.description} onChange={(e) => updateItem(i, { description: e.target.value })} rows={3} className="w-full border rounded px-2 py-1.5 text-sm resize-none" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500">Catégorie</label>
-                      <input value={it.categorie?.label || ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
+                      <label className="text-xs text-gray-500">Catégorie *</label>
+                      {categories.length > 0 ? (
+                        <select
+                          value={it.categorie?.label || ''}
+                          onChange={(e) => {
+                            const label = e.target.value
+                            const match = categories.find((c) => c.label === label) || null
+                            updateItem(i, { categorie: match ? { label: match.label, idsquare: match.idsquare } : null })
+                          }}
+                          className="w-full border rounded px-2 py-1.5 text-sm bg-white"
+                        >
+                          <option value="">Choisir…</option>
+                          {categories.map((c) => (
+                            <option key={c.label} value={c.label}>{c.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={it.categorie?.label || ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
+                      )}
                     </div>
                     <div>
                       <label className="text-xs text-gray-500">Prix d'achat unitaire (€)</label>

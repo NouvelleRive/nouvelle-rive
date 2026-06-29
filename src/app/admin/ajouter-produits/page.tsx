@@ -261,6 +261,7 @@ export default function AdminAjouterPage() {
             email: selectedChineuse.email,
             trigramme: selectedChineuse.trigramme,
           }}
+          categories={chineuseCategories}
         />
       )}
       {whatnotModalOpen && selectedChineuse && (
@@ -271,6 +272,7 @@ export default function AdminAjouterPage() {
             email: selectedChineuse.email,
             trigramme: selectedChineuse.trigramme,
           }}
+          categories={chineuseCategories}
         />
       )}
       {fleekModalOpen && selectedChineuse && (
@@ -281,6 +283,7 @@ export default function AdminAjouterPage() {
             email: selectedChineuse.email,
             trigramme: selectedChineuse.trigramme,
           }}
+          categories={chineuseCategories}
         />
       )}
     </>
