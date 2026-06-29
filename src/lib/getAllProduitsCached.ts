@@ -7,5 +7,5 @@ export const getAllProduitsCached = unstable_cache(
     return snap.docs.map(d => ({ id: d.id, raw: d.data() as any }))
   },
   ['all-produits-raw'],
-  { revalidate: 600 }
+  { revalidate: 3600 }
 )
