@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { adminDb } from '@/lib/firebaseAdmin'
 import ProductGrid from '@/components/ProductGrid'
 import TypeH1Title from '@/components/TypeH1Title'
 import { getTypeSlug } from '@/lib/produitSlug'
+import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
@@ -147,10 +147,9 @@ function getDateVenteMs(raw: any): number | null {
 
 async function getProduitsByType(type: string) {
   try {
-    const snap = await adminDb.collection('produits').get()
+    const all = await getAllProduitsCached()
     const seuilVendu = Date.now() - TROIS_SEMAINES_MS
-    const filtered = snap.docs
-      .map(d => ({ id: d.id, raw: d.data() as any }))
+    const filtered = all
       .filter(({ raw }) => {
         if (raw.statut === 'supprime' || raw.statut === 'retour') return false
         if (!(raw.prix > 0)) return false

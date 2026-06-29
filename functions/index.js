@@ -388,7 +388,8 @@ exports.onProductDeleted = functions
   });
   exports.checkGmailFactures = functions
   .region("europe-west1")
-  .pubsub.schedule("every 1 hours")
+  .pubsub.schedule("every day 09:00")
+  .timeZone("Europe/Paris")
   .onRun(async (context) => {
     const fetch = require('node-fetch')
 
@@ -566,7 +567,7 @@ exports.pingEbaySync = functions
 // =============================================================================
 exports.gmailWatcherAchats = functions
   .region("europe-west1")
-  .pubsub.schedule("every 5 minutes")
+  .pubsub.schedule("every day 09:00")
   .timeZone("Europe/Paris")
   .onRun(async () => {
     const fetch = require('node-fetch')

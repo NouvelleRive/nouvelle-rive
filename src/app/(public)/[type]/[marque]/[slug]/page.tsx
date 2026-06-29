@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { unstable_cache } from 'next/cache'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebaseAdmin'
 import ProduitClient, { type Produit, type ChineuseInfo } from '../../../boutique/[id]/ProduitClient'
@@ -182,23 +181,19 @@ function serializeSimilar(id: string, raw: any): SimilarProduit {
   }
 }
 
-const getAllAvailableProduits = unstable_cache(
-  async () => {
-    const snap = await adminDb.collection('produits').get()
-    return snap.docs
-      .map(d => ({ id: d.id, raw: d.data() as any }))
-      .filter(({ raw }) =>
-        raw.statut !== 'supprime' &&
-        raw.statut !== 'retour' &&
-        raw.vendu !== true &&
-        (raw.quantite ?? 1) > 0 &&
-        raw.prix > 0 &&
-        (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)
-      )
-  },
-  ['all-available-produits-similar'],
-  { revalidate: 300 }
-)
+import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
+
+const getAllAvailableProduits = async () => {
+  const all = await getAllProduitsCached()
+  return all.filter(({ raw }) =>
+    raw.statut !== 'supprime' &&
+    raw.statut !== 'retour' &&
+    raw.vendu !== true &&
+    (raw.quantite ?? 1) > 0 &&
+    raw.prix > 0 &&
+    (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)
+  )
+}
 
 async function getSimilarProduits(currentId: string, chineuse: ChineuseInfo | null, currentTypeSlug: string): Promise<SimilarProduit[]> {
   try {

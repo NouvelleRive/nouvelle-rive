@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { adminDb } from '@/lib/firebaseAdmin'
 import ProductGrid from '@/components/ProductGrid'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
@@ -44,9 +44,8 @@ function serializeProduit(id: string, raw: any) {
 
 async function getProduitsByMarque(slug: string) {
   try {
-    const snap = await adminDb.collection('produits').get()
-    return snap.docs
-      .map(d => ({ id: d.id, raw: d.data() as any }))
+    const all = await getAllProduitsCached()
+    return all
       .filter(({ raw }) =>
         raw.statut !== 'supprime' &&
         raw.statut !== 'retour' &&
