@@ -214,13 +214,13 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto overscroll-contain" onClick={onClose}>
-      <div className="flex items-start justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl flex flex-col"
+        className="bg-white rounded-2xl max-w-3xl w-full shadow-xl flex flex-col"
+        style={{ maxHeight: 'calc(100vh - 2rem)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between px-6 pt-6 pb-3 shrink-0 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
               {step === 'preview' ? 'Vérifie avant création' : 'Importer depuis Vinted / Whatnot / Fleek'}
@@ -243,6 +243,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
 
         {step === 'paste' && (
           <>
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 flex flex-col">
             {/* Zone drag&drop / parcourir (Fleek = facture PDF) */}
             <div
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
@@ -291,7 +292,8 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
                 ✗ {errorMsg}
               </div>
             )}
-            <div className="flex justify-end gap-2 mt-4">
+            </div>
+            <div className="px-6 pt-3 pb-6 flex justify-end gap-2 shrink-0 border-t border-gray-100">
               <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Fermer</button>
               <button
                 onClick={handleVerify}
@@ -306,7 +308,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
 
         {step === 'preview' && (
           <>
-            <div className="-mx-2 px-2 space-y-4">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4">
               {items.map((it, i) => {
                 const isFleek = it.provenance === 'fleek'
                 return (
@@ -405,13 +407,13 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
                 </div>
                 )
               })}
+              {errorMsg && (
+                <div className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-800 border border-red-200">
+                  ✗ {errorMsg}
+                </div>
+              )}
             </div>
-            {errorMsg && (
-              <div className="mt-3 px-3 py-2 rounded-lg text-sm bg-red-50 text-red-800 border border-red-200">
-                ✗ {errorMsg}
-              </div>
-            )}
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="px-6 pt-3 pb-6 flex justify-end gap-2 shrink-0 border-t border-gray-100">
               <button onClick={() => setStep('paste')} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Retour</button>
               <button
                 onClick={handleCreate}
@@ -424,11 +426,11 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         )}
 
         {step === 'creating' && (
-          <div className="flex-1 flex items-center justify-center text-gray-600">Création en cours…</div>
+          <div className="flex-1 flex items-center justify-center text-gray-600 p-6">Création en cours…</div>
         )}
 
         {step === 'done' && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6">
             <div className="text-green-700 font-medium">{resultMsg}</div>
             <div className="flex gap-2">
               <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50">
@@ -450,7 +452,6 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
             </div>
           </div>
         )}
-      </div>
       </div>
     </div>
   )
