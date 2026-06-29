@@ -55,51 +55,61 @@ export function parseFleekInvoice(rawBody: string): FleekInvoiceResult {
     return { ok: false, reason: 'Order Date invalide' }
   }
 
-  // On isole la section "items" entre "Items …" et "Subtotal:" pour ne pas
-  // matcher par accident les totaux du bas.
+  // On isole la section "items" pour ne pas matcher par accident les totaux
+  // du bas (Subtotal/Discount/Buyer Protection Fee/Grand total).
+  //
+  // Le mot "Subtotal" apparaît au moins 2 fois sur la facture Fleek :
+  //   - 1× dans le header de la table ("Items Qty Price Tax Tax Amount Subtotal")
+  //   - 1× dans les totaux du bas ("Subtotal: €924.28")
+  // Le bloc items = ce qui est entre les deux. Robuste au pdfjs qui peut
+  // éclater les cellules d'en-tête sur des lignes séparées.
   let block = text
-  const headerIdx = text.search(/Items[ \t]+Qty[ \t]+Price/i)
-  if (headerIdx >= 0) {
-    const afterHeader = text.slice(headerIdx).replace(/^Items[^\n]*\n/i, '')
-    const endIdx = afterHeader.search(/\n\s*Subtotal:/i)
-    block = endIdx >= 0 ? afterHeader.slice(0, endIdx) : afterHeader
+  const subtotalHits = [...text.matchAll(/\bSubtotal\b/gi)]
+  if (subtotalHits.length >= 2) {
+    const first = subtotalHits[0]
+    const last = subtotalHits[subtotalHits.length - 1]
+    const start = (first.index ?? 0) + first[0].length
+    const end = last.index ?? text.length
+    if (end > start) block = text.slice(start, end)
   }
 
-  const lines = block.split('\n').map((l) => l.trim()).filter(Boolean)
+  // Selon la source (copier-coller texte vs extraction pdfjs), le bloc peut
+  // arriver soit en lignes "humaines" (titre / qty / prix par triplets ou
+  // colonnes), soit éclaté en tokens (chaque cellule sur sa propre ligne).
+  // On utilise des regex globales avec \s+ comme séparateur pour tolérer
+  // tous les formats — espaces, tabulations, sauts de ligne se valent.
 
-  // Le PDF Fleek se copie soit en triplets (titre → qty → prix), soit en
-  // 2 colonnes (tous les titres+qtys d'abord, puis toutes les lignes de prix).
-  // On collecte les 3 informations en 3 passes indépendantes puis on zippe
-  // par index — ça marche dans les deux cas.
+  // Regex globales (réutilisées plusieurs fois → on les recrée à chaque
+  // appel via factory pour éviter les soucis de lastIndex partagé).
+  const pieceRe = () => /(\d+)\s*\/\s*piece/gi
+  const priceRe = () =>
+    /\d+\s+€\s*([\d.,]+)\s+\d+\s*%\s+€\s*[\d.,]+\s+€\s*([\d.,]+)/g
 
-  const PIECE_RE = /^(\d+)\s*\/\s*piece$/i
-  const PRICE_RE = /^\d+\s+€\s*([\d.,]+)\s+\d+%\s+€\s*[\d.,]+\s+€\s*([\d.,]+)$/
+  const qtyHits = [...block.matchAll(pieceRe())].map((m) => ({
+    index: m.index ?? 0,
+    end: (m.index ?? 0) + m[0].length,
+    qty: parseInt(m[1], 10),
+  }))
+  const priceHits = [...block.matchAll(priceRe())].map((m) => ({
+    prixLot: toNumber(m[2]),
+  }))
 
-  type QtyHit = { idx: number; qty: number }
-  const qtyHits: QtyHit[] = []
-  const priceHits: { prixLot: number }[] = []
-  for (let i = 0; i < lines.length; i++) {
-    const qm = lines[i].match(PIECE_RE)
-    if (qm) {
-      const q = parseInt(qm[1], 10)
-      if (q > 0) qtyHits.push({ idx: i, qty: q })
-      continue
-    }
-    const pm = lines[i].match(PRICE_RE)
-    if (pm) {
-      const subtotal = toNumber(pm[2])
-      if (subtotal > 0) priceHits.push({ prixLot: subtotal })
-    }
-  }
-
-  // Titre = ce qui précède chaque "N / piece", jusqu'au précédent "N / piece"
-  // (ou début de bloc), en filtrant les lignes prix qui auraient pu s'intercaler.
+  // Titre = ce qui précède chaque "N / piece", borné par le précédent hit
+  // (ou début du bloc). On retire les fragments de prix éventuels et tout
+  // ce qui ressemble à des chiffres/symboles isolés.
   const titres: string[] = []
-  let lastIdx = -1
-  for (const { idx } of qtyHits) {
-    const slice = lines.slice(lastIdx + 1, idx).filter((l) => !PRICE_RE.test(l))
-    titres.push(slice.join(' ').replace(/\s+/g, ' ').trim())
-    lastIdx = idx
+  let lastEnd = 0
+  for (const qh of qtyHits) {
+    let segment = block.slice(lastEnd, qh.index)
+    segment = segment.replace(priceRe(), ' ')
+    const cleaned = segment
+      .split(/\s+/)
+      .filter((tok) => tok && !/^€?[\d.,%]+$/.test(tok))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    titres.push(cleaned)
+    lastEnd = qh.end
   }
 
   // Zip strict : on n'avance que si on a les 3 (titre, qty, prix) au même index.
@@ -115,7 +125,10 @@ export function parseFleekInvoice(rawBody: string): FleekInvoiceResult {
   }
 
   if (lots.length === 0) {
-    return { ok: false, reason: 'Aucun lot extrait de la facture' }
+    return {
+      ok: false,
+      reason: `Aucun lot extrait (qtys: ${qtyHits.length}, prix: ${priceHits.length}, titres: ${titres.length})`,
+    }
   }
 
   return { ok: true, provenance: 'fleek', orderId, dateCommande, lots }
