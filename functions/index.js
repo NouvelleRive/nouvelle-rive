@@ -713,3 +713,78 @@ function findPartByMime(parts, mime) {
   }
   return null
 }
+
+// --- Sitemap cache : pré-calcule la liste d'URLs pour éviter le timeout Googlebot ---
+// Le sitemap Next.js lit `_meta/sitemap-cache` (1 doc, ~50ms) au lieu de scanner tous les produits.
+const SITEMAP_LUXURY_BRANDS = [
+  'hermès', 'hermes', 'chanel', 'louis vuitton', 'lv', 'dior', 'christian dior',
+  'céline', 'celine', 'yves saint laurent', 'ysl', 'saint laurent', 'gucci',
+  'burberry', 'givenchy', 'lanvin', 'nina ricci', 'balenciaga', 'bottega veneta',
+  'prada', 'fendi', 'valentino', 'loewe', 'cartier', 'van cleef', 'boucheron',
+]
+
+function sitemapSlugify(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+function sitemapStripTrigramme(s) {
+  return String(s || '').replace(/^[A-Z]{2,10}\d{0,4}\s*[-–]\s*/i, '').trim()
+}
+function sitemapCategorieLabel(cat) {
+  if (typeof cat === 'string') return cat
+  if (cat && typeof cat === 'object' && typeof cat.label === 'string') return cat.label
+  return ''
+}
+function sitemapTypeSlug(cat) {
+  return sitemapSlugify(sitemapStripTrigramme(sitemapCategorieLabel(cat))) || 'piece'
+}
+function sitemapBuildPath(p) {
+  const type = sitemapTypeSlug(p.categorie)
+  const marque = sitemapSlugify(p.marque || '') || 'sm'
+  const nom = sitemapStripTrigramme(p.nom || '')
+  const desc = [p.marque, nom, p.color, p.taille].filter(Boolean).join(' ')
+  const descSlug = sitemapSlugify(desc).slice(0, 80) || 'piece'
+  return `${type}/${marque}/${descSlug}-${p.id}`
+}
+
+exports.regenSitemapCache = functions
+  .region('europe-west1')
+  .runWith({ memory: '512MB', timeoutSeconds: 300 })
+  .pubsub.schedule('every 60 minutes')
+  .onRun(async () => {
+    const snap = await db.collection('produits')
+      .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
+      .get()
+
+    const luxurySlugs = new Set(SITEMAP_LUXURY_BRANDS.map(sitemapSlugify))
+    const paths = []
+    const typeSet = new Set()
+    const luxuryBrandSet = new Set()
+
+    for (const doc of snap.docs) {
+      const p = { id: doc.id, ...doc.data() }
+      if (p.statut === 'supprime' || p.statut === 'retour') continue
+      if (p.vendu === true) continue
+      if ((p.quantite == null ? 1 : p.quantite) <= 0) continue
+      if (!p.prix || p.prix <= 0) continue
+      if (!(p.photos && p.photos.face) && !(p.imageUrls && p.imageUrls[0]) && !p.imageUrl) continue
+
+      const type = sitemapTypeSlug(p.categorie)
+      if (type && type !== 'piece') typeSet.add(type)
+      if (p.marque) {
+        const bSlug = sitemapSlugify(p.marque)
+        if (luxurySlugs.has(bSlug)) luxuryBrandSet.add(bSlug)
+      }
+      paths.push(sitemapBuildPath(p))
+    }
+
+    await db.doc('_meta/sitemap-cache').set({
+      paths,
+      types: Array.from(typeSet),
+      luxuryBrands: Array.from(luxuryBrandSet),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    console.log(`✅ Sitemap cache: ${paths.length} produits, ${typeSet.size} types, ${luxuryBrandSet.size} luxe`)
+    return null
+  })

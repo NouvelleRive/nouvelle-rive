@@ -43,53 +43,73 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: p.priority,
   }))
 
-  let productEntries: MetadataRoute.Sitemap = []
-  const typeSet = new Set<string>()
-  const luxuryBrandSet = new Set<string>()
+  let productPaths: string[] = []
+  let types: string[] = []
+  let luxuryBrands: string[] = []
+  let usedCache = false
+
   try {
-    const snap = await adminDb.collection('produits')
-      .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
-      .get()
-    const available = snap.docs
-      .map(d => ({ id: d.id, ...d.data() } as any))
-      .filter(p =>
-        p.statut !== 'supprime' &&
-        p.statut !== 'retour' &&
-        p.vendu !== true &&
-        (p.quantite ?? 1) > 0 &&
-        p.prix > 0 &&
-        (p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
-      )
-    productEntries = available.map(p => {
-      const type = getTypeSlug(p.categorie)
-      if (type && type !== 'piece') typeSet.add(type)
-      if (p.marque) {
-        const bSlug = slugifyBrandStr(p.marque)
-        if (LUXURY_SLUGS.has(bSlug)) luxuryBrandSet.add(bSlug)
-      }
-      return {
-        url: `${BASE_URL}/${buildProduitPath(p)}`,
-        lastModified: now,
-        changeFrequency: 'weekly' as const,
-        priority: 0.7,
-      }
-    })
+    const cacheDoc = await adminDb.doc('_meta/sitemap-cache').get()
+    const data = cacheDoc.data()
+    if (data && Array.isArray(data.paths) && data.paths.length > 0) {
+      productPaths = data.paths
+      types = Array.isArray(data.types) ? data.types : []
+      luxuryBrands = Array.isArray(data.luxuryBrands) ? data.luxuryBrands : []
+      usedCache = true
+    }
   } catch (err) {
-    console.error('[sitemap] Firestore fetch failed:', err)
+    console.error('[sitemap] cache read failed:', err)
   }
 
-  const typeEntries: MetadataRoute.Sitemap = Array.from(typeSet).map(type => ({
+  if (!usedCache) {
+    // Fallback : première exécution avant que la Firebase Function `regenSitemapCache` ait tourné.
+    try {
+      const snap = await adminDb.collection('produits')
+        .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
+        .get()
+      const typeSet = new Set<string>()
+      const luxSet = new Set<string>()
+      for (const doc of snap.docs) {
+        const p = { id: doc.id, ...doc.data() } as any
+        if (p.statut === 'supprime' || p.statut === 'retour') continue
+        if (p.vendu === true) continue
+        if ((p.quantite ?? 1) <= 0) continue
+        if (!p.prix || p.prix <= 0) continue
+        if (!p.photos?.face && !p.imageUrls?.[0] && !p.imageUrl) continue
+        const type = getTypeSlug(p.categorie)
+        if (type && type !== 'piece') typeSet.add(type)
+        if (p.marque) {
+          const bSlug = slugifyBrandStr(p.marque)
+          if (LUXURY_SLUGS.has(bSlug)) luxSet.add(bSlug)
+        }
+        productPaths.push(buildProduitPath(p))
+      }
+      types = Array.from(typeSet)
+      luxuryBrands = Array.from(luxSet)
+    } catch (err) {
+      console.error('[sitemap] fallback Firestore fetch failed:', err)
+    }
+  }
+
+  const typeEntries: MetadataRoute.Sitemap = types.map(type => ({
     url: `${BASE_URL}/${type}`,
     lastModified: now,
     changeFrequency: 'daily' as const,
     priority: 0.85,
   }))
 
-  const brandEntries: MetadataRoute.Sitemap = Array.from(luxuryBrandSet).map(slug => ({
+  const brandEntries: MetadataRoute.Sitemap = luxuryBrands.map(slug => ({
     url: `${BASE_URL}/designer/${slug}`,
     lastModified: now,
     changeFrequency: 'daily' as const,
     priority: 0.85,
+  }))
+
+  const productEntries: MetadataRoute.Sitemap = productPaths.map(path => ({
+    url: `${BASE_URL}/${path}`,
+    lastModified: now,
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
   }))
 
   return [...staticEntries, ...typeEntries, ...brandEntries, ...productEntries]
