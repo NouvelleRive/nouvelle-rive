@@ -164,9 +164,12 @@
       return date.toDate() < twoMonthsAgo
   }
 
-  function getPriceBadgeStatus(p: Produit): 'none' | 'orange' | 'blue' | 'red' {
+  function getPriceBadgeStatus(p: Produit, chineusesList: { trigramme: string; stockType?: string }[]): 'none' | 'orange' | 'blue' | 'red' {
     // Pas de badge tant que la pièce n'est pas physiquement reçue en boutique
     if (p.recu !== true) return 'none'
+    // Chineuses petite série : pas de cycle "faire tourner / venir chercher" (aligné cron reminders)
+    const tri = (p.trigramme || p.sku?.match(/^[A-Za-z]+/)?.[0] || '').toUpperCase()
+    if (tri && chineusesList.find(c => c.trigramme?.toUpperCase() === tri)?.stockType === 'smallBatch') return 'none'
     // Si prix baissé, vérifier le délai depuis la baisse
     if (p.prixBaisseLe) {
       const oneMonthAgo = new Date()
@@ -1287,7 +1290,7 @@
                     </h3>
                     {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-green-600 mt-1"><RefreshCw size={11} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-[11px] text-red-600 mt-1"><RefreshCw size={11} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
-                    {getPriceBadgeStatus(p) === 'orange' && (
+                    {getPriceBadgeStatus(p, chineusesList) === 'orange' && (
                       <button
                         onClick={() => handleDelete(p.id)}
                         className="inline-flex items-center gap-1 text-[11px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full mt-1 hover:bg-orange-200"
@@ -1295,7 +1298,7 @@
                         🔄 2 mois+ – rotation / baisse de prix ?
                       </button>
                     )}
-                    {getPriceBadgeStatus(p) === 'blue' && (
+                    {getPriceBadgeStatus(p, chineusesList) === 'blue' && (
                       needsEtiquetteMaj(p) ? (
                         <button
                           onClick={() => handleMajEtiquette(p)}
@@ -1309,7 +1312,7 @@
                         </span>
                       )
                     )}
-                    {getPriceBadgeStatus(p) === 'red' && (
+                    {getPriceBadgeStatus(p, chineusesList) === 'red' && (
                       <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
                         🚨 À récupérer – prix baissé il y a 1 mois+
                       </span>
@@ -1409,7 +1412,7 @@
                       )}
                       {(p as any).statutRestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-green-600 mt-1"><RefreshCw size={12} /> Restock en attente (+{(p as any).quantiteRestock})</span>}
                     {(p as any).statutDestock === 'enAttente' && <span className="inline-flex items-center gap-1 text-xs text-red-600 mt-1"><RefreshCw size={12} /> Destock en attente (-{(p as any).quantiteDestock})</span>}
-                    {getPriceBadgeStatus(p) === 'orange' && (
+                    {getPriceBadgeStatus(p, chineusesList) === 'orange' && (
   <button
     onClick={() => handleDelete(p.id)}
     className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200 transition-colors"
@@ -1417,7 +1420,7 @@
     🔄 En surface depuis 2 mois+ – rotation / baisse de prix nécessaire
   </button>
 )}
-{getPriceBadgeStatus(p) === 'blue' && (
+{getPriceBadgeStatus(p, chineusesList) === 'blue' && (
   needsEtiquetteMaj(p) ? (
     <button
       onClick={() => handleMajEtiquette(p)}
@@ -1431,7 +1434,7 @@
     </span>
   )
 )}
-{getPriceBadgeStatus(p) === 'red' && (
+{getPriceBadgeStatus(p, chineusesList) === 'red' && (
   <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
     🚨 À récupérer – prix baissé il y a 1 mois+
   </span>
