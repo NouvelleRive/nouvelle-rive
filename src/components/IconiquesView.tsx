@@ -254,8 +254,26 @@ export default function IconiquesView({
           ])
           activeRaw = activeSnaps.flatMap(s => s.docs.map(d => ({ id: d.id, ...d.data() } as any)))
           soldRaw = soldSnaps.flatMap(s => s.docs.map(d => ({ id: d.id, ...d.data() } as any)))
+        } else if (needleMarqueRaw && needleMarqueRaw !== 'luxe') {
+          // Iconique avec marque (Burberry, Chanel, Hermès, Levi's…) : filtre serveur par marque.
+          // Firestore est insensible : on tente la marque telle qu'écrite. Si la base contient des
+          // variantes de casse, le filtre client (matchPredicate) compense.
+          const [activeSnap, soldSnap] = await Promise.all([
+            getDocs(query(
+              collection(db, 'produits'),
+              where('vendu', '==', false),
+              where('marque', '==', current.marque),
+            )),
+            getDocs(query(
+              collection(db, 'produits'),
+              where('vendu', '==', true),
+              where('marque', '==', current.marque),
+            )),
+          ])
+          activeRaw = activeSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
+          soldRaw = soldSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
         } else {
-          // Slow path : pas de trigramme → on est obligé de tout fetch (iconique luxe etc.).
+          // Slow path : iconique "luxe" ou sans aucun filtre → on doit tout fetch.
           const [activeSnap, soldSnap] = await Promise.all([
             getDocs(query(collection(db, 'produits'), where('vendu', '==', false))),
             getDocs(query(collection(db, 'produits'), where('vendu', '==', true))),
