@@ -8,6 +8,7 @@ import PlanningCalendar from '@/components/PlanningCalendar'
 
 export default function ChineuseCalendrierPage() {
   const [userNom, setUserNom] = useState<string>('')
+  const [userTrigramme, setUserTrigramme] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
   const [chineuseId, setChineuseId] = useState<string>('')
   const [nbArticles, setNbArticles] = useState<number>(0)
@@ -31,6 +32,7 @@ export default function ChineuseCalendrierPage() {
         const nom = (data.nom || data.trigramme || '').toUpperCase()
         trigramme = data.trigramme || ''
         setUserNom(nom)
+        setUserTrigramme(trigramme.toUpperCase())
         setChineuseId(snap.docs[0].id)
       }
 
@@ -66,7 +68,7 @@ export default function ChineuseCalendrierPage() {
       <div className="lg:col-span-2">
         <PlanningCalendar
           mode="restock"
-          participants={userNom ? [{ nom: userNom, type: 'chineuse' }] : []}
+          participants={userNom ? [{ nom: userNom, type: 'chineuse', trigramme: userTrigramme || undefined }] : []}
           userType="chineuse"
           userNom={userNom}
         />

@@ -629,7 +629,8 @@
               mode="restock"
               participants={deposants.map((d: any) => ({
                 nom: (d.nom || d.trigramme || '').toUpperCase(),
-                type: 'chineuse' as const
+                type: 'chineuse' as const,
+                trigramme: (d.trigramme || '').toUpperCase() || undefined,
               }))}
               userType="admin"
             />
