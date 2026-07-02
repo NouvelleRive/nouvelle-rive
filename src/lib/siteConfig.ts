@@ -240,16 +240,23 @@ let q = options?.lastDoc
   }
   return produits
 }
-export function useFilteredProducts(pageId: string) {
+export function useFilteredProducts(pageId: string, opts?: { skip?: boolean }) {
   const [produits, setProduits] = useState<Produit[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const skip = !!opts?.skip
 
   useEffect(() => {
     // Stratégie : premier batch rapide (150 docs) pour afficher la page tout de suite,
     // puis on continue à charger le reste du catalogue en background par batches de 300.
     // Pendant le background, loadingMore=true → le "Chargement…" reste visible en bas
     // et la recherche/filtres voient les nouveaux produits apparaître dynamiquement.
+    if (skip) {
+      setProduits([])
+      setLoading(false)
+      setLoadingMore(false)
+      return
+    }
     let cancelled = false
     setProduits([])
     setLoading(true)
@@ -279,7 +286,7 @@ export function useFilteredProducts(pageId: string) {
     loadAll().catch(console.error)
 
     return () => { cancelled = true }
-  }, [pageId])
+  }, [pageId, skip])
 
   return { produits, loading, loadingMore }
 }

@@ -8,6 +8,7 @@ import { useFilteredProducts } from '@/lib/siteConfig'
 import { Save, Plus, X, Trash2 } from 'lucide-react'
 import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-react'
 import ProductList, { Produit } from '@/components/ProductList'
+import IconiquesManager from '@/components/admin/IconiquesManager'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -54,7 +55,11 @@ const PAGES = [
   { id: 'homme', label: '(Plutôt) Homme' },
   { id: 'enfant', label: 'Enfant' },
   { id: 'accessoires', label: 'Accessoires' },
+  { id: 'iconiques-vintage', label: 'Iconiques Vintage' },
+  { id: 'iconiques-upcy', label: 'Iconiques Upcy' },
 ]
+
+const ICONIQUE_PAGE_IDS = ['iconiques-vintage', 'iconiques-upcy'] as const
 
 const CATEGORIES = [
   'Ensemble', 'Haut', 'Pantalon', 'Robe', 'Jupe / Short', 'Veste / Manteau',
@@ -88,7 +93,8 @@ export default function AdminSitePage() {
 
   const [produitsFiltrés, setProduitsFiltrés] = useState<ProduitPreview[]>([])
   const [loadingProduits, setLoadingProduits] = useState(false)
-  const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage)
+  const isIconiquesMode = ICONIQUE_PAGE_IDS.includes(selectedPage as any)
+  const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage, { skip: isIconiquesMode })
   const [localProduits, setLocalProduits] = useState<Produit[]>([])
 
   // Sync local products with hook
@@ -122,6 +128,10 @@ export default function AdminSitePage() {
   }, [])
 
   useEffect(() => {
+    if (ICONIQUE_PAGE_IDS.includes(selectedPage as any)) {
+      setLoading(false)
+      return
+    }
     async function fetchConfig() {
       setLoading(true)
       try {
@@ -285,11 +295,13 @@ const getImageUrl = (p: ProduitPreview) => {
         </select>
       </div>
 
-      {loading ? (
+      {ICONIQUE_PAGE_IDS.includes(selectedPage as any) ? (
+        <IconiquesManager typeFilter={selectedPage === 'iconiques-vintage' ? 'vintage' : 'upcy'} />
+      ) : loading ? (
         <div className="py-10 text-center text-gray-500">Chargement...</div>
       ) : (
         <div className="bg-white border rounded-lg p-6 space-y-6">
-          
+
           {config.regles.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-blue-800 mb-3">📋 Règles actives (liées par OU) :</h3>
