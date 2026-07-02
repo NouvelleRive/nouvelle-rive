@@ -4,7 +4,7 @@
   import { useState, useMemo, useRef, useEffect } from 'react'
   import { useRouter } from 'next/navigation'
   import { db, auth } from '@/lib/firebaseConfig'
-  import { doc, updateDoc, Timestamp } from 'firebase/firestore'
+  import { doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore'
   import {
     Search, X, Check, AlertTriangle, Package, PackageCheck,
     ImageIcon, Edit3, Filter, Camera, Upload
@@ -404,11 +404,18 @@
       // Sinon, réception directe (chineuses)
       setProcessingIds((prev) => new Set(prev).add(p.id))
       try {
-        await updateDoc(doc(db, 'produits', p.id), {
+        const update: Record<string, unknown> = {
           recu: true,
           dateReception: Timestamp.now(),
           recuPar: vendeusePrenom,
-        })
+        }
+        // Brouillon achat (Vinted/Whatnot/Fleek/…) : passer aussi achatStatut
+        // à 'recu-boutique' pour retirer le grisé + le badge livraison et
+        // remettre le produit dans le flux vendeuse classique.
+        if (typeof p.source === 'string' && p.source.startsWith('achat-')) {
+          update.achatStatut = 'recu-boutique'
+        }
+        await updateDoc(doc(db, 'produits', p.id), update)
         fetch('/api/ebay/publish-if-luxe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -541,17 +548,13 @@
       setProcessingIds((prev) => new Set(prev).add(p.id))
 
       try {
-        await updateDoc(doc(db, 'produits', p.id), {
-          statut: 'supprime',
-          dateSuppressionReception: Timestamp.now(),
-          supprimePar: vendeusePrenom,
-        })
-        // Retrait eBay best-effort si le produit y était listé
-        fetch('/api/produits/remove-ebay', {
+        // Retrait eBay best-effort AVANT le delete (pour ne pas perdre les ids)
+        await fetch('/api/produits/remove-ebay', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productId: p.id }),
         }).catch(() => {})
+        await deleteDoc(doc(db, 'produits', p.id))
         onProductUpdate?.()
       } catch (err) {
         console.error('Erreur suppression:', err)
