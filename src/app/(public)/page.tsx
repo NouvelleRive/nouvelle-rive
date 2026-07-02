@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import BoutiqueListing from '@/components/BoutiqueListing'
 import { getRecentProduitsServer } from '@/lib/produitsServer'
 
-export const revalidate = 60
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Vintage et upcyclé chinés à Paris',

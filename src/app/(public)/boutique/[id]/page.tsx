@@ -2,7 +2,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { buildProduitSlug } from '@/lib/produitSlug'
 
-export const revalidate = 60
+export const revalidate = 3600
 
 export default async function BoutiqueIdRedirect({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

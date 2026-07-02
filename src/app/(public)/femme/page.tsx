@@ -1,7 +1,7 @@
 import CategoryListingClient from '@/components/CategoryListingClient'
 import { getInitialProduitsForPage } from '@/lib/produitsServer'
 
-export const revalidate = 60
+export const revalidate = 3600
 
 export default async function FemmePage() {
   const initialProduits = await getInitialProduitsForPage('femme', 50)
