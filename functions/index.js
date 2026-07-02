@@ -504,18 +504,28 @@ console.log(`✅ checkGmailFactures terminé`)
   })
 
 // =============================================================================
-// Rappels pointage / récap / restocks → ping de l'endpoint Vercel toutes les 5 min
-// L'endpoint /api/cron/reminders calcule lui-même l'heure de Paris et déclenche
-// les notifs au bon moment (12h10, 12h30, 12h50/15h50/17h50, 19h55).
+// Cron "5 min" mutualisé : rappels pointage + poll Gmail achats.
+//
+// - Rappels : ping /api/cron/reminders qui décide lui-même quoi envoyer selon
+//   l'heure de Paris (12h10, 12h30, 12h50/15h50/17h50, 19h55).
+// - Poll Gmail achats : mails Vinted / Chronopost / Mondial Relay / Pickup
+//   pour mettre à jour les statuts commande → expédié → livré (voir helper
+//   pollGmailAchats). No-op silencieux si les env OAuth ne sont pas posés.
+//
+// Objectif "zéro cron" : on partage ce job pour rester dans les 3 gratuits
+// de Cloud Scheduler (Cron A = 5 min, B = 60 min, C = 1×/jour).
 // =============================================================================
 exports.pingReminders = functions
   .region("europe-west1")
+  .runWith({ timeoutSeconds: 540, memory: '256MB' })
   .pubsub.schedule("every 5 minutes")
   .timeZone("Europe/Paris")
   .onRun(async () => {
     const fetch = require('node-fetch')
     const url = 'https://www.nouvellerive.eu/api/cron/reminders'
     const secret = process.env.CRON_SECRET || ''
+    // 1. Rappels — isolé dans son propre try/catch pour ne pas être bloqué
+    //    par une panne du poll Gmail (ordre : rappels d'abord, sensibles au temps).
     try {
       const res = await fetch(url, {
         headers: secret ? { Authorization: `Bearer ${secret}` } : {},
@@ -525,22 +535,33 @@ exports.pingReminders = functions
     } catch (err) {
       console.error('pingReminders failed:', err)
     }
+    // 2. Poll Gmail achats — try/catch isolé, ne casse pas les rappels si ça plante.
+    try {
+      await pollGmailAchats()
+    } catch (err) {
+      console.error('pollGmailAchats (from pingReminders) failed:', err)
+    }
     return null
   })
 
 // =============================================================================
-// Sync ventes eBay → ping de l'endpoint Vercel toutes les 10 min
-// L'API de notifications eBay ne pousse pas les ventes ; le polling Fulfillment
-// est la méthode officielle. Idempotent (IDs déterministes côté Firestore).
+// Cron "60 min" mutualisé : sync ventes eBay + régénération cache sitemap.
+//
+// - eBay : ping /api/sync/ebay-orders (idempotent, IDs déterministes).
+// - Sitemap : regenSitemap() reconstruit le cache _meta/sitemap-cache.
+//
+// Objectif "zéro cron" : partage pour rester dans les 3 gratuits Cloud Scheduler.
 // =============================================================================
 exports.pingEbaySync = functions
   .region("europe-west1")
+  .runWith({ timeoutSeconds: 540, memory: '512MB' })
   .pubsub.schedule("every 60 minutes")
   .timeZone("Europe/Paris")
   .onRun(async () => {
     const fetch = require('node-fetch')
     const url = 'https://www.nouvellerive.eu/api/sync/ebay-orders'
     const secret = process.env.CRON_SECRET || ''
+    // 1. eBay — isolé
     try {
       const res = await fetch(url, {
         headers: secret ? { Authorization: `Bearer ${secret}` } : {},
@@ -550,136 +571,141 @@ exports.pingEbaySync = functions
     } catch (err) {
       console.error('pingEbaySync failed:', err)
     }
+    // 2. Sitemap cache — isolé, ne bloque pas eBay si ça plante
+    try {
+      await regenSitemap()
+    } catch (err) {
+      console.error('regenSitemap (from pingEbaySync) failed:', err)
+    }
     return null
   })
 
 // =============================================================================
-// Watch Gmail nouvelleriveachats@ pour les mails Vinted/transporteurs.
-// Toutes les 5 min : on récupère les mails non lus matchant nos parsers et on
-// les POST à /api/webhooks/gmail-achats. La route Next.js parse + écrit dans
-// Firestore (chineuse NR, source='achat-vinted', etc.). Une fois traité avec
-// succès, on enlève le label UNREAD du mail pour ne pas le retraiter.
+// Helper : poll de la BM Gmail nouvelleriveachats@ pour les mails
+// Vinted/transporteurs. Récupère les mails non lus matchant nos parsers,
+// les POST à /api/webhooks/gmail-achats (qui parse + écrit Firestore), puis
+// enlève le label UNREAD si le webhook a confirmé.
+//
+// Appelé par `pingReminders` (cron 5 min mutualisé — pas de cron dédié pour
+// rester dans les 3 gratuits Cloud Scheduler).
 //
 // Env requis :
 //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET  (déjà utilisés par checkGmailFactures)
-//   GOOGLE_REFRESH_TOKEN_ACHATS             (OAuth refresh token spécifique au compte achats)
+//   GOOGLE_REFRESH_TOKEN_ACHATS             (OAuth refresh token du compte achats)
 //   NR_INTERNAL_TOKEN                       (auth partagé avec la route Next.js)
+//
+// No-op silencieux si un env manque (permet de déployer avant d'avoir posé le
+// refresh token OAuth).
 // =============================================================================
-exports.gmailWatcherAchats = functions
-  .region("europe-west1")
-  .pubsub.schedule("every day 09:00")
-  .timeZone("Europe/Paris")
-  .onRun(async () => {
-    const fetch = require('node-fetch')
+async function pollGmailAchats() {
+  const fetch = require('node-fetch')
 
-    const refreshToken = process.env.GOOGLE_REFRESH_TOKEN_ACHATS
-    const internalToken = process.env.NR_INTERNAL_TOKEN
-    if (!refreshToken || !internalToken) {
-      console.error('gmailWatcherAchats: GOOGLE_REFRESH_TOKEN_ACHATS / NR_INTERNAL_TOKEN manquants')
-      return null
-    }
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN_ACHATS
+  const internalToken = process.env.NR_INTERNAL_TOKEN
+  if (!refreshToken || !internalToken) {
+    // Silencieux : normal avant d'avoir configuré OAuth. Log discret pour trace.
+    console.log('pollGmailAchats: GOOGLE_REFRESH_TOKEN_ACHATS / NR_INTERNAL_TOKEN manquants — skip')
+    return
+  }
 
-    // 1. Échange du refresh token contre un access token court
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }),
-    })
-    const tokenJson = await tokenRes.json()
-    if (!tokenJson.access_token) {
-      console.error('gmailWatcherAchats: pas d\'access_token, réponse:', JSON.stringify(tokenJson))
-      return null
-    }
-    const accessToken = tokenJson.access_token
-
-    // 2. Recherche des mails non lus en provenance de nos parsers connus
-    const senders = [
-      'no-reply@vinted.fr',
-      'noreply@mondialrelay.fr',
-      'avisage-ne-pas-repondre@chronopost.fr',
-      'chronopost@network1.pickup.fr',
-    ]
-    const query = encodeURIComponent(`is:unread (${senders.map((e) => `from:${e}`).join(' OR ')})`)
-    const listRes = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=50`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    )
-    const listJson = await listRes.json()
-    if (listJson.error) {
-      console.error('gmailWatcherAchats: erreur list:', JSON.stringify(listJson.error))
-      return null
-    }
-    const messages = listJson.messages || []
-    if (messages.length === 0) {
-      console.log('gmailWatcherAchats: aucun nouveau mail')
-      return null
-    }
-    console.log(`gmailWatcherAchats: ${messages.length} mail(s) à traiter`)
-
-    const baseUrl = process.env.NR_BASE_URL || 'https://www.nouvellerive.eu'
-
-    // 3. Pour chaque mail : récupère le corps, POST à la route, marque comme lu
-    for (const m of messages) {
-      try {
-        const msgRes = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=full`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        )
-        const msg = await msgRes.json()
-        if (msg.error) {
-          console.error(`gmailWatcherAchats ${m.id}: erreur get:`, JSON.stringify(msg.error))
-          continue
-        }
-
-        const headers = {}
-        for (const h of msg.payload?.headers || []) headers[h.name] = h.value
-        const from = headers['From'] || ''
-        const subject = headers['Subject'] || ''
-        const body = extractMessageBody(msg.payload)
-
-        if (!body) {
-          console.warn(`gmailWatcherAchats ${m.id}: pas de corps lisible, skip`)
-          continue
-        }
-
-        // 4. Push vers la route Next.js
-        const hookRes = await fetch(`${baseUrl}/api/webhooks/gmail-achats`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Token': internalToken,
-          },
-          body: JSON.stringify({ gmailMessageId: m.id, from, subject, body }),
-        })
-        const hookText = await hookRes.text()
-        console.log(`gmailWatcherAchats ${m.id} → ${hookRes.status}: ${hookText.slice(0, 200)}`)
-
-        // 5. Marquer comme lu uniquement si le webhook a confirmé ok
-        if (hookRes.ok) {
-          await fetch(
-            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}/modify`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
-            }
-          )
-        }
-      } catch (err) {
-        console.error(`gmailWatcherAchats ${m.id}: exception`, err)
-      }
-    }
-
-    return null
+  // 1. Échange du refresh token contre un access token court
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
   })
+  const tokenJson = await tokenRes.json()
+  if (!tokenJson.access_token) {
+    console.error('pollGmailAchats: pas d\'access_token, réponse:', JSON.stringify(tokenJson))
+    return
+  }
+  const accessToken = tokenJson.access_token
+
+  // 2. Recherche des mails non lus en provenance de nos parsers connus
+  const senders = [
+    'no-reply@vinted.fr',
+    'noreply@mondialrelay.fr',
+    'avisage-ne-pas-repondre@chronopost.fr',
+    'chronopost@network1.pickup.fr',
+  ]
+  const query = encodeURIComponent(`is:unread (${senders.map((e) => `from:${e}`).join(' OR ')})`)
+  const listRes = await fetch(
+    `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}&maxResults=50`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  )
+  const listJson = await listRes.json()
+  if (listJson.error) {
+    console.error('pollGmailAchats: erreur list:', JSON.stringify(listJson.error))
+    return
+  }
+  const messages = listJson.messages || []
+  if (messages.length === 0) {
+    return // silencieux : cas normal la plupart du temps
+  }
+  console.log(`pollGmailAchats: ${messages.length} mail(s) à traiter`)
+
+  const baseUrl = process.env.NR_BASE_URL || 'https://www.nouvellerive.eu'
+
+  // 3. Pour chaque mail : récupère le corps, POST à la route, marque comme lu
+  for (const m of messages) {
+    try {
+      const msgRes = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=full`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      )
+      const msg = await msgRes.json()
+      if (msg.error) {
+        console.error(`pollGmailAchats ${m.id}: erreur get:`, JSON.stringify(msg.error))
+        continue
+      }
+
+      const headers = {}
+      for (const h of msg.payload?.headers || []) headers[h.name] = h.value
+      const from = headers['From'] || ''
+      const subject = headers['Subject'] || ''
+      const body = extractMessageBody(msg.payload)
+
+      if (!body) {
+        console.warn(`pollGmailAchats ${m.id}: pas de corps lisible, skip`)
+        continue
+      }
+
+      // 4. Push vers la route Next.js
+      const hookRes = await fetch(`${baseUrl}/api/webhooks/gmail-achats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Token': internalToken,
+        },
+        body: JSON.stringify({ gmailMessageId: m.id, from, subject, body }),
+      })
+      const hookText = await hookRes.text()
+      console.log(`pollGmailAchats ${m.id} → ${hookRes.status}: ${hookText.slice(0, 200)}`)
+
+      // 5. Marquer comme lu uniquement si le webhook a confirmé ok
+      if (hookRes.ok) {
+        await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}/modify`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
+          }
+        )
+      }
+    } catch (err) {
+      console.error(`pollGmailAchats ${m.id}: exception`, err)
+    }
+  }
+}
 
 /**
  * Extrait le corps texte d'un payload Gmail (multi-part possible).
@@ -747,44 +773,42 @@ function sitemapBuildPath(p) {
   return `${type}/${marque}/${descSlug}-${p.id}`
 }
 
-exports.regenSitemapCache = functions
-  .region('europe-west1')
-  .runWith({ memory: '512MB', timeoutSeconds: 300 })
-  .pubsub.schedule('every 60 minutes')
-  .onRun(async () => {
-    const snap = await db.collection('produits')
-      .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
-      .get()
+// Helper : régénère le cache _meta/sitemap-cache. Appelé par pingEbaySync
+// (cron 60 min mutualisé — pas de cron dédié pour rester dans les 3 gratuits
+// Cloud Scheduler).
+async function regenSitemap() {
+  const snap = await db.collection('produits')
+    .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
+    .get()
 
-    const luxurySlugs = new Set(SITEMAP_LUXURY_BRANDS.map(sitemapSlugify))
-    const paths = []
-    const typeSet = new Set()
-    const luxuryBrandSet = new Set()
+  const luxurySlugs = new Set(SITEMAP_LUXURY_BRANDS.map(sitemapSlugify))
+  const paths = []
+  const typeSet = new Set()
+  const luxuryBrandSet = new Set()
 
-    for (const doc of snap.docs) {
-      const p = { id: doc.id, ...doc.data() }
-      if (p.statut === 'supprime' || p.statut === 'retour') continue
-      if (p.vendu === true) continue
-      if ((p.quantite == null ? 1 : p.quantite) <= 0) continue
-      if (!p.prix || p.prix <= 0) continue
-      if (!(p.photos && p.photos.face) && !(p.imageUrls && p.imageUrls[0]) && !p.imageUrl) continue
+  for (const doc of snap.docs) {
+    const p = { id: doc.id, ...doc.data() }
+    if (p.statut === 'supprime' || p.statut === 'retour') continue
+    if (p.vendu === true) continue
+    if ((p.quantite == null ? 1 : p.quantite) <= 0) continue
+    if (!p.prix || p.prix <= 0) continue
+    if (!(p.photos && p.photos.face) && !(p.imageUrls && p.imageUrls[0]) && !p.imageUrl) continue
 
-      const type = sitemapTypeSlug(p.categorie)
-      if (type && type !== 'piece') typeSet.add(type)
-      if (p.marque) {
-        const bSlug = sitemapSlugify(p.marque)
-        if (luxurySlugs.has(bSlug)) luxuryBrandSet.add(bSlug)
-      }
-      paths.push(sitemapBuildPath(p))
+    const type = sitemapTypeSlug(p.categorie)
+    if (type && type !== 'piece') typeSet.add(type)
+    if (p.marque) {
+      const bSlug = sitemapSlugify(p.marque)
+      if (luxurySlugs.has(bSlug)) luxuryBrandSet.add(bSlug)
     }
+    paths.push(sitemapBuildPath(p))
+  }
 
-    await db.doc('_meta/sitemap-cache').set({
-      paths,
-      types: Array.from(typeSet),
-      luxuryBrands: Array.from(luxuryBrandSet),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    })
-
-    console.log(`✅ Sitemap cache: ${paths.length} produits, ${typeSet.size} types, ${luxuryBrandSet.size} luxe`)
-    return null
+  await db.doc('_meta/sitemap-cache').set({
+    paths,
+    types: Array.from(typeSet),
+    luxuryBrands: Array.from(luxuryBrandSet),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   })
+
+  console.log(`✅ Sitemap cache: ${paths.length} produits, ${typeSet.size} types, ${luxuryBrandSet.size} luxe`)
+}
