@@ -51,13 +51,14 @@ type PieceInfo = { sku: string; nom: string; imageUrl: string; categorie: string
 async function actionsChineuse(
   trigramme: string,
   refDate: Date,
-): Promise<{ aRecuperer: PieceInfo[]; prixABaisser: PieceInfo[] }> {
-  if (!trigramme) return { aRecuperer: [], prixABaisser: [] }
+): Promise<{ aRecuperer: PieceInfo[]; prixABaisser: PieceInfo[]; stockActif: number }> {
+  if (!trigramme) return { aRecuperer: [], prixABaisser: [], stockActif: 0 }
   const snap = await adminDb.collection('produits').where('trigramme', '==', trigramme.toUpperCase()).get()
   const oneMonthAgo = new Date(refDate); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
   const twoMonthsAgo = new Date(refDate); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
   const aRecuperer: PieceInfo[] = []
   const prixABaisser: PieceInfo[] = []
+  let stockActif = 0
   const toInfo = (p: any): PieceInfo => ({
     sku: p.sku || '',
     nom: (p.nom || '').replace(`${p.sku || ''} - `, ''),
@@ -73,14 +74,16 @@ async function actionsChineuse(
     if (p.statutRecuperation === 'aRecuperer') { aRecuperer.push(toInfo(p)); continue }
     const baisseDate = p.prixBaisseLe?.toDate?.()
     if (baisseDate instanceof Date) {
-      if (baisseDate < oneMonthAgo) aRecuperer.push(toInfo(p))
+      if (baisseDate < oneMonthAgo) { aRecuperer.push(toInfo(p)); continue }
+      if (p.recu === true) stockActif++
       continue
     }
     // Cycle orange basé sur la date de réception en boutique (pas createdAt)
     const receptionDate = p.dateReception?.toDate?.()
     if (receptionDate instanceof Date && receptionDate < twoMonthsAgo) prixABaisser.push(toInfo(p))
+    if (p.recu === true) stockActif++
   }
-  return { aRecuperer, prixABaisser }
+  return { aRecuperer, prixABaisser, stockActif }
 }
 
 // Recherche une chineuse à partir du nom (uppercase dans les slots) ou trigramme
@@ -390,7 +393,9 @@ export async function GET(req: NextRequest) {
       // Compte les actions à prévoir, évaluées à la date du restock (demain)
       const triForCount = (slot.trigramme || chin.trigramme || '').toString().toUpperCase()
       const refDate = new Date(tomorrowStr + 'T12:00:00')
-      const { aRecuperer, prixABaisser } = await actionsChineuse(triForCount, refDate)
+      const { aRecuperer, prixABaisser, stockActif } = await actionsChineuse(triForCount, refDate)
+      const cible = typeof chin.cibleStock === 'number' ? chin.cibleStock : 0
+      const aAmener = Math.max(0, cible - stockActif - aRecuperer.length)
       const renderPieces = (pieces: PieceInfo[]) => pieces.length === 0 ? '' : `
                 <table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${pieces.map(p => `
                   <td style="padding:6px;vertical-align:top;text-align:center;width:120px;">
@@ -399,13 +404,21 @@ export async function GET(req: NextRequest) {
                     <div style="font-size:11px;color:#444;">${p.nom}</div>
                     ${p.categorie ? `<div style="font-size:10px;color:#888;">${p.categorie}</div>` : ''}
                   </td>`).join('')}</tr></table>`
-      const actionsHtml = (aRecuperer.length > 0 || prixABaisser.length > 0) ? `
-                <p style="margin-top:24px;"><strong>À prévoir côté stock en boutique :</strong></p>
+      const recapItems: string[] = []
+      if (cible > 0 && aAmener > 0) recapItems.push(`📦 Amène au moins <strong>${aAmener} nouvelle${aAmener > 1 ? 's' : ''} pièce${aAmener > 1 ? 's' : ''}</strong>`)
+      if (aRecuperer.length > 0) recapItems.push(`🚨 <strong>${aRecuperer.length} pièce${aRecuperer.length > 1 ? 's' : ''} à récupérer</strong>`)
+      if (prixABaisser.length > 0) recapItems.push(`💸 <strong>${prixABaisser.length} pièce${prixABaisser.length > 1 ? 's' : ''} dont le prix doit être baissé</strong>`)
+      const recapHtml = recapItems.length === 0 ? '' : `
+                <p style="margin-top:20px;"><strong>Petit récap :</strong></p>
+                <ul style="padding-left:20px;line-height:1.7;">
+                  ${recapItems.map(i => `<li>${i}</li>`).join('')}
+                </ul>`
+      const detailsPiecesHtml = (aRecuperer.length > 0 || prixABaisser.length > 0) ? `
                 ${aRecuperer.length > 0 ? `
-                <p style="margin-top:16px;margin-bottom:4px;">🚨 <strong>${aRecuperer.length} pièce${aRecuperer.length > 1 ? 's' : ''} à récupérer</strong></p>
+                <p style="margin-top:16px;margin-bottom:4px;">🚨 Pièces à récupérer :</p>
                 ${renderPieces(aRecuperer)}` : ''}
                 ${prixABaisser.length > 0 ? `
-                <p style="margin-top:16px;margin-bottom:4px;">💸 <strong>${prixABaisser.length} pièce${prixABaisser.length > 1 ? 's' : ''} dont le prix doit être baissé</strong></p>
+                <p style="margin-top:16px;margin-bottom:4px;">💸 Prix à baisser :</p>
                 ${renderPieces(prixABaisser)}` : ''}` : ''
 
       // Email
@@ -421,14 +434,15 @@ export async function GET(req: NextRequest) {
               <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
                 <h1 style="color:#22209C;">À demain 💙</h1>
                 <p>Hello ${chin.prenom || chin.nom || ''},</p>
-                <p>Petit rappel : ton restock est prévu <strong>${dateFr} à ${creneau}</strong>, en boutique au 8 rue des Écouffes, 75004 Paris. On a hâte de te voir !!! 💙</p>
-                <p style="margin-top:20px;"><strong>As-tu bien préparé ton restock ?</strong></p>
+                <p>N'oublie pas ton restock demain <strong>${dateFr} à ${creneau}</strong>, en boutique au 8 rue des Écouffes, 75004 Paris. On a hâte de te voir !!! 💙</p>
+                ${recapHtml}
+                ${detailsPiecesHtml}
+                <p style="margin-top:24px;"><strong>As-tu bien préparé ton restock ?</strong></p>
                 <ul style="padding-left:20px;line-height:1.7;">
                   <li>produits créés dans l'app</li>
                   <li>photos détourées proprement et portés vérifiés</li>
                   <li>produits étiquetés avec prix et SKU</li>
                 </ul>
-                ${actionsHtml}
                 <p style="margin-top:20px;">Au fait les filles en surface organisent leur temps de travail et leurs pauses autour des restocks, donc si tu arrives avec plus de 10 mn de retard, pense à leur ramener un cookie !</p>
                 <p style="margin-top:12px;">On attend tes pépites avec impatience ! 🌊</p>
                 <p style="margin-top:24px;">
