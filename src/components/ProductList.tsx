@@ -1251,7 +1251,7 @@
                           </span>
                         </span>
                         {/* Badge statut directement sous la date */}
-                        {p.source?.startsWith('achat-') && p.achatStatut ? (
+                        {isAchatBrouillon && p.achatStatut ? (
                           <span className="inline-flex items-center gap-1 text-[12px] text-[#09B1BA]">
                             <Clock size={12} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
                           </span>
@@ -1343,9 +1343,8 @@
                       <button onClick={() => handleToggleForceDisplay(p)} className={`ml-auto p-0.5 rounded ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                     </div>
 
-                    {/* Encart Livraison — uniquement pour les pièces achetées (Vinted/…). Chaque
-                        champ ne s'affiche que s'il est rempli. */}
-                    {p.source?.startsWith('achat-') && (
+                    {/* Encart Livraison — uniquement pour les brouillons achat pas encore reçus. */}
+                    {isAchatBrouillon && (
                       <div className="mt-2 pt-2 border-t border-[#09B1BA]/30 text-[11px] flex flex-wrap gap-x-3 gap-y-1">
                         <span className="font-semibold text-[#09B1BA] uppercase tracking-wide text-[10px] basis-full">Livraison</span>
                         {p.achatTransporteur && <span><span className="text-gray-400">Livreur:</span> <span className="font-medium">{libelleTransporteur(p.achatTransporteur)}</span></span>}
@@ -1397,7 +1396,7 @@
                         </span>
                       </p>
                       {/* Display chineur retiré : info inutile dans la grille admin (mais le champ reste en base). */}
-                      {p.source?.startsWith('achat-') && p.achatStatut ? (
+                      {isAchatBrouillon && p.achatStatut ? (
                         <span className="inline-flex items-center gap-1 text-xs text-[#09B1BA] mt-1">
                           <Clock size={12} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
                           {p.achatStatut === 'livre' && p.achatLieuLivraison && (
@@ -1440,7 +1439,7 @@
   </span>
 )}
                       {/* Encart Livraison desktop — même règle d'affichage que mobile */}
-                      {p.source?.startsWith('achat-') && (
+                      {isAchatBrouillon && (
                         <div className="mt-2 pt-2 border-t border-[#09B1BA]/30 text-[11px] flex flex-wrap gap-x-3 gap-y-1">
                           <span className="font-semibold text-[#09B1BA] uppercase tracking-wide text-[10px] basis-full">Livraison</span>
                           {p.achatTransporteur && <span><span className="text-gray-400">Livreur:</span> <span className="font-medium">{libelleTransporteur(p.achatTransporteur)}</span></span>}
