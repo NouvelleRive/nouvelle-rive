@@ -1102,7 +1102,6 @@
                             Whatnot
                           </button>
                         )}
-                        <span className="text-[11px] text-gray-400 text-center mt-1">copie colle la page (cmd+A, cmd+C, cmd+V)</span>
                       </div>
                     </div>
                   )

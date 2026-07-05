@@ -1513,15 +1513,6 @@ async function compressImage(file: File): Promise<string> {
                   Fleek
                 </button>
               )}
-              {/* Ligne 2 : helper uniquement sous Vinted (cellule vide ailleurs) */}
-              {onVintedImport && (
-                <>
-                  <div />
-                  <p className="text-[11px] text-gray-400 text-center">copie colle la page (cmd+A, cmd+C, cmd+V)</p>
-                  {onWhatnotImport && <div />}
-                  {onFleekImport && <div />}
-                </>
-              )}
             </div>
           </div>
           )

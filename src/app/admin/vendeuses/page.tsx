@@ -786,7 +786,7 @@
                           <>
                             <div className="flex items-center justify-between text-xs pl-5 mt-0.5">
                               <span>CA : {stats.ca.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €</span>
-                              <span className="font-bold">Bonus : {Math.round(stats.bonus)} €</span>
+                              <span>Bonus : {Math.round(stats.bonus)} €</span>
                             </div>
                             <div className="flex items-center justify-between text-xs pl-5 mt-0.5 text-gray-400">
                               <span>Nb de ventes : {Math.round(stats.ventes)}</span>
@@ -802,26 +802,26 @@
                         )}
                         {fam && fam.total > 0 && (
                           <div className="pl-5 mt-1 pt-1 border-t border-gray-100">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-[#22209C]">Ventes familiales</span>
-                              <span className="font-bold text-[#22209C]">
+                            <div className="flex items-center justify-between text-xs text-[#22209C]">
+                              <span>Ventes familiales</span>
+                              <span>
                                 {fam.total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
                               </span>
                             </div>
-                            <div className="text-[11px] text-gray-400 mt-0.5">
-                              {fam.count} pièce{fam.count > 1 ? 's' : ''} : {fam.items
-                                .map(i => i.sku || i.nom)
-                                .filter(Boolean)
-                                .join(', ')}
-                            </div>
                             {stats && (
-                              <div className="flex items-center justify-between text-xs mt-1 text-[#22209C]">
+                              <div className="flex items-center justify-between text-xs mt-0.5 text-[#22209C]">
                                 <span>Bonus net</span>
                                 <span className="font-bold">
                                   {Math.round(stats.bonus - fam.coutBonus).toLocaleString('fr-FR')} €
                                 </span>
                               </div>
                             )}
+                            <div className="text-[11px] text-gray-400 mt-0.5">
+                              {fam.count} pièce{fam.count > 1 ? 's' : ''} : {fam.items
+                                .map(i => i.sku || i.nom)
+                                .filter(Boolean)
+                                .join(', ')}
+                            </div>
                           </div>
                         )}
                       </div>
