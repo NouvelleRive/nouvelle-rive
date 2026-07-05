@@ -42,6 +42,15 @@
     source?: string
     sku?: string | null
     nom?: string | null
+    chineur?: string | null
+    trigramme?: string | null
+  }
+
+  type Chineuse = {
+    id: string
+    email?: string
+    trigramme?: string
+    taux?: number
   }
 
   const CRENEAUX = ['12-20', '11-17'] as const
@@ -83,6 +92,7 @@
     const [planningSlots, setPlanningSlots] = useState<PlanningSlots>({})
     const [planningLoading, setPlanningLoading] = useState(false)
     const [ventesAll, setVentesAll] = useState<ProduitVente[]>([])
+    const [chineuses, setChineuses] = useState<Chineuse[]>([])
     type Pointage = { id: string; vendeuseId: string; date: string; arrivee: string | null; depart: string | null }
     const [pointages, setPointages] = useState<Pointage[]>([])
 
@@ -147,6 +157,14 @@
     })
     return () => unsub()
   }, [])
+
+    // Charger les chineuses (pour connaître le taux de commission NR)
+    useEffect(() => {
+      const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
+        setChineuses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Chineuse)))
+      })
+      return () => unsub()
+    }, [])
 
     // =====================
     // AJOUTER VENDEUSE
@@ -456,22 +474,34 @@
     }, [ventesAll, planningSlots, currentMonth, pointages])
 
     // Ventes familiales attribuées à une vendeuse (mois courant)
+    // coutBonus = part chineuse (prix × (1 − taux NR)) — c'est ce qu'on soustrait
+    // au bonus car NR "offre" sa marge à la vendeuse mais doit payer la chineuse.
     const ventesFamilialesParVendeuse = useMemo(() => {
-      const map = new Map<string, { total: number; count: number; items: ProduitVente[] }>()
+      const map = new Map<string, { total: number; count: number; coutBonus: number; items: ProduitVente[] }>()
+      const tauxPour = (v: ProduitVente): number => {
+        const ch = chineuses.find(c =>
+          (v.chineur && c.email === v.chineur) ||
+          (v.trigramme && c.trigramme === v.trigramme)
+        )
+        return typeof ch?.taux === 'number' ? ch.taux / 100 : 0.40
+      }
       ventesAll.forEach(v => {
         if (!(v.venteFamiliale === true || v.source === 'familiale')) return
         if (!v.vendeuseId) return
         if (!(v.dateVente instanceof Timestamp)) return
         const d = v.dateVente.toDate()
         if (d.getMonth() !== currentMonth.month || d.getFullYear() !== currentMonth.year) return
-        const cur = map.get(v.vendeuseId) || { total: 0, count: 0, items: [] }
-        cur.total += v.prixVenteReel || 0
+        const prix = v.prixVenteReel || 0
+        const taux = tauxPour(v)
+        const cur = map.get(v.vendeuseId) || { total: 0, count: 0, coutBonus: 0, items: [] }
+        cur.total += prix
+        cur.coutBonus += prix * (1 - taux)
         cur.count += 1
         cur.items.push(v)
         map.set(v.vendeuseId, cur)
       })
       return map
-    }, [ventesAll, currentMonth])
+    }, [ventesAll, chineuses, currentMonth])
 
     const dailyCA = useMemo(() => {
   const ca: Record<string, number> = {}
@@ -773,8 +803,8 @@
                         {fam && fam.total > 0 && (
                           <div className="pl-5 mt-1 pt-1 border-t border-gray-100">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-pink-600">Ventes familiales</span>
-                              <span className="font-bold text-pink-600">
+                              <span className="text-[#22209C]">Ventes familiales</span>
+                              <span className="font-bold text-[#22209C]">
                                 {fam.total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
                               </span>
                             </div>
@@ -784,6 +814,14 @@
                                 .filter(Boolean)
                                 .join(', ')}
                             </div>
+                            {stats && (
+                              <div className="flex items-center justify-between text-xs mt-1 text-[#22209C]">
+                                <span>Bonus net</span>
+                                <span className="font-bold">
+                                  {Math.round(stats.bonus - fam.coutBonus).toLocaleString('fr-FR')} €
+                                </span>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
