@@ -29,8 +29,10 @@
     }, [pathname])
 
     // Stats rapides
+    const actifs = produitsFiltres.filter(p => p.statut !== 'supprime' && p.statut !== 'retour' && !p.vendu && (p.quantite ?? 1) > 0)
     const stats = {
-      total: produitsFiltres.filter(p => p.statut !== 'supprime' && p.statut !== 'retour' && !p.vendu && (p.quantite ?? 1) > 0).length,
+      refs: actifs.length,
+      pieces: actifs.reduce((sum, p) => sum + (p.quantite ?? 1), 0),
       vendus: produitsFiltres.filter(p => p.vendu || (p.quantite ?? 1) <= 0).length,
     }
 
@@ -205,8 +207,12 @@
               </div>
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500">Produits:</span>
-                  <span className="font-bold">{stats.total}</span>
+                  <span className="text-gray-500">Ref:</span>
+                  <span className="font-bold">{stats.refs}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Pièces:</span>
+                  <span className="font-bold">{stats.pieces}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-gray-500">Vendus:</span>
