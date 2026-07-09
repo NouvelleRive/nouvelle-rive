@@ -6,6 +6,7 @@
  */
 
 import { Client, Environment } from 'square'
+import { FieldValue as FirestoreFieldValue } from 'firebase-admin/firestore'
 import { removeFromEbay, isEbayConfigured } from '@/lib/ebay'
 import { adminDb } from '@/lib/firebaseAdmin'
 
@@ -47,14 +48,18 @@ export async function removeProductFromSquare(
   }
 
   let ok = true
+  let variationDone = false
+  let itemDone = false
   if (variationId) {
     try {
       await squareClient.catalogApi.deleteCatalogObject(variationId)
       console.log(`✅ Variation Square supprimée: ${variationId}`)
+      variationDone = true
     } catch (err: any) {
       const status = err?.statusCode
       if (status === 404) {
         console.log(`ℹ️ Variation Square déjà absente: ${variationId}`)
+        variationDone = true
       } else {
         console.warn(`⚠️ Suppression variation Square échouée: ${err?.message}`)
         ok = false
@@ -65,10 +70,12 @@ export async function removeProductFromSquare(
     try {
       await squareClient.catalogApi.deleteCatalogObject(itemId)
       console.log(`✅ Item Square supprimé: ${itemId}`)
+      itemDone = true
     } catch (err: any) {
       const status = err?.statusCode
       if (status === 404) {
         console.log(`ℹ️ Item Square déjà absent: ${itemId}`)
+        itemDone = true
       } else {
         console.warn(`⚠️ Suppression item Square échouée: ${err?.message} — tentative d'archivage`)
         try {
@@ -93,6 +100,7 @@ export async function removeProductFromSquare(
               },
             })
             console.log(`✅ Item Square archivé: ${itemId}`)
+            itemDone = true
           }
         } catch (archiveErr: any) {
           console.error(`❌ Archivage Square échoué: ${archiveErr?.message}`)
@@ -101,6 +109,30 @@ export async function removeProductFromSquare(
       }
     }
   }
+
+  // Nettoyer les IDs Square côté Firestore quand la suppression a réussi (ou 404).
+  // Sinon on garde les IDs pour que le cron de réconciliation puisse retenter.
+  try {
+    const cleanup: Record<string, unknown> = {}
+    if (variationDone) {
+      cleanup.variationId = FirestoreFieldValue.delete()
+      cleanup.catalogObjectId = FirestoreFieldValue.delete()
+    }
+    if (itemDone) {
+      cleanup.itemId = FirestoreFieldValue.delete()
+    }
+    if (ok) {
+      cleanup.squareRemovalPendingAt = FirestoreFieldValue.delete()
+    } else {
+      cleanup.squareRemovalPendingAt = FirestoreFieldValue.serverTimestamp()
+    }
+    if (Object.keys(cleanup).length > 0) {
+      await adminDb.collection('produits').doc(produit.id).update(cleanup)
+    }
+  } catch (fsErr: any) {
+    console.warn(`⚠️ Nettoyage IDs Square côté Firestore KO pour ${produit.id}: ${fsErr?.message}`)
+  }
+
   return ok
 }
 
