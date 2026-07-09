@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useCart, SEUIL_LIVRAISON_OFFERTE } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
@@ -18,21 +18,38 @@ export default function PanierPage() {
 
   useEffect(() => {
     if (!hydrated || items.length === 0) return
-    const unsubs = items.map(item =>
-      onSnapshot(doc(db, 'produits', item.id), (snap) => {
-        if (!snap.exists()) {
-          removeItem(item.id)
-          setRetires(prev => prev.includes(item.nom) ? prev : [...prev, item.nom])
-          return
+    // Vérification one-shot au montage : si l'item est vendu/absent entre l'ajout
+    // au panier et l'affichage de la page, on le retire. Le checkout re-vérifie
+    // aussi côté serveur (route /api/checkout), donc pas de risque d'acheter un
+    // produit vendu même si un item devient vendu pendant que l'user regarde.
+    let cancelled = false
+    Promise.all(
+      items.map(async item => {
+        try {
+          const snap = await getDoc(doc(db, 'produits', item.id))
+          if (cancelled) return
+          if (!snap.exists()) {
+            removeItem(item.id)
+            setRetires(prev => (prev.includes(item.nom) ? prev : [...prev, item.nom]))
+            return
+          }
+          const data = snap.data() as Record<string, unknown>
+          if (
+            data.vendu === true ||
+            data.statut === 'outOfStock' ||
+            (typeof data.quantite === 'number' && data.quantite <= 0)
+          ) {
+            removeItem(item.id)
+            setRetires(prev => (prev.includes(item.nom) ? prev : [...prev, item.nom]))
+          }
+        } catch {
+          /* silencieux — on bloquera au checkout si vraiment cassé */
         }
-        const data = snap.data() as Record<string, unknown>
-        if (data.vendu === true || data.statut === 'outOfStock' || (typeof data.quantite === 'number' && data.quantite <= 0)) {
-          removeItem(item.id)
-          setRetires(prev => prev.includes(item.nom) ? prev : [...prev, item.nom])
-        }
-      })
+      }),
     )
-    return () => { unsubs.forEach(u => u()) }
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, items.map(i => i.id).join(',')])
 
