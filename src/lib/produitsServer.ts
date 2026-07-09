@@ -6,6 +6,7 @@
 import { adminDb } from '@/lib/firebaseAdmin'
 import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 import { getTypeSlug } from '@/lib/produitSlug'
+import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 
 export type ProduitInitial = {
   id: string
@@ -180,23 +181,16 @@ export async function getInitialProduitsForPage(pageId: string, limit: number = 
   }
 }
 
-// Page /sac : sacs qui matchent les règles LUXE (siteConfig/luxe) OU qui viennent d'une chineuse
-// "petite série" (stockType === 'smallBatch'). Filtre supplémentaire : categorie doit être "sac".
+// Page /sac : sacs de marques luxe (LUXURY_BRANDS partagé avec /admin/ebay) OU sacs venant d'une
+// chineuse "petite série" (stockType === 'smallBatch').
 export async function getSacsHauteCoutureProduits(limit: number = 50): Promise<ProduitInitial[]> {
   try {
-    const [cfgSnap, prodSnap, chineusesList] = await Promise.all([
-      adminDb.collection('siteConfig').doc('luxe').get(),
-      adminDb.collection('produits').where('vendu', '==', false).orderBy('createdAt', 'desc').limit(600).get(),
+    const [prodSnap, chineusesList] = await Promise.all([
+      adminDb.collection('produits').where('vendu', '==', false).orderBy('createdAt', 'desc').limit(800).get(),
       getChineusesLiteCached(),
     ])
 
-    const luxeCfg: PageConfig = cfgSnap.exists ? { regles: [], ...(cfgSnap.data() as any) } : { regles: [] }
-
-    const chineusesMap = new Map<string, { trigramme?: string; email?: string }>()
-    chineusesList.forEach((c) => chineusesMap.set(c.uid, { trigramme: c.trigramme, email: c.email }))
-
-    // Identifiants de reconnaissance des chineuses "petite série" — on matche sur uid, email ou
-    // trigramme préfixe SKU (même règle que matchCritere case 'chineuse').
+    // Chineuses "petite série" — reconnaissables sur uid, email ou trigramme préfixe SKU.
     const smallBatchUids = new Set<string>()
     const smallBatchEmails = new Set<string>()
     const smallBatchTrigrammes = new Set<string>()
@@ -208,34 +202,24 @@ export async function getSacsHauteCoutureProduits(limit: number = 50): Promise<P
       }
     }
 
-    const exclus = new Set(luxeCfg.produitsManquels || [])
-
     const matches = prodSnap.docs
       .map((d) => ({ id: d.id, raw: d.data() as any }))
-      .filter(({ id, raw }) => {
+      .filter(({ raw }) => {
         if (raw.statut === 'supprime' || raw.statut === 'retour') return false
         if (raw.recu === false || raw.hidden === true) return false
         if ((raw.quantite ?? 1) <= 0) return false
         if (!raw.prix || raw.prix <= 0) return false
         if (!(raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)) return false
 
-        // Restriction sac uniquement.
-        if (getTypeSlug(raw.categorie) !== 'sac') return false
+        // Restriction sacs uniquement (categorie contient "sac" — couvre "Sac", "Sac à main", "Sacoche"…).
+        const catLabel = (typeof raw.categorie === 'object' ? raw.categorie?.label : raw.categorie) || ''
+        if (!String(catLabel).toLowerCase().includes('sac')) return false
 
-        // Union : match règles LUXE OU chineuse petite série.
-        const matchLuxe = (() => {
-          if (exclus.has(id)) return false
-          if (luxeCfg.prixMin && raw.prix < luxeCfg.prixMin) return false
-          if (luxeCfg.prixMax && raw.prix > luxeCfg.prixMax) return false
-          if (luxeCfg.regles.length === 0) return true
-          return luxeCfg.regles.some(
-            (r) => r.criteres.length > 0 && r.criteres.every((c) => matchCritere(raw, c, chineusesMap))
-          )
-        })()
-
+        // Union : marque luxe OU chineuse petite série.
+        const marqueLower = (raw.marque || '').toLowerCase().trim()
+        const matchLuxe = marqueLower && LUXURY_BRANDS.some((b) => marqueLower.includes(b) || b.includes(marqueLower))
         if (matchLuxe) return true
 
-        // smallBatch : uid, email, ou trigramme préfixe SKU
         if (raw.chineurUid && smallBatchUids.has(raw.chineurUid)) return true
         if (raw.chineur && smallBatchEmails.has(String(raw.chineur).toLowerCase())) return true
         const sku = (raw.sku || '').toUpperCase()
