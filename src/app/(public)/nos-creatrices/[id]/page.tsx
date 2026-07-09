@@ -53,6 +53,7 @@ function padRowToThree(urls: string[], allVideos: string[]): string[] {
 type Produit = {
   id: string
   nom: string
+  marque?: string
   prix: number
   imageUrl: string
 }
@@ -161,6 +162,7 @@ export default function CreateurPage() {
             all.map((p: any) => ({
               id: p.id,
               nom: p.nom || 'Produit',
+              marque: p.marque,
               prix: p.prix || 0,
               imageUrl: p.imageUrls?.[0] || p.imageUrl || '',
             }))
@@ -179,6 +181,7 @@ export default function CreateurPage() {
             all.map((p: any) => ({
               id: p.id,
               nom: p.nom || 'Produit',
+              marque: p.marque,
               prix: p.prix || 0,
               imageUrl: p.imageUrls?.[0] || p.imageUrl || '',
             }))
@@ -481,10 +484,10 @@ export default function CreateurPage() {
                   </div>
                   <div className="py-4 px-3 text-center bg-white flex-grow">
                     <h3 className="uppercase font-semibold" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-                      {p.nom}
+                      {p.nom.replace(/^[A-Z]+\d+\s*[-–]\s*/i, '')}
                     </h3>
                     <p className="mt-1 uppercase" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px', color: '#666' }}>
-                      {creatrice.nom}
+                      {p.marque || creatrice.nom}
                     </p>
                     <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
                       {formatPrix(p.prix)} €

@@ -93,7 +93,7 @@ export default function NavbarPublic() {
   const boutiqueLinks = [
     { href: '/coups-de-coeur#titre', label: t('NOS PIÈCES PRÉFÉRÉES', 'OUR FAVORITE GEMS', lang) },
     { href: '/ete#titre', label: t('ÉTÉ', 'SUMMER', lang) },
-    { href: '/sac', label: t('SACS DESIGNER', 'DESIGNER BAGS', lang) },
+    { href: '/sac', label: t('SACS DE DESIGNER', 'DESIGNER BAGS', lang) },
     { href: '/luxe#titre', label: t('LE LUXE', 'LUXURY', lang) },
     { href: '/iconiques-upcy', label: t('NOS PIÈCES UPCY FAVORITES', 'FAVORITE UPCYCLED PIECES', lang) },
     { href: '/les-iconiques', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONICS', lang) },
