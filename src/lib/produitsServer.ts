@@ -5,8 +5,17 @@
 
 import { adminDb } from '@/lib/firebaseAdmin'
 import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
+import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 import { getTypeSlug } from '@/lib/produitSlug'
-import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+
+// Copie côté serveur de LUXURY_BRANDS (défini dans lib/admin/helpers.ts) : on ne peut pas importer
+// depuis admin/helpers.ts en Server Component car ce fichier tire tout le SDK Firebase client.
+const LUXURY_BRANDS = [
+  'hermès', 'hermes', 'chanel', 'louis vuitton', 'lv', 'dior', 'christian dior',
+  'céline', 'celine', 'yves saint laurent', 'ysl', 'saint laurent', 'gucci',
+  'burberry', 'givenchy', 'lanvin', 'nina ricci', 'balenciaga', 'bottega veneta',
+  'prada', 'fendi', 'valentino', 'loewe', 'cartier', 'van cleef', 'boucheron',
+]
 
 export type ProduitInitial = {
   id: string
@@ -181,12 +190,12 @@ export async function getInitialProduitsForPage(pageId: string, limit: number = 
   }
 }
 
-// Page /sac : sacs de marques luxe (LUXURY_BRANDS partagé avec /admin/ebay) OU sacs venant d'une
-// chineuse "petite série" (stockType === 'smallBatch').
-export async function getSacsHauteCoutureProduits(limit: number = 50): Promise<ProduitInitial[]> {
+// Page /sac : même logique que [type]='sac' (getTypeSlug === 'sac', y compris vendus <3 semaines),
+// filtrée en plus par : marque luxe (LUXURY_BRANDS) OU chineuse "petite série" (stockType === 'smallBatch').
+export async function getSacsHauteCoutureProduits(): Promise<ProduitInitial[]> {
   try {
-    const [prodSnap, chineusesList] = await Promise.all([
-      adminDb.collection('produits').where('vendu', '==', false).orderBy('createdAt', 'desc').limit(800).get(),
+    const [all, chineusesList] = await Promise.all([
+      getAllProduitsCached(),
       getChineusesLiteCached(),
     ])
 
@@ -202,22 +211,30 @@ export async function getSacsHauteCoutureProduits(limit: number = 50): Promise<P
       }
     }
 
-    const matches = prodSnap.docs
-      .map((d) => ({ id: d.id, raw: d.data() as any }))
+    // Copie du seuil vendus de [type]/page.tsx.
+    const TROIS_SEMAINES_MS = 21 * 24 * 60 * 60 * 1000
+    const seuilVendu = Date.now() - TROIS_SEMAINES_MS
+
+    const filtered = all
       .filter(({ raw }) => {
+        // ---- reprise EXACTE de [type]/page.tsx filter ----
         if (raw.statut === 'supprime' || raw.statut === 'retour') return false
-        if (raw.recu === false || raw.hidden === true) return false
-        if ((raw.quantite ?? 1) <= 0) return false
-        if (!raw.prix || raw.prix <= 0) return false
+        if (!(raw.prix > 0)) return false
         if (!(raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)) return false
+        if (getTypeSlug(raw.categorie) !== 'sac') return false
+        if (raw.vendu === true) {
+          const dv = raw.dateVente
+          if (!dv) return false
+          const dvMs = typeof dv.toMillis === 'function' ? dv.toMillis() : (typeof dv === 'string' ? new Date(dv).getTime() : (dv?.seconds ? dv.seconds * 1000 : NaN))
+          if (!Number.isFinite(dvMs) || dvMs < seuilVendu) return false
+        } else if ((raw.quantite ?? 1) <= 0) {
+          return false
+        }
+        // ---- fin reprise ----
 
-        // Restriction sacs uniquement (categorie contient "sac" — couvre "Sac", "Sac à main", "Sacoche"…).
-        const catLabel = (typeof raw.categorie === 'object' ? raw.categorie?.label : raw.categorie) || ''
-        if (!String(catLabel).toLowerCase().includes('sac')) return false
-
-        // Union : marque luxe OU chineuse petite série.
+        // Condition supplémentaire : marque luxe OU chineuse petite série
         const marqueLower = (raw.marque || '').toLowerCase().trim()
-        const matchLuxe = marqueLower && LUXURY_BRANDS.some((b) => marqueLower.includes(b) || b.includes(marqueLower))
+        const matchLuxe = !!marqueLower && LUXURY_BRANDS.some((b) => marqueLower.includes(b) || b.includes(marqueLower))
         if (matchLuxe) return true
 
         if (raw.chineurUid && smallBatchUids.has(raw.chineurUid)) return true
@@ -232,10 +249,11 @@ export async function getSacsHauteCoutureProduits(limit: number = 50): Promise<P
         }
         return false
       })
-      .slice(0, limit)
-      .map(({ id, raw }) => serialize(id, raw))
 
-    return matches
+    // Tri identique : non-vendus en premier
+    filtered.sort((a, b) => Number(!!a.raw.vendu) - Number(!!b.raw.vendu))
+
+    return filtered.map(({ id, raw }) => serialize(id, raw))
   } catch (err) {
     console.error('[produitsServer] getSacsHauteCoutureProduits error:', err)
     return []

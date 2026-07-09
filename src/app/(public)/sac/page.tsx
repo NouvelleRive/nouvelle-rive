@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function SacPage() {
   // Filtre custom (règles LUXE union chineuses petite série) non représentable via siteConfig,
   // donc on rend uniquement les produits SSR et on skip le refetch client.
-  const initialProduits = await getSacsHauteCoutureProduits(50)
+  const initialProduits = await getSacsHauteCoutureProduits()
   return (
     <BoutiqueListing
       initialProduits={initialProduits}
