@@ -24,6 +24,7 @@ export type ChineuseLite = {
   authUid?: string
   imageUrl?: string
   specialite?: string
+  wearType?: string
 }
 
 export const getChineusesLiteCached = unstable_cache(
@@ -51,6 +52,7 @@ export const getChineusesLiteCached = unstable_cache(
         authUid: data.authUid || '',
         imageUrl: data.imageUrl || '',
         specialite: data.specialite || '',
+        wearType: data.wearType || 'womenswear',
       }
     })
   },

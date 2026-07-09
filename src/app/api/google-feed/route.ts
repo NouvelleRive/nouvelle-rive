@@ -2,19 +2,9 @@
 export const revalidate = 43200
 
 import { NextResponse } from 'next/server'
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
 import { buildProduitSlug } from '@/lib/produitSlug'
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  })
-}
+import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
+import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 
 function escapeXml(str: string): string {
   return (str || '')
@@ -27,21 +17,19 @@ function escapeXml(str: string): string {
 
 export async function GET() {
   try {
-    const db = getFirestore()
-    const [snap, chineuseSnap] = await Promise.all([
-      db.collection('produits').get(),
-      db.collection('chineuse').get(),
+    // Cache mutualisé (1h) — plus de scan Firestore direct à chaque revalidate.
+    const [allProduits, chineuses] = await Promise.all([
+      getAllProduitsCached(),
+      getChineusesLiteCached(),
     ])
 
     const chineuseMap: Record<string, string> = {}
-    chineuseSnap.docs.forEach(d => {
-      const tri = (d.data().trigramme || '').toUpperCase()
-      const wearType = d.data().wearType || 'womenswear'
-      if (tri) chineuseMap[tri] = wearType
+    chineuses.forEach(c => {
+      if (c.trigramme) chineuseMap[c.trigramme] = c.wearType || 'womenswear'
     })
 
-    const produits = snap.docs
-      .map(d => ({ id: d.id, ...d.data() } as any))
+    const produits = allProduits
+      .map(({ id, raw }) => ({ id, ...raw } as any))
       .filter(p =>
         p.statut !== 'supprime' &&
         p.statut !== 'retour' &&

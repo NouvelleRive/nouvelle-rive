@@ -5,20 +5,9 @@
 export const revalidate = 3600
 
 import { NextResponse } from 'next/server'
-import { initializeApp, getApps, cert } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 
 const STORE_CODE = '10929298200958467105'
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  })
-}
 
 function escapeXml(str: string): string {
   return (str || '')
@@ -31,11 +20,11 @@ function escapeXml(str: string): string {
 
 export async function GET() {
   try {
-    const db = getFirestore()
-    const snap = await db.collection('produits').get()
+    // Cache mutualisé (1h) — évite un scan Firestore par revalidate.
+    const allProduits = await getAllProduitsCached()
 
-    const produits = snap.docs
-      .map(d => ({ id: d.id, ...d.data() } as any))
+    const produits = allProduits
+      .map(({ id, raw }) => ({ id, ...raw } as any))
       .filter(p =>
         p.statut !== 'supprime' &&
         p.statut !== 'retour' &&
