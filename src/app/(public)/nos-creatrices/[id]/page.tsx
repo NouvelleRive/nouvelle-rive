@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
 import { useLang, t } from '@/lib/i18n'
 import { getCreatriceI18n } from '@/lib/creatricesI18n'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -71,129 +69,40 @@ export default function CreateurPage() {
   const [loading, setLoading] = useState(true)
   const [displayedText, setDisplayedText] = useState('')
 
-  // Charger la liste des slugs (pour navigation prev/next)
-  useEffect(() => {
-    getDocs(collection(db, 'chineuse')).then(snap => {
-      const slugs = snap.docs
-        .map(d => ({ slug: d.id, ordre: d.data().ordre || 0 }))
-        .sort((a, b) => a.ordre - b.ordre)
-        .map(x => x.slug)
-      setAllSlugs(slugs)
-    }).catch(() => {})
-  }, [])
-
   const currentIdx = allSlugs.indexOf(slug)
   const prevSlug = currentIdx > 0 ? allSlugs[currentIdx - 1] : null
   const nextSlug = currentIdx >= 0 && currentIdx < allSlugs.length - 1 ? allSlugs[currentIdx + 1] : null
 
-        // Fetch créatrice depuis Firebase
+  // Fetch unique : chineuse + allSlugs + produits en 1 seul appel API (cache Vercel 6h).
+  // Remplace 3 lectures Firestore client (getDocs chineuse + getDoc chineuse/slug
+  // + getDocs produits where trigramme).
   useEffect(() => {
-    // Reset des états quand on navigue d'une chineuse à une autre
+    if (!slug) return
     setCreatrice(null)
     setProduits([])
     setVisibleCount(12)
     setLoading(true)
 
-    async function fetchCreatrice() {
-      if (!slug) return
+    let cancelled = false
+    fetch(`/api/creatrice-page?slug=${encodeURIComponent(slug)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (cancelled || !data) return
+        if (Array.isArray(data.allSlugs)) setAllSlugs(data.allSlugs)
+        if (data.chineuse) setCreatrice(data.chineuse as Creatrice)
+        if (Array.isArray(data.produits)) setProduits(data.produits as Produit[])
+      })
+      .catch(err => {
+        console.error('[nos-creatrices] fetch failed:', err)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
 
-      try {
-        const docRef = doc(db, 'chineuse', slug)
-        const docSnap = await getDoc(docRef)
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data()
-          setCreatrice({
-            nom: data.nom || slug,
-            slug: data.slug || slug,
-            trigramme: data.trigramme || '',
-            specialite: data.specialite || '',
-            accroche: data.accroche || '',
-            accrocheEn: data.accrocheEn || '',
-            description: data.description || '',
-            descriptionEn: data.descriptionEn || '',
-            lien: data.lien || '',
-            instagram: data.instagram || '',
-            imageUrl: data.imageUrl || '',
-            stockType: data.stockType || '',
-            videos: Array.isArray(data.videos) ? data.videos : [],
-            instagramFeatured: data.instagramFeatured || '',
-          })
-        }
-      } catch (error) {
-        console.error('Erreur lors du fetch de la créatrice:', error)
-      } finally {
-        setLoading(false)
-      }
+    return () => {
+      cancelled = true
     }
-
-    fetchCreatrice()
   }, [slug])
-
-  // Fetch produits : 3 derniers (pieceUnique) ou plus likés (smallBatch)
-  useEffect(() => {
-    async function fetchProduitsCreatrices() {
-      if (!creatrice || !creatrice.trigramme) return
-
-      try {
-        const produitsSnap = await getDocs(
-          query(collection(db, 'produits'), where('trigramme', '==', creatrice.trigramme))
-        )
-
-        const all = produitsSnap.docs
-          .map((d) => ({ id: d.id, ...(d.data() as any) }))
-          .filter((p: any) => {
-            if (p.vendu) return false
-            if ((p.quantite ?? 1) <= 0) return false
-            if (p.statut === 'retour' || p.statut === 'supprime') return false
-            if (p.hidden === true) return false
-            if (p.forceDisplay === false) return false
-            if (p.recu === false) return false
-            const hasImage = (p.imageUrls && p.imageUrls.length > 0) || p.imageUrl
-            return !!hasImage
-          })
-
-        const isSmallBatch = creatrice.stockType === 'smallBatch'
-
-        if (isSmallBatch) {
-          // Tri par likesCount (champ stocké sur le produit, pas de query par-produit)
-          all.sort((a: any, b: any) => (b.likesCount || 0) - (a.likesCount || 0))
-          setProduits(
-            all.map((p: any) => ({
-              id: p.id,
-              nom: p.nom || 'Produit',
-              marque: p.marque,
-              prix: p.prix || 0,
-              imageUrl: p.imageUrls?.[0] || p.imageUrl || '',
-            }))
-          )
-        } else {
-          all.sort((a: any, b: any) => {
-            const ta = a.createdAt?.toMillis
-              ? a.createdAt.toMillis()
-              : new Date(a.createdAt || 0).getTime()
-            const tb = b.createdAt?.toMillis
-              ? b.createdAt.toMillis()
-              : new Date(b.createdAt || 0).getTime()
-            return tb - ta
-          })
-          setProduits(
-            all.map((p: any) => ({
-              id: p.id,
-              nom: p.nom || 'Produit',
-              marque: p.marque,
-              prix: p.prix || 0,
-              imageUrl: p.imageUrls?.[0] || p.imageUrl || '',
-            }))
-          )
-        }
-      } catch (error) {
-        console.error('Erreur fetch produits:', error)
-      }
-    }
-
-    fetchProduitsCreatrices()
-  }, [creatrice])
   
   // Scroll to title
   useEffect(() => {

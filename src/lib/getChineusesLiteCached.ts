@@ -25,6 +25,10 @@ export type ChineuseLite = {
   imageUrl?: string
   specialite?: string
   wearType?: string
+  ordre?: number
+  lien?: string
+  instagram?: string
+  instagramFeatured?: string
 }
 
 export const getChineusesLiteCached = unstable_cache(
@@ -53,9 +57,13 @@ export const getChineusesLiteCached = unstable_cache(
         imageUrl: data.imageUrl || '',
         specialite: data.specialite || '',
         wearType: data.wearType || 'womenswear',
+        ordre: typeof data.ordre === 'number' ? data.ordre : 0,
+        lien: data.lien || '',
+        instagram: data.instagram || '',
+        instagramFeatured: data.instagramFeatured || '',
       }
     })
   },
-  ['chineuses-lite-v2'],
+  ['chineuses-lite-v3'],
   { revalidate: 3600 }
 )
