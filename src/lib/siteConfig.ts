@@ -247,10 +247,10 @@ export function useFilteredProducts(pageId: string, opts?: { skip?: boolean }) {
   const skip = !!opts?.skip
 
   useEffect(() => {
-    // Stratégie : premier batch rapide (150 docs) pour afficher la page tout de suite,
-    // puis on continue à charger le reste du catalogue en background par batches de 300.
-    // Pendant le background, loadingMore=true → le "Chargement…" reste visible en bas
-    // et la recherche/filtres voient les nouveaux produits apparaître dynamiquement.
+    // Fetch la liste filtrée depuis /api/page-produits (cache Vercel 6h, servi
+    // depuis les caches serveur mutualisés getAllProduitsCached + getChineusesLiteCached).
+    // Avant : ~1500 reads Firestore CLIENT par visite (batches 300 + vendus 1000 + chineuses).
+    // Maintenant : 0 read Firestore par visite, tout est en mémoire côté serveur.
     if (skip) {
       setProduits([])
       setLoading(false)
@@ -262,30 +262,25 @@ export function useFilteredProducts(pageId: string, opts?: { skip?: boolean }) {
     setLoading(true)
     setLoadingMore(false)
 
-    const loadAll = async () => {
-      const first = await getFilteredProducts(pageId, { limitCount: 150 })
-      if (cancelled) return
-      setProduits(first.produits)
-      setLoading(false)
-
-      if (!first.hasMore) return
-
-      setLoadingMore(true)
-      let lastDoc = first.lastDoc
-      let hasMore: boolean = first.hasMore
-      while (hasMore && !cancelled) {
-        const next = await getFilteredProducts(pageId, { lastDoc, limitCount: 300 })
+    fetch(`/api/page-produits?pageId=${encodeURIComponent(pageId)}`)
+      .then(r => (r.ok ? r.json() : { produits: [] }))
+      .then((data: { produits?: Produit[] }) => {
         if (cancelled) return
-        setProduits(prev => [...prev, ...next.produits])
-        lastDoc = next.lastDoc
-        hasMore = next.hasMore
-      }
-      if (!cancelled) setLoadingMore(false)
+        setProduits(Array.isArray(data.produits) ? data.produits : [])
+        setLoading(false)
+        setLoadingMore(false)
+      })
+      .catch(err => {
+        console.error('[useFilteredProducts] fetch failed:', err)
+        if (!cancelled) {
+          setLoading(false)
+          setLoadingMore(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
     }
-
-    loadAll().catch(console.error)
-
-    return () => { cancelled = true }
   }, [pageId, skip])
 
   return { produits, loading, loadingMore }
