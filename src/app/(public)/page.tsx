@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import BoutiqueListing from '@/components/BoutiqueListing'
-import { getInitialProduitsForPage } from '@/lib/produitsServer'
+import { getCoupsDeCoeurServer } from '@/lib/produitsServer'
 import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/lib/cloudinary'
 
 export const revalidate = 3600
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const initialProduits = await getInitialProduitsForPage('ete', 50)
+  const initialProduits = await getCoupsDeCoeurServer(50)
   // Précharge les 4 premières vignettes dans le <head> du HTML pour que le navigateur les télécharge
   // avant même de parser le corps de la page (React 19 hisse les <link> dans <head>).
   const preloadImages = initialProduits
@@ -50,9 +50,9 @@ export default async function HomePage() {
       ))}
       <BoutiqueListing
         initialProduits={initialProduits}
-        pageId="ete"
-        h1Fr="ÉTÉ"
-        h1En="SUMMER"
+        h1Fr="NOS PIÈCES PRÉFÉRÉES"
+        h1En="OUR FAVOURITES"
+        skipClientRefetch
       />
     </>
   )
