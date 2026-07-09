@@ -2,12 +2,9 @@
 
 import { useState, useEffect, useRef, ReactNode } from 'react'
 import Link from 'next/link'
-import { collection, query, where, getDocs } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
 import ProductGrid from '@/components/ProductGrid'
 import FavoriteButton from '@/components/FavoriteButton'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
-import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t } from '@/lib/i18n'
 
@@ -109,44 +106,38 @@ export default function IconiquesView({
 
     async function load() {
       try {
-        // 1) Iconiques (24 docs ~ instantané) → on libère le rendu dès que prêt.
-        const iconSnap = await getDocs(collection(db, 'iconiques'))
-        const data: Iconique[] = []
-        iconSnap.forEach((doc) => {
-          const docData = doc.data()
-          if (docData.displayOnWebsite === false) return
-          const docType = docData.type || 'vintage'
-          if (docType !== typeFilter) return
-          data.push({
-            id: doc.id,
-            nom: docData.nom || '',
-            nomEn: docData.nomEn || '',
-            slug: docData.slug || doc.id,
-            dateCreation: docData.dateCreation || '',
-            histoire: docData.histoire || '',
-            histoireEn: docData.histoireEn || '',
-            valeurNeuf: docData.valeurNeuf || 0,
-            tendancePrix: docData.tendancePrix || 'monte',
-            pourquoiMust: docData.pourquoiMust || '',
-            pourquoiMustEn: docData.pourquoiMustEn || '',
-            categorieRecherche: docData.categorieRecherche || '',
-            marque: docData.marque || '',
-            chineuseTrigrammes: docData.chineuseTrigrammes || [],
-            categoriesIn: docData.categoriesIn || [],
-            categoriesOrder: docData.categoriesOrder || [],
-            materialContient: docData.materialContient || '',
-            nomPluriel: docData.nomPluriel || '',
-            nomPlurielEn: docData.nomPlurielEn || '',
-            images: docData.images || [],
-            ordre: docData.ordre || 0,
-            soldOut: docData.soldOut === true,
-            buyLink: docData.buyLink || '',
-            videos: Array.isArray(docData.videos) ? docData.videos : [],
-            videosLabel: docData.videosLabel || '',
-            videosLabelEn: docData.videosLabelEn || '',
-          })
-        })
-        data.sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+        // 1) Iconiques via route API cachée 6h (au lieu d'un getDocs Firestore client).
+        const res = await fetch(`/api/iconiques-list?type=${encodeURIComponent(typeFilter)}`)
+        const json = res.ok ? await res.json() : { iconiques: [] }
+        const list: any[] = Array.isArray(json.iconiques) ? json.iconiques : []
+        const data: Iconique[] = list.map(docData => ({
+          id: docData.id,
+          nom: docData.nom || '',
+          nomEn: docData.nomEn || '',
+          slug: docData.slug || docData.id,
+          dateCreation: docData.dateCreation || '',
+          histoire: docData.histoire || '',
+          histoireEn: docData.histoireEn || '',
+          valeurNeuf: docData.valeurNeuf || 0,
+          tendancePrix: docData.tendancePrix || 'monte',
+          pourquoiMust: docData.pourquoiMust || '',
+          pourquoiMustEn: docData.pourquoiMustEn || '',
+          categorieRecherche: docData.categorieRecherche || '',
+          marque: docData.marque || '',
+          chineuseTrigrammes: docData.chineuseTrigrammes || [],
+          categoriesIn: docData.categoriesIn || [],
+          categoriesOrder: docData.categoriesOrder || [],
+          materialContient: docData.materialContient || '',
+          nomPluriel: docData.nomPluriel || '',
+          nomPlurielEn: docData.nomPlurielEn || '',
+          images: docData.images || [],
+          ordre: docData.ordre || 0,
+          soldOut: docData.soldOut === true,
+          buyLink: docData.buyLink || '',
+          videos: Array.isArray(docData.videos) ? docData.videos : [],
+          videosLabel: docData.videosLabel || '',
+          videosLabelEn: docData.videosLabelEn || '',
+        }))
         if (cancelled) return
         setIconiques(data)
         const initialIndices: { [key: string]: number } = {}
@@ -187,142 +178,16 @@ export default function IconiquesView({
 
     let cancelled = false
 
+    // Fetch via /api/iconique-produits (cache Vercel 6h, servi depuis les caches
+    // serveur getAllProduitsCached + getIconiquesCached). Remplace tous les
+    // getDocs Firestore client — 0 read par visite (avant : jusqu'à 3000 pour
+    // le slow path "luxe").
     async function fetchForCurrent() {
-      const norm = (s: string) =>
-        s.toLowerCase()
-          .normalize('NFD').replace(/[̀-ͯ]/g, '')
-          .replace(/['’\-_.\s]+/g, '')
-
-      const needleNom = norm(current.categorieRecherche || '')
-      const needleMarque = norm(current.marque || '')
-      const needleMarqueRaw = (current.marque || '').toLowerCase().trim()
-      const needleMaterial = norm(current.materialContient || '')
-      const trigs = (current.chineuseTrigrammes || []).map(t => t.toUpperCase())
-      const catsIn = (current.categoriesIn || []).map(c => norm(c))
-
-      if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0) {
-        setProduits(prev => ({ ...prev, [current.id]: [] }))
-        return
-      }
-
-      const matchPredicate = (p: any) => {
-        const nom = norm(p.nom || p.Nom || '')
-        const marque = norm(p.marque || '')
-        const cat = typeof p.categorie === 'object'
-          ? norm(p.categorie?.label || '')
-          : norm(p.categorie || '')
-        const material = norm(p.material || '')
-        const trigramme = (p.trigramme || '').toUpperCase()
-
-        if (needleNom && !nom.includes(needleNom) && !cat.includes(needleNom)) return false
-
-        if (needleMarque) {
-          if (needleMarqueRaw === 'luxe') {
-            if (!LUXURY_BRANDS.some(b => marque.includes(norm(b)))) return false
-          } else {
-            if (!marque.includes(needleMarque)) return false
-          }
-        }
-
-        if (trigs.length > 0 && !trigs.includes(trigramme)) return false
-        if (catsIn.length > 0 && !catsIn.some(c => cat.includes(c))) return false
-        if (needleMaterial && !material.includes(needleMaterial)) return false
-
-        return true
-      }
-
       try {
-        let activeRaw: any[] = []
-        let soldRaw: any[] = []
-
-        if (trigs.length > 0) {
-          // Fast path : filtre serveur par trigramme (batches de 30, limite Firestore `in`).
-          const batches: string[][] = []
-          for (let i = 0; i < trigs.length; i += 30) batches.push(trigs.slice(i, i + 30))
-
-          const [activeSnaps, soldSnaps] = await Promise.all([
-            Promise.all(batches.map(b => getDocs(query(
-              collection(db, 'produits'),
-              where('vendu', '==', false),
-              where('trigramme', 'in', b),
-            )))),
-            Promise.all(batches.map(b => getDocs(query(
-              collection(db, 'produits'),
-              where('vendu', '==', true),
-              where('trigramme', 'in', b),
-            )))),
-          ])
-          activeRaw = activeSnaps.flatMap(s => s.docs.map(d => ({ id: d.id, ...d.data() } as any)))
-          soldRaw = soldSnaps.flatMap(s => s.docs.map(d => ({ id: d.id, ...d.data() } as any)))
-        } else if (needleMarqueRaw && needleMarqueRaw !== 'luxe') {
-          // Iconique avec marque (Burberry, Chanel, Hermès, Levi's…) : filtre serveur par marque.
-          // Firestore est insensible : on tente la marque telle qu'écrite. Si la base contient des
-          // variantes de casse, le filtre client (matchPredicate) compense.
-          const [activeSnap, soldSnap] = await Promise.all([
-            getDocs(query(
-              collection(db, 'produits'),
-              where('vendu', '==', false),
-              where('marque', '==', current.marque),
-            )),
-            getDocs(query(
-              collection(db, 'produits'),
-              where('vendu', '==', true),
-              where('marque', '==', current.marque),
-            )),
-          ])
-          activeRaw = activeSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
-          soldRaw = soldSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
-        } else {
-          // Slow path : iconique "luxe" ou sans aucun filtre → on doit tout fetch.
-          const [activeSnap, soldSnap] = await Promise.all([
-            getDocs(query(collection(db, 'produits'), where('vendu', '==', false))),
-            getDocs(query(collection(db, 'produits'), where('vendu', '==', true))),
-          ])
-          activeRaw = activeSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
-          soldRaw = soldSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))
-        }
-
+        const res = await fetch(`/api/iconique-produits?id=${encodeURIComponent(current.id)}`)
+        const json = res.ok ? await res.json() : { produits: [] }
         if (cancelled) return
-
-        const matchedActive = activeRaw
-          .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
-          .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
-          .filter(p => (p.quantite ?? 1) > 0)
-          .filter(matchPredicate)
-
-        const matchedSold = soldRaw
-          .filter(p => p.statut !== 'retour' && p.statut !== 'supprime' && p.hidden !== true)
-          .filter(p => !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face))
-          .filter(matchPredicate)
-
-        let result: any[]
-        if (current.soldOut) {
-          matchedSold.sort((a, b) => {
-            const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()
-            const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()
-            return tb - ta
-          })
-          result = matchedSold.slice(0, 8)
-        } else {
-          if (current.categoriesOrder && current.categoriesOrder.length > 0) {
-            const order = current.categoriesOrder.map(c => norm(c))
-            const sortByOrder = (a: any, b: any) => {
-              const catA = typeof a.categorie === 'object' ? norm(a.categorie?.label || '') : norm(a.categorie || '')
-              const catB = typeof b.categorie === 'object' ? norm(b.categorie?.label || '') : norm(b.categorie || '')
-              const idxA = order.findIndex(o => catA.includes(o))
-              const idxB = order.findIndex(o => catB.includes(o))
-              const fa = idxA === -1 ? 999 : idxA
-              const fb = idxB === -1 ? 999 : idxB
-              return fa - fb
-            }
-            matchedActive.sort(sortByOrder)
-            matchedSold.sort(sortByOrder)
-          }
-          result = [...matchedActive, ...matchedSold]
-        }
-
-        if (cancelled) return
-        setProduits(prev => ({ ...prev, [current.id]: result }))
+        setProduits(prev => ({ ...prev, [current.id]: Array.isArray(json.produits) ? json.produits : [] }))
       } catch (err) {
         console.error('Erreur fetch produits iconique', current.id, err)
       }
