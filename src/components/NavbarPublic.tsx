@@ -92,7 +92,7 @@ export default function NavbarPublic() {
   // ce qui place le titre de la page en haut du viewport (la navbar passe au-dessus).
   const boutiqueLinks = [
     { href: '/ete#titre', label: t('ÉTÉ', 'SUMMER', lang) },
-    { href: '/sac', label: t('SACS HAUTE COUTURE ET JEUNES CRÉATRICES', 'HAUTE COUTURE & YOUNG DESIGNER BAGS', lang) },
+    { href: '/sac', label: t('SACS DESIGNER', 'DESIGNER BAGS', lang) },
     { href: '/luxe#titre', label: t('LE LUXE', 'LUXURY', lang) },
     { href: '/iconiques-upcy', label: t('NOS PIÈCES UPCY FAVORITES', 'FAVORITE UPCYCLED PIECES', lang) },
     { href: '/les-iconiques', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONICS', lang) },
