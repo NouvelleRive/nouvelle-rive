@@ -13,6 +13,7 @@ import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
+import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/lib/cloudinary'
 
 type ChineuseLite = {
   uid: string
@@ -94,27 +95,6 @@ interface ProductGridProps {
   videoTrigrammeWhitelist?: string[]
 }
 
-function getCloudinaryUrl(url: string, size: number = 500): string {
-  if (!url || !url.includes('cloudinary.com')) return url
-
-  const transformations = [
-    `w_${size}`,
-    `h_${size}`,
-    'c_fit',
-    'q_auto:good',
-    'f_auto',
-  ].join(',')
-
-  return url.replace('/upload/', `/upload/${transformations}/`)
-}
-
-// Sert 3 tailles pour laisser le navigateur choisir : mobile prend 400w, tablette 600w, desktop 800w.
-function getCloudinarySrcSet(url: string): string | undefined {
-  if (!url || !url.includes('cloudinary.com')) return undefined
-  return [400, 600, 800]
-    .map((w) => `${getCloudinaryUrl(url, w)} ${w}w`)
-    .join(', ')
-}
 
 export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist }: ProductGridProps) {
   const lang = useLang()
@@ -607,16 +587,15 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               className="block"
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
-              {/* bg-neutral-100 : fond gris clair instantané pendant que l'image arrive — pas d'écran blanc. */}
-              <div className="aspect-square bg-neutral-100 overflow-hidden relative">
+              <div className="aspect-square bg-white overflow-hidden relative">
               {produit.imageUrls?.[0] ? (
                 <>
                   <img
                     src={getCloudinaryUrl(produit.imageUrls[0])}
                     srcSet={getCloudinarySrcSet(produit.imageUrls[0])}
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
-                    width={500}
-                    height={500}
+                    sizes={CLOUDINARY_GRID_SIZES}
+                    width={400}
+                    height={400}
                     alt={produit.nom}
                     loading={isAboveFold ? 'eager' : 'lazy'}
                     fetchPriority={isAboveFold ? 'high' : 'auto'}
@@ -627,9 +606,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                     <img
                       src={getCloudinaryUrl(produit.imageUrls[1])}
                       srcSet={getCloudinarySrcSet(produit.imageUrls[1])}
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
-                      width={500}
-                      height={500}
+                      sizes={CLOUDINARY_GRID_SIZES}
+                      width={400}
+                      height={400}
                       alt={`${produit.nom} 2`}
                       loading="lazy"
                       decoding="async"
