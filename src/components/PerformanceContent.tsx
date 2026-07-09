@@ -337,6 +337,18 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     ? String(Math.round((panierMoyen - previousPanierMoyenProrata) / previousPanierMoyenProrata * 100))
     : null
 
+  // Marge nette NR : (prixVente − prixAchat) × 0.80. Ne compte que les ventes avec prixAchat renseigné.
+  const totalMargeNetteNR = useMemo(() => {
+    if (chineuseTrigramme !== 'NR') return 0
+    const margeBrute = ventesCurrentMonth.reduce((s, v) => {
+      const prixVente = (v as any).prixVenteReel || (v as any).prix || 0
+      const prixAchat = (v as any).prixAchat
+      if (typeof prixAchat !== 'number' || prixAchat <= 0) return s
+      return s + Math.max(prixVente - prixAchat, 0)
+    }, 0)
+    return Math.round(margeBrute * 0.80)
+  }, [ventesCurrentMonth, chineuseTrigramme])
+
   // CA par jour (admin only)
   const dailyData = useMemo(() => {
     if (!isAdmin) return []
@@ -804,12 +816,15 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       </div>
 
       {/* KPIs */}
-      <div className={`grid ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-3'} gap-3`}>
+      <div className={`grid ${(isAdmin || chineuseTrigramme === 'NR') ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-3'} gap-3`}>
         <KpiCard title="Chiffre d'affaires" value={formatPrix(totalCA)} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
         <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
         <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
         {isAdmin && (
           <KpiCard title="Marge" value={formatPrix(classementChineuses.reduce((s, c) => s + c.benef, 0))} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+        )}
+        {!isAdmin && chineuseTrigramme === 'NR' && (
+          <KpiCard title="Marge nette" value={formatPrix(totalMargeNetteNR)} unit="€" evolution={totalCA > 0 ? String(Math.round(totalMargeNetteNR / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         )}
       </div>
 
