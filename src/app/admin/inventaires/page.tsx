@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { db } from '@/lib/firebaseConfig'
+import { auth, db } from '@/lib/firebaseConfig'
 import {
   collection,
   query,
@@ -107,22 +107,40 @@ export default function AdminInventairesPage() {
     return () => unsubscribes.forEach((u) => u())
   }, [inventaires])
 
-  // Charger les produits
+  // Charger les produits via route admin cachée (au lieu d'onSnapshot sur toute
+  // la collection produits — évitait 1500 reads par montage).
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'produits'), (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
-      setProduits(data)
-    })
-    return () => unsub()
+    let cancelled = false
+    async function load() {
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        const res = await fetch('/api/admin/produits-full', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        const data = res.ok ? await res.json() : { produits: [] }
+        if (!cancelled) setProduits(Array.isArray(data.produits) ? data.produits : [])
+      } catch (err) {
+        console.error('[admin/inventaires] produits load:', err)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  // Charger les déposants
+  // Charger les déposants via /api/chineuses-lite (cache 1h).
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Deposant))
-      setDeposants(data)
-    })
-    return () => unsub()
+    let cancelled = false
+    fetch('/api/chineuses-lite')
+      .then(r => (r.ok ? r.json() : []))
+      .then((list: any[]) => {
+        if (!cancelled) setDeposants(Array.isArray(list) ? (list.map(c => ({ id: c.uid, ...c })) as Deposant[]) : [])
+      })
+      .catch(err => console.error('[admin/inventaires] chineuses:', err))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Inventaire en cours

@@ -7,7 +7,7 @@
     collection, getDocs, addDoc, updateDoc, deleteDoc, doc,
     serverTimestamp, getDoc, setDoc, Timestamp, onSnapshot, deleteField
   } from 'firebase/firestore'
-  import { db } from '@/lib/firebaseConfig'
+  import { auth, db } from '@/lib/firebaseConfig'
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
   import PlanningCalendar from '@/components/PlanningCalendar'
   import PointagesSection from '@/components/admin/PointagesSection'
@@ -149,21 +149,41 @@
       })()
     }, [monthKey])
 
-    // Charger les ventes
+    // Charger les ventes via /api/ventes (auth admin + limit 5000 + filtre 24
+    // derniers mois côté serveur). Remplace onSnapshot sur toute la collection
+    // ventes (potentiellement 10k+ docs par montage).
     useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'ventes'), (snap) => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProduitVente))
-      setVentesAll(list)
-    })
-    return () => unsub()
-  }, [])
+      let cancelled = false
+      async function load() {
+        try {
+          const token = await auth.currentUser?.getIdToken()
+          const res = await fetch('/api/ventes', {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          })
+          const data = res.ok ? await res.json() : { ventes: [] }
+          if (!cancelled) setVentesAll(Array.isArray(data.ventes) ? (data.ventes as ProduitVente[]) : [])
+        } catch (err) {
+          console.error('[admin/vendeuses] ventes load:', err)
+        }
+      }
+      load()
+      return () => {
+        cancelled = true
+      }
+    }, [])
 
-    // Charger les chineuses (pour connaître le taux de commission NR)
+    // Charger les chineuses via /api/chineuses-lite (cache 1h).
     useEffect(() => {
-      const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
-        setChineuses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Chineuse)))
-      })
-      return () => unsub()
+      let cancelled = false
+      fetch('/api/chineuses-lite')
+        .then(r => (r.ok ? r.json() : []))
+        .then((list: any[]) => {
+          if (!cancelled) setChineuses(Array.isArray(list) ? (list.map(c => ({ id: c.uid, ...c })) as Chineuse[]) : [])
+        })
+        .catch(err => console.error('[admin/vendeuses] chineuses:', err))
+      return () => {
+        cancelled = true
+      }
     }, [])
 
     // =====================

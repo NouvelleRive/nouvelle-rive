@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { db } from '@/lib/firebaseConfig'
+import { auth, db } from '@/lib/firebaseConfig'
 import {
   collection,
   onSnapshot,
@@ -71,19 +71,45 @@ export default function AdminPaiementsPage() {
     return result
   }, [])
 
+  // Fetch chineuses via route cachée (au lieu d'onSnapshot sur la collection).
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
-      setChineuses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Chineuse)))
-    })
-    return () => unsub()
+    let cancelled = false
+    fetch('/api/chineuses-lite')
+      .then(r => (r.ok ? r.json() : []))
+      .then((list: any[]) => {
+        if (cancelled) return
+        setChineuses(Array.isArray(list) ? list.map(c => ({ id: c.uid, ...c })) : [])
+      })
+      .catch(err => console.error('[admin/paiements] chineuses load:', err))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
+  // Fetch ventes via /api/ventes (auth admin + limit 5000 + filtre 24 derniers
+  // mois côté serveur). Remplace onSnapshot sur toute la collection ventes
+  // (potentiellement 10k+ docs par montage).
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'ventes'), (snap) => {
-      setVentes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Vente)))
-      setLoading(false)
-    })
-    return () => unsub()
+    let cancelled = false
+    async function load() {
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        const res = await fetch('/api/ventes', {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        const data = res.ok ? await res.json() : { ventes: [] }
+        if (cancelled) return
+        setVentes(Array.isArray(data.ventes) ? data.ventes : [])
+      } catch (err) {
+        console.error('[admin/paiements] ventes load:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {

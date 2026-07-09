@@ -2,8 +2,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { auth } from '@/lib/firebaseConfig'
 import ProductList, { Produit, Deposant } from '@/components/ProductList'
 import { useAdmin } from '@/lib/admin/context'
 
@@ -20,23 +19,34 @@ export default function NosProduits() {
     ))
   }, [])
 
+  // Fetch one-shot via route API cachée (au lieu d'onSnapshot sur toute la
+  // collection produits — évite 1500 reads par montage). La push notif à la
+  // vente prévient déjà la propriétaire d'un changement ; sinon elle refresh.
   useEffect(() => {
-    // Charger tous les produits
-    const unsubProduits = onSnapshot(collection(db, 'produits'), (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
-      setProduits(data)
-      setLoading(false)
-    })
-
-    // Charger les déposants/chineuses
-    const unsubDeposants = onSnapshot(collection(db, 'chineuses'), (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Deposant))
-      setDeposants(data)
-    })
-
+    let cancelled = false
+    async function load() {
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        const [prodRes, chRes] = await Promise.all([
+          fetch('/api/admin/produits-full', {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          }),
+          fetch('/api/chineuses-lite'),
+        ])
+        const prodData = prodRes.ok ? await prodRes.json() : { produits: [] }
+        const chList = chRes.ok ? await chRes.json() : []
+        if (cancelled) return
+        setProduits(Array.isArray(prodData.produits) ? prodData.produits : [])
+        setDeposants(Array.isArray(chList) ? chList : [])
+      } catch (err) {
+        console.error('[admin/nos-produits] load failed:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
     return () => {
-      unsubProduits()
-      unsubDeposants()
+      cancelled = true
     }
   }, [])
 
