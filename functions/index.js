@@ -776,7 +776,23 @@ function sitemapBuildPath(p) {
 // Helper : régénère le cache _meta/sitemap-cache. Appelé par pingEbaySync
 // (cron 60 min mutualisé — pas de cron dédié pour rester dans les 3 gratuits
 // Cloud Scheduler).
+// Perf : throttle à 6h (1500 produits × 24 scans/jour = 36k reads/jour évités,
+// le sitemap n'a pas besoin d'être plus frais que ça pour Google).
+const SITEMAP_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000
 async function regenSitemap() {
+  // Skip si la dernière regénération date de moins de 6h.
+  try {
+    const metaSnap = await db.doc('_meta/sitemap-cache').get()
+    const lastUpdatedAt = metaSnap.exists ? metaSnap.data()?.updatedAt : null
+    const lastMs = lastUpdatedAt?.toMillis?.() || 0
+    if (lastMs && Date.now() - lastMs < SITEMAP_MIN_INTERVAL_MS) {
+      console.log(`⏭️ Sitemap cache jeune (< 6h), skip`)
+      return
+    }
+  } catch (err) {
+    console.warn('⚠️ regenSitemap: check age failed, on regénère par sécurité', err?.message || err)
+  }
+
   const snap = await db.collection('produits')
     .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
     .get()
