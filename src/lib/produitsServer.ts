@@ -130,7 +130,7 @@ export async function getCoupsDeCoeurServer(limit: number = 50): Promise<Produit
       .limit(limit * 2)
       .get()
 
-    return snap.docs
+    const filtered = snap.docs
       .map(d => ({ id: d.id, raw: d.data() as any }))
       .filter(({ raw }) =>
         raw.statut !== 'supprime' &&
@@ -142,6 +142,26 @@ export async function getCoupsDeCoeurServer(limit: number = 50): Promise<Produit
         (raw.quantite ?? 1) > 0 &&
         (raw.imageUrls?.[0] || raw.imageUrl || raw.photos?.face)
       )
+
+    // À nombre de likes identique, on mélange au hasard (Fisher-Yates) plutôt que de garder
+    // l'ordre Firestore (createdAt-derived) — la page paraît trop figée sinon.
+    const byLikes = new Map<number, Array<{ id: string; raw: any }>>()
+    for (const p of filtered) {
+      const lc = p.raw.likesCount || 0
+      if (!byLikes.has(lc)) byLikes.set(lc, [])
+      byLikes.get(lc)!.push(p)
+    }
+    const shuffled: Array<{ id: string; raw: any }> = []
+    for (const lc of [...byLikes.keys()].sort((a, b) => b - a)) {
+      const group = byLikes.get(lc)!
+      for (let i = group.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[group[i], group[j]] = [group[j], group[i]]
+      }
+      shuffled.push(...group)
+    }
+
+    return shuffled
       .slice(0, limit)
       .map(({ id, raw }) => serialize(id, raw))
   } catch (err) {
