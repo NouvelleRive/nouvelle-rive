@@ -12,6 +12,8 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
+import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 import {
   publishToEbay,
   prepareProductForEbay,
@@ -111,13 +113,22 @@ export async function GET(req: NextRequest) {
   const configSnap = await adminDb.collection('siteConfig').doc('luxe').get()
   const config: LuxeConfig = configSnap.exists ? { regles: [], ...configSnap.data() } as LuxeConfig : { regles: [] }
 
-  const chineusesSnap = await adminDb.collection('chineuse').get()
-  const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({ uid: d.id, ...(d.data() as any) }))
+  // Caches mutualisés (1h) — mêmes données, 0 nouveau scan Firestore la plupart du temps.
+  const [chineusesLite, allProduits] = await Promise.all([
+    getChineusesLiteCached(),
+    getAllProduitsCached(),
+  ])
+  const chineuses: Chineuse[] = chineusesLite.map(c => ({
+    uid: c.uid,
+    nom: c.nom,
+    trigramme: c.trigramme,
+    email: c.email,
+    wearType: c.wearType,
+  }))
   const wearTypeByTri = new Map<string, string>()
   for (const c of chineuses) if (c.trigramme) wearTypeByTri.set(c.trigramme.toUpperCase(), c.wearType || 'womenswear')
 
-  const produitsSnap = await adminDb.collection('produits').get()
-  const produits = produitsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
+  const produits = allProduits.map(({ id, raw }) => ({ id, ...raw }))
 
   const toPublish: any[] = []
   const toRemove: any[] = []

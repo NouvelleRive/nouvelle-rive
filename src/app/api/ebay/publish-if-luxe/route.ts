@@ -6,6 +6,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 import {
   publishToEbay,
   prepareProductForEbay,
@@ -71,8 +72,14 @@ export async function POST(req: NextRequest) {
     const configSnap = await adminDb.collection('siteConfig').doc('luxe').get()
     const config: LuxeConfig = configSnap.exists ? { regles: [], ...(configSnap.data() as any) } : { regles: [] }
 
-    const chineusesSnap = await adminDb.collection('chineuse').get()
-    const chineuses: Chineuse[] = chineusesSnap.docs.map(d => ({ uid: d.id, ...(d.data() as any) }))
+    // Cache mutualisé (1h) — évite un scan chineuse par publication produit.
+    const chineusesLite = await getChineusesLiteCached()
+    const chineuses: Chineuse[] = chineusesLite.map(c => ({
+      uid: c.uid,
+      trigramme: c.trigramme,
+      email: c.email,
+      wearType: c.wearType,
+    }))
 
     if (!matchesLuxe(produit, config, chineuses)) {
       return NextResponse.json({ success: true, action: 'noop', reason: 'no-match-luxe' })

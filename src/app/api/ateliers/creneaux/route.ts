@@ -1,5 +1,6 @@
 // app/api/ateliers/creneaux/route.ts
 export const runtime = 'nodejs'
+export const revalidate = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
@@ -38,7 +39,9 @@ export async function GET(req: NextRequest) {
       return a.heure.localeCompare(b.heure)
     })
 
-    return NextResponse.json({ success: true, creneaux })
+    return NextResponse.json({ success: true, creneaux }, {
+      headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' },
+    })
   } catch (error: any) {
     console.error('Erreur GET créneaux:', error)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
