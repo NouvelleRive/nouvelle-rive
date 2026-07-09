@@ -4,7 +4,7 @@
   import { useState, useMemo, useRef, useEffect } from 'react'
   import { useRouter } from 'next/navigation'
   import { db, auth } from '@/lib/firebaseConfig'
-  import { doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore'
+  import { doc, updateDoc, deleteDoc, Timestamp, increment } from 'firebase/firestore'
   import {
     Search, X, Check, AlertTriangle, Package, PackageCheck,
     ImageIcon, Edit3, Filter, Camera, Upload
@@ -167,6 +167,8 @@
     // Popup "pièces à rendre ou prix à baisser ?" + "photos correctes ?" quand toutes les pièces chineuse en réception sont acceptées
     const [restockFiniChineuse, setRestockFiniChineuse] = useState<{ trigramme: string; nom: string } | null>(null)
     const [restockPhotoIndex, setRestockPhotoIndex] = useState(0)
+    const [restockShowGrid, setRestockShowGrid] = useState(false)
+    const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const router = useRouter()
     // Infinite scroll
@@ -1547,12 +1549,91 @@
             )
           }
 
+          // Phase C — grille finale : elle choisit ses pièces préférées → coups-de-coeur
+          if (restockShowGrid) {
+            const toggleFav = async (p: Produit) => {
+              if (favTogglingId) return
+              setFavTogglingId(p.id)
+              try {
+                const wasFav = (p as any).favoriEquipe === true
+                await updateDoc(doc(db, 'produits', p.id), {
+                  favoriEquipe: !wasFav,
+                  likesCount: increment(wasFav ? -1 : 1),
+                })
+                onProductUpdate?.()
+              } catch (err: any) {
+                console.error('Erreur toggle favori équipe:', err)
+                alert(err.message || 'Erreur favori')
+              } finally {
+                setFavTogglingId(null)
+              }
+            }
+            const closeAll = () => {
+              setRestockShowGrid(false)
+              setRestockFiniChineuse(null)
+              setRestockPhotoIndex(0)
+            }
+            return (
+              <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-2xl w-full p-5 max-h-[95vh] overflow-y-auto flex flex-col">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-[#22209C]">
+                        Tes pièces préférées de {restockFiniChineuse.nom} 💙
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Tape sur celles que tu adores — elles iront dans « Nos pièces préférées ».
+                      </p>
+                    </div>
+                    <button onClick={closeAll} className="text-gray-400 hover:text-gray-600" aria-label="Fermer">
+                      <X size={22} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {photosACheck.map((p) => {
+                      const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+                      const isFav = (p as any).favoriEquipe === true
+                      const busy = favTogglingId === p.id
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => toggleFav(p)}
+                          disabled={busy}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                            isFav ? 'border-[#22209C] ring-2 ring-[#22209C]/30' : 'border-gray-200 hover:border-gray-300'
+                          } ${busy ? 'opacity-60' : ''}`}
+                        >
+                          <img src={face} alt={p.nom} className="w-full h-full object-cover" />
+                          {isFav && (
+                            <span className="absolute top-1 right-1 bg-[#22209C] text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow">
+                              <Check size={14} />
+                            </span>
+                          )}
+                          <span className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] font-mono py-0.5 text-center">
+                            {p.sku}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={closeAll}
+                    className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                  >
+                    Terminer
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
           const idx = Math.min(restockPhotoIndex, photosACheck.length - 1)
           const current = photosACheck[idx]
           const currentFace = current.photos?.face || current.imageUrls?.[0] || current.imageUrl || ''
           const goNext = () => {
             if (idx + 1 >= photosACheck.length) {
-              setRestockFiniChineuse(null)
+              // Fin du carousel → passe à la grille "pièces préférées"
+              setRestockShowGrid(true)
               setRestockPhotoIndex(0)
             } else {
               setRestockPhotoIndex(idx + 1)
