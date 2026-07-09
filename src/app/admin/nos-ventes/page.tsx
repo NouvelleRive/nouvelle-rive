@@ -99,7 +99,10 @@ export default function AdminNosVentesPage() {
   const loadVentes = async () => {
     setLoadingVentes(true)
     try {
-      const res = await fetch('/api/ventes')
+      const token = await getAuthToken()
+      const res = await fetch('/api/ventes', {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
       const data = await res.json()
       if (data.success) {
         setVentes(data.ventes || [])

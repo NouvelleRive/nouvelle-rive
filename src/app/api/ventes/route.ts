@@ -24,6 +24,13 @@ async function isAdmin(req: NextRequest): Promise<boolean> {
 }
 
 // GET - Récupérer les ventes
+// Sécu : sans filtre (chineurUid/chineurEmail/trigramme), require token admin
+// (sinon leak : n'importe qui pourrait GET emails clients + montants).
+// Perf : limit 5000 + filtre date par défaut sur 24 derniers mois pour
+// borner le read count.
+const VENTES_MAX = 5000
+const VENTES_DEFAULT_MONTHS = 24
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
@@ -31,23 +38,38 @@ export async function GET(req: NextRequest) {
     const chineurEmail = searchParams.get('chineurEmail')
     const trigramme = searchParams.get('trigramme')
 
-    // D'abord déclarer la query par défaut
-    let query: FirebaseFirestore.Query = adminDb.collection('ventes')
-      .orderBy('dateVente', 'desc')
+    const hasFilter = !!(chineurUid || chineurEmail || trigramme)
+    if (!hasFilter) {
+      const ok = await isAdmin(req)
+      if (!ok) {
+        return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
+      }
+    }
 
-    // Ensuite filtrer si nécessaire
+    const seuilDate = new Date()
+    seuilDate.setMonth(seuilDate.getMonth() - VENTES_DEFAULT_MONTHS)
+    const seuilTs = Timestamp.fromDate(seuilDate)
+
+    let query: FirebaseFirestore.Query = adminDb.collection('ventes')
+      .where('dateVente', '>=', seuilTs)
+      .orderBy('dateVente', 'desc')
+      .limit(VENTES_MAX)
+
     if (trigramme) {
       query = adminDb.collection('ventes')
         .where('trigramme', '==', trigramme)
         .orderBy('dateVente', 'desc')
+        .limit(VENTES_MAX)
     } else if (chineurEmail) {
       query = adminDb.collection('ventes')
         .where('chineur', '==', chineurEmail)
         .orderBy('dateVente', 'desc')
+        .limit(VENTES_MAX)
     } else if (chineurUid) {
       query = adminDb.collection('ventes')
         .where('chineurUid', '==', chineurUid)
         .orderBy('dateVente', 'desc')
+        .limit(VENTES_MAX)
     }
 
     const snapshot = await query.get()
