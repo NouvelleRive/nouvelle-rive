@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import BoutiqueListing from '@/components/BoutiqueListing'
-import { getRecentProduitsServer } from '@/lib/produitsServer'
+import { getInitialProduitsForPage } from '@/lib/produitsServer'
 
 export const revalidate = 3600
 
@@ -27,6 +27,13 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const initialProduits = await getRecentProduitsServer(50)
-  return <BoutiqueListing initialProduits={initialProduits} />
+  const initialProduits = await getInitialProduitsForPage('ete', 50)
+  return (
+    <BoutiqueListing
+      initialProduits={initialProduits}
+      pageId="ete"
+      h1Fr="ÉTÉ"
+      h1En="SUMMER"
+    />
+  )
 }

@@ -91,7 +91,6 @@ export default function NavbarPublic() {
   // Le navigateur (et Next.js) scrollent automatiquement à cet ancrage à l'arrivée,
   // ce qui place le titre de la page en haut du viewport (la navbar passe au-dessus).
   const boutiqueLinks = [
-    { href: '/', label: t('TOUT VOIR', 'SEE ALL', lang) },
     { href: '/nous-rencontrer#titre', label: t('IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES', 'IRL: OUR BOUTIQUE — 8 RUE DES ECOUFFES', lang) },
     { href: '/ete#titre', label: t('ÉTÉ', 'SUMMER', lang) },
     { href: '/soiree#titre', label: t('SOIRÉE', 'EVENING', lang) },
@@ -105,6 +104,7 @@ export default function NavbarPublic() {
     { href: '/homme#titre', label: t('(PLUTÔT) HOMME', '(SO-CALLED) MEN', lang) },
     { href: '/accessoires#titre', label: t('ACCESSOIRES', 'ACCESSORIES', lang) },
     { href: '/ateliers#titre', label: t('ATELIER BIJOU UPCYCLÉ AVEC UNE DESIGNEUSE', 'UPCYCLED JEWELRY WORKSHOP WITH A DESIGNER', lang) },
+    { href: '/boutique', label: t('TOUT VOIR', 'SEE ALL', lang) },
   ]
 
   const cartLabel = t('PANIER', 'CART', lang)

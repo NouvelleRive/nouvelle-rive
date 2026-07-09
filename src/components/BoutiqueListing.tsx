@@ -7,8 +7,20 @@ import CountdownPromo from '@/components/CountdownPromo'
 import { useLang, t } from '@/lib/i18n'
 import type { ProduitInitial } from '@/lib/produitsServer'
 
-export default function BoutiqueListing({ initialProduits = [] }: { initialProduits?: ProduitInitial[] }) {
-  const { produits, loadingMore } = useFilteredProducts('new-in')
+type BoutiqueListingProps = {
+  initialProduits?: ProduitInitial[]
+  pageId?: string
+  h1Fr?: string
+  h1En?: string
+}
+
+export default function BoutiqueListing({
+  initialProduits = [],
+  pageId = 'new-in',
+  h1Fr,
+  h1En,
+}: BoutiqueListingProps) {
+  const { produits, loadingMore } = useFilteredProducts(pageId)
   const [nombreAchats, setNombreAchats] = useState(0)
   const lang = useLang()
 
@@ -22,7 +34,26 @@ export default function BoutiqueListing({ initialProduits = [] }: { initialProdu
   const displayProduits = (produits.length > 0 ? produits : initialProduits) as any
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+      {h1Fr && h1En && (
+        <>
+          <div className="px-6 py-20">
+            <h1
+              id="titre"
+              style={{
+                fontSize: 'clamp(40px, 8vw, 120px)',
+                fontWeight: 700,
+                letterSpacing: '-0.03em',
+                lineHeight: 0.9,
+                textTransform: 'uppercase',
+              }}
+            >
+              {t(h1Fr, h1En, lang)}
+            </h1>
+          </div>
+          <div className="w-full border-t border-black" />
+        </>
+      )}
       <ProductGrid produits={displayProduits} columns={3} />
 
       {loadingMore && (
