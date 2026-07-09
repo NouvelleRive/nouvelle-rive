@@ -170,6 +170,7 @@
     const [restockShowGrid, setRestockShowGrid] = useState(false)
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
+    const [igPublishingId, setIgPublishingId] = useState<string | null>(null)
     const router = useRouter()
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
@@ -1573,6 +1574,47 @@
               setRestockFiniChineuse(null)
               setRestockPhotoIndex(0)
             }
+            const favoriteProducts = photosACheck.filter(p => (p as any).favoriEquipe === true)
+            const publishAllFavorites = async () => {
+              if (igPublishingId || favoriteProducts.length === 0) return
+              const igOk: string[] = []
+              const fbOk: string[] = []
+              const failures: string[] = []
+              for (const p of favoriteProducts) {
+                setIgPublishingId(p.id)
+                try {
+                  const igRes = await fetch('/api/instagram/publish-story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: p.id }),
+                  })
+                  const igData = await igRes.json()
+                  if (igData.success) igOk.push(p.sku || p.id)
+                  else failures.push(`${p.sku}: IG ${igData.error || 'erreur'}`)
+
+                  const fbRes = await fetch('/api/facebook/publish-post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: p.id }),
+                  })
+                  const fbData = await fbRes.json()
+                  if (fbData.success) fbOk.push(p.sku || p.id)
+                  else failures.push(`${p.sku}: FB ${fbData.error || 'erreur'}`)
+                } catch (err: any) {
+                  failures.push(`${p.sku}: ${err?.message || 'erreur réseau'}`)
+                }
+              }
+              setIgPublishingId(null)
+              onProductUpdate?.()
+              const lines = [
+                `${igOk.length}/${favoriteProducts.length} stories IG publiées ✅`,
+                `${fbOk.length}/${favoriteProducts.length} posts FB publiés ✅`,
+                favoriteProducts.length > 0 && '\nPense à ajouter le sticker "Lien" sur chaque story IG si tu veux qu\'elle soit cliquable.',
+                failures.length > 0 && `\nErreurs :\n${failures.join('\n')}`,
+              ].filter(Boolean).join('\n')
+              alert(lines)
+              closeAll()
+            }
             return (
               <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl max-w-2xl w-full p-5 max-h-[95vh] overflow-y-auto flex flex-col">
@@ -1616,11 +1658,23 @@
                       )
                     })}
                   </div>
+                  {favoriteProducts.length > 0 && (
+                    <button
+                      onClick={publishAllFavorites}
+                      disabled={!!igPublishingId}
+                      className="w-full mb-2 px-4 py-2.5 bg-gradient-to-r from-[#E1306C] to-[#833AB4] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                    >
+                      {igPublishingId
+                        ? `Publication en cours…`
+                        : `Publier ${favoriteProducts.length} pièce${favoriteProducts.length > 1 ? 's' : ''} sur IG story + FB`}
+                    </button>
+                  )}
                   <button
                     onClick={closeAll}
-                    className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                    disabled={!!igPublishingId}
+                    className="w-full px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Terminer
+                    Terminer sans publier
                   </button>
                 </div>
               </div>
