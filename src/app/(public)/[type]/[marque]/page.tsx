@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import ProductGrid from '@/components/ProductGrid'
 import { getTypeSlug, getMarqueSlug, SANS_MARQUE } from '@/lib/produitSlug'
@@ -41,7 +42,10 @@ function getDateVenteMs(raw: any): number | null {
   return null
 }
 
-async function getProduitsByTypeMarque(type: string, marque: string) {
+// `cache()` de React dédup le fetch dans un même request : generateMetadata et
+// TypeMarquePage appellent tous les deux getProduitsByTypeMarque — sans ce wrap,
+// 2 passes de filter sur toute la collection pour une même visite.
+const getProduitsByTypeMarque = cache(async (type: string, marque: string) => {
   try {
     const all = await getAllProduitsCached()
     const seuilVendu = Date.now() - TROIS_SEMAINES_MS
@@ -68,7 +72,7 @@ async function getProduitsByTypeMarque(type: string, marque: string) {
     console.error('[(public)/[type]/[marque]] getProduitsByTypeMarque error:', err)
     return { produits: [], marqueLabel: '' }
   }
-}
+})
 
 type Params = Promise<{ type: string; marque: string }>
 

@@ -6,6 +6,6 @@ export const getAllProduitsCached = unstable_cache(
     const snap = await adminDb.collection('produits').get()
     return snap.docs.map(d => ({ id: d.id, raw: d.data() as any }))
   },
-  ['all-produits-raw'],
-  { revalidate: 3600 }
+  ['all-produits-raw-v2'],
+  { revalidate: 21600 }
 )
