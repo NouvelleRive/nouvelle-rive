@@ -10,8 +10,17 @@ import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 
 export async function GET() {
   try {
-    const list = await getChineusesLiteCached()
-    return NextResponse.json(list, {
+    const full = await getChineusesLiteCached()
+    // Strip les champs privés (authUid, descriptions…) avant exposition publique.
+    const publicList = full.map(c => ({
+      uid: c.uid,
+      slug: c.slug,
+      trigramme: c.trigramme,
+      email: c.email,
+      emails: c.emails,
+      videos: c.videos,
+    }))
+    return NextResponse.json(publicList, {
       headers: {
         'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       },

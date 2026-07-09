@@ -1,20 +1,21 @@
 import type { Metadata } from 'next'
-import { adminDb } from '@/lib/firebaseAdmin'
+import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
-export const revalidate = 300
+export const revalidate = 3600
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
 
   try {
-    const snap = await adminDb.collection('chineuse').doc(id).get()
-    if (!snap.exists) {
+    // Résolution en mémoire depuis le cache mutualisé — 0 read Firestore par visite.
+    const chineuses = await getChineusesLiteCached()
+    const data = chineuses.find(c => c.uid === id || c.slug === id)
+    if (!data) {
       return { title: 'Créatrice introuvable', robots: { index: false } }
     }
 
-    const data = snap.data() as any
     const nom = (data.nom || id).trim()
     const accroche = (data.accroche || '').trim()
     const description = (data.description || '').trim()

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import { cache } from 'react'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 import ProduitClient, { type Produit, type ChineuseInfo } from '../../../boutique/[id]/ProduitClient'
 import {
   SEUIL_LIVRAISON_OFFERTE,
@@ -71,7 +73,9 @@ async function fetchDoc(id: string) {
   return snap.exists ? snap : null
 }
 
-async function getProduit(id: string): Promise<ProduitDoc | null> {
+// `cache()` de React dédup le fetch dans un même request : generateMetadata et
+// ProduitPage appellent tous les deux getProduit(id) — sans ce wrap, 2 reads Firestore.
+const getProduit = cache(async (id: string): Promise<ProduitDoc | null> => {
   try {
     let snap = await fetchDoc(id)
     // SKU-format ids are uppercase in Firestore — retry uppercase if direct lookup miss
@@ -110,29 +114,28 @@ async function getProduit(id: string): Promise<ProduitDoc | null> {
     console.error('[(public)/[type]/[marque]/[slug]] getProduit error:', err)
     return null
   }
-}
+})
 
 async function getChineuseInfo(produit: ProduitDoc): Promise<ChineuseInfo | null> {
   try {
-    let chDoc: FirebaseFirestore.DocumentSnapshot | null = null
+    // Résolution en mémoire depuis le cache mutualisé (1h) — 0 read Firestore par visite.
+    // Remplace 3 requêtes where().limit(1).get() qui coûtaient jusqu'à 3 reads par produit visité.
+    const chineuses = await getChineusesLiteCached()
+    let ch: (typeof chineuses)[number] | undefined
 
     const catRaw = typeof produit.categorie === 'string' ? produit.categorie : (produit.categorie?.label || '')
     const triMatch = catRaw.match(/^([A-Z]{2,10})\s*[-–]/)
     if (triMatch) {
-      const snap = await adminDb.collection('chineuse').where('trigramme', '==', triMatch[1]).limit(1).get()
-      if (!snap.empty) chDoc = snap.docs[0]
+      ch = chineuses.find(c => c.trigramme === triMatch[1])
     }
-    if (!chDoc && produit.chineurUid) {
-      const snap = await adminDb.collection('chineuse').where('authUid', '==', produit.chineurUid).limit(1).get()
-      if (!snap.empty) chDoc = snap.docs[0]
+    if (!ch && produit.chineurUid) {
+      ch = chineuses.find(c => c.authUid === produit.chineurUid)
     }
-    if (!chDoc && produit.chineur) {
-      const snap = await adminDb.collection('chineuse').where('email', '==', produit.chineur).limit(1).get()
-      if (!snap.empty) chDoc = snap.docs[0]
+    if (!ch && produit.chineur) {
+      ch = chineuses.find(c => c.email === produit.chineur || c.emails?.includes(produit.chineur!))
     }
-    if (!chDoc) return null
+    if (!ch) return null
 
-    const ch = chDoc.data() as any
     return {
       accroche: ch.accroche,
       accrocheEn: ch.accrocheEn,

@@ -13,6 +13,17 @@ export type ChineuseLite = {
   email: string
   emails: string[]
   videos: string[]
+  // Champs additionnels pour SSR fiches produit (privés — ne pas exposer via route publique).
+  nom?: string
+  accroche?: string
+  accrocheEn?: string
+  description?: string
+  descriptionEn?: string
+  texteEcoCirculaire?: number
+  stockType?: string
+  authUid?: string
+  imageUrl?: string
+  specialite?: string
 }
 
 export const getChineusesLiteCached = unstable_cache(
@@ -30,9 +41,19 @@ export const getChineusesLiteCached = unstable_cache(
         email: data.email || '',
         emails: Array.isArray(data.emails) ? data.emails : [],
         videos,
+        nom: data.nom || '',
+        accroche: data.accroche || '',
+        accrocheEn: data.accrocheEn || '',
+        description: data.description || '',
+        descriptionEn: data.descriptionEn || '',
+        texteEcoCirculaire: typeof data.texteEcoCirculaire === 'number' ? data.texteEcoCirculaire : 1,
+        stockType: data.stockType || 'unique',
+        authUid: data.authUid || '',
+        imageUrl: data.imageUrl || '',
+        specialite: data.specialite || '',
       }
     })
   },
-  ['chineuses-lite-v1'],
+  ['chineuses-lite-v2'],
   { revalidate: 3600 }
 )
