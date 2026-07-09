@@ -11,6 +11,7 @@ import { Client, Environment } from 'square'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { sendPushToOwner } from '@/lib/webpush'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
+import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 
 // Initialiser Firebase Admin
 if (!getApps().length) {
@@ -209,13 +210,10 @@ export async function POST(request: Request) {
             || await resolveTrigrammeFromSku(adminDb, produitData.sku)
           let isSmallBatch = false
           if (tri) {
-            const chineuseSnap = await adminDb.collection('chineuse')
-              .where('trigramme', '==', tri)
-              .limit(1)
-              .get()
-            if (!chineuseSnap.empty) {
-              isSmallBatch = chineuseSnap.docs[0].data().stockType === 'smallBatch'
-            }
+            // Cache mémoire — évite un read Firestore par vente POS.
+            const chineuses = await getChineusesLiteCached()
+            const chineuse = chineuses.find(c => c.trigramme === tri)
+            isSmallBatch = chineuse?.stockType === 'smallBatch'
           }
 
           if (isSmallBatch) {
