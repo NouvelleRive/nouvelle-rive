@@ -94,9 +94,9 @@ interface ProductGridProps {
   videoTrigrammeWhitelist?: string[]
 }
 
-function getCloudinaryUrl(url: string, size: number = 800): string {
+function getCloudinaryUrl(url: string, size: number = 500): string {
   if (!url || !url.includes('cloudinary.com')) return url
-  
+
   const transformations = [
     `w_${size}`,
     `h_${size}`,
@@ -104,8 +104,16 @@ function getCloudinaryUrl(url: string, size: number = 800): string {
     'q_auto:good',
     'f_auto',
   ].join(',')
-  
+
   return url.replace('/upload/', `/upload/${transformations}/`)
+}
+
+// Sert 3 tailles pour laisser le navigateur choisir : mobile prend 400w, tablette 600w, desktop 800w.
+function getCloudinarySrcSet(url: string): string | undefined {
+  if (!url || !url.includes('cloudinary.com')) return undefined
+  return [400, 600, 800]
+    .map((w) => `${getCloudinaryUrl(url, w)} ${w}w`)
+    .join(', ')
 }
 
 export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist }: ProductGridProps) {
@@ -540,7 +548,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
       {/* Grille produits */}
       <div className={`grid ${gridCols[columns]}`} style={{ borderLeft: '1px solid #000' }}>
-        {displayItems.map((item) => {
+        {displayItems.map((item, itemIndex) => {
+          // Les 6 premières vignettes sont chargées en priorité haute (au-dessus de la ligne de flottaison
+          // sur mobile 2-col et desktop 3-col) ; le reste passe en lazy pour économiser la bande passante.
+          const isAboveFold = itemIndex < 6
           if (item.type === 'video') {
             const mobileSpanCls = item.mobileSpan === 1 ? 'col-span-1' : 'col-span-2'
             return (
@@ -596,19 +607,29 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               className="block"
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
-              <div className="aspect-square bg-white overflow-hidden relative">
+              {/* bg-neutral-100 : fond gris clair instantané pendant que l'image arrive — pas d'écran blanc. */}
+              <div className="aspect-square bg-neutral-100 overflow-hidden relative">
               {produit.imageUrls?.[0] ? (
                 <>
                   <img
                     src={getCloudinaryUrl(produit.imageUrls[0])}
+                    srcSet={getCloudinarySrcSet(produit.imageUrls[0])}
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                    width={500}
+                    height={500}
                     alt={produit.nom}
-                    loading="lazy"
+                    loading={isAboveFold ? 'eager' : 'lazy'}
+                    fetchPriority={isAboveFold ? 'high' : 'auto'}
                     decoding="async"
                     className={`w-full h-full object-cover transition duration-500 ${produit.vendu ? 'opacity-50' : ''} ${produit.imageUrls[1] ? 'group-hover:opacity-0' : 'group-hover:scale-105'}`}
                   />
                   {produit.imageUrls[1] && (
                     <img
                       src={getCloudinaryUrl(produit.imageUrls[1])}
+                      srcSet={getCloudinarySrcSet(produit.imageUrls[1])}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 400px"
+                      width={500}
+                      height={500}
                       alt={`${produit.nom} 2`}
                       loading="lazy"
                       decoding="async"
