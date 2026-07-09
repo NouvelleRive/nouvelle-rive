@@ -343,7 +343,7 @@ export async function GET(req: NextRequest) {
         await resend.emails.send({
           from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
           to: dep.email,
-          bcc: 'nouvelleriveparis@gmail.com',
+          cc: 'nouvelleriveparis@gmail.com',
           subject: `Rappel — votre dépôt demain à ${creneau} 💙`,
           html: `
             <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
@@ -428,7 +428,7 @@ export async function GET(req: NextRequest) {
           await resend.emails.send({
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: emails,
-            bcc: 'nouvelleriveparis@gmail.com',
+            cc: 'nouvelleriveparis@gmail.com',
             subject: `Rappel — ton restock demain à ${creneau} 💙`,
             html: `
               <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
@@ -644,7 +644,7 @@ export async function GET(req: NextRequest) {
           await resend.emails.send({
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: emails,
-            bcc: 'nouvelleriveparis@gmail.com',
+            cc: 'nouvelleriveparis@gmail.com',
             subject,
             html,
           })
@@ -861,7 +861,7 @@ export async function GET(req: NextRequest) {
               await resend.emails.send({
                 from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
                 to: emails,
-                bcc: 'nouvelleriveparis@gmail.com',
+                cc: 'nouvelleriveparis@gmail.com',
                 subject: ventesCount > 0
                   ? `WOUAOU t'as vendu ${ventesCount} pièce${ventesCount > 1 ? 's' : ''}, time to restock 🌊`
                   : `Viens nous amener tes pépites ma vie 🌊`,
