@@ -5,6 +5,7 @@
 
 import { adminDb } from '@/lib/firebaseAdmin'
 import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
+import { getTypeSlug } from '@/lib/produitSlug'
 
 export type ProduitInitial = {
   id: string
@@ -175,6 +176,84 @@ export async function getInitialProduitsForPage(pageId: string, limit: number = 
     return matches
   } catch (err) {
     console.error('[produitsServer] getInitialProduitsForPage error:', err)
+    return []
+  }
+}
+
+// Page /sac : sacs qui matchent les règles LUXE (siteConfig/luxe) OU qui viennent d'une chineuse
+// "petite série" (stockType === 'smallBatch'). Filtre supplémentaire : categorie doit être "sac".
+export async function getSacsHauteCoutureProduits(limit: number = 50): Promise<ProduitInitial[]> {
+  try {
+    const [cfgSnap, prodSnap, chineusesList] = await Promise.all([
+      adminDb.collection('siteConfig').doc('luxe').get(),
+      adminDb.collection('produits').where('vendu', '==', false).orderBy('createdAt', 'desc').limit(600).get(),
+      getChineusesLiteCached(),
+    ])
+
+    const luxeCfg: PageConfig = cfgSnap.exists ? { regles: [], ...(cfgSnap.data() as any) } : { regles: [] }
+
+    const chineusesMap = new Map<string, { trigramme?: string; email?: string }>()
+    chineusesList.forEach((c) => chineusesMap.set(c.uid, { trigramme: c.trigramme, email: c.email }))
+
+    // Identifiants de reconnaissance des chineuses "petite série" — on matche sur uid, email ou
+    // trigramme préfixe SKU (même règle que matchCritere case 'chineuse').
+    const smallBatchUids = new Set<string>()
+    const smallBatchEmails = new Set<string>()
+    const smallBatchTrigrammes = new Set<string>()
+    for (const c of chineusesList) {
+      if (c.stockType === 'smallBatch') {
+        smallBatchUids.add(c.uid)
+        if (c.email) smallBatchEmails.add(c.email.toLowerCase())
+        if (c.trigramme) smallBatchTrigrammes.add(c.trigramme.toUpperCase())
+      }
+    }
+
+    const exclus = new Set(luxeCfg.produitsManquels || [])
+
+    const matches = prodSnap.docs
+      .map((d) => ({ id: d.id, raw: d.data() as any }))
+      .filter(({ id, raw }) => {
+        if (raw.statut === 'supprime' || raw.statut === 'retour') return false
+        if (raw.recu === false || raw.hidden === true) return false
+        if ((raw.quantite ?? 1) <= 0) return false
+        if (!raw.prix || raw.prix <= 0) return false
+        if (!(raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)) return false
+
+        // Restriction sac uniquement.
+        if (getTypeSlug(raw.categorie) !== 'sac') return false
+
+        // Union : match règles LUXE OU chineuse petite série.
+        const matchLuxe = (() => {
+          if (exclus.has(id)) return false
+          if (luxeCfg.prixMin && raw.prix < luxeCfg.prixMin) return false
+          if (luxeCfg.prixMax && raw.prix > luxeCfg.prixMax) return false
+          if (luxeCfg.regles.length === 0) return true
+          return luxeCfg.regles.some(
+            (r) => r.criteres.length > 0 && r.criteres.every((c) => matchCritere(raw, c, chineusesMap))
+          )
+        })()
+
+        if (matchLuxe) return true
+
+        // smallBatch : uid, email, ou trigramme préfixe SKU
+        if (raw.chineurUid && smallBatchUids.has(raw.chineurUid)) return true
+        if (raw.chineur && smallBatchEmails.has(String(raw.chineur).toLowerCase())) return true
+        const sku = (raw.sku || '').toUpperCase()
+        if (sku) {
+          for (const tri of smallBatchTrigrammes) {
+            if (sku.startsWith(tri) && (sku.length === tri.length || /\d/.test(sku[tri.length] || ''))) {
+              return true
+            }
+          }
+        }
+        return false
+      })
+      .slice(0, limit)
+      .map(({ id, raw }) => serialize(id, raw))
+
+    return matches
+  } catch (err) {
+    console.error('[produitsServer] getSacsHauteCoutureProduits error:', err)
     return []
   }
 }

@@ -12,6 +12,9 @@ type BoutiqueListingProps = {
   pageId?: string
   h1Fr?: string
   h1En?: string
+  /** true → on n'ré-appelle pas useFilteredProducts, on affiche uniquement initialProduits.
+   *  Utile pour les pages qui font un filtre custom SSR non représentable dans siteConfig. */
+  skipClientRefetch?: boolean
 }
 
 export default function BoutiqueListing({
@@ -19,8 +22,9 @@ export default function BoutiqueListing({
   pageId = 'new-in',
   h1Fr,
   h1En,
+  skipClientRefetch = false,
 }: BoutiqueListingProps) {
-  const { produits, loadingMore } = useFilteredProducts(pageId)
+  const { produits, loadingMore } = useFilteredProducts(pageId, { skip: skipClientRefetch })
   const [nombreAchats, setNombreAchats] = useState(0)
   const lang = useLang()
 
