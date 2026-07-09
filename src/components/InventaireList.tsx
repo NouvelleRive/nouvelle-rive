@@ -166,6 +166,8 @@
     const [bonDepotGenerating, setBonDepotGenerating] = useState(false)
     // Popup "pièces à rendre ou prix à baisser ?" + "photos correctes ?" quand toutes les pièces chineuse en réception sont acceptées
     const [restockFiniChineuse, setRestockFiniChineuse] = useState<{ trigramme: string; nom: string } | null>(null)
+    const [restockPhotoIndex, setRestockPhotoIndex] = useState(0)
+    const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const router = useRouter()
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
@@ -178,8 +180,28 @@
       return dep?.nom || email.split('@')[0]
     }
 
-    const deposantsUniques = Array.from(new Set(produits.map((p) => p.chineur).filter(Boolean)))
-      .sort((a, b) => getChineurName(a).localeCompare(getChineurName(b), 'fr'))
+    // Trigramme canonique d'un produit (depuis p.trigramme, fallback préfixe SKU)
+    const getTri = (p: Produit): string => {
+      if (p.trigramme) return p.trigramme.toUpperCase()
+      const m = p.sku?.match(/^[A-Za-z]+/)
+      return (m?.[0] || '').toUpperCase()
+    }
+
+    // Nom lisible d'une chineuse à partir de son trigramme
+    const getNomFromTri = (tri: string | undefined) => {
+      if (!tri) return '—'
+      const up = tri.toUpperCase()
+      const dep = deposants.find((d) => (d.trigramme || '').toUpperCase() === up)
+      if (dep?.nom) return dep.nom
+      // Fallback : un produit portant ce trigramme
+      const p = produits.find((pp) => getTri(pp) === up && pp.chineur)
+      if (p?.chineur) return getChineurName(p.chineur)
+      return up
+    }
+
+    // Filtre par chineuse = par trigramme (une chineuse peut avoir plusieurs emails)
+    const deposantsUniques = Array.from(new Set(produits.map(getTri).filter(Boolean)))
+      .sort((a, b) => getNomFromTri(a).localeCompare(getNomFromTri(b), 'fr'))
       const categoriesUniques = Array.from(
         new Set(
           produits
@@ -208,7 +230,7 @@
 
         const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
         if (filtreCategorie && cat !== filtreCategorie) return false
-        if (filtreDeposant && p.chineur !== filtreDeposant) return false
+        if (filtreDeposant && getTri(p) !== filtreDeposant) return false
 
         // Filtre par statut trouvé/non trouvé
         if (mode === 'inventaire' && filtreStatut !== 'tous') {
@@ -256,7 +278,9 @@
     const produitsParChineuse = useMemo(() => {
       const grouped: Record<string, Produit[]> = {}
       for (const p of produitsFiltres) {
-        const key = p.chineur || 'Sans chineuse'
+        // Regroupement par trigramme (canonique) : une chineuse = une clé,
+        // même si elle utilise plusieurs emails.
+        const key = getTri(p) || 'SANS-TRI'
         if (!grouped[key]) grouped[key] = []
         grouped[key].push(p)
       }
@@ -423,18 +447,20 @@
         }).catch(() => {})
         onProductUpdate?.()
 
-        // Si c'était la dernière pièce de cette chineuse à recevoir en mode réception :
-        // proposer de vérifier pièces à rendre / prix à baisser
-        if (mode === 'reception' && p.chineur) {
+        // Si c'était la dernière pièce de cette chineuse (trigramme) à recevoir
+        // en mode réception : proposer de vérifier pièces à rendre / prix à baisser
+        // NB : une chineuse peut avoir plusieurs emails → on regroupe par trigramme.
+        const tri = getTri(p)
+        if (mode === 'reception' && tri) {
           const remaining = produits.filter(o =>
             o.id !== p.id &&
-            o.chineur === p.chineur &&
+            getTri(o) === tri &&
             o.statut !== 'supprime' &&
             (((o as any).statutRestock === 'enAttente') || o.recu === false)
           )
           if (remaining.length === 0) {
-            const tri = (p.trigramme || p.sku?.match(/^[A-Za-z]+/)?.[0] || '').toUpperCase()
-            setRestockFiniChineuse({ trigramme: tri, nom: getChineurName(p.chineur) })
+            setRestockPhotoIndex(0)
+            setRestockFiniChineuse({ trigramme: tri, nom: getNomFromTri(tri) })
           }
         }
       } catch (err) {
@@ -1057,9 +1083,9 @@
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
               >
                 <option value="">Toutes chineuses</option>
-                {deposantsUniques.map((email, i) => (
-                  <option key={i} value={email}>
-                    {getChineurName(email).toUpperCase()}
+                {deposantsUniques.map((tri, i) => (
+                  <option key={i} value={tri}>
+                    {getNomFromTri(tri).toUpperCase()}{tri ? ` · ${tri}` : ''}
                   </option>
                 ))}
               </select>
@@ -1094,15 +1120,15 @@
         {produitsParChineuse ? (
           <div className="space-y-6">
             {Object.entries(produitsParChineuse)
-              .sort(([a], [b]) => getChineurName(a).localeCompare(getChineurName(b), 'fr'))
-              .map(([chineur, prods]) => {
+              .sort(([a], [b]) => getNomFromTri(a).localeCompare(getNomFromTri(b), 'fr'))
+              .map(([tri, prods]) => {
                 const chineuseNonTrouves = mode === 'inventaire' ? prods.filter(p => !isProductFound(p)).length : 0
                 const chineuseTrouves = mode === 'inventaire' ? prods.filter(p => isProductFound(p)).length : 0
 
                 return (
-                  <div key={chineur}>
+                  <div key={tri}>
                     <h2 className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-2">
-                      <span>{getChineurName(chineur)}</span>
+                      <span>{getNomFromTri(tri)}{tri && tri !== 'SANS-TRI' ? ` · ${tri}` : ''}</span>
                       {mode === 'inventaire' ? (
                         <>
                           <span className="text-xs font-normal text-gray-400">
@@ -1424,43 +1450,201 @@
           </div>
         )}
 
-        {/* Popup : restock chineuse fini */}
-        {restockFiniChineuse && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold mb-3 text-[#22209C]">
-                Bravo pr le restock beautey 🦾
-              </h3>
-              <p className="text-sm text-gray-700 mb-4">
-                On sait que c'est pas toujours gagné mdr 💙
-              </p>
-              <p className="text-sm font-medium text-gray-800 mb-2">As-tu bien vérifié que :</p>
-              <ul className="text-sm text-gray-700 mb-5 space-y-2 list-disc pl-5">
-                <li>il n'y a pas de pièces à rendre ou des prix à baisser ?</li>
-                <li>les photos sont correctes ?</li>
-              </ul>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setRestockFiniChineuse(null)}
-                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  Tout va bien
-                </button>
-                <button
-                  onClick={() => {
-                    const tri = restockFiniChineuse.trigramme
-                    setRestockFiniChineuse(null)
-                    if (tri) router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
-                    else router.push('/vendeuse/produits')
-                  }}
-                  className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
-                >
-                  Je vérifie
-                </button>
+        {/* Popup : restock chineuse fini — phase A (pièces à gérer) puis phase B (photos face à valider) */}
+        {restockFiniChineuse && (() => {
+          const tri = restockFiniChineuse.trigramme
+          const now = new Date()
+          const oneMonthAgo = new Date(now); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+          const twoMonthsAgo = new Date(now); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+          const pieces = produits.filter(p =>
+            getTri(p) === tri &&
+            p.statut !== 'supprime' && p.statut !== 'vendu' && p.statut !== 'retour' &&
+            p.vendu !== true
+          )
+          const aRecuperer = pieces.filter(p => {
+            if (p.statutRecuperation === 'aRecuperer') return true
+            const baisse = (p as any).prixBaisseLe?.toDate?.()
+            return baisse instanceof Date && baisse < oneMonthAgo
+          })
+          const prixABaisser = pieces.filter(p => {
+            if (p.statutRecuperation === 'aRecuperer') return false
+            const baisse = (p as any).prixBaisseLe?.toDate?.()
+            if (baisse instanceof Date) return false
+            const dr = (p as any).dateReception?.toDate?.()
+            return dr instanceof Date && dr < twoMonthsAgo
+          })
+          const aGerer = [
+            ...aRecuperer.map(p => ({ p, kind: 'red' as const })),
+            ...prixABaisser.map(p => ({ p, kind: 'orange' as const })),
+          ]
+
+          if (aGerer.length > 0) {
+            // Phase A — pièces à gérer
+            return (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+                  <h3 className="text-lg font-semibold mb-2 text-[#22209C]">
+                    Bravo pr le restock beautey 🦾
+                  </h3>
+                  <p className="text-sm text-gray-700 mb-4">
+                    Il faut encore gérer {aGerer.length} pièce{aGerer.length > 1 ? 's' : ''} de <strong>{restockFiniChineuse.nom}</strong> :
+                  </p>
+                  <ul className="text-sm text-gray-800 mb-5 space-y-1.5">
+                    {aGerer.map(({ p, kind }) => (
+                      <li key={p.id} className="flex items-center gap-2">
+                        <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${kind === 'red' ? 'bg-red-500' : 'bg-orange-400'}`} />
+                        <span className="font-mono text-xs text-gray-500">{p.sku}</span>
+                        <span className="truncate">{(p.nom || '').replace(`${p.sku || ''} - `, '')}</span>
+                        <span className="text-xs text-gray-400 ml-auto flex-shrink-0">
+                          {kind === 'red' ? 'à récupérer' : 'à baisser'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setRestockFiniChineuse(null)}
+                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      Plus tard
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRestockFiniChineuse(null)
+                        router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
+                      }}
+                      className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                    >
+                      Gérer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          // Phase B — défilement des photos face une par une
+          const photosACheck = pieces
+            .filter(p => (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
+            .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
+
+          if (photosACheck.length === 0) {
+            return (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-md w-full p-6">
+                  <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Tout est OK 💙</h3>
+                  <p className="text-sm text-gray-700 mb-5">
+                    Restock de <strong>{restockFiniChineuse.nom}</strong> terminé, aucune pièce à valider.
+                  </p>
+                  <button
+                    onClick={() => setRestockFiniChineuse(null)}
+                    className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          const idx = Math.min(restockPhotoIndex, photosACheck.length - 1)
+          const current = photosACheck[idx]
+          const currentFace = current.photos?.face || current.imageUrls?.[0] || current.imageUrl || ''
+          const goNext = () => {
+            if (idx + 1 >= photosACheck.length) {
+              setRestockFiniChineuse(null)
+              setRestockPhotoIndex(0)
+            } else {
+              setRestockPhotoIndex(idx + 1)
+            }
+          }
+          const genererPorte = async () => {
+            if (!currentFace) return
+            setGeneratingPorteId(current.id)
+            try {
+              const cat = typeof current.categorie === 'object' ? current.categorie?.label : current.categorie || ''
+              const res = await fetch('/api/generate-tryon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  imageUrl: currentFace,
+                  productName: current.nom,
+                  gender: 'female',
+                  categorie: cat,
+                  matiere: current.material || '',
+                  view: 'front',
+                  seed: Math.floor(Math.random() * 4294967295),
+                }),
+              })
+              const data = await res.json()
+              if (!data.success || !data.onModelUrl) throw new Error(data.error || 'Erreur génération')
+              const currentImages = getAllImages(current)
+              const newUrls = currentImages.includes(data.onModelUrl) ? currentImages : [...currentImages, data.onModelUrl]
+              await updateDoc(doc(db, 'produits', current.id), {
+                'photos.faceOnModel': data.onModelUrl,
+                imageUrls: newUrls,
+                imageUrl: newUrls[0],
+              })
+              onProductUpdate?.()
+            } catch (err: any) {
+              console.error('Erreur génération porté:', err)
+              alert(err.message || 'Erreur génération porté')
+            } finally {
+              setGeneratingPorteId(null)
+            }
+          }
+
+          return (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl max-w-lg w-full p-5 max-h-[95vh] overflow-y-auto flex flex-col">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-[#22209C]">
+                      Photos {restockFiniChineuse.nom} · {tri}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {idx + 1} / {photosACheck.length} · <span className="font-mono">{current.sku}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setRestockFiniChineuse(null); setRestockPhotoIndex(0) }}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Fermer"
+                  >
+                    <X size={22} />
+                  </button>
+                </div>
+                <img
+                  src={currentFace}
+                  alt={current.nom}
+                  className="w-full aspect-square object-contain bg-gray-50 rounded-lg mb-3"
+                />
+                <p className="text-sm text-gray-700 mb-3 truncate">{(current.nom || '').replace(`${current.sku || ''} - `, '')}</p>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => { openEditModal(current) }}
+                    className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50"
+                  >
+                    Pas OK
+                  </button>
+                  <button
+                    onClick={genererPorte}
+                    disabled={generatingPorteId === current.id}
+                    className="flex-1 px-3 py-2 border border-[#22209C]/30 text-[#22209C] rounded-lg text-sm hover:bg-[#22209C]/5 disabled:opacity-50"
+                  >
+                    {generatingPorteId === current.id ? 'Génération…' : 'Générer porté'}
+                  </button>
+                  <button
+                    onClick={goNext}
+                    className="flex-1 px-3 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                  >
+                    OK →
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Popup : toutes les pièces DEP de ce trigramme reçues → générer le bon de dépôt */}
         {bonDepotTrigramme && (
