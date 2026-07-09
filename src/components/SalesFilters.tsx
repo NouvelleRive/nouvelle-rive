@@ -368,10 +368,19 @@ export default function SalesFilters({
         })
       })
       const { pdfBase64: resultBase64 } = await res.json()
+      const byteChars = atob(resultBase64)
+      const bytes = new Uint8Array(byteChars.length)
+      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i)
+      const blob = new Blob([bytes], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = `data:application/pdf;base64,${resultBase64}`
+      link.href = url
       link.download = `facture_${ref}.pdf`
+      link.rel = 'noopener'
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (err) {
     console.error('Erreur Factur-X détaillée:', JSON.stringify(err))
     alert('Erreur Factur-X : ' + (err as Error).message)
