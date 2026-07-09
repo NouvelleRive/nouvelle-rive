@@ -337,17 +337,18 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     ? String(Math.round((panierMoyen - previousPanierMoyenProrata) / previousPanierMoyenProrata * 100))
     : null
 
-  // Marge nette NR : (prixVente − prixAchat) × 0.80. Ne compte que les ventes avec prixAchat renseigné.
+  // Marge nette NR : (prixVente − prixAchat) × 0.80. prixAchat est stocké sur le produit, pas sur la vente.
   const totalMargeNetteNR = useMemo(() => {
     if (chineuseTrigramme !== 'NR') return 0
     const margeBrute = ventesCurrentMonth.reduce((s, v) => {
       const prixVente = (v as any).prixVenteReel || (v as any).prix || 0
-      const prixAchat = (v as any).prixAchat
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const prixAchat = (v as any).prixAchat ?? (produit as any)?.prixAchat
       if (typeof prixAchat !== 'number' || prixAchat <= 0) return s
       return s + Math.max(prixVente - prixAchat, 0)
     }, 0)
     return Math.round(margeBrute * 0.80)
-  }, [ventesCurrentMonth, chineuseTrigramme])
+  }, [ventesCurrentMonth, chineuseTrigramme, produitsMap])
 
   // CA par jour (admin only)
   const dailyData = useMemo(() => {
@@ -410,7 +411,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       const tri = (v as any).trigramme || 'unknown'
       const current = map.get(tri) || { ca: 0, ventes: 0, margeBrute: 0 }
       const prixVente = (v as any).prixVenteReel || (v as any).prix || 0
-      const prixAchat = (v as any).prixAchat
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const prixAchat = (v as any).prixAchat ?? (produit as any)?.prixAchat
       // Marge brute ne compte que si prixAchat est explicitement renseigné (> 0).
       // Sinon on n'a pas l'info → contribution 0 (sinon on additionnerait le prix
       // de vente entier comme s'il était pure marge, ce qui est faux).
@@ -446,7 +448,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       })
       .filter(c => c.key !== 'unknown')
       .sort((a, b) => b.ca - a.ca)
-  }, [ventesCurrentMonth, deposants])
+  }, [ventesCurrentMonth, deposants, produitsMap])
 
   // Top catégories
   const topCategories = useMemo(() => {
