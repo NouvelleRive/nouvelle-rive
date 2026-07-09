@@ -4,6 +4,7 @@
 // la suite en arrière-plan après le premier paint pour ne pas plomber le LCP.
 
 import { adminDb } from '@/lib/firebaseAdmin'
+import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 
 export type ProduitInitial = {
   id: string
@@ -140,17 +141,16 @@ export async function getCoupsDeCoeurServer(limit: number = 50): Promise<Produit
 
 export async function getInitialProduitsForPage(pageId: string, limit: number = 50): Promise<ProduitInitial[]> {
   try {
-    const [cfgSnap, prodSnap, chSnap] = await Promise.all([
+    const [cfgSnap, prodSnap, chineusesList] = await Promise.all([
       adminDb.collection('siteConfig').doc(pageId).get(),
       adminDb.collection('produits').where('vendu', '==', false).orderBy('createdAt', 'desc').limit(400).get(),
-      adminDb.collection('chineuse').get(),
+      getChineusesLiteCached(),
     ])
 
     const config: PageConfig = cfgSnap.exists ? { regles: [], ...(cfgSnap.data() as any) } : { regles: [] }
     const chineuses = new Map<string, { trigramme?: string; email?: string }>()
-    chSnap.docs.forEach(d => {
-      const data = d.data() as any
-      chineuses.set(d.id, { trigramme: data.trigramme, email: data.email })
+    chineusesList.forEach(c => {
+      chineuses.set(c.uid, { trigramme: c.trigramme, email: c.email })
     })
 
     const exclus = new Set(config.produitsManquels || [])

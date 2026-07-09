@@ -3,8 +3,6 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
 import FavoriteButton from '@/components/FavoriteButton'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { COLOR_PALETTE } from '@/lib/couleurs'
@@ -146,24 +144,16 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   }, [])
 
   // Chineuses (avec leurs videos) — pour intercaler une vidéo toutes les 7 pièces.
+  // Fetch via /api/chineuses-lite (cache Vercel 1h) au lieu d'un getDocs Firestore
+  // direct à chaque montage : évite 1 scan collection chineuse par visite publique.
   const [chineuses, setChineuses] = useState<ChineuseLite[]>([])
   useEffect(() => {
     let alive = true
-    getDocs(collection(db, 'chineuse'))
-      .then(snap => {
+    fetch('/api/chineuses-lite')
+      .then(r => r.ok ? r.json() : [])
+      .then((list: ChineuseLite[]) => {
         if (!alive) return
-        const list: ChineuseLite[] = snap.docs.map(d => {
-          const data = d.data() as any
-          return {
-            uid: d.id,
-            slug: data.slug || d.id,
-            trigramme: (data.trigramme || '').toUpperCase(),
-            email: data.email || '',
-            emails: Array.isArray(data.emails) ? data.emails : [],
-            videos: Array.isArray(data.videos) ? data.videos.filter((u: any) => typeof u === 'string' && /\.mp4(\?|$)/i.test(u)) : [],
-          }
-        })
-        setChineuses(list)
+        if (Array.isArray(list)) setChineuses(list)
       })
       .catch(() => {})
     return () => { alive = false }
