@@ -83,11 +83,19 @@ export function parseVintedPage(rawText: string): VintedPageResult {
     if (slugMatch) titre = slugMatch[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   }
   if (!titre) {
-    // Heuristique : on cherche une ligne courte qui précède la ligne descriptive
-    // "S / 36 / 8 · Très bon état · Inconnu"
-    const descRe = /·.*·/
+    // Heuristique : ligne courte qui précède la ligne descriptive Vinted.
+    // Deux formes possibles :
+    //   "S / 36 / 8 · Très bon état · Inconnu" (2 séparateurs)
+    //   "Neuf sans étiquette · Vintage Dressing" (1 séparateur, pas de taille — bijoux)
+    const descRe = /^[^·]+·[^·]/
+    const NOISE = /^(Publicit[ée]|Vendu|Enlev[ée]\s*!|Dressing du membre|Articles similaires)$/i
     for (let i = 1; i < lines.length; i++) {
-      if (descRe.test(lines[i]) && lines[i - 1].length < 80) {
+      if (
+        descRe.test(lines[i]) &&
+        lines[i - 1].length < 120 &&
+        lines[i - 1].length > 3 &&
+        !NOISE.test(lines[i - 1])
+      ) {
         titre = lines[i - 1]
         break
       }

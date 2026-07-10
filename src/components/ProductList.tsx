@@ -339,13 +339,8 @@
       return produits.filter((p) => {
         if (p.statut === 'supprime') return false
         if (p.statut === 'retour') return false
-        // "À récupérer" = même règle que le badge rouge / cron reminders :
-        // statutRecuperation === 'aRecuperer' OU prix baissé il y a +1 mois.
-        const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-        const isARecuperer = p.statutRecuperation === 'aRecuperer'
-          || (p.prixBaisseLe instanceof Timestamp && p.prixBaisseLe.toDate() < oneMonthAgo)
         if (filtreARecuperer) {
-          if (!isARecuperer) return false
+          if (p.statutRecuperation !== 'aRecuperer') return false
         } else {
           if (p.statutRecuperation === 'aRecuperer') return false
         }
@@ -394,6 +389,7 @@
         // Prix baissé récent (<1 mois) — au-delà, la pièce est "à récupérer"
         if (filtrePrixBaisse) {
           if (!(p.prixBaisseLe instanceof Timestamp)) return false
+          const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
           if (p.prixBaisseLe.toDate() < oneMonthAgo) return false
         }
 
@@ -1323,7 +1319,11 @@
                         </span>
                       )
                     )}
-                    {getPriceBadgeStatus(p, chineusesList) === 'red' && (
+                    {p.statutRecuperation === 'aRecuperer' ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
+                        🚨 À récupérer
+                      </span>
+                    ) : getPriceBadgeStatus(p, chineusesList) === 'red' && (
                       <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
                         🚨 À récupérer – prix baissé il y a 1 mois+
                       </span>
@@ -1444,7 +1444,11 @@
     </span>
   )
 )}
-{getPriceBadgeStatus(p, chineusesList) === 'red' && (
+{p.statutRecuperation === 'aRecuperer' ? (
+  <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
+    🚨 À récupérer
+  </span>
+) : getPriceBadgeStatus(p, chineusesList) === 'red' && (
   <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
     🚨 À récupérer – prix baissé il y a 1 mois+
   </span>

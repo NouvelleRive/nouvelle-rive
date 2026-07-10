@@ -59,7 +59,18 @@ export async function POST(req: NextRequest) {
     const page = parseVintedPage(body)
     if (!page.ok) return NextResponse.json({ ok: false, reason: page.reason })
 
-    const categorieEntry = await detectCategorie(targetChineuseUid, page.titre || '')
+    // Fallback description : si le titre parsé est vide (page mal formatée),
+    // la description contient souvent le nom de la pièce → utile pour la catégorie.
+    const titreForCategorie = page.titre || page.description || ''
+    const categorieEntry = await detectCategorie(targetChineuseUid, titreForCategorie)
+
+    // Taille unique par défaut pour les bijoux : ils n'ont jamais de champ
+    // "Taille" sur Vinted → sans ça la modal refuse la création.
+    const bijouRe = /\b(collier|bague|bracelet|boucles?\s+d[.']?oreille|boucles?|broche|earcuff|charm|piercing|pendentif|sautoir)\b/i
+    const isBijou = bijouRe.test(titreForCategorie)
+    const tailleMappee = mapTailleVintedVersNR(page.taille || '')
+    const tailleFinale = tailleMappee || (isBijou ? 'Unique' : '')
+
     const cleaned = await cleanWithClaude({
       titre: page.titre || '',
       description: page.description || '',
@@ -74,15 +85,17 @@ export async function POST(req: NextRequest) {
         titre: cleaned.titre,
         titreOriginal: page.titre || '',
         marque: page.marque && page.marque.toLowerCase() !== 'inconnu' ? page.marque : '',
-        taille: mapTailleVintedVersNR(page.taille || ''),
+        taille: tailleFinale,
         tailleOriginale: page.taille || '',
         couleur: page.couleur || '',
         etat: page.etat || '',
         description: cleaned.description,
         descriptionOriginale: page.description || '',
         vendeur: page.vendeur || '',
-        prixAchat: page.prixAvecProtection ?? null,
-        prixSuggere: page.prixAvecProtection ? Math.round(page.prixAvecProtection * 2.5) : null,
+        prixAchat: page.prixAvecProtection ?? page.prixArticle ?? null,
+        prixSuggere: (page.prixAvecProtection ?? page.prixArticle)
+          ? Math.round((page.prixAvecProtection ?? page.prixArticle)! * 2.5)
+          : null,
         categorie: categorieEntry,
         achatOrderId: null, // pas connu côté page
       },
