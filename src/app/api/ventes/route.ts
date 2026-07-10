@@ -72,7 +72,9 @@ export async function GET(req: NextRequest) {
         .limit(VENTES_MAX)
     }
 
+    const t0 = Date.now()
     const snapshot = await query.get()
+    console.log(`[FS-SCAN] /api/ventes docs=${snapshot.docs.length} filter=${trigramme ? 'trigramme' : chineurEmail ? 'chineurEmail' : chineurUid ? 'chineurUid' : 'admin-full'} elapsed=${Date.now() - t0}ms`)
 
     const ventes = snapshot.docs.map(doc => {
       const d = doc.data()

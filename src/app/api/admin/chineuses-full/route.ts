@@ -1,17 +1,14 @@
-// app/api/admin/produits-full/route.ts
-// Retourne la liste complète des produits pour les pages admin
-// (nos-produits, inventaires). Auth admin OU chineuse (côté client, la page
-// admin est déjà protégée par middleware — on met l'auth ici pour pas exposer
-// les données stock/prix d'achat).
-//
-// Sert depuis getAllProduitsCached (cache 6h) — 0 read Firestore par appel.
+// app/api/admin/chineuses-full/route.ts
+// Liste chineuses avec champs privés (nom, iban, bic, raisonSociale, taux)
+// pour les 4 pages admin (paiements, vendeuses, nos-produits, inventaires).
+// Auth admin obligatoire. Sert depuis getChineusesFullCached (cache 1h).
 
 export const runtime = 'nodejs'
 export const revalidate = 3600
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebaseAdmin'
-import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
+import { getChineusesFullCached } from '@/lib/getChineusesFullCached'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -29,12 +26,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
     }
 
-    const t0 = Date.now()
-    const all = await getAllProduitsCached()
-    const produits = all.map(({ id, raw }) => ({ id, ...(raw as any) }))
-    console.log(`[FS-SCAN] /api/admin/produits-full produits=${produits.length} elapsed=${Date.now() - t0}ms`)
+    const chineuses = await getChineusesFullCached()
     return NextResponse.json(
-      { success: true, produits },
+      { success: true, chineuses },
       { headers: { 'Cache-Control': 'private, max-age=300' } },
     )
   } catch (e: any) {

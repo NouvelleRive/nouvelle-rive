@@ -27,17 +27,17 @@ export default function NosProduits() {
     async function load() {
       try {
         const token = await auth.currentUser?.getIdToken()
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined
         const [prodRes, chRes] = await Promise.all([
-          fetch('/api/admin/produits-full', {
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          }),
-          fetch('/api/chineuses-lite'),
+          fetch('/api/admin/produits-full', { headers }),
+          fetch('/api/admin/chineuses-full', { headers }),
         ])
         const prodData = prodRes.ok ? await prodRes.json() : { produits: [] }
-        const chList = chRes.ok ? await chRes.json() : []
+        const chData = chRes.ok ? await chRes.json() : { chineuses: [] }
         if (cancelled) return
         setProduits(Array.isArray(prodData.produits) ? prodData.produits : [])
-        setDeposants(Array.isArray(chList) ? chList : [])
+        const chList = Array.isArray(chData.chineuses) ? chData.chineuses : []
+        setDeposants(chList.map((c: any) => ({ id: c.uid, ...c })))
       } catch (err) {
         console.error('[admin/nos-produits] load failed:', err)
       } finally {

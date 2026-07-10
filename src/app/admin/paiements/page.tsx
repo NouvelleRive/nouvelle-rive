@@ -71,16 +71,23 @@ export default function AdminPaiementsPage() {
     return result
   }, [])
 
-  // Fetch chineuses via route cachée (au lieu d'onSnapshot sur la collection).
+  // Fetch chineuses via route admin cachée (inclut nom, iban, bic, raisonSociale,
+  // taux — nécessaires pour affichage + XML SEPA). /api/chineuses-lite strippait
+  // ces champs (route publique), d'où l'email affiché à la place du nom.
   useEffect(() => {
     let cancelled = false
-    fetch('/api/chineuses-lite')
-      .then(r => (r.ok ? r.json() : []))
-      .then((list: any[]) => {
-        if (cancelled) return
-        setChineuses(Array.isArray(list) ? list.map(c => ({ id: c.uid, ...c })) : [])
+    async function load() {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      const res = await fetch('/api/admin/chineuses-full', {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .catch(err => console.error('[admin/paiements] chineuses load:', err))
+      const data = res.ok ? await res.json() : { chineuses: [] }
+      if (cancelled) return
+      const list = Array.isArray(data.chineuses) ? data.chineuses : []
+      setChineuses(list.map((c: any) => ({ id: c.uid, ...c })))
+    }
+    load().catch(err => console.error('[admin/paiements] chineuses load:', err))
     return () => {
       cancelled = true
     }

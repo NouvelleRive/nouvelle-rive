@@ -38,7 +38,10 @@ export type IconiqueDoc = {
 
 export const getIconiquesCached = unstable_cache(
   async (): Promise<IconiqueDoc[]> => {
+    const t0 = Date.now()
     const snap = await adminDb.collection('iconiques').get()
+    const count = snap.docs.length
+    console.log(`[FS-SCAN] getIconiquesCached iconiques=${count} elapsed=${Date.now() - t0}ms`)
     return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
   },
   ['iconiques-v1'],

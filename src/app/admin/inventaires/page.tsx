@@ -129,15 +129,22 @@ export default function AdminInventairesPage() {
     }
   }, [])
 
-  // Charger les déposants via /api/chineuses-lite (cache 1h).
+  // Charger les déposants via /api/admin/chineuses-full (auth admin, cache 1h,
+  // inclut le champ `nom` — la route publique lite le strippe).
   useEffect(() => {
     let cancelled = false
-    fetch('/api/chineuses-lite')
-      .then(r => (r.ok ? r.json() : []))
-      .then((list: any[]) => {
-        if (!cancelled) setDeposants(Array.isArray(list) ? (list.map(c => ({ id: c.uid, ...c })) as Deposant[]) : [])
+    async function load() {
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) return
+      const res = await fetch('/api/admin/chineuses-full', {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      .catch(err => console.error('[admin/inventaires] chineuses:', err))
+      const data = res.ok ? await res.json() : { chineuses: [] }
+      if (cancelled) return
+      const list = Array.isArray(data.chineuses) ? data.chineuses : []
+      setDeposants(list.map((c: any) => ({ id: c.uid, ...c })) as Deposant[])
+    }
+    load().catch(err => console.error('[admin/inventaires] chineuses:', err))
     return () => {
       cancelled = true
     }

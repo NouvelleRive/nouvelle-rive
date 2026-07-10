@@ -33,7 +33,10 @@ export type ChineuseLite = {
 
 export const getChineusesLiteCached = unstable_cache(
   async (): Promise<ChineuseLite[]> => {
+    const t0 = Date.now()
     const snap = await adminDb.collection('chineuse').get()
+    const count = snap.docs.length
+    console.log(`[FS-SCAN] getChineusesLiteCached chineuse=${count} elapsed=${Date.now() - t0}ms`)
     return snap.docs.map(d => {
       const data = d.data() as any
       const videos = Array.isArray(data.videos)

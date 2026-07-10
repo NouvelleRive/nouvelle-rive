@@ -172,15 +172,22 @@
       }
     }, [])
 
-    // Charger les chineuses via /api/chineuses-lite (cache 1h).
+    // Charger les chineuses via /api/admin/chineuses-full (auth admin, cache 1h,
+    // inclut `nom` + `taux` — la route publique lite les strippe).
     useEffect(() => {
       let cancelled = false
-      fetch('/api/chineuses-lite')
-        .then(r => (r.ok ? r.json() : []))
-        .then((list: any[]) => {
-          if (!cancelled) setChineuses(Array.isArray(list) ? (list.map(c => ({ id: c.uid, ...c })) as Chineuse[]) : [])
+      async function load() {
+        const token = await auth.currentUser?.getIdToken()
+        if (!token) return
+        const res = await fetch('/api/admin/chineuses-full', {
+          headers: { Authorization: `Bearer ${token}` },
         })
-        .catch(err => console.error('[admin/vendeuses] chineuses:', err))
+        const data = res.ok ? await res.json() : { chineuses: [] }
+        if (cancelled) return
+        const list = Array.isArray(data.chineuses) ? data.chineuses : []
+        setChineuses(list.map((c: any) => ({ id: c.uid, ...c })) as Chineuse[])
+      }
+      load().catch(err => console.error('[admin/vendeuses] chineuses:', err))
       return () => {
         cancelled = true
       }
