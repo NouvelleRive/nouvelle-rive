@@ -2,7 +2,8 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { auth } from '@/lib/firebaseConfig'
+import { db } from '@/lib/firebaseConfig'
+import { collection, onSnapshot } from 'firebase/firestore'
 import ProductList, { Produit, Deposant } from '@/components/ProductList'
 import { useAdmin } from '@/lib/admin/context'
 
@@ -19,34 +20,23 @@ export default function NosProduits() {
     ))
   }, [])
 
-  // Fetch one-shot via route API cachée (au lieu d'onSnapshot sur toute la
-  // collection produits — évite 1500 reads par montage). La push notif à la
-  // vente prévient déjà la propriétaire d'un changement ; sinon elle refresh.
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const token = await auth.currentUser?.getIdToken()
-        const headers = token ? { Authorization: `Bearer ${token}` } : undefined
-        const [prodRes, chRes] = await Promise.all([
-          fetch('/api/admin/produits-full', { headers }),
-          fetch('/api/admin/chineuses-full', { headers }),
-        ])
-        const prodData = prodRes.ok ? await prodRes.json() : { produits: [] }
-        const chData = chRes.ok ? await chRes.json() : { chineuses: [] }
-        if (cancelled) return
-        setProduits(Array.isArray(prodData.produits) ? prodData.produits : [])
-        const chList = Array.isArray(chData.chineuses) ? chData.chineuses : []
-        setDeposants(chList.map((c: any) => ({ id: c.uid, ...c })))
-      } catch (err) {
-        console.error('[admin/nos-produits] load failed:', err)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
+    // Charger tous les produits
+    const unsubProduits = onSnapshot(collection(db, 'produits'), (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
+      setProduits(data)
+      setLoading(false)
+    })
+
+    // Charger les déposants/chineuses
+    const unsubDeposants = onSnapshot(collection(db, 'chineuses'), (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Deposant))
+      setDeposants(data)
+    })
+
     return () => {
-      cancelled = true
+      unsubProduits()
+      unsubDeposants()
     }
   }, [])
 

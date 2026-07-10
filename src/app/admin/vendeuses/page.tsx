@@ -7,7 +7,7 @@
     collection, getDocs, addDoc, updateDoc, deleteDoc, doc,
     serverTimestamp, getDoc, setDoc, Timestamp, onSnapshot, deleteField
   } from 'firebase/firestore'
-  import { auth, db } from '@/lib/firebaseConfig'
+  import { db } from '@/lib/firebaseConfig'
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
   import PlanningCalendar from '@/components/PlanningCalendar'
   import PointagesSection from '@/components/admin/PointagesSection'
@@ -149,48 +149,21 @@
       })()
     }, [monthKey])
 
-    // Charger les ventes via /api/ventes (auth admin + limit 5000 + filtre 24
-    // derniers mois côté serveur). Remplace onSnapshot sur toute la collection
-    // ventes (potentiellement 10k+ docs par montage).
+    // Charger les ventes
     useEffect(() => {
-      let cancelled = false
-      async function load() {
-        try {
-          const token = await auth.currentUser?.getIdToken()
-          const res = await fetch('/api/ventes', {
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          })
-          const data = res.ok ? await res.json() : { ventes: [] }
-          if (!cancelled) setVentesAll(Array.isArray(data.ventes) ? (data.ventes as ProduitVente[]) : [])
-        } catch (err) {
-          console.error('[admin/vendeuses] ventes load:', err)
-        }
-      }
-      load()
-      return () => {
-        cancelled = true
-      }
-    }, [])
+    const unsub = onSnapshot(collection(db, 'ventes'), (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProduitVente))
+      setVentesAll(list)
+    })
+    return () => unsub()
+  }, [])
 
-    // Charger les chineuses via /api/admin/chineuses-full (auth admin, cache 1h,
-    // inclut `nom` + `taux` — la route publique lite les strippe).
+    // Charger les chineuses (pour connaître le taux de commission NR)
     useEffect(() => {
-      let cancelled = false
-      async function load() {
-        const token = await auth.currentUser?.getIdToken()
-        if (!token) return
-        const res = await fetch('/api/admin/chineuses-full', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = res.ok ? await res.json() : { chineuses: [] }
-        if (cancelled) return
-        const list = Array.isArray(data.chineuses) ? data.chineuses : []
-        setChineuses(list.map((c: any) => ({ id: c.uid, ...c })) as Chineuse[])
-      }
-      load().catch(err => console.error('[admin/vendeuses] chineuses:', err))
-      return () => {
-        cancelled = true
-      }
+      const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
+        setChineuses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Chineuse)))
+      })
+      return () => unsub()
     }, [])
 
     // =====================

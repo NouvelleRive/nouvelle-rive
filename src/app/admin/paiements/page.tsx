@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { auth, db } from '@/lib/firebaseConfig'
+import { db } from '@/lib/firebaseConfig'
 import {
   collection,
   onSnapshot,
@@ -71,52 +71,19 @@ export default function AdminPaiementsPage() {
     return result
   }, [])
 
-  // Fetch chineuses via route admin cachée (inclut nom, iban, bic, raisonSociale,
-  // taux — nécessaires pour affichage + XML SEPA). /api/chineuses-lite strippait
-  // ces champs (route publique), d'où l'email affiché à la place du nom.
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      const token = await auth.currentUser?.getIdToken()
-      if (!token) return
-      const res = await fetch('/api/admin/chineuses-full', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = res.ok ? await res.json() : { chineuses: [] }
-      if (cancelled) return
-      const list = Array.isArray(data.chineuses) ? data.chineuses : []
-      setChineuses(list.map((c: any) => ({ id: c.uid, ...c })))
-    }
-    load().catch(err => console.error('[admin/paiements] chineuses load:', err))
-    return () => {
-      cancelled = true
-    }
+    const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
+      setChineuses(snap.docs.map(d => ({ id: d.id, ...d.data() } as Chineuse)))
+    })
+    return () => unsub()
   }, [])
 
-  // Fetch ventes via /api/ventes (auth admin + limit 5000 + filtre 24 derniers
-  // mois côté serveur). Remplace onSnapshot sur toute la collection ventes
-  // (potentiellement 10k+ docs par montage).
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const token = await auth.currentUser?.getIdToken()
-        const res = await fetch('/api/ventes', {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        })
-        const data = res.ok ? await res.json() : { ventes: [] }
-        if (cancelled) return
-        setVentes(Array.isArray(data.ventes) ? data.ventes : [])
-      } catch (err) {
-        console.error('[admin/paiements] ventes load:', err)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
+    const unsub = onSnapshot(collection(db, 'ventes'), (snap) => {
+      setVentes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Vente)))
+      setLoading(false)
+    })
+    return () => unsub()
   }, [])
 
   useEffect(() => {

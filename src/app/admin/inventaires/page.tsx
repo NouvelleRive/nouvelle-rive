@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { auth, db } from '@/lib/firebaseConfig'
+import { db } from '@/lib/firebaseConfig'
 import {
   collection,
   query,
@@ -107,47 +107,22 @@ export default function AdminInventairesPage() {
     return () => unsubscribes.forEach((u) => u())
   }, [inventaires])
 
-  // Charger les produits via route admin cachée (au lieu d'onSnapshot sur toute
-  // la collection produits — évitait 1500 reads par montage).
+  // Charger les produits
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const token = await auth.currentUser?.getIdToken()
-        const res = await fetch('/api/admin/produits-full', {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        })
-        const data = res.ok ? await res.json() : { produits: [] }
-        if (!cancelled) setProduits(Array.isArray(data.produits) ? data.produits : [])
-      } catch (err) {
-        console.error('[admin/inventaires] produits load:', err)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
+    const unsub = onSnapshot(collection(db, 'produits'), (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Produit))
+      setProduits(data)
+    })
+    return () => unsub()
   }, [])
 
-  // Charger les déposants via /api/admin/chineuses-full (auth admin, cache 1h,
-  // inclut le champ `nom` — la route publique lite le strippe).
+  // Charger les déposants
   useEffect(() => {
-    let cancelled = false
-    async function load() {
-      const token = await auth.currentUser?.getIdToken()
-      if (!token) return
-      const res = await fetch('/api/admin/chineuses-full', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = res.ok ? await res.json() : { chineuses: [] }
-      if (cancelled) return
-      const list = Array.isArray(data.chineuses) ? data.chineuses : []
-      setDeposants(list.map((c: any) => ({ id: c.uid, ...c })) as Deposant[])
-    }
-    load().catch(err => console.error('[admin/inventaires] chineuses:', err))
-    return () => {
-      cancelled = true
-    }
+    const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Deposant))
+      setDeposants(data)
+    })
+    return () => unsub()
   }, [])
 
   // Inventaire en cours
