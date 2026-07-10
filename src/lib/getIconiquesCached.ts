@@ -4,6 +4,7 @@
 
 import { unstable_cache } from 'next/cache'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { logFirestoreScan } from '@/lib/logFirestoreScan'
 
 export type IconiqueDoc = {
   id: string
@@ -40,8 +41,7 @@ export const getIconiquesCached = unstable_cache(
   async (): Promise<IconiqueDoc[]> => {
     const t0 = Date.now()
     const snap = await adminDb.collection('iconiques').get()
-    const count = snap.docs.length
-    console.log(`[FS-SCAN] getIconiquesCached iconiques=${count} elapsed=${Date.now() - t0}ms`)
+    logFirestoreScan('getIconiquesCached', snap.docs.length, { elapsedMs: Date.now() - t0 })
     return snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }))
   },
   ['iconiques-v1'],

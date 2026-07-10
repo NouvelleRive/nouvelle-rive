@@ -5,6 +5,7 @@
 
 import { unstable_cache } from 'next/cache'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { logFirestoreScan } from '@/lib/logFirestoreScan'
 
 export type ChineuseLite = {
   uid: string
@@ -35,8 +36,7 @@ export const getChineusesLiteCached = unstable_cache(
   async (): Promise<ChineuseLite[]> => {
     const t0 = Date.now()
     const snap = await adminDb.collection('chineuse').get()
-    const count = snap.docs.length
-    console.log(`[FS-SCAN] getChineusesLiteCached chineuse=${count} elapsed=${Date.now() - t0}ms`)
+    logFirestoreScan('getChineusesLiteCached', snap.docs.length, { elapsedMs: Date.now() - t0 })
     return snap.docs.map(d => {
       const data = d.data() as any
       const videos = Array.isArray(data.videos)

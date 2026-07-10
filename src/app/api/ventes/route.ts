@@ -6,6 +6,7 @@ import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
+import { logFirestoreScan } from '@/lib/logFirestoreScan'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -74,7 +75,10 @@ export async function GET(req: NextRequest) {
 
     const t0 = Date.now()
     const snapshot = await query.get()
-    console.log(`[FS-SCAN] /api/ventes docs=${snapshot.docs.length} filter=${trigramme ? 'trigramme' : chineurEmail ? 'chineurEmail' : chineurUid ? 'chineurUid' : 'admin-full'} elapsed=${Date.now() - t0}ms`)
+    logFirestoreScan('/api/ventes', snapshot.docs.length, {
+      filter: trigramme ? 'trigramme' : chineurEmail ? 'chineurEmail' : chineurUid ? 'chineurUid' : 'admin-full',
+      elapsedMs: Date.now() - t0,
+    })
 
     const ventes = snapshot.docs.map(doc => {
       const d = doc.data()
