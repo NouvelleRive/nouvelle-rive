@@ -339,9 +339,13 @@
       return produits.filter((p) => {
         if (p.statut === 'supprime') return false
         if (p.statut === 'retour') return false
-        // Filtre "à récupérer" : si actif, on ne garde QUE ces pièces ; sinon on les exclut.
+        // "À récupérer" = même règle que le badge rouge / cron reminders :
+        // statutRecuperation === 'aRecuperer' OU prix baissé il y a +1 mois.
+        const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+        const isARecuperer = p.statutRecuperation === 'aRecuperer'
+          || (p.prixBaisseLe instanceof Timestamp && p.prixBaisseLe.toDate() < oneMonthAgo)
         if (filtreARecuperer) {
-          if (p.statutRecuperation !== 'aRecuperer') return false
+          if (!isARecuperer) return false
         } else {
           if (p.statutRecuperation === 'aRecuperer') return false
         }
@@ -478,9 +482,14 @@
         })
     }, [produits, recherche, filtreCategorie, filtreDeposant, filtreMois, filtrePrix])
 
-      // Produits à récupérer
+      // Produits à récupérer (même règle que le badge rouge)
       const produitsARecuperer = useMemo(() => {
-        return produits.filter((p) => p.statutRecuperation === 'aRecuperer' && p.statut !== 'supprime')
+        const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+        return produits.filter((p) => {
+          if (p.statut === 'supprime' || p.statut === 'retour' || p.statut === 'vendu') return false
+          if (p.statutRecuperation === 'aRecuperer') return true
+          return p.prixBaisseLe instanceof Timestamp && p.prixBaisseLe.toDate() < oneMonthAgo
+        })
       }, [produits])
 
       // Options de filtres
