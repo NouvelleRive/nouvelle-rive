@@ -391,8 +391,11 @@
         // Source déposante uniquement
         if (filtreDeposanteOnly && p.source !== 'deposante') return false
 
-        // Prix baissé
-        if (filtrePrixBaisse && !p.prixBaisseLe) return false
+        // Prix baissé récent (<1 mois) — au-delà, la pièce est "à récupérer"
+        if (filtrePrixBaisse) {
+          if (!(p.prixBaisseLe instanceof Timestamp)) return false
+          if (p.prixBaisseLe.toDate() < oneMonthAgo) return false
+        }
 
           return true
         })
