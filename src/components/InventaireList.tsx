@@ -180,6 +180,8 @@
     const [pricesInput, setPricesInput] = useState<Record<string, string>>({})
     const [phaseASession, setPhaseASession] = useState<Set<string>>(new Set())
     const [phaseAProcessingId, setPhaseAProcessingId] = useState<string | null>(null)
+    const [phaseBReuploadingId, setPhaseBReuploadingId] = useState<string | null>(null)
+    const phaseBCameraRef = useRef<HTMLInputElement>(null)
     // Reset la session Phase A dès que le popup ferme (peu importe la sortie)
     useEffect(() => {
       if (!restockFiniChineuse) {
@@ -1850,12 +1852,39 @@
                   className="w-full aspect-square object-contain bg-gray-50 rounded-lg mb-3"
                 />
                 <p className="text-sm text-gray-700 mb-3 truncate">{(current.nom || '').replace(`${current.sku || ''} - `, '')}</p>
+                <input
+                  ref={phaseBCameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!file) return
+                    setPhaseBReuploadingId(current.id)
+                    try {
+                      const url = await uploadToBunny(file)
+                      await updateDoc(doc(db, 'produits', current.id), {
+                        'photos.face': url,
+                        imageUrl: url,
+                        imageUrls: [url, ...(current.imageUrls || []).filter(u => u !== currentFace)],
+                      })
+                      onProductUpdate?.()
+                    } catch (err: any) {
+                      alert('Erreur upload : ' + (err?.message || 'inconnue'))
+                    } finally {
+                      setPhaseBReuploadingId(null)
+                    }
+                  }}
+                />
                 <div className="flex gap-2 mb-2">
                   <button
-                    onClick={() => { openEditModal(current) }}
-                    className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50"
+                    onClick={() => phaseBCameraRef.current?.click()}
+                    disabled={phaseBReuploadingId === current.id}
+                    className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50"
                   >
-                    Pas OK
+                    {phaseBReuploadingId === current.id ? 'Upload…' : 'Pas OK'}
                   </button>
                   <button
                     onClick={genererPorte}
