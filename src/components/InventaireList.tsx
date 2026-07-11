@@ -2,7 +2,6 @@
   'use client'
 
   import { useState, useMemo, useRef, useEffect } from 'react'
-  import { useRouter } from 'next/navigation'
   import { db, auth } from '@/lib/firebaseConfig'
   import { doc, updateDoc, deleteDoc, Timestamp, increment } from 'firebase/firestore'
   import {
@@ -174,7 +173,6 @@
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const [igPublishingId, setIgPublishingId] = useState<string | null>(null)
-    const router = useRouter()
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
     const loaderRef = useRef<HTMLDivElement>(null)
@@ -1522,8 +1520,14 @@
                     </button>
                     <button
                       onClick={() => {
-                        setRestockFiniChineuse(null)
-                        router.push(`/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`)
+                        // Ouvre dans un nouvel onglet pour que le popup reste ouvert
+                        // et se rafraîchisse tout seul via onSnapshot quand les prix
+                        // sont baissés / pièces marquées "à récupérer".
+                        window.open(
+                          `/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`,
+                          '_blank',
+                          'noopener,noreferrer'
+                        )
                       }}
                       className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
                     >
