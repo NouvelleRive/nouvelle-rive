@@ -1480,22 +1480,30 @@
           const now = new Date()
           const oneMonthAgo = new Date(now); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
           const twoMonthsAgo = new Date(now); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+          const threeMonthsAgo = new Date(now); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
           const pieces = produits.filter(p =>
             getTri(p) === tri &&
             p.statut !== 'supprime' && p.statut !== 'vendu' && p.statut !== 'retour' &&
             p.vendu !== true
           )
+          // Rouge (à récupérer) : demande de sortie déjà faite OU prix baissé +1 mois OU
+          // réception +3 mois (peu importe l'historique de baisse — la règle 3 mois prime)
           const aRecuperer = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return true
             const baisse = (p as any).prixBaisseLe?.toDate?.()
-            return baisse instanceof Date && baisse < oneMonthAgo
+            if (baisse instanceof Date && baisse < oneMonthAgo) return true
+            const dr = (p as any).dateReception?.toDate?.()
+            return dr instanceof Date && dr < threeMonthsAgo
           })
+          // Orange (prix à baisser) : réception entre 2 et 3 mois, jamais baissé,
+          // pas de demande de sortie (au-delà de 3 mois → passe en rouge)
           const prixABaisser = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return false
             const baisse = (p as any).prixBaisseLe?.toDate?.()
             if (baisse instanceof Date) return false
             const dr = (p as any).dateReception?.toDate?.()
-            return dr instanceof Date && dr < twoMonthsAgo
+            if (!(dr instanceof Date)) return false
+            return dr < twoMonthsAgo && dr >= threeMonthsAgo
           })
           const aGerer = [
             ...aRecuperer.map(p => ({ p, kind: 'red' as const })),

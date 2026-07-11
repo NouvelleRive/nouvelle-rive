@@ -46,8 +46,8 @@ type PieceInfo = { sku: string; nom: string; imageUrl: string; categorie: string
 
 // Liste les pièces "à récupérer" (pastille rouge) et "prix à baisser" (pastille orange)
 // pour une chineuse donnée, évaluées à la date du restock (refDate).
-// - rouge : statutRecuperation = 'aRecuperer' OU prix baissé il y a +1 mois
-// - orange : créé il y a +2 mois, jamais baissé, sans statut de récupération
+// - rouge : statutRecuperation = 'aRecuperer' OU prix baissé +1 mois OU réception +3 mois
+// - orange : réception entre 2 et 3 mois, jamais baissé, sans statut de récupération
 async function actionsChineuse(
   trigramme: string,
   refDate: Date,
@@ -56,6 +56,7 @@ async function actionsChineuse(
   const snap = await adminDb.collection('produits').where('trigramme', '==', trigramme.toUpperCase()).get()
   const oneMonthAgo = new Date(refDate); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
   const twoMonthsAgo = new Date(refDate); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+  const threeMonthsAgo = new Date(refDate); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
   const aRecuperer: PieceInfo[] = []
   const prixABaisser: PieceInfo[] = []
   let stockActif = 0
@@ -72,14 +73,19 @@ async function actionsChineuse(
     if (p.vendu === true) continue
     if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
     if (p.statutRecuperation === 'aRecuperer') { aRecuperer.push(toInfo(p)); continue }
+    const receptionDate = p.dateReception?.toDate?.()
+    // Règle absolue : réception +3 mois → rouge, peu importe la baisse
+    if (receptionDate instanceof Date && receptionDate < threeMonthsAgo) {
+      aRecuperer.push(toInfo(p))
+      continue
+    }
     const baisseDate = p.prixBaisseLe?.toDate?.()
     if (baisseDate instanceof Date) {
       if (baisseDate < oneMonthAgo) { aRecuperer.push(toInfo(p)); continue }
       if (p.recu === true) stockActif++
       continue
     }
-    // Cycle orange basé sur la date de réception en boutique (pas createdAt)
-    const receptionDate = p.dateReception?.toDate?.()
+    // Orange : réception entre 2 et 3 mois, jamais baissé
     if (receptionDate instanceof Date && receptionDate < twoMonthsAgo) prixABaisser.push(toInfo(p))
     if (p.recu === true) stockActif++
   }
