@@ -1264,7 +1264,7 @@
 
         {/* Modal Édition */}
         {showEditModal && editTarget && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
             <div className="bg-white rounded-xl max-w-sm w-full p-5 max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold mb-4 text-gray-900">Modifier</h3>
 
@@ -1616,9 +1616,10 @@
             )
           }
 
-          // Phase B — défilement des photos face une par une
+          // Phase B — uniquement les pièces reçues pendant cette session de restock
+          // (pas tout le stock chineuse — sinon on ferait défiler des vieilles pièces)
           const photosACheck = pieces
-            .filter(p => (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
+            .filter(p => sessionReceivedIds.has(p.id) && (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
 
           if (photosACheck.length === 0) {
