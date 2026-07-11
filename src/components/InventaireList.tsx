@@ -173,6 +173,20 @@
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const [igPublishingId, setIgPublishingId] = useState<string | null>(null)
+    // Phase A du popup fin de restock : par ligne, la vendeuse entre un nouveau
+    // prix OU appuie "Récupérer". Le popup ne se ferme pas tant qu'il reste
+    // une pièce orange ou rouge. sessionHandledIds compense onSnapshot pour
+    // que la ligne disparaisse instantanément.
+    const [pricesInput, setPricesInput] = useState<Record<string, string>>({})
+    const [phaseASession, setPhaseASession] = useState<Set<string>>(new Set())
+    const [phaseAProcessingId, setPhaseAProcessingId] = useState<string | null>(null)
+    // Reset la session Phase A dès que le popup ferme (peu importe la sortie)
+    useEffect(() => {
+      if (!restockFiniChineuse) {
+        setPhaseASession(new Set())
+        setPricesInput({})
+      }
+    }, [restockFiniChineuse])
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
     const loaderRef = useRef<HTMLDivElement>(null)
@@ -1486,53 +1500,108 @@
           const aGerer = [
             ...aRecuperer.map(p => ({ p, kind: 'red' as const })),
             ...prixABaisser.map(p => ({ p, kind: 'orange' as const })),
-          ]
+          ].filter(({ p }) => !phaseASession.has(p.id))
 
           if (aGerer.length > 0) {
-            // Phase A — pièces à gérer
+            const baisserPrix = async (p: Produit) => {
+              const raw = pricesInput[p.id]
+              const nouveau = parseFloat((raw || '').replace(',', '.'))
+              const actuel = typeof p.prix === 'number' ? p.prix : 0
+              if (!nouveau || nouveau <= 0) { alert('Prix invalide'); return }
+              if (nouveau >= actuel) { alert(`Le nouveau prix doit être inférieur à ${actuel}€`); return }
+              setPhaseAProcessingId(p.id)
+              try {
+                // Process normal baisse de prix : { ancienPrix, prix, prixBaisseLe }
+                // → tag "💰 Prix baissé le … · MÀJ étiquette" apparaît côté vendeuse
+                await updateDoc(doc(db, 'produits', p.id), {
+                  ancienPrix: actuel,
+                  prix: nouveau,
+                  prixBaisseLe: Timestamp.now(),
+                })
+                setPhaseASession(prev => new Set(prev).add(p.id))
+                setPricesInput(prev => { const n = { ...prev }; delete n[p.id]; return n })
+                onProductUpdate?.()
+              } catch (err: any) {
+                alert('Erreur : ' + (err?.message || 'inconnue'))
+              } finally {
+                setPhaseAProcessingId(null)
+              }
+            }
+            const marquerRecuperer = async (p: Produit) => {
+              setPhaseAProcessingId(p.id)
+              try {
+                // Process normal : reason=valider_destock → statut='retour', retrait multi-canal
+                // → la pièce sort du stock actif et passe dans "produits récupérés"
+                const res = await fetch('/api/delete-produits', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ productId: p.id, reason: 'valider_destock' }),
+                })
+                const data = await res.json()
+                if (!data.success) throw new Error(data.error || 'récupération échouée')
+                setPhaseASession(prev => new Set(prev).add(p.id))
+                onProductUpdate?.()
+              } catch (err: any) {
+                alert('Erreur : ' + (err?.message || 'inconnue'))
+              } finally {
+                setPhaseAProcessingId(null)
+              }
+            }
+
+            // Phase A — actions inline par ligne, aucun exit
             return (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-                  <h3 className="text-lg font-semibold mb-2 text-[#22209C]">
-                    Bravo pr le restock beautey 🦾
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
+                  <h3 className="text-lg font-semibold mb-1 text-[#22209C]">
+                    {aGerer.length} pièce{aGerer.length > 1 ? 's' : ''} à gérer chez {restockFiniChineuse.nom}
                   </h3>
-                  <p className="text-sm text-gray-700 mb-4">
-                    Il faut encore gérer {aGerer.length} pièce{aGerer.length > 1 ? 's' : ''} de <strong>{restockFiniChineuse.nom}</strong> :
+                  <p className="text-xs text-gray-500 mb-4">
+                    Baisse le prix ou marque la pièce « Récupérée » pour continuer.
                   </p>
-                  <ul className="text-sm text-gray-800 mb-5 space-y-1.5">
-                    {aGerer.map(({ p, kind }) => (
-                      <li key={p.id} className="flex items-center gap-2">
-                        <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${kind === 'red' ? 'bg-red-500' : 'bg-orange-400'}`} />
-                        <span className="font-mono text-xs text-gray-500">{p.sku}</span>
-                        <span className="truncate">{(p.nom || '').replace(`${p.sku || ''} - `, '')}</span>
-                        <span className="text-xs text-gray-400 ml-auto flex-shrink-0">
-                          {kind === 'red' ? 'à récupérer' : 'à baisser'}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setRestockFiniChineuse(null)}
-                      className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                      Plus tard
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Ouvre dans un nouvel onglet pour que le popup reste ouvert
-                        // et se rafraîchisse tout seul via onSnapshot quand les prix
-                        // sont baissés / pièces marquées "à récupérer".
-                        window.open(
-                          `/vendeuse/produits?chineuse=${encodeURIComponent(tri)}`,
-                          '_blank',
-                          'noopener,noreferrer'
-                        )
-                      }}
-                      className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
-                    >
-                      Gérer
-                    </button>
+                  <div className="space-y-2.5">
+                    {aGerer.map(({ p, kind }) => {
+                      const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+                      const busy = phaseAProcessingId === p.id
+                      const inputVal = pricesInput[p.id] || ''
+                      return (
+                        <div key={p.id} className="flex items-start gap-2 p-2 border border-gray-100 rounded-lg">
+                          <img src={face} alt="" className="w-14 h-14 object-cover rounded flex-shrink-0 bg-gray-100" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${kind === 'red' ? 'bg-red-500' : 'bg-orange-400'}`} />
+                              <span className="font-mono text-xs text-gray-500">{p.sku}</span>
+                              <span className="text-xs text-gray-600 ml-auto">{p.prix ? `${p.prix}€` : ''}</span>
+                            </div>
+                            <p className="text-xs text-gray-600 truncate mt-0.5">{(p.nom || '').replace(`${p.sku || ''} - `, '')}</p>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                placeholder="Nouveau prix"
+                                value={inputVal}
+                                onChange={(e) => setPricesInput(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                disabled={busy}
+                                className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 disabled:opacity-50"
+                              />
+                              <button
+                                onClick={() => baisserPrix(p)}
+                                disabled={busy || !inputVal}
+                                className="px-2.5 py-1 bg-[#22209C] text-white rounded text-xs font-medium disabled:opacity-40"
+                              >
+                                Baisser
+                              </button>
+                              <button
+                                onClick={() => marquerRecuperer(p)}
+                                disabled={busy}
+                                className="px-2.5 py-1 border border-red-200 text-red-600 rounded text-xs font-medium hover:bg-red-50 disabled:opacity-50"
+                              >
+                                Récupérée
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -1586,6 +1655,8 @@
               setRestockShowGrid(false)
               setRestockFiniChineuse(null)
               setRestockPhotoIndex(0)
+              setPhaseASession(new Set())
+              setPricesInput({})
             }
             const favoriteProducts = photosACheck.filter(p => (p as any).favoriEquipe === true)
             const publishAllFavorites = async () => {
