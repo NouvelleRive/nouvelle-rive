@@ -166,6 +166,9 @@
     const [bonDepotGenerating, setBonDepotGenerating] = useState(false)
     // Popup "pièces à rendre ou prix à baisser ?" + "photos correctes ?" quand toutes les pièces chineuse en réception sont acceptées
     const [restockFiniChineuse, setRestockFiniChineuse] = useState<{ trigramme: string; nom: string } | null>(null)
+    // IDs reçus dans la session courante : compense le décalage entre updateDoc
+    // et le refresh onSnapshot pour détecter la « dernière pièce » sans attendre.
+    const [sessionReceivedIds, setSessionReceivedIds] = useState<Set<string>>(new Set())
     const [restockPhotoIndex, setRestockPhotoIndex] = useState(0)
     const [restockShowGrid, setRestockShowGrid] = useState(false)
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
@@ -450,6 +453,11 @@
         }).catch(() => {})
         onProductUpdate?.()
 
+        // Track ID reçu dans la session (compense le décalage onSnapshot)
+        const nextReceived = new Set(sessionReceivedIds)
+        nextReceived.add(p.id)
+        setSessionReceivedIds(nextReceived)
+
         // Si c'était la dernière pièce de cette chineuse (trigramme) à recevoir
         // en mode réception : proposer de vérifier pièces à rendre / prix à baisser
         // NB : une chineuse peut avoir plusieurs emails → on regroupe par trigramme.
@@ -457,6 +465,7 @@
         if (mode === 'reception' && tri) {
           const remaining = produits.filter(o =>
             o.id !== p.id &&
+            !nextReceived.has(o.id) &&
             getTri(o) === tri &&
             o.statut !== 'supprime' &&
             (((o as any).statutRestock === 'enAttente') || o.recu === false)
