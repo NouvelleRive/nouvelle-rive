@@ -1486,19 +1486,21 @@
             p.statut !== 'supprime' && p.statut !== 'vendu' && p.statut !== 'retour' &&
             p.vendu !== true
           )
-          // Rouge (à récupérer) : demande de sortie déjà faite OU prix baissé +1 mois OU
-          // réception +3 mois (peu importe l'historique de baisse — la règle 3 mois prime)
+          // Rouge (à récupérer) : demande de récupération, demande de destock,
+          // prix baissé +1 mois OU réception +3 mois (règle 3 mois absolue)
           const aRecuperer = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return true
+            if ((p as any).statutDestock === 'enAttente') return true
             const baisse = (p as any).prixBaisseLe?.toDate?.()
             if (baisse instanceof Date && baisse < oneMonthAgo) return true
             const dr = (p as any).dateReception?.toDate?.()
             return dr instanceof Date && dr < threeMonthsAgo
           })
           // Orange (prix à baisser) : réception entre 2 et 3 mois, jamais baissé,
-          // pas de demande de sortie (au-delà de 3 mois → passe en rouge)
+          // aucune demande de sortie (au-delà de 3 mois → passe en rouge)
           const prixABaisser = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return false
+            if ((p as any).statutDestock === 'enAttente') return false
             const baisse = (p as any).prixBaisseLe?.toDate?.()
             if (baisse instanceof Date) return false
             const dr = (p as any).dateReception?.toDate?.()
