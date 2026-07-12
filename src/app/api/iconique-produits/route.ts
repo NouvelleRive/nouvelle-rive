@@ -52,8 +52,9 @@ export async function GET(req: NextRequest) {
     const needleMaterial = norm(current.materialContient || '')
     const trigs = (current.chineuseTrigrammes || []).map(t => t.toUpperCase())
     const catsIn = (current.categoriesIn || []).map(c => norm(c))
+    const marquesIn = ((current as any).marquesIn || []).map((m: string) => norm(m)).filter(Boolean)
 
-    if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0) {
+    if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0 && marquesIn.length === 0) {
       return NextResponse.json(
         { produits: [] },
         { headers: { 'Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400' } },
@@ -75,6 +76,7 @@ export async function GET(req: NextRequest) {
           if (!marque.includes(needleMarque)) return false
         }
       }
+      if (marquesIn.length > 0 && !marquesIn.some((m: string) => marque.includes(m))) return false
       if (trigs.length > 0 && !trigs.includes(trigramme)) return false
       if (catsIn.length > 0 && !catsIn.some(c => cat.includes(c))) return false
       if (needleMaterial && !material.includes(needleMaterial)) return false

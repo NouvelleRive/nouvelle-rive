@@ -24,6 +24,7 @@ type Iconique = {
   categorieRecherche?: string
   categoriesIn?: string[]
   marque?: string
+  marquesIn?: string[]
   chineuseTrigrammes?: string[]
   materialContient?: string
   images?: string[]
@@ -54,6 +55,7 @@ const emptyDraft = (type: IconiqueType, ordre: number): Iconique => ({
   categorieRecherche: '',
   categoriesIn: [],
   marque: '',
+  marquesIn: [],
   chineuseTrigrammes: [],
   materialContient: '',
   images: [],
@@ -228,6 +230,7 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
         type: typeFilter,
         chineuseTrigrammes: (draft.chineuseTrigrammes || []).map(t => t.toUpperCase().trim()).filter(Boolean),
         categoriesIn: (draft.categoriesIn || []).map(c => c.toLowerCase().trim()).filter(Boolean),
+        marquesIn: (draft.marquesIn || []).map(m => m.trim()).filter(Boolean),
         valeurNeuf: Number(draft.valeurNeuf) || 0,
         ordre: Number(draft.ordre) || 0,
         displayOnWebsite: draft.displayOnWebsite !== false,
@@ -301,6 +304,7 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
                   const preview = icon.images?.[0] || ''
                   const rules: string[] = []
                   if (icon.marque) rules.push(`marque=${icon.marque}`)
+                  if (icon.marquesIn && icon.marquesIn.length > 0) rules.push(`marques=${icon.marquesIn.join('/')}`)
                   if (icon.chineuseTrigrammes && icon.chineuseTrigrammes.length > 0) rules.push(`tri=${icon.chineuseTrigrammes.join(',')}`)
                   if (icon.categoriesIn && icon.categoriesIn.length > 0) rules.push(`cat=${icon.categoriesIn.join(',')}`)
                   if (icon.categorieRecherche) rules.push(`rech=${icon.categorieRecherche}`)
@@ -484,6 +488,14 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
           <div className="grid grid-cols-2 gap-4">
             <Field label="Marque (ex: Chanel, Hermès, Burberry, luxe)">
               <input className={inputCls} value={draft.marque || ''} onChange={e => setDraft({ ...draft, marque: e.target.value })} />
+            </Field>
+            <Field label="Ou plusieurs marques (séparées par virgule)">
+              <input
+                className={inputCls}
+                value={(draft.marquesIn || []).join(', ')}
+                onChange={e => setDraft({ ...draft, marquesIn: e.target.value.split(',').map(x => x.trim()).filter(Boolean) })}
+                placeholder="YSL, Ralph Lauren, Lacoste…"
+              />
             </Field>
             <Field label="Catégorie de recherche (mot-clé dans nom/catégorie)">
               <input className={inputCls} value={draft.categorieRecherche || ''} onChange={e => setDraft({ ...draft, categorieRecherche: e.target.value })} placeholder="tweed, carré, foulard…" />
