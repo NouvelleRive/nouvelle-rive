@@ -5,7 +5,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Link, Pencil, Trash2 } from 'lucide-react'
+import { Link, Pencil, Trash2, X } from 'lucide-react'
 
 import { Vente, formatPrix } from '@/components/SalesList'
 
@@ -38,7 +38,7 @@ export default function SalesGrid({
   onSupprimer,
 }: SalesGridProps) {
   const [enriched, setEnriched] = useState<Map<string, { imageUrls: string[]; marque: string }>>(new Map())
-  const [activeCard, setActiveCard] = useState<string | null>(null)
+  const [zoomedImg, setZoomedImg] = useState<string | null>(null)
 
   // Fetch images pour les ventes sans imageUrls
   useEffect(() => {
@@ -73,6 +73,11 @@ export default function SalesGrid({
     return urls[0] ? getBunnyUrl(urls[0], 400) : ''
   }
 
+  const getRawImage = (v: Vente): string => {
+    const urls = v.imageUrls?.length ? v.imageUrls : enriched.get(v.id)?.imageUrls || []
+    return urls[0] || ''
+  }
+
   const getMarque = (v: Vente): string => {
     return v.marque || enriched.get(v.id)?.marque || ''
   }
@@ -96,27 +101,17 @@ export default function SalesGrid({
     >
       {ventes.map((vente) => {
         const img = getImage(vente)
+        const rawImg = getRawImage(vente)
         const marque = getMarque(vente)
         const prix = getPrix(vente)
         const prixInitial = vente.prixInitial
         const prixBaisse = prixInitial && prixInitial !== prix && prixInitial > prix
-        const isActive = activeCard === vente.id
-
-        const href = vente.produitId ? `/boutique/${vente.produitId}` : undefined
 
         return (
-          <a
+          <div
             key={vente.id}
-            href={href || '#'}
-            target={href ? '_blank' : undefined}
-            rel={href ? 'noopener noreferrer' : undefined}
-            onClick={(e) => {
-              if (!href) {
-                e.preventDefault()
-                setActiveCard(isActive ? null : vente.id)
-              }
-            }}
-            className="relative bg-white cursor-pointer group block"
+            onClick={() => rawImg && setZoomedImg(rawImg)}
+            className="relative bg-white cursor-zoom-in group block"
           >
             {/* Photo */}
             <div className="aspect-square overflow-hidden bg-gray-100">
@@ -151,9 +146,7 @@ export default function SalesGrid({
 
             {/* Overlay infos au tap/hover */}
             <div
-              className={`absolute inset-0 bg-white/95 flex flex-col justify-between p-2 transition-opacity duration-200 ${
-                isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
+              className="absolute inset-0 bg-white/95 flex flex-col justify-between p-2 transition-opacity duration-200 opacity-0 group-hover:opacity-100"
             >
               <div>
                 {marque && (
@@ -223,9 +216,30 @@ export default function SalesGrid({
                 {formatPrix(prix)}€{prixBaisse && <span style={{ fontSize: 8, color: '#aaa', textDecoration: 'line-through', marginLeft: 3 }}>{formatPrix(prixInitial)}€</span>}
               </span>
             </div>
-          </a>
+          </div>
         )
       })}
+
+      {zoomedImg && (
+        <div
+          className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setZoomedImg(null)}
+        >
+          <img
+            src={zoomedImg.includes('b-cdn.net') || zoomedImg.includes('bunnycdn') ? `${zoomedImg}?width=1600` : zoomedImg}
+            alt=""
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setZoomedImg(null)}
+            className="absolute top-4 right-4 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg"
+            aria-label="Fermer"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
