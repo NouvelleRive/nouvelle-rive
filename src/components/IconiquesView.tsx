@@ -438,7 +438,7 @@ export default function IconiquesView({
                       zIndex: 0
                     }}
                   >
-                    #{item.ordre}
+                    #{idx + 1}
                   </div>
 
                   <h2
@@ -861,17 +861,24 @@ export default function IconiquesView({
           )})}
         </div>
 
-        <div className="hidden md:flex justify-center gap-2 py-6">
+        <div className="hidden md:flex justify-center items-center gap-3 py-6 flex-wrap px-4">
           {iconiques.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              className="w-2 h-2 rounded-full"
+              aria-label={`Aller à l'iconique ${idx + 1}`}
+              className="uppercase transition-opacity"
               style={{
-                background: idx === currentIndex ? '#000' : '#ccc',
-                transform: idx === currentIndex ? 'scale(1.2)' : 'scale(1)',
+                fontFamily: 'Helvetica Neue, sans-serif',
+                fontSize: idx === currentIndex ? '13px' : '11px',
+                fontWeight: idx === currentIndex ? 700 : 500,
+                letterSpacing: '0.15em',
+                color: idx === currentIndex ? '#000' : '#999',
+                padding: '4px 8px',
               }}
-            />
+            >
+              #{idx + 1}
+            </button>
           ))}
         </div>
       </div>
