@@ -385,11 +385,14 @@
 
 
 
-      // Helper : une vente familiale ne compte JAMAIS pour le CA/bonus vendeuse
+      // Helper : familiale + ventes à distance (eBay, site en ligne via Square)
+      // ne comptent JAMAIS pour le CA/bonus vendeuse — la vendeuse ne les traite pas
       const isFamiliale = (v: ProduitVente) => v.venteFamiliale === true || v.source === 'familiale'
+      const isDistance = (v: ProduitVente) => v.source === 'ebay' || v.source === 'square'
+      const skipVendeuse = (v: ProduitVente) => isFamiliale(v) || isDistance(v)
 
       ventesAll.forEach(p => {
-        if (isFamiliale(p)) return
+        if (skipVendeuse(p)) return
         if (!(p.dateVente instanceof Timestamp)) return
         const date = p.dateVente.toDate()
         if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
@@ -434,7 +437,7 @@
       const caJour = new Map<string, number>()
 
       ventesAll.forEach(p => {
-        if (isFamiliale(p)) return
+        if (skipVendeuse(p)) return
         if (!(p.dateVente instanceof Timestamp)) return
         const date = p.dateVente.toDate()
         if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
@@ -471,7 +474,7 @@
         if (ptsToday.length > 0) {
           // Logique pointage : pour chaque vente du jour, attribuer aux vendeuses présentes
           const ventesDuJour = ventesAll.filter(v => {
-            if (isFamiliale(v)) return false
+            if (skipVendeuse(v)) return false
             if (!(v.dateVente instanceof Timestamp)) return false
             const d = v.dateVente.toDate()
             return format(d, 'yyyy-MM-dd') === dateStr

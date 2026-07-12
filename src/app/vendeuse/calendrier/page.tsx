@@ -15,7 +15,7 @@ const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
 type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string> }
 type PlanningSlots = Record<string, string>
-type ProduitVente = { id: string; prix?: number; prixVenteReel?: number; dateVente?: Timestamp }
+type ProduitVente = { id: string; prix?: number; prixVenteReel?: number; dateVente?: Timestamp; venteFamiliale?: boolean; source?: string }
 type Produit = { id: string; chineur?: string; chineurUid?: string; createdAt?: Timestamp }
 type Deposante = { id: string; nom?: string; trigramme?: string; email?: string }
 type Task = { id: string; texte: string }
@@ -218,7 +218,12 @@ export default function VendeuseCalendrierPage() {
 
   const caParVendeuse = useMemo(() => {
     const map = new Map<string, { ca: number; ventes: number; bonus: number; discountCount: number; discountTotal: number }>()
+    // Familiale + ventes à distance (eBay / site en ligne via Square) ne comptent
+    // jamais pour le CA/bonus vendeuse — la vendeuse ne les traite pas.
+    const skipVendeuse = (v: ProduitVente) =>
+      v.venteFamiliale === true || v.source === 'familiale' || v.source === 'ebay' || v.source === 'square'
     ventesAll.forEach(p => {
+      if (skipVendeuse(p)) return
       if (!(p.dateVente instanceof Timestamp)) return
       const date = p.dateVente.toDate()
       if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
@@ -242,6 +247,7 @@ export default function VendeuseCalendrierPage() {
     const ca1117 = new Map<string, number>()
     const caJour = new Map<string, number>()
     ventesAll.forEach(p => {
+      if (skipVendeuse(p)) return
       if (!(p.dateVente instanceof Timestamp)) return
       const date = p.dateVente.toDate()
       if (date.getMonth() !== currentMonth.month || date.getFullYear() !== currentMonth.year) return
@@ -266,6 +272,7 @@ export default function VendeuseCalendrierPage() {
       const ptsToday = pointagesByDay.get(ds) || []
       if (ptsToday.length > 0) {
         const ventesDuJour = ventesAll.filter(v => {
+          if (skipVendeuse(v)) return false
           if (!(v.dateVente instanceof Timestamp)) return false
           return format(v.dateVente.toDate(), 'yyyy-MM-dd') === ds
         })
