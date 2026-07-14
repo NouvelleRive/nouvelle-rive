@@ -112,5 +112,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
+  const seen = new Set<string>()
   return [...staticEntries, ...typeEntries, ...brandEntries, ...productEntries]
+    .filter(e => {
+      if (seen.has(e.url)) return false
+      seen.add(e.url)
+      return true
+    })
 }
