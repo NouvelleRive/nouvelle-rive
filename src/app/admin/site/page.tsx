@@ -9,6 +9,7 @@ import { Save, Plus, X, Trash2 } from 'lucide-react'
 import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-react'
 import ProductList, { Produit } from '@/components/ProductList'
 import IconiquesManager from '@/components/admin/IconiquesManager'
+import { getConfigurablePages } from '@/lib/site-pages'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -46,18 +47,13 @@ type ProduitPreview = {
   masque?: boolean
 }
 
-const PAGES = [
-  { id: 'new-in', label: 'New In' },
-  { id: 'ete', label: 'Été' },
-  { id: 'soiree', label: 'Soirée' },
-  { id: 'luxe', label: 'Le Luxe' },
-  { id: 'femme', label: '(Plutôt) Femme' },
-  { id: 'homme', label: '(Plutôt) Homme' },
-  { id: 'enfant', label: 'Enfant' },
-  { id: 'accessoires', label: 'Accessoires' },
-  { id: 'iconiques-vintage', label: 'Iconiques Vintage' },
-  { id: 'iconiques-upcy', label: 'Iconiques Upcy' },
-]
+// Source unique : src/lib/site-pages.ts (filtre configurable).
+// Nav pages en premier (Été, Le Luxe, …), puis les configurables hors nav (New In, Femme, …).
+const PAGES = getConfigurablePages().map(p => ({
+  id: p.id,
+  label: p.labelAdmin || p.id,
+  inNav: !!p.inNav,
+}))
 
 const ICONIQUE_PAGE_IDS = ['iconiques-vintage', 'iconiques-upcy'] as const
 
@@ -304,7 +300,9 @@ const getImageUrl = (p: ProduitPreview) => {
           className="border rounded px-3 py-2 w-full max-w-xs"
         >
           {PAGES.map((p) => (
-            <option key={p.id} value={p.id}>{p.label}</option>
+            <option key={p.id} value={p.id}>
+              {p.inNav ? '🔗 ' : ''}{p.label}
+            </option>
           ))}
         </select>
       </div>

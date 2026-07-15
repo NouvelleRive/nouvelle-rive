@@ -9,6 +9,7 @@ import { auth } from '@/lib/firebaseConfig'
 import { useCart } from '@/lib/cart'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { useLang, t } from '@/lib/i18n'
+import { getNavPages } from '@/lib/site-pages'
 
 export default function NavbarPublic() {
   const pathname = usePathname()
@@ -90,18 +91,11 @@ export default function NavbarPublic() {
   // Hash #titre : chaque page de destination a un id="titre" sur son h1 principal.
   // Le navigateur (et Next.js) scrollent automatiquement à cet ancrage à l'arrivée,
   // ce qui place le titre de la page en haut du viewport (la navbar passe au-dessus).
-  const boutiqueLinks = [
-    { href: '/coups-de-coeur#titre', label: t('NOS PIÈCES PRÉFÉRÉES', 'OUR FAVORITE GEMS', lang) },
-    { href: '/ete#titre', label: t('ÉTÉ', 'SUMMER', lang) },
-    { href: '/sac', label: t('SACS DE DESIGNER', 'DESIGNER BAGS', lang) },
-    { href: '/luxe#titre', label: t('LE LUXE', 'LUXURY', lang) },
-    { href: '/iconiques-upcy', label: t('NOS PIÈCES UPCY FAVORITES', 'FAVORITE UPCYCLED PIECES', lang) },
-    { href: '/les-iconiques', label: t('LES ICONIQUES DU VINTAGE', 'VINTAGE ICONICS', lang) },
-    { href: '/soiree#titre', label: t('SOIRÉE', 'EVENING', lang) },
-    { href: '/nos-creatrices#titre', label: t('NOS CRÉATRICES/CURATEURICES', 'OUR DESIGNERS / CURATORS', lang) },
-    { href: '/nous-rencontrer#titre', label: t('IRL : NOTRE BOUTIQUE 8 RUE DES ECOUFFES', 'IRL: OUR BOUTIQUE — 8 RUE DES ECOUFFES', lang) },
-    { href: '/boutique', label: t('TOUT VOIR', 'SEE ALL', lang) },
-  ]
+  // Source unique : src/lib/site-pages.ts (filtre inNav, ordonné par navOrder).
+  const boutiqueLinks = getNavPages().map(p => ({
+    href: `${p.path}${p.hash || ''}`,
+    label: t(p.labels?.fr || '', p.labels?.en || '', lang),
+  }))
 
   const cartLabel = t('PANIER', 'CART', lang)
   const accountLabel = t('MON COMPTE', 'MY ACCOUNT', lang)

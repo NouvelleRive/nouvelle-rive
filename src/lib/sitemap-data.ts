@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebaseAdmin'
 import { buildProduitPath, getTypeSlug } from '@/lib/produitSlug'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
+import { getSitemapPages } from '@/lib/site-pages'
 
 const DIACRITICS = /[̀-ͯ]/g
 function slugifyBrandStr(s: string): string {
@@ -17,30 +18,16 @@ export type SitemapEntry = {
   priority: number
 }
 
-const STATIC_PAGES: { path: string; changeFrequency: SitemapEntry['changeFrequency']; priority: number }[] = [
-  { path: '/', changeFrequency: 'daily', priority: 1.0 },
-  { path: '/coups-de-coeur', changeFrequency: 'weekly', priority: 0.8 },
-  { path: '/ete', changeFrequency: 'weekly', priority: 0.8 },
-  { path: '/sac', changeFrequency: 'weekly', priority: 0.8 },
-  { path: '/luxe', changeFrequency: 'daily', priority: 0.8 },
-  { path: '/iconiques-upcy', changeFrequency: 'weekly', priority: 0.8 },
-  { path: '/les-iconiques', changeFrequency: 'weekly', priority: 0.8 },
-  { path: '/soiree', changeFrequency: 'weekly', priority: 0.8 },
-  { path: '/nos-creatrices', changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/nous-rencontrer', changeFrequency: 'monthly', priority: 0.7 },
-  { path: '/legal/retours', changeFrequency: 'yearly', priority: 0.2 },
-  { path: '/legal/confidentialite', changeFrequency: 'yearly', priority: 0.2 },
-  { path: '/legal/mentions-cgv', changeFrequency: 'yearly', priority: 0.2 },
-]
+// Source unique : src/lib/site-pages.ts (filtre inSitemap).
 
 export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   const now = new Date()
 
-  const staticEntries: SitemapEntry[] = STATIC_PAGES.map(p => ({
+  const staticEntries: SitemapEntry[] = getSitemapPages().map(p => ({
     url: `${BASE_URL}${p.path}`,
     lastModified: now,
-    changeFrequency: p.changeFrequency,
-    priority: p.priority,
+    changeFrequency: p.sitemap!.changeFrequency,
+    priority: p.sitemap!.priority,
   }))
 
   let productPaths: string[] = []
