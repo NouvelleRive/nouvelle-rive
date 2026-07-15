@@ -162,6 +162,17 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   })
   const [tri, setTri] = useState('nouveautes')
 
+  // Accordéons filtres — tous fermés au démarrage
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set())
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   const triLabels: { [key: string]: string } = {
     'nouveautes': t('Nouveautés', 'New in', lang),
     'prix-asc': t('Prix croissant', 'Price: low to high', lang),
@@ -742,314 +753,317 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
             {/* Filtres - scrollable */}
             <div className="flex-1 overflow-y-auto">
-              {/* Catégorie */}
-              {categories.length > 0 && (
-                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4
-                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+              {(() => {
+                const HELVETICA = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+                const AccordionHeader = ({ id, label }: { id: string; label: string }) => (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(id)}
+                    className="w-full px-6 py-5 flex items-center justify-between text-left hover:opacity-70 transition"
                   >
-                    {t('Catégorie', 'Category', lang)}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, sousCats: [], taille: '', color: '', material: '', modele: '', motif: '' })}
-                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                        style={{
-                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                          border: '1px solid #000',
-                          backgroundColor: filters.categorie === cat ? '#000' : '#fff',
-                          color: filters.categorie === cat ? '#fff' : '#000',
-                        }}
-                      >
-                        {translateCategory(cat, lang)}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Sous-catégories */}
-                  {sousCategories.length > 1 && (
-                    <div className="grid grid-cols-2 gap-2 mt-4 pt-4" style={{ borderTop: '1px solid #eee' }}>
-                      {sousCategories.map((sousCat) => {
-                        const isSelected = filters.sousCats.includes(sousCat)
-                        return (
-                          <button
-                            key={sousCat}
-                            onClick={() => {
-                              const newSousCats = isSelected
-                                ? filters.sousCats.filter(s => s !== sousCat)
-                                : [...filters.sousCats, sousCat]
-                              setFilters({ ...filters, sousCats: newSousCats, taille: '', color: '', material: '', modele: '', motif: '' })
-                            }}
-                            className="py-1.5 px-3 text-xs uppercase tracking-wide transition"
-                            style={{
-                              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                              border: '1px solid #999',
-                              backgroundColor: isSelected ? '#555' : '#fff',
-                              color: isSelected ? '#fff' : '#555',
-                            }}
-                          >
-                            {translateCategory(sousCat, lang)}
-                          </button>
-                        )
-                      })}
+                    <h4
+                      className="uppercase text-xs tracking-widest font-semibold"
+                      style={{ fontFamily: HELVETICA }}
+                    >
+                      {label}
+                    </h4>
+                    <span className="text-lg leading-none font-light w-4 text-right">
+                      {openSections.has(id) ? '−' : '+'}
+                    </span>
+                  </button>
+                )
+                return (
+                  <>
+                    {/* Catégorie */}
+                    {categories.length > 0 && (
+                      <div style={{ borderBottom: '1px solid #000' }}>
+                        <AccordionHeader id="categorie" label={t('Catégorie', 'Category', lang)} />
+                        {openSections.has('categorie') && (
+                          <div className="px-6 pb-6">
+                            <div className="grid grid-cols-2 gap-2">
+                              {categories.map((cat) => (
+                                <button
+                                  key={cat}
+                                  onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, sousCats: [], taille: '', color: '', material: '', modele: '', motif: '' })}
+                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                  style={{
+                                    fontFamily: HELVETICA,
+                                    border: '1px solid #000',
+                                    backgroundColor: filters.categorie === cat ? '#000' : '#fff',
+                                    color: filters.categorie === cat ? '#fff' : '#000',
+                                  }}
+                                >
+                                  {translateCategory(cat, lang)}
+                                </button>
+                              ))}
+                            </div>
+                            {/* Sous-catégories */}
+                            {sousCategories.length > 1 && (
+                              <div className="grid grid-cols-2 gap-2 mt-4 pt-4" style={{ borderTop: '1px solid #eee' }}>
+                                {sousCategories.map((sousCat) => {
+                                  const isSelected = filters.sousCats.includes(sousCat)
+                                  return (
+                                    <button
+                                      key={sousCat}
+                                      onClick={() => {
+                                        const newSousCats = isSelected
+                                          ? filters.sousCats.filter(s => s !== sousCat)
+                                          : [...filters.sousCats, sousCat]
+                                        setFilters({ ...filters, sousCats: newSousCats, taille: '', color: '', material: '', modele: '', motif: '' })
+                                      }}
+                                      className="py-1.5 px-3 text-xs uppercase tracking-wide transition"
+                                      style={{
+                                        fontFamily: HELVETICA,
+                                        border: '1px solid #999',
+                                        backgroundColor: isSelected ? '#555' : '#fff',
+                                        color: isSelected ? '#fff' : '#555',
+                                      }}
+                                    >
+                                      {translateCategory(sousCat, lang)}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Taille */}
+                    <div style={{ borderBottom: '1px solid #000' }}>
+                      <AccordionHeader id="taille" label={t('Taille', 'Size', lang)} />
+                      {openSections.has('taille') && (
+                        <div className="px-6 pb-6">
+                          {tailles.length > 0 ? (
+                            <div className="grid grid-cols-4 gap-2">
+                              {tailles.map((taille) => (
+                                <button
+                                  key={taille}
+                                  onClick={() => setFilters({ ...filters, taille: filters.taille === taille ? '' : taille! })}
+                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                  style={{
+                                    fontFamily: HELVETICA,
+                                    border: '1px solid #000',
+                                    backgroundColor: filters.taille === taille ? '#000' : '#fff',
+                                    color: filters.taille === taille ? '#fff' : '#000',
+                                  }}
+                                >
+                                  {taille}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500" style={{ fontFamily: HELVETICA }}>
+                              {t('Aucune taille disponible', 'No size available', lang)}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
 
-              {/* Marque */}
-              {marques.length > 0 && (
-                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4
-                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                  >
-                    {t('Marque', 'Brand', lang)}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {marques.map((marque) => (
-                      <button
-                        key={marque}
-                        onClick={() => setFilters({ ...filters, marque: filters.marque === marque ? '' : marque! })}
-                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                        style={{
-                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                          border: '1px solid #000',
-                          backgroundColor: filters.marque === marque ? '#000' : '#fff',
-                          color: filters.marque === marque ? '#fff' : '#000',
-                        }}
-                      >
-                        {marque}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    {/* Marque */}
+                    {marques.length > 0 && (
+                      <div style={{ borderBottom: '1px solid #000' }}>
+                        <AccordionHeader id="marque" label={t('Marque', 'Brand', lang)} />
+                        {openSections.has('marque') && (
+                          <div className="px-6 pb-6">
+                            <div className="grid grid-cols-2 gap-2">
+                              {marques.map((marque) => (
+                                <button
+                                  key={marque}
+                                  onClick={() => setFilters({ ...filters, marque: filters.marque === marque ? '' : marque! })}
+                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                  style={{
+                                    fontFamily: HELVETICA,
+                                    border: '1px solid #000',
+                                    backgroundColor: filters.marque === marque ? '#000' : '#fff',
+                                    color: filters.marque === marque ? '#fff' : '#000',
+                                  }}
+                                >
+                                  {marque}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-              {/* Prix */}
-              <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                <h4
-                  className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                  style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                >
-                  {t('Prix', 'Price', lang)}
-                </h4>
-                <div className="flex gap-4 items-center">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={filters.prixMin}
-                    onChange={(e) => setFilters({ ...filters, prixMin: e.target.value })}
-                    className="w-24 py-2 px-3 text-sm"
-                    style={{ 
-                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                      border: '1px solid #000'
-                    }}
-                  />
-                  <span>—</span>
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={filters.prixMax}
-                    onChange={(e) => setFilters({ ...filters, prixMax: e.target.value })}
-                    className="w-24 py-2 px-3 text-sm"
-                    style={{ 
-                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                      border: '1px solid #000'
-                    }}
-                  />
-                  <span className="text-sm">€</span>
-                </div>
-              </div>
+                    {/* Prix */}
+                    <div style={{ borderBottom: '1px solid #000' }}>
+                      <AccordionHeader id="prix" label={t('Prix', 'Price', lang)} />
+                      {openSections.has('prix') && (
+                        <div className="px-6 pb-6">
+                          <div className="flex gap-4 items-center">
+                            <input
+                              type="number"
+                              placeholder="Min"
+                              value={filters.prixMin}
+                              onChange={(e) => setFilters({ ...filters, prixMin: e.target.value })}
+                              className="w-24 py-2 px-3 text-sm"
+                              style={{ fontFamily: HELVETICA, border: '1px solid #000' }}
+                            />
+                            <span>—</span>
+                            <input
+                              type="number"
+                              placeholder="Max"
+                              value={filters.prixMax}
+                              onChange={(e) => setFilters({ ...filters, prixMax: e.target.value })}
+                              className="w-24 py-2 px-3 text-sm"
+                              style={{ fontFamily: HELVETICA, border: '1px solid #000' }}
+                            />
+                            <span className="text-sm">€</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-              {/* Taille */}
-              <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                <h4
-                  className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                  style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                >
-                  {t('Taille', 'Size', lang)}
-                </h4>
-                {tailles.length > 0 ? (
-                  <div className="grid grid-cols-4 gap-2">
-                    {tailles.map((taille) => (
-                      <button
-                        key={taille}
-                        onClick={() => setFilters({ ...filters, taille: filters.taille === taille ? '' : taille! })}
-                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                        style={{
-                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                          border: '1px solid #000',
-                          backgroundColor: filters.taille === taille ? '#000' : '#fff',
-                          color: filters.taille === taille ? '#fff' : '#000',
-                        }}
-                      >
-                        {taille}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p
-                    className="text-sm text-gray-500"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                  >
-                    {t('Aucune taille disponible', 'No size available', lang)}
-                  </p>
-                )}
-              </div>
+                    {/* Couleur */}
+                    {couleurs.length > 0 && (
+                      <div style={{ borderBottom: '1px solid #000' }}>
+                        <AccordionHeader id="couleur" label={t('Couleur', 'Color', lang)} />
+                        {openSections.has('couleur') && (
+                          <div className="px-6 pb-6">
+                            <div className="grid grid-cols-3 gap-2">
+                              {couleurs.map((couleur) => {
+                                const paletteEntry = COLOR_PALETTE.find(c => c.name === couleur)
+                                return (
+                                  <button
+                                    key={couleur}
+                                    onClick={() => setFilters({ ...filters, color: filters.color === couleur ? '' : couleur! })}
+                                    className="py-2 px-3 text-xs uppercase tracking-wide transition flex items-center gap-2"
+                                    style={{
+                                      fontFamily: HELVETICA,
+                                      border: filters.color === couleur ? '2px solid #000' : '1px solid #000',
+                                      backgroundColor: filters.color === couleur ? '#f3f4f6' : '#fff',
+                                      color: '#000',
+                                    }}
+                                  >
+                                    <span
+                                      className="w-4 h-4 rounded-full flex-shrink-0"
+                                      style={{
+                                        background: paletteEntry?.hex || '#ccc',
+                                        border: couleur === 'Blanc' || couleur === 'Écru' || couleur === 'Crème' ? '1px solid #ccc' : 'none',
+                                      }}
+                                    />
+                                    {translateColor(couleur!, lang)}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-              {/* Couleur */}
-              {couleurs.length > 0 && (
-                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4
-                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                  >
-                    {t('Couleur', 'Color', lang)}
-                  </h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {couleurs.map((couleur) => {
-                      const paletteEntry = COLOR_PALETTE.find(c => c.name === couleur)
-                      return (
-                        <button
-                          key={couleur}
-                          onClick={() => setFilters({ ...filters, color: filters.color === couleur ? '' : couleur! })}
-                          className="py-2 px-3 text-xs uppercase tracking-wide transition flex items-center gap-2"
-                          style={{
-                            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                            border: filters.color === couleur ? '2px solid #000' : '1px solid #000',
-                            backgroundColor: filters.color === couleur ? '#f3f4f6' : '#fff',
-                            color: '#000',
-                          }}
-                        >
-                          <span
-                            className="w-4 h-4 rounded-full flex-shrink-0"
-                            style={{
-                              background: paletteEntry?.hex || '#ccc',
-                              border: couleur === 'Blanc' || couleur === 'Écru' || couleur === 'Crème' ? '1px solid #ccc' : 'none',
-                            }}
-                          />
-                          {translateColor(couleur!, lang)}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+                    {/* Matière */}
+                    {matieres.length > 0 && (
+                      <div style={{ borderBottom: '1px solid #000' }}>
+                        <AccordionHeader id="matiere" label={t('Matière', 'Material', lang)} />
+                        {openSections.has('matiere') && (
+                          <div className="px-6 pb-6">
+                            <div className="grid grid-cols-2 gap-2">
+                              {matieres.map((matiere) => (
+                                <button
+                                  key={matiere}
+                                  onClick={() => setFilters({ ...filters, material: filters.material === matiere ? '' : matiere! })}
+                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                  style={{
+                                    fontFamily: HELVETICA,
+                                    border: '1px solid #000',
+                                    backgroundColor: filters.material === matiere ? '#000' : '#fff',
+                                    color: filters.material === matiere ? '#fff' : '#000',
+                                  }}
+                                >
+                                  {translateMaterial(matiere!, lang)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-              {/* Matière */}
-              {matieres.length > 0 && (
-                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4
-                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                  >
-                    {t('Matière', 'Material', lang)}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {matieres.map((matiere) => (
-                      <button
-                        key={matiere}
-                        onClick={() => setFilters({ ...filters, material: filters.material === matiere ? '' : matiere! })}
-                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                        style={{
-                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                          border: '1px solid #000',
-                          backgroundColor: filters.material === matiere ? '#000' : '#fff',
-                          color: filters.material === matiere ? '#fff' : '#000',
-                        }}
-                      >
-                        {translateMaterial(matiere!, lang)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    {/* Modèle */}
+                    {modeles.length > 0 && (
+                      <div style={{ borderBottom: '1px solid #000' }}>
+                        <AccordionHeader id="modele" label={t('Modèle', 'Style', lang)} />
+                        {openSections.has('modele') && (
+                          <div className="px-6 pb-6">
+                            <div className="grid grid-cols-2 gap-2">
+                              {modeles.map((modele) => (
+                                <button
+                                  key={modele}
+                                  onClick={() => setFilters({ ...filters, modele: filters.modele === modele ? '' : modele })}
+                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                  style={{
+                                    fontFamily: HELVETICA,
+                                    border: '1px solid #000',
+                                    backgroundColor: filters.modele === modele ? '#000' : '#fff',
+                                    color: filters.modele === modele ? '#fff' : '#000',
+                                  }}
+                                >
+                                  {translateModele(modele, lang)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-              {/* Modèle */}
-              {modeles.length > 0 && (
-                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4
-                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                  >
-                    {t('Modèle', 'Style', lang)}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {modeles.map((modele) => (
-                      <button
-                        key={modele}
-                        onClick={() => setFilters({ ...filters, modele: filters.modele === modele ? '' : modele })}
-                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                        style={{
-                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                          border: '1px solid #000',
-                          backgroundColor: filters.modele === modele ? '#000' : '#fff',
-                          color: filters.modele === modele ? '#fff' : '#000',
-                        }}
-                      >
-                        {translateModele(modele, lang)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    {/* Motif */}
+                    {motifs.length > 0 && (
+                      <div style={{ borderBottom: '1px solid #000' }}>
+                        <AccordionHeader id="motif" label={t('Motif', 'Pattern', lang)} />
+                        {openSections.has('motif') && (
+                          <div className="px-6 pb-6">
+                            <div className="grid grid-cols-2 gap-2">
+                              {motifs.map((motif) => (
+                                <button
+                                  key={motif}
+                                  onClick={() => setFilters({ ...filters, motif: filters.motif === motif ? '' : motif })}
+                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                  style={{
+                                    fontFamily: HELVETICA,
+                                    border: '1px solid #000',
+                                    backgroundColor: filters.motif === motif ? '#000' : '#fff',
+                                    color: filters.motif === motif ? '#fff' : '#000',
+                                  }}
+                                >
+                                  {translateMotif(motif, lang)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-              {/* Motif */}
-              {motifs.length > 0 && (
-                <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                  <h4
-                    className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                  >
-                    {t('Motif', 'Pattern', lang)}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {motifs.map((motif) => (
-                      <button
-                        key={motif}
-                        onClick={() => setFilters({ ...filters, motif: filters.motif === motif ? '' : motif })}
-                        className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                        style={{
-                          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-                          border: '1px solid #000',
-                          backgroundColor: filters.motif === motif ? '#000' : '#fff',
-                          color: filters.motif === motif ? '#fff' : '#000',
-                        }}
-                      >
-                        {translateMotif(motif, lang)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Promotion */}
-              <div className="px-6 py-6" style={{ borderBottom: '1px solid #000' }}>
-                <h4
-                  className="uppercase text-xs tracking-widest mb-4 font-semibold"
-                  style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                >
-                  {t('Promotion', 'Sale', lang)}
-                </h4>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <div
-                    className="w-5 h-5 flex items-center justify-center"
-                    style={{ border: '1px solid #000' }}
-                    onClick={() => setFilters({ ...filters, promotion: !filters.promotion })}
-                  >
-                    {filters.promotion && <span className="text-sm">✓</span>}
-                  </div>
-                  <span
-                    className="text-sm uppercase tracking-wide"
-                    style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
-                  >
-                    {t('En promotion uniquement', 'On sale only', lang)}
-                  </span>
-                </label>
-              </div>
+                    {/* Promotion */}
+                    <div style={{ borderBottom: '1px solid #000' }}>
+                      <AccordionHeader id="promotion" label={t('Promotion', 'Sale', lang)} />
+                      {openSections.has('promotion') && (
+                        <div className="px-6 pb-6">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <div
+                              className="w-5 h-5 flex items-center justify-center"
+                              style={{ border: '1px solid #000' }}
+                              onClick={() => setFilters({ ...filters, promotion: !filters.promotion })}
+                            >
+                              {filters.promotion && <span className="text-sm">✓</span>}
+                            </div>
+                            <span className="text-sm uppercase tracking-wide" style={{ fontFamily: HELVETICA }}>
+                              {t('En promotion uniquement', 'On sale only', lang)}
+                            </span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )
+              })()}
             </div>
 
             {/* Footer sticky */}
