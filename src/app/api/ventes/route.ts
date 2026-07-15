@@ -90,12 +90,18 @@ export async function GET(req: NextRequest) {
         categorie: d.categorie || null,
         marque: d.marque || null,
         trigramme: d.trigramme || null,
+        chineur: d.chineur || null,
         chineurUid: d.chineurUid || null,
+        prix: d.prix || d.prixInitial || null,
         prixInitial: d.prixInitial || null,
         prixVenteReel: d.prixVenteReel || 0,
         dateVente: d.dateVente?.toDate?.()?.toISOString?.() || null,
         remarque: d.remarque || d.noteArticle || null,
         source: d.source || 'manual',
+        venteFamiliale: d.venteFamiliale === true,
+        vendeuseId: d.vendeuseId || null,
+        vendeusePrenom: d.vendeusePrenom || null,
+        beneficiaire: d.beneficiaire || null,
         isAttribue: d.attribue === true || !!d.produitId,
       }
     })
