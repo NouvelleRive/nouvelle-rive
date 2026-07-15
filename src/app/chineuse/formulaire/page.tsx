@@ -80,6 +80,7 @@ export default function FormulairePage() {
   const [categories, setCategories] = useState<Cat[]>([])
   const [categorieRapport, setCategorieRapport] = useState<string>('')
   const [trigramme, setTrigramme] = useState<string>('')
+  const [chineuseDocId, setChineuseDocId] = useState<string>('')
   const [sku, setSku] = useState<string>('')
   const [loading, setLoading] = useState(false)
 
@@ -118,6 +119,7 @@ export default function FormulairePage() {
         setCategories([])
         setCategorieRapport('')
         setTrigramme('')
+        setChineuseDocId('')
         setSku('')
         return
       }
@@ -127,6 +129,7 @@ export default function FormulairePage() {
 
       const triDirect = (data?.trigramme || '').toString().trim().toUpperCase()
       setTrigramme(triDirect)
+      setChineuseDocId(chineuseSnap.id)
       setCategorieRapport(readCategorieRapportLabel(data))
 
       if (u.email) await refreshSku(triDirect, u.email)
@@ -207,7 +210,7 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
         shoeType: formData.shoeType?.trim() || null,
         sku,
         chineur: user.email,
-        chineurUid: user.uid,
+        chineurUid: chineuseDocId || user.uid,
         categorieRapport,
         trigramme,
         photos: photosData,

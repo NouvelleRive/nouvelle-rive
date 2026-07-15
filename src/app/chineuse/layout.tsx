@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebaseConfig'
+import { auth, db } from '@/lib/firebaseConfig'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import Link from 'next/link'
 import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
 import LogoutButton from '@/components/LogoutButton'
@@ -155,15 +156,23 @@ export default function ChineuseLayout({ children }: { children: React.ReactNode
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [chineuseDocId, setChineuseDocId] = useState<string>('')
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (!u) {
         router.push('/login')
         return
       }
       setUser(u)
       setLoading(false)
+
+      let snap = await getDoc(doc(db, 'chineuse', u.uid))
+      if (!snap.exists() && u.email) {
+        const byEmail = await getDocs(query(collection(db, 'chineuse'), where('emails', 'array-contains', u.email)))
+        if (!byEmail.empty) snap = byEmail.docs[0]
+      }
+      setChineuseDocId(snap.exists() ? snap.id : '')
     })
     return () => unsubscribe()
   }, [router])
@@ -178,7 +187,7 @@ export default function ChineuseLayout({ children }: { children: React.ReactNode
 
   if (!user) return null
 
-  const notifsOwnerId = user.email === ADMIN_EMAIL ? 'boutique' : user.uid
+  const notifsOwnerId = user.email === ADMIN_EMAIL ? 'boutique' : (chineuseDocId || user.uid)
 
   return (
     <div className="min-h-screen bg-gray-50">
