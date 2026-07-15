@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore'
+import { doc, getDoc, setDoc, collection, getDocs, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { useFilteredProducts } from '@/lib/siteConfig'
 import { Save, Plus, X, Trash2 } from 'lucide-react'
@@ -97,9 +97,23 @@ export default function AdminSitePage() {
   const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage, { skip: isIconiquesMode })
   const [localProduits, setLocalProduits] = useState<Produit[]>([])
 
-  // Sync local products with hook
+  // Sync local products with hook.
+  // /api/page-produits sérialise Timestamp → number (millis). ProductList appelle
+  // p.createdAt.toDate() partout : on reconvertit en Timestamp SDK client pour
+  // éviter "e.toDate is not a function".
   useEffect(() => {
-    setLocalProduits(produitsFromHook as Produit[])
+    const reTs = (v: any) =>
+      typeof v === 'number' && v > 0 ? Timestamp.fromMillis(v) : v
+    const converted = (produitsFromHook as any[]).map(p => ({
+      ...p,
+      createdAt: reTs(p.createdAt),
+      dateVente: reTs(p.dateVente),
+      dateReception: reTs(p.dateReception),
+      dateRetour: reTs(p.dateRetour),
+      prixBaisseLe: reTs(p.prixBaisseLe),
+      achatDateLivraison: reTs(p.achatDateLivraison),
+    })) as Produit[]
+    setLocalProduits(converted)
   }, [produitsFromHook])
 
   // Callback pour mise à jour immédiate après modification
