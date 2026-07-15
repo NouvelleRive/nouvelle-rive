@@ -989,21 +989,30 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         {openSections.has('matiere') && (
                           <div className="px-6 pb-6">
                             <div className="grid grid-cols-2 gap-2">
-                              {matieres.map((matiere) => (
-                                <button
-                                  key={matiere}
-                                  onClick={() => setFilters({ ...filters, material: filters.material === matiere ? '' : matiere! })}
-                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                                  style={{
-                                    fontFamily: HELVETICA,
-                                    border: '1px solid #000',
-                                    backgroundColor: filters.material === matiere ? '#000' : '#fff',
-                                    color: filters.material === matiere ? '#fff' : '#000',
-                                  }}
-                                >
-                                  {translateMaterial(matiere!, lang)}
-                                </button>
-                              ))}
+                              {matieres.map((matiere) => {
+                                const isSelected = !!matiere && filters.material.includes(matiere)
+                                return (
+                                  <button
+                                    key={matiere}
+                                    onClick={() => {
+                                      if (!matiere) return
+                                      const next = isSelected
+                                        ? filters.material.filter(m => m !== matiere)
+                                        : [...filters.material, matiere]
+                                      setFilters({ ...filters, material: next })
+                                    }}
+                                    className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                    style={{
+                                      fontFamily: HELVETICA,
+                                      border: '1px solid #000',
+                                      backgroundColor: isSelected ? '#000' : '#fff',
+                                      color: isSelected ? '#fff' : '#000',
+                                    }}
+                                  >
+                                    {translateMaterial(matiere!, lang)}
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         )}
@@ -1017,21 +1026,29 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         {openSections.has('modele') && (
                           <div className="px-6 pb-6">
                             <div className="grid grid-cols-2 gap-2">
-                              {modeles.map((modele) => (
-                                <button
-                                  key={modele}
-                                  onClick={() => setFilters({ ...filters, modele: filters.modele === modele ? '' : modele })}
-                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                                  style={{
-                                    fontFamily: HELVETICA,
-                                    border: '1px solid #000',
-                                    backgroundColor: filters.modele === modele ? '#000' : '#fff',
-                                    color: filters.modele === modele ? '#fff' : '#000',
-                                  }}
-                                >
-                                  {translateModele(modele, lang)}
-                                </button>
-                              ))}
+                              {modeles.map((modele) => {
+                                const isSelected = filters.modele.includes(modele)
+                                return (
+                                  <button
+                                    key={modele}
+                                    onClick={() => {
+                                      const next = isSelected
+                                        ? filters.modele.filter(m => m !== modele)
+                                        : [...filters.modele, modele]
+                                      setFilters({ ...filters, modele: next })
+                                    }}
+                                    className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                    style={{
+                                      fontFamily: HELVETICA,
+                                      border: '1px solid #000',
+                                      backgroundColor: isSelected ? '#000' : '#fff',
+                                      color: isSelected ? '#fff' : '#000',
+                                    }}
+                                  >
+                                    {translateModele(modele, lang)}
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         )}
@@ -1045,21 +1062,29 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         {openSections.has('motif') && (
                           <div className="px-6 pb-6">
                             <div className="grid grid-cols-2 gap-2">
-                              {motifs.map((motif) => (
-                                <button
-                                  key={motif}
-                                  onClick={() => setFilters({ ...filters, motif: filters.motif === motif ? '' : motif })}
-                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                                  style={{
-                                    fontFamily: HELVETICA,
-                                    border: '1px solid #000',
-                                    backgroundColor: filters.motif === motif ? '#000' : '#fff',
-                                    color: filters.motif === motif ? '#fff' : '#000',
-                                  }}
-                                >
-                                  {translateMotif(motif, lang)}
-                                </button>
-                              ))}
+                              {motifs.map((motif) => {
+                                const isSelected = filters.motif.includes(motif)
+                                return (
+                                  <button
+                                    key={motif}
+                                    onClick={() => {
+                                      const next = isSelected
+                                        ? filters.motif.filter(m => m !== motif)
+                                        : [...filters.motif, motif]
+                                      setFilters({ ...filters, motif: next })
+                                    }}
+                                    className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                    style={{
+                                      fontFamily: HELVETICA,
+                                      border: '1px solid #000',
+                                      backgroundColor: isSelected ? '#000' : '#fff',
+                                      color: isSelected ? '#fff' : '#000',
+                                    }}
+                                  >
+                                    {translateMotif(motif, lang)}
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         )}
