@@ -1620,17 +1620,14 @@
             )
           }
 
-          // Pièces reçues dans cette session (pour Phase B et Phase C)
-          const sessionPieces = pieces
-            .filter(p => sessionReceivedIds.has(p.id))
+          // Pièces reçues dans cette session ET qui ont une photo face
+          // (une pièce sans photo n'apparaît pas sur la fiche produit publique, donc
+          // ni Phase B — check photos — ni Phase C — favoris — ne la concernent)
+          const photosACheck = pieces
+            .filter(p => sessionReceivedIds.has(p.id) && (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
-          // Phase B ne défile que celles qui ont une photo face
-          const photosACheck = sessionPieces.filter(p => (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
-          // Si aucune photo → on saute direct en grille Phase C (elle doit toujours
-          // pouvoir choisir ses préférées, même sans photo pour l'instant)
-          const forceGrid = photosACheck.length === 0
 
-          if (sessionPieces.length === 0) {
+          if (photosACheck.length === 0) {
             return (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -1649,8 +1646,8 @@
             )
           }
 
-          // Phase C — grille finale : obligatoire, saute Phase B si aucune photo
-          if (restockShowGrid || forceGrid) {
+          // Phase C — grille finale : elle choisit ses pièces préférées → coups-de-coeur
+          if (restockShowGrid) {
             const toggleFav = async (p: Produit) => {
               if (favTogglingId) return
               setFavTogglingId(p.id)
@@ -1675,7 +1672,7 @@
               setPhaseASession(new Set())
               setPricesInput({})
             }
-            const favoriteProducts = sessionPieces.filter(p => (p as any).favoriEquipe === true)
+            const favoriteProducts = photosACheck.filter(p => (p as any).favoriEquipe === true)
             const publishAllFavorites = async () => {
               if (igPublishingId || favoriteProducts.length === 0) return
               const igOk: string[] = []
@@ -1733,7 +1730,7 @@
                     </button>
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-4">
-                    {sessionPieces.map((p) => {
+                    {photosACheck.map((p) => {
                       const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
                       const isFav = (p as any).favoriEquipe === true
                       const busy = favTogglingId === p.id
@@ -1746,13 +1743,7 @@
                             isFav ? 'border-[#22209C] ring-2 ring-[#22209C]/30' : 'border-gray-200 hover:border-gray-300'
                           } ${busy ? 'opacity-60' : ''}`}
                         >
-                          {face ? (
-                            <img src={face} alt={p.nom} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 px-1 text-center">
-                              pas de photo
-                            </div>
-                          )}
+                          <img src={face} alt={p.nom} className="w-full h-full object-cover" />
                           {isFav && (
                             <span className="absolute top-1 right-1 bg-[#22209C] text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow">
                               <Check size={14} />
