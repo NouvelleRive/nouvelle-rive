@@ -149,16 +149,16 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
   const [filters, setFilters] = useState({
     promotion: false,
-    marque: '',
+    marque: [] as string[],
     prixMin: '',
     prixMax: '',
     categorie: '',
-      sousCats: [],
-    taille: '',
-    color: '',
-    material: '',
-    modele: '',
-    motif: '',
+    sousCats: [] as string[],
+    taille: [] as string[],
+    color: [] as string[],
+    material: [] as string[],
+    modele: [] as string[],
+    motif: [] as string[],
   })
   const [tri, setTri] = useState('nouveautes')
 
@@ -279,8 +279,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   if (filters.promotion) {
     filteredProduits = filteredProduits.filter(p => p.promotion)
   }
-  if (filters.marque) {
-    filteredProduits = filteredProduits.filter(p => p.marque === filters.marque)
+  if (filters.marque.length > 0) {
+    filteredProduits = filteredProduits.filter(p => p.marque && filters.marque.includes(p.marque))
   }
   if (filters.prixMin) {
     filteredProduits = filteredProduits.filter(p => p.prix >= Number(filters.prixMin))
@@ -288,22 +288,22 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   if (filters.prixMax) {
     filteredProduits = filteredProduits.filter(p => p.prix <= Number(filters.prixMax))
   }
-  if (filters.taille) {
-    filteredProduits = filteredProduits.filter(p => p.taille === filters.taille)
+  if (filters.taille.length > 0) {
+    filteredProduits = filteredProduits.filter(p => p.taille && filters.taille.includes(p.taille))
   }
-  if (filters.color) {
-    filteredProduits = filteredProduits.filter(p => p.color === filters.color)
+  if (filters.color.length > 0) {
+    filteredProduits = filteredProduits.filter(p => p.color && filters.color.includes(p.color))
   }
-  if (filters.material) {
-    filteredProduits = filteredProduits.filter(p => p.material === filters.material)
-  }
-
-  if (filters.modele) {
-    filteredProduits = filteredProduits.filter(p => p.modele === filters.modele)
+  if (filters.material.length > 0) {
+    filteredProduits = filteredProduits.filter(p => p.material && filters.material.includes(p.material))
   }
 
-  if (filters.motif) {
-    filteredProduits = filteredProduits.filter(p => p.motif === filters.motif)
+  if (filters.modele.length > 0) {
+    filteredProduits = filteredProduits.filter(p => p.modele && filters.modele.includes(p.modele))
+  }
+
+  if (filters.motif.length > 0) {
+    filteredProduits = filteredProduits.filter(p => p.motif && filters.motif.includes(p.motif))
   }
 
   // Filtrage par recherche (texte libre, multi-mots)
@@ -439,16 +439,16 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   const resetFilters = () => {
     setFilters({
       promotion: false,
-      marque: '',
+      marque: [] as string[],
       prixMin: '',
       prixMax: '',
       categorie: '',
-    sousCats: [] as string[],
-      taille: '',
-      color: '',
-      material: '',
-      modele: '',
-      motif: '',
+      sousCats: [] as string[],
+      taille: [] as string[],
+      color: [] as string[],
+      material: [] as string[],
+      modele: [] as string[],
+      motif: [] as string[],
     })
   }
 
@@ -784,7 +784,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                               {categories.map((cat) => (
                                 <button
                                   key={cat}
-                                  onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, sousCats: [], taille: '', color: '', material: '', modele: '', motif: '' })}
+                                  onClick={() => setFilters({ ...filters, categorie: filters.categorie === cat ? '' : cat, sousCats: [], taille: [], color: [], material: [], modele: [], motif: [] })}
                                   className="py-2 px-3 text-xs uppercase tracking-wide transition"
                                   style={{
                                     fontFamily: HELVETICA,
@@ -809,7 +809,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                                         const newSousCats = isSelected
                                           ? filters.sousCats.filter(s => s !== sousCat)
                                           : [...filters.sousCats, sousCat]
-                                        setFilters({ ...filters, sousCats: newSousCats, taille: '', color: '', material: '', modele: '', motif: '' })
+                                        setFilters({ ...filters, sousCats: newSousCats, taille: [], color: [], material: [], modele: [], motif: [] })
                                       }}
                                       className="py-1.5 px-3 text-xs uppercase tracking-wide transition"
                                       style={{
@@ -837,21 +837,30 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         <div className="px-6 pb-6">
                           {tailles.length > 0 ? (
                             <div className="grid grid-cols-4 gap-2">
-                              {tailles.map((taille) => (
-                                <button
-                                  key={taille}
-                                  onClick={() => setFilters({ ...filters, taille: filters.taille === taille ? '' : taille! })}
-                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                                  style={{
-                                    fontFamily: HELVETICA,
-                                    border: '1px solid #000',
-                                    backgroundColor: filters.taille === taille ? '#000' : '#fff',
-                                    color: filters.taille === taille ? '#fff' : '#000',
-                                  }}
-                                >
-                                  {taille}
-                                </button>
-                              ))}
+                              {tailles.map((taille) => {
+                                const isSelected = !!taille && filters.taille.includes(taille)
+                                return (
+                                  <button
+                                    key={taille}
+                                    onClick={() => {
+                                      if (!taille) return
+                                      const next = isSelected
+                                        ? filters.taille.filter(t => t !== taille)
+                                        : [...filters.taille, taille]
+                                      setFilters({ ...filters, taille: next })
+                                    }}
+                                    className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                    style={{
+                                      fontFamily: HELVETICA,
+                                      border: '1px solid #000',
+                                      backgroundColor: isSelected ? '#000' : '#fff',
+                                      color: isSelected ? '#fff' : '#000',
+                                    }}
+                                  >
+                                    {taille}
+                                  </button>
+                                )
+                              })}
                             </div>
                           ) : (
                             <p className="text-sm text-gray-500" style={{ fontFamily: HELVETICA }}>
@@ -869,21 +878,30 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         {openSections.has('marque') && (
                           <div className="px-6 pb-6">
                             <div className="grid grid-cols-2 gap-2">
-                              {marques.map((marque) => (
-                                <button
-                                  key={marque}
-                                  onClick={() => setFilters({ ...filters, marque: filters.marque === marque ? '' : marque! })}
-                                  className="py-2 px-3 text-xs uppercase tracking-wide transition"
-                                  style={{
-                                    fontFamily: HELVETICA,
-                                    border: '1px solid #000',
-                                    backgroundColor: filters.marque === marque ? '#000' : '#fff',
-                                    color: filters.marque === marque ? '#fff' : '#000',
-                                  }}
-                                >
-                                  {marque}
-                                </button>
-                              ))}
+                              {marques.map((marque) => {
+                                const isSelected = !!marque && filters.marque.includes(marque)
+                                return (
+                                  <button
+                                    key={marque}
+                                    onClick={() => {
+                                      if (!marque) return
+                                      const next = isSelected
+                                        ? filters.marque.filter(m => m !== marque)
+                                        : [...filters.marque, marque]
+                                      setFilters({ ...filters, marque: next })
+                                    }}
+                                    className="py-2 px-3 text-xs uppercase tracking-wide transition"
+                                    style={{
+                                      fontFamily: HELVETICA,
+                                      border: '1px solid #000',
+                                      backgroundColor: isSelected ? '#000' : '#fff',
+                                      color: isSelected ? '#fff' : '#000',
+                                    }}
+                                  >
+                                    {marque}
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         )}
@@ -928,15 +946,22 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                             <div className="grid grid-cols-3 gap-2">
                               {couleurs.map((couleur) => {
                                 const paletteEntry = COLOR_PALETTE.find(c => c.name === couleur)
+                                const isSelected = !!couleur && filters.color.includes(couleur)
                                 return (
                                   <button
                                     key={couleur}
-                                    onClick={() => setFilters({ ...filters, color: filters.color === couleur ? '' : couleur! })}
+                                    onClick={() => {
+                                      if (!couleur) return
+                                      const next = isSelected
+                                        ? filters.color.filter(c => c !== couleur)
+                                        : [...filters.color, couleur]
+                                      setFilters({ ...filters, color: next })
+                                    }}
                                     className="py-2 px-3 text-xs uppercase tracking-wide transition flex items-center gap-2"
                                     style={{
                                       fontFamily: HELVETICA,
-                                      border: filters.color === couleur ? '2px solid #000' : '1px solid #000',
-                                      backgroundColor: filters.color === couleur ? '#f3f4f6' : '#fff',
+                                      border: isSelected ? '2px solid #000' : '1px solid #000',
+                                      backgroundColor: isSelected ? '#f3f4f6' : '#fff',
                                       color: '#000',
                                     }}
                                   >

@@ -1,9 +1,10 @@
 // lib/getChineusesFullCached.ts
-// Cache module-scoped (par worker Vercel) de la liste chineuses AVEC champs
-// privés (bancaires, taux). Réservé aux routes admin.
+// Cache 2-niveaux (mémoire worker + blob Firebase Storage) de la liste chineuses
+// AVEC champs privés (bancaires, taux). Réservé aux routes admin.
 
 import { adminDb } from '@/lib/firebaseAdmin'
 import { logFirestoreScan } from '@/lib/logFirestoreScan'
+import { getBlobCached } from '@/lib/blobCache'
 
 export type ChineuseFull = {
   uid: string
@@ -22,9 +23,8 @@ export type ChineuseFull = {
 }
 
 const TTL_MS = 6 * 60 * 60 * 1000
-type Cached = { data: ChineuseFull[]; at: number }
-let cache: Cached | null = null
-let inflight: Promise<ChineuseFull[]> | null = null
+const memory: { current: { data: ChineuseFull[]; at: number } | null } = { current: null }
+const inflight: { current: Promise<ChineuseFull[]> | null } = { current: null }
 
 async function fetchFresh(): Promise<ChineuseFull[]> {
   const t0 = Date.now()
@@ -51,16 +51,5 @@ async function fetchFresh(): Promise<ChineuseFull[]> {
 }
 
 export async function getChineusesFullCached(): Promise<ChineuseFull[]> {
-  const now = Date.now()
-  if (cache && now - cache.at < TTL_MS) return cache.data
-  if (inflight) return inflight
-  inflight = fetchFresh()
-    .then(data => {
-      cache = { data, at: Date.now() }
-      return data
-    })
-    .finally(() => {
-      inflight = null
-    })
-  return inflight
+  return getBlobCached<ChineuseFull[]>('chineuses-full-admin', TTL_MS, memory, inflight, fetchFresh)
 }

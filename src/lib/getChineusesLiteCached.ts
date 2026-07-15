@@ -5,6 +5,7 @@
 
 import { adminDb } from '@/lib/firebaseAdmin'
 import { logFirestoreScan } from '@/lib/logFirestoreScan'
+import { getBlobCached } from '@/lib/blobCache'
 
 export type ChineuseLite = {
   uid: string
@@ -31,12 +32,10 @@ export type ChineuseLite = {
   instagramFeatured?: string
 }
 
-// Cache module-scoped (par worker Vercel) — plus fiable que unstable_cache
-// qui ne persiste pas correctement entre invocations serverless.
+// Cache 2-niveaux : mémoire worker + blob Firebase Storage partagé.
 const TTL_MS = 6 * 60 * 60 * 1000
-type Cached = { data: ChineuseLite[]; at: number }
-let cache: Cached | null = null
-let inflight: Promise<ChineuseLite[]> | null = null
+const memory: { current: { data: ChineuseLite[]; at: number } | null } = { current: null }
+const inflight: { current: Promise<ChineuseLite[]> | null } = { current: null }
 
 async function fetchFresh(): Promise<ChineuseLite[]> {
   const t0 = Date.now()
@@ -74,16 +73,5 @@ async function fetchFresh(): Promise<ChineuseLite[]> {
 }
 
 export async function getChineusesLiteCached(): Promise<ChineuseLite[]> {
-  const now = Date.now()
-  if (cache && now - cache.at < TTL_MS) return cache.data
-  if (inflight) return inflight
-  inflight = fetchFresh()
-    .then(data => {
-      cache = { data, at: Date.now() }
-      return data
-    })
-    .finally(() => {
-      inflight = null
-    })
-  return inflight
+  return getBlobCached<ChineuseLite[]>('chineuses-lite', TTL_MS, memory, inflight, fetchFresh)
 }

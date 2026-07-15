@@ -1,8 +1,10 @@
 // lib/getIconiquesCached.ts
-// Cache module-scoped (par worker Vercel) de la collection iconiques (~24 docs).
+// Cache 2-niveaux (mémoire worker + blob Firebase Storage) de la collection
+// iconiques (~24 docs).
 
 import { adminDb } from '@/lib/firebaseAdmin'
 import { logFirestoreScan } from '@/lib/logFirestoreScan'
+import { getBlobCached } from '@/lib/blobCache'
 
 export type IconiqueDoc = {
   id: string
@@ -36,9 +38,8 @@ export type IconiqueDoc = {
 }
 
 const TTL_MS = 6 * 60 * 60 * 1000
-type Cached = { data: IconiqueDoc[]; at: number }
-let cache: Cached | null = null
-let inflight: Promise<IconiqueDoc[]> | null = null
+const memory: { current: { data: IconiqueDoc[]; at: number } | null } = { current: null }
+const inflight: { current: Promise<IconiqueDoc[]> | null } = { current: null }
 
 async function fetchFresh(): Promise<IconiqueDoc[]> {
   const t0 = Date.now()
@@ -48,16 +49,5 @@ async function fetchFresh(): Promise<IconiqueDoc[]> {
 }
 
 export async function getIconiquesCached(): Promise<IconiqueDoc[]> {
-  const now = Date.now()
-  if (cache && now - cache.at < TTL_MS) return cache.data
-  if (inflight) return inflight
-  inflight = fetchFresh()
-    .then(data => {
-      cache = { data, at: Date.now() }
-      return data
-    })
-    .finally(() => {
-      inflight = null
-    })
-  return inflight
+  return getBlobCached<IconiqueDoc[]>('iconiques', TTL_MS, memory, inflight, fetchFresh)
 }
