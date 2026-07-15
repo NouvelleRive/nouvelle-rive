@@ -4,7 +4,6 @@ import { getSitemapEntries, renderSitemapXml } from '@/lib/sitemap-data'
 export const revalidate = 3600
 export const dynamic = 'force-static'
 
-// Alias de /sitemap.xml pour compat (soumis à GSC durant le debug indexation).
 export async function GET() {
   const entries = await getSitemapEntries()
   const xml = renderSitemapXml(entries)

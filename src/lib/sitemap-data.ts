@@ -1,4 +1,3 @@
-import type { MetadataRoute } from 'next'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { buildProduitPath, getTypeSlug } from '@/lib/produitSlug'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
@@ -11,9 +10,14 @@ const LUXURY_SLUGS = new Set(LUXURY_BRANDS.map(slugifyBrandStr))
 
 const BASE_URL = 'https://www.nouvellerive.eu'
 
-export const revalidate = 3600
+export type SitemapEntry = {
+  url: string
+  lastModified: Date
+  changeFrequency: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never'
+  priority: number
+}
 
-const STATIC_PAGES: { path: string; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency']; priority: number }[] = [
+const STATIC_PAGES: { path: string; changeFrequency: SitemapEntry['changeFrequency']; priority: number }[] = [
   { path: '/', changeFrequency: 'daily', priority: 1.0 },
   { path: '/coups-de-coeur', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/ete', changeFrequency: 'weekly', priority: 0.8 },
@@ -29,10 +33,10 @@ const STATIC_PAGES: { path: string; changeFrequency: MetadataRoute.Sitemap[numbe
   { path: '/legal/mentions-cgv', changeFrequency: 'yearly', priority: 0.2 },
 ]
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   const now = new Date()
 
-  const staticEntries: MetadataRoute.Sitemap = STATIC_PAGES.map(p => ({
+  const staticEntries: SitemapEntry[] = STATIC_PAGES.map(p => ({
     url: `${BASE_URL}${p.path}`,
     lastModified: now,
     changeFrequency: p.changeFrequency,
@@ -87,24 +91,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  const typeEntries: MetadataRoute.Sitemap = types.map(type => ({
+  const typeEntries: SitemapEntry[] = types.map(type => ({
     url: `${BASE_URL}/${type}`,
     lastModified: now,
-    changeFrequency: 'daily' as const,
+    changeFrequency: 'daily',
     priority: 0.85,
   }))
 
-  const brandEntries: MetadataRoute.Sitemap = luxuryBrands.map(slug => ({
+  const brandEntries: SitemapEntry[] = luxuryBrands.map(slug => ({
     url: `${BASE_URL}/designer/${slug}`,
     lastModified: now,
-    changeFrequency: 'daily' as const,
+    changeFrequency: 'daily',
     priority: 0.85,
   }))
 
-  const productEntries: MetadataRoute.Sitemap = productPaths.map(path => ({
+  const productEntries: SitemapEntry[] = productPaths.map(path => ({
     url: `${BASE_URL}/${path}`,
     lastModified: now,
-    changeFrequency: 'weekly' as const,
+    changeFrequency: 'weekly',
     priority: 0.7,
   }))
 
@@ -115,4 +119,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       seen.add(e.url)
       return true
     })
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+}
+
+export function renderSitemapXml(entries: SitemapEntry[]): string {
+  const urls = entries.map(e => {
+    const loc = `<loc>${escapeXml(e.url)}</loc>`
+    const lastmod = `<lastmod>${e.lastModified.toISOString().slice(0, 10)}</lastmod>`
+    const changefreq = `<changefreq>${e.changeFrequency}</changefreq>`
+    const priority = `<priority>${e.priority.toFixed(1)}</priority>`
+    return `  <url>${loc}${lastmod}${changefreq}${priority}</url>`
+  }).join('\n')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>`
 }
