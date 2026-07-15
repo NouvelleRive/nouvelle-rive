@@ -1620,19 +1620,23 @@
             )
           }
 
-          // Phase B — uniquement les pièces reçues pendant cette session de restock
-          // (pas tout le stock chineuse — sinon on ferait défiler des vieilles pièces)
-          const photosACheck = pieces
-            .filter(p => sessionReceivedIds.has(p.id) && (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
+          // Pièces reçues dans cette session (pour Phase B et Phase C)
+          const sessionPieces = pieces
+            .filter(p => sessionReceivedIds.has(p.id))
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
+          // Phase B ne défile que celles qui ont une photo face
+          const photosACheck = sessionPieces.filter(p => (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
+          // Si aucune photo → on saute direct en grille Phase C (elle doit toujours
+          // pouvoir choisir ses préférées, même sans photo pour l'instant)
+          const forceGrid = photosACheck.length === 0
 
-          if (photosACheck.length === 0) {
+          if (sessionPieces.length === 0) {
             return (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl max-w-md w-full p-6">
                   <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Tout est OK 💙</h3>
                   <p className="text-sm text-gray-700 mb-5">
-                    Restock de <strong>{restockFiniChineuse.nom}</strong> terminé, aucune pièce à valider.
+                    Restock de <strong>{restockFiniChineuse.nom}</strong> terminé.
                   </p>
                   <button
                     onClick={() => setRestockFiniChineuse(null)}
@@ -1645,8 +1649,8 @@
             )
           }
 
-          // Phase C — grille finale : elle choisit ses pièces préférées → coups-de-coeur
-          if (restockShowGrid) {
+          // Phase C — grille finale : obligatoire, saute Phase B si aucune photo
+          if (restockShowGrid || forceGrid) {
             const toggleFav = async (p: Produit) => {
               if (favTogglingId) return
               setFavTogglingId(p.id)
@@ -1671,7 +1675,7 @@
               setPhaseASession(new Set())
               setPricesInput({})
             }
-            const favoriteProducts = photosACheck.filter(p => (p as any).favoriEquipe === true)
+            const favoriteProducts = sessionPieces.filter(p => (p as any).favoriEquipe === true)
             const publishAllFavorites = async () => {
               if (igPublishingId || favoriteProducts.length === 0) return
               const igOk: string[] = []
@@ -1729,7 +1733,7 @@
                     </button>
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-4">
-                    {photosACheck.map((p) => {
+                    {sessionPieces.map((p) => {
                       const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
                       const isFav = (p as any).favoriEquipe === true
                       const busy = favTogglingId === p.id
@@ -1742,7 +1746,13 @@
                             isFav ? 'border-[#22209C] ring-2 ring-[#22209C]/30' : 'border-gray-200 hover:border-gray-300'
                           } ${busy ? 'opacity-60' : ''}`}
                         >
-                          <img src={face} alt={p.nom} className="w-full h-full object-cover" />
+                          {face ? (
+                            <img src={face} alt={p.nom} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 px-1 text-center">
+                              pas de photo
+                            </div>
+                          )}
                           {isFav && (
                             <span className="absolute top-1 right-1 bg-[#22209C] text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow">
                               <Check size={14} />
