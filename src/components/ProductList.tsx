@@ -339,6 +339,8 @@
       return produits.filter((p) => {
         if (p.statut === 'supprime') return false
         if (p.statut === 'retour') return false
+        if (p.statut === 'vendu') return false
+        if (p.vendu === true) return false
         if (filtreARecuperer) {
           if (p.statutRecuperation !== 'aRecuperer') return false
         } else {
