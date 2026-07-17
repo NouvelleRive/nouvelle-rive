@@ -259,7 +259,16 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
         return label ? getMatieresForCategorie(label) : []
       }))]
     : []
-  const matieresPresentes = [...new Set(produitsParCat.map(p => p.material).filter(Boolean))] as string[]
+  const matieresPresentes = (() => {
+    const set = new Set<string>()
+    for (const p of produitsParCat) {
+      if (!p.material) continue
+      for (const m of p.material.split(',').map(s => s.trim()).filter(Boolean)) {
+        set.add(m)
+      }
+    }
+    return [...set]
+  })()
   const matieres = matieresLib.length > 0
     ? matieresLib.filter(m => matieresPresentes.includes(m))
     : matieresPresentes.sort()
@@ -314,7 +323,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     })
   }
   if (filters.material.length > 0) {
-    filteredProduits = filteredProduits.filter(p => p.material && filters.material.includes(p.material))
+    filteredProduits = filteredProduits.filter(p => {
+      if (!p.material) return false
+      const parts = p.material.split(',').map(s => s.trim()).filter(Boolean)
+      return parts.some(m => filters.material.includes(m))
+    })
   }
 
   if (filters.modele.length > 0) {
