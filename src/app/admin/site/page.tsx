@@ -94,12 +94,22 @@ export default function AdminSitePage() {
   const [localProduits, setLocalProduits] = useState<Produit[]>([])
 
   // Sync local products with hook.
-  // /api/page-produits sérialise Timestamp → number (millis). ProductList appelle
-  // p.createdAt.toDate() partout : on reconvertit en Timestamp SDK client pour
-  // éviter "e.toDate is not a function".
+  // /api/page-produits sérialise createdAt/dateVente en millis, mais les autres
+  // Timestamps (dateReception, prixBaisseLe…) sortent en {_seconds,_nanoseconds}
+  // via JSON.stringify du Firestore Admin SDK. ProductList appelle .toDate()
+  // partout : on reconvertit tout en Timestamp SDK client.
   useEffect(() => {
-    const reTs = (v: any) =>
-      typeof v === 'number' && v > 0 ? Timestamp.fromMillis(v) : v
+    const reTs = (v: any) => {
+      if (!v) return v
+      if (v instanceof Timestamp) return v
+      if (typeof v === 'number' && v > 0) return Timestamp.fromMillis(v)
+      if (typeof v === 'object') {
+        const s = v._seconds ?? v.seconds
+        const n = v._nanoseconds ?? v.nanoseconds ?? 0
+        if (typeof s === 'number') return new Timestamp(s, n)
+      }
+      return v
+    }
     const converted = (produitsFromHook as any[]).map(p => ({
       ...p,
       createdAt: reTs(p.createdAt),
