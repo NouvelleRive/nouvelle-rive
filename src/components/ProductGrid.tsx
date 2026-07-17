@@ -10,6 +10,7 @@ import { getModelesForCategorie } from '@/lib/modeles'
 import { getMatieresForCategorie } from '@/lib/matieres'
 import { MOTIFS } from '@/lib/motifs'
 import { MACRO_ORDER, getMacroCategorie } from '@/lib/categories'
+import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
@@ -162,6 +163,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   })
   const [tri, setTri] = useState('nouveautes')
 
+  const [marqueSearch, setMarqueSearch] = useState('')
+
   // Accordéons filtres — tous fermés au démarrage
   const [openSections, setOpenSections] = useState<Set<string>>(new Set())
   const toggleSection = (key: string) => {
@@ -213,6 +216,18 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     : []
 
   const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))].sort((a, b) => a!.localeCompare(b!, 'fr'))
+
+  const isMarqueLuxe = (m: string) => {
+    const low = m.toLowerCase().trim()
+    return LUXURY_BRANDS.some(b => low.includes(b) || b.includes(low))
+  }
+  const marquesLuxePresentes = marques.filter((m): m is string => !!m && isMarqueLuxe(m))
+  const luxeToutSelectionne = marquesLuxePresentes.length > 0
+    && marquesLuxePresentes.every(m => filters.marque.includes(m))
+  const marqueSearchNorm = marqueSearch.trim().toLowerCase()
+  const marquesAffichees = marqueSearchNorm
+    ? marques.filter(m => !!m && m.toLowerCase().includes(marqueSearchNorm))
+    : marques
 
   // Produits filtrés par catégorie pour les sous-filtres
   const produitsParCat = filters.categorie
@@ -909,8 +924,38 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                         <AccordionHeader id="marque" label={t('Marque', 'Brand', lang)} />
                         {openSections.has('marque') && (
                           <div className="px-6 pb-6">
+                            <div className="flex items-center gap-2 mb-3">
+                              <input
+                                type="text"
+                                value={marqueSearch}
+                                onChange={(e) => setMarqueSearch(e.target.value)}
+                                placeholder={t('Rechercher une marque…', 'Search a brand…', lang)}
+                                className="flex-1 py-2 px-3 text-xs"
+                                style={{ fontFamily: HELVETICA, border: '1px solid #000' }}
+                              />
+                              {marquesLuxePresentes.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = luxeToutSelectionne
+                                      ? filters.marque.filter(m => !marquesLuxePresentes.includes(m))
+                                      : [...new Set([...filters.marque, ...marquesLuxePresentes])]
+                                    setFilters({ ...filters, marque: next })
+                                  }}
+                                  className="py-2 px-3 text-xs uppercase tracking-wide transition whitespace-nowrap"
+                                  style={{
+                                    fontFamily: HELVETICA,
+                                    border: '1px solid #000',
+                                    backgroundColor: luxeToutSelectionne ? '#000' : '#fff',
+                                    color: luxeToutSelectionne ? '#fff' : '#000',
+                                  }}
+                                >
+                                  {t('Luxe', 'Luxury', lang)}
+                                </button>
+                              )}
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
-                              {marques.map((marque) => {
+                              {marquesAffichees.map((marque) => {
                                 const isSelected = !!marque && filters.marque.includes(marque)
                                 return (
                                   <button
@@ -934,6 +979,14 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                                   </button>
                                 )
                               })}
+                              {marquesAffichees.length === 0 && (
+                                <div
+                                  className="col-span-2 text-xs text-center py-4"
+                                  style={{ fontFamily: HELVETICA, color: '#666' }}
+                                >
+                                  {t('Aucune marque', 'No brand', lang)}
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
