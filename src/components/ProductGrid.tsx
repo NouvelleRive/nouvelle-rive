@@ -235,7 +235,22 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     if (iB !== -1) return 1
     return a!.localeCompare(b!)
   })
-  const couleurs = [...new Set(produitsParCat.map(p => p.color).filter(Boolean))].sort()
+  const couleurs = (() => {
+    const set = new Set<string>()
+    for (const p of produitsParCat) {
+      if (!p.color) continue
+      for (const c of p.color.split(',').map(s => s.trim()).filter(Boolean)) {
+        set.add(c)
+      }
+    }
+    const paletteIndex = new Map(COLOR_PALETTE.map((c, i) => [c.name, i]))
+    return [...set].sort((a, b) => {
+      const iA = paletteIndex.get(a) ?? Infinity
+      const iB = paletteIndex.get(b) ?? Infinity
+      if (iA !== iB) return iA - iB
+      return a.localeCompare(b)
+    })
+  })()
 
   // Matières et modèles depuis les libs si catégorie sélectionnée
   const matieresLib = filters.categorie
@@ -292,7 +307,11 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     filteredProduits = filteredProduits.filter(p => p.taille && filters.taille.includes(p.taille))
   }
   if (filters.color.length > 0) {
-    filteredProduits = filteredProduits.filter(p => p.color && filters.color.includes(p.color))
+    filteredProduits = filteredProduits.filter(p => {
+      if (!p.color) return false
+      const parts = p.color.split(',').map(s => s.trim()).filter(Boolean)
+      return parts.some(c => filters.color.includes(c))
+    })
   }
   if (filters.material.length > 0) {
     filteredProduits = filteredProduits.filter(p => p.material && filters.material.includes(p.material))
