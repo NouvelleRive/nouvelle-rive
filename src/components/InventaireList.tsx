@@ -8,6 +8,11 @@
     Search, X, Check, AlertTriangle, Package, PackageCheck,
     ImageIcon, Edit3, Filter, Camera, Upload
   } from 'lucide-react'
+  import { COLORS, MATERIALS } from '@/lib/dico'
+
+  // Listes triées pour les selects du popup vérif réception
+  const COLOR_OPTIONS = Object.keys(COLORS).sort((a, b) => a.localeCompare(b, 'fr'))
+  const MATERIAL_OPTIONS = Object.keys(MATERIALS).sort((a, b) => a.localeCompare(b, 'fr'))
 
   // =====================
   // TYPES
@@ -182,6 +187,13 @@
     const [phaseAProcessingId, setPhaseAProcessingId] = useState<string | null>(null)
     const [phaseBReuploadingId, setPhaseBReuploadingId] = useState<string | null>(null)
     const phaseBCameraRef = useRef<HTMLInputElement>(null)
+    // Vérif photo/couleur/matière déclenchée à chaque réception d'une pièce chineuse
+    const [photoCheckPiece, setPhotoCheckPiece] = useState<Produit | null>(null)
+    const [photoCheckColor, setPhotoCheckColor] = useState('')
+    const [photoCheckMaterial, setPhotoCheckMaterial] = useState('')
+    const [photoCheckSaving, setPhotoCheckSaving] = useState(false)
+    const [photoCheckReuploading, setPhotoCheckReuploading] = useState(false)
+    const photoCheckCameraRef = useRef<HTMLInputElement>(null)
     // Reset la session Phase A dès que le popup ferme (peu importe la sortie)
     useEffect(() => {
       if (!restockFiniChineuse) {
@@ -471,6 +483,13 @@
         const nextReceived = new Set(sessionReceivedIds)
         nextReceived.add(p.id)
         setSessionReceivedIds(nextReceived)
+
+        // Vérif immédiate photo/couleur/matière (pièce-par-pièce, en réception)
+        if (mode === 'reception') {
+          setPhotoCheckColor(p.color || '')
+          setPhotoCheckMaterial(p.material || '')
+          setPhotoCheckPiece(p)
+        }
 
         // Si c'était la dernière pièce de cette chineuse (trigramme) à recevoir
         // en mode réception : proposer de vérifier pièces à rendre / prix à baisser
@@ -1475,6 +1494,148 @@
             </div>
           </div>
         )}
+
+        {/* Popup vérif à chaque réception : photo face + couleur + matière */}
+        {photoCheckPiece && (() => {
+          const p = photoCheckPiece
+          const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+          const closePopup = () => {
+            setPhotoCheckPiece(null)
+            setPhotoCheckColor('')
+            setPhotoCheckMaterial('')
+          }
+          const valider = async () => {
+            if (photoCheckSaving) return
+            const newColor = photoCheckColor.trim()
+            const newMaterial = photoCheckMaterial.trim()
+            const colorChanged = newColor !== (p.color || '').trim()
+            const materialChanged = newMaterial !== (p.material || '').trim()
+            if (!colorChanged && !materialChanged) { closePopup(); return }
+            setPhotoCheckSaving(true)
+            try {
+              const update: Record<string, unknown> = {}
+              if (colorChanged) update.color = newColor
+              if (materialChanged) update.material = newMaterial
+              await updateDoc(doc(db, 'produits', p.id), update)
+              onProductUpdate?.()
+              closePopup()
+            } catch (err: any) {
+              alert('Erreur : ' + (err?.message || 'inconnue'))
+            } finally {
+              setPhotoCheckSaving(false)
+            }
+          }
+          return (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-3">
+              <div className="bg-white rounded-xl w-full max-w-md p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-gray-500">{p.sku}</span>
+                  <button
+                    onClick={closePopup}
+                    className="text-gray-400 hover:text-gray-600 -mr-1"
+                    aria-label="Fermer"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                {face ? (
+                  <img
+                    src={face}
+                    alt={p.nom}
+                    className="w-full h-[42vh] object-contain bg-gray-50 rounded-lg"
+                  />
+                ) : (
+                  <div className="w-full h-[42vh] bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                    Pas de photo
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-600 w-14 flex-shrink-0">Couleur</label>
+                  <select
+                    value={photoCheckColor}
+                    onChange={(e) => setPhotoCheckColor(e.target.value)}
+                    className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
+                  >
+                    <option value="">— choisir —</option>
+                    {photoCheckColor && !COLOR_OPTIONS.includes(photoCheckColor) && (
+                      <option value={photoCheckColor}>{photoCheckColor} (actuel)</option>
+                    )}
+                    {COLOR_OPTIONS.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-600 w-14 flex-shrink-0">Matière</label>
+                  <select
+                    value={photoCheckMaterial}
+                    onChange={(e) => setPhotoCheckMaterial(e.target.value)}
+                    className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
+                  >
+                    <option value="">— choisir —</option>
+                    {photoCheckMaterial && !MATERIAL_OPTIONS.includes(photoCheckMaterial) && (
+                      <option value={photoCheckMaterial}>{photoCheckMaterial} (actuel)</option>
+                    )}
+                    {MATERIAL_OPTIONS.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <input
+                  ref={photoCheckCameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (!file) return
+                    setPhotoCheckReuploading(true)
+                    try {
+                      const url = await uploadToBunny(file)
+                      await updateDoc(doc(db, 'produits', p.id), {
+                        'photos.face': url,
+                        imageUrl: url,
+                        imageUrls: [url, ...(p.imageUrls || []).filter(u => u !== face)],
+                      })
+                      setPhotoCheckPiece({
+                        ...p,
+                        photos: { ...(p.photos || {}), face: url },
+                        imageUrl: url,
+                        imageUrls: [url, ...(p.imageUrls || []).filter(u => u !== face)],
+                      })
+                      onProductUpdate?.()
+                    } catch (err: any) {
+                      alert('Erreur upload : ' + (err?.message || 'inconnue'))
+                    } finally {
+                      setPhotoCheckReuploading(false)
+                    }
+                  }}
+                />
+                <div className="flex gap-2 mt-1">
+                  <button
+                    onClick={() => photoCheckCameraRef.current?.click()}
+                    disabled={photoCheckReuploading || photoCheckSaving}
+                    className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {photoCheckReuploading ? 'Upload…' : 'Pas OK'}
+                  </button>
+                  <button
+                    onClick={valider}
+                    disabled={photoCheckReuploading || photoCheckSaving}
+                    className="flex-1 px-3 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878] disabled:opacity-50"
+                  >
+                    {photoCheckSaving ? '...' : 'OK'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Popup : restock chineuse fini — phase A (pièces à gérer) puis phase B (photos face à valider) */}
         {restockFiniChineuse && (() => {
