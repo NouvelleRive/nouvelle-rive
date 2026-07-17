@@ -485,28 +485,12 @@
         setSessionReceivedIds(nextReceived)
 
         // Vérif immédiate photo/couleur/matière (pièce-par-pièce, en réception)
+        // Le trigger fin-de-restock (Phase A/B/C) est reporté à la fermeture
+        // de ce popup pour ne pas ouvrir deux popups en même temps.
         if (mode === 'reception') {
           setPhotoCheckColor(p.color || '')
           setPhotoCheckMaterial(p.material || '')
           setPhotoCheckPiece(p)
-        }
-
-        // Si c'était la dernière pièce de cette chineuse (trigramme) à recevoir
-        // en mode réception : proposer de vérifier pièces à rendre / prix à baisser
-        // NB : une chineuse peut avoir plusieurs emails → on regroupe par trigramme.
-        const tri = getTri(p)
-        if (mode === 'reception' && tri) {
-          const remaining = produits.filter(o =>
-            o.id !== p.id &&
-            !nextReceived.has(o.id) &&
-            getTri(o) === tri &&
-            o.statut !== 'supprime' &&
-            (((o as any).statutRestock === 'enAttente') || o.recu === false)
-          )
-          if (remaining.length === 0) {
-            setRestockPhotoIndex(0)
-            setRestockFiniChineuse({ trigramme: tri, nom: getNomFromTri(tri) })
-          }
         }
       } catch (err) {
         console.error('Erreur réception:', err)
@@ -1503,6 +1487,22 @@
             setPhotoCheckPiece(null)
             setPhotoCheckColor('')
             setPhotoCheckMaterial('')
+            // À la fermeture : si c'était la dernière pièce à recevoir pour ce
+            // trigramme (dans le stock non-reçu actuel), enchaîner Phase A/B/C.
+            const tri = getTri(p)
+            if (mode === 'reception' && tri) {
+              const remaining = produits.filter(o =>
+                o.id !== p.id &&
+                !sessionReceivedIds.has(o.id) &&
+                getTri(o) === tri &&
+                o.statut !== 'supprime' &&
+                (((o as any).statutRestock === 'enAttente') || o.recu === false)
+              )
+              if (remaining.length === 0) {
+                setRestockPhotoIndex(0)
+                setRestockFiniChineuse({ trigramme: tri, nom: getNomFromTri(tri) })
+              }
+            }
           }
           const valider = async () => {
             if (photoCheckSaving) return
