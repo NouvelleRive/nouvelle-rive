@@ -84,9 +84,15 @@ function generateId() {
 
 export default function AdminSitePage() {
   const [navPages, setNavPages] = useState<NavPage[]>([])
+  // Dropdown "Page à configurer" : on liste TOUTES les pages du NavManager (pas seulement
+  // celles marquées `configurable`), pour que ce qui est édité en haut soit sélectionnable
+  // en bas. Les pages non-configurables (statiques comme /nos-creatrices) sont sélectionnables
+  // mais le formulaire de règles affichera un message qu'elles n'ont pas de matching.
   const configurablePages = (navPages.length > 0
-    ? navPages.filter(p => p.configurable).map(p => ({ id: p.id, label: p.labelFr, inNav: !p.hidden }))
-    : FALLBACK_PAGES)
+    ? navPages.map(p => ({ id: p.id, label: p.labelFr, inNav: !p.hidden, configurable: p.configurable }))
+    : FALLBACK_PAGES.map(p => ({ ...p, configurable: true })))
+  const selectedPageMeta = configurablePages.find(p => p.id === selectedPage)
+  const isPageConfigurable = selectedPageMeta?.configurable !== false
   const [selectedPage, setSelectedPage] = useState(FALLBACK_PAGES[0].id)
   const [config, setConfig] = useState<PageConfig>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(false)
@@ -331,6 +337,10 @@ const getImageUrl = (p: ProduitPreview) => {
 
       {ICONIQUE_PAGE_IDS.includes(selectedPage as any) ? (
         <IconiquesManager typeFilter={selectedPage === 'iconiques-vintage' ? 'vintage' : 'upcy'} />
+      ) : !isPageConfigurable ? (
+        <div className="bg-white border rounded-lg p-6 text-sm text-gray-600">
+          Cette page n'a pas de règles de matching à configurer (contenu géré directement en code).
+        </div>
       ) : loading ? (
         <div className="py-10 text-center text-gray-500">Chargement...</div>
       ) : (
