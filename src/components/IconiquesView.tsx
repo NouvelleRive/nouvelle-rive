@@ -100,6 +100,10 @@ export default function IconiquesView({
   // Direction du dernier changement d'index — utilisé pour orienter l'animation de slide
   // (glissement depuis la droite quand on avance, depuis la gauche quand on recule).
   const [slideDir, setSlideDir] = useState<'forward' | 'backward'>('forward')
+  // Slide sortante pendant la transition (~550ms) : l'ancienne slide part à gauche
+  // pendant que la nouvelle entre par la droite. Nulle en dehors de la transition.
+  const [prevIndex, setPrevIndex] = useState<number | null>(null)
+  const prevTimerRef = useRef<number | null>(null)
   // Page de couverture (grille de toutes les favorites avec leur #). Affichée au 1er load,
   // désactivée quand on clique sur une tuile ou quand initialSlug/hash pointe déjà sur un item.
   const [showCover, setShowCover] = useState(true)
@@ -209,10 +213,15 @@ export default function IconiquesView({
   }, [currentIndex, iconiques, produits])
 
   // Setter unifié : maj slideDir en fonction du sens du saut, puis maj currentIndex.
+  // Garde l'ancien index dans prevIndex pendant 550ms pour permettre à l'ancienne slide
+  // de glisser hors écran (translateX 0 → -100% forward, 0 → 100% backward).
   const goToIndex = (newIndex: number) => {
     if (newIndex === currentIndex) return
     setSlideDir(newIndex > currentIndex ? 'forward' : 'backward')
+    setPrevIndex(currentIndex)
     setCurrentIndex(newIndex)
+    if (prevTimerRef.current) window.clearTimeout(prevTimerRef.current)
+    prevTimerRef.current = window.setTimeout(() => setPrevIndex(null), 600)
   }
 
   const scroll = (direction: 'left' | 'right') => {
@@ -331,8 +340,61 @@ export default function IconiquesView({
   // Vue "cover" : grille de toutes les favorites (tuile = #N + image + nom + marque).
   // Clic sur une tuile → on cache la cover et on ouvre le slider sur cet iconique.
   if (showCover) {
+    // Marquee upcy : bandeau infini en haut avec toutes les images des iconiques.
+    // Duplication ×2 pour boucle sans couture (translate -50%).
+    const marqueeImages = typeFilter === 'upcy'
+      ? iconiques.flatMap(i => (i.images && i.images.length > 0 ? [{ id: i.id, slug: i.slug, src: i.images[0], nom: i.nom, idx: iconiques.indexOf(i) }] : []))
+      : []
     return (
       <main className="bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+        {marqueeImages.length > 0 && (
+          <>
+            <style>{`
+              @keyframes iconiques-marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+              .iconiques-marquee-track {
+                display: flex;
+                width: max-content;
+                animation: iconiques-marquee 45s linear infinite;
+                will-change: transform;
+              }
+              .iconiques-marquee-track:hover { animation-play-state: paused; }
+              .iconiques-marquee-item {
+                width: 45vh;
+                height: 45vh;
+              }
+              @media (min-width: 768px) {
+                .iconiques-marquee-item { width: 65vh; height: 65vh; }
+                .iconiques-marquee-track { animation-duration: 60s; }
+              }
+            `}</style>
+            <div className="relative w-full overflow-hidden bg-white" style={{ borderBottom: '1px solid #000' }}>
+              <div className="iconiques-marquee-track">
+                {[...marqueeImages, ...marqueeImages].map((it, i) => (
+                  <button
+                    key={`${it.id}-${i}`}
+                    onClick={() => {
+                      setSlideDir('forward')
+                      setCurrentIndex(it.idx)
+                      setShowCover(false)
+                    }}
+                    className="iconiques-marquee-item shrink-0 relative group overflow-hidden bg-white"
+                    aria-label={it.nom}
+                  >
+                    <img
+                      src={it.src}
+                      alt={it.nom}
+                      className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
         <div className="px-6 py-20">
           <h1
             id="titre"
@@ -419,21 +481,30 @@ export default function IconiquesView({
 
   return (
     <main className="bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-      {/* Animation glissement + blur (ambiance futuriste) sur changement de slide.
-          .iconique-slide-fwd/bwd sont appliquées via key={currentIndex} → re-mount → replay CSS. */}
+      {/* Transition slide : la nouvelle slide entre par la droite pendant que l'ancienne
+          sort à gauche (forward). Backward inversé. Les deux slides sont montées en même
+          temps pendant ~550ms (prevIndex), puis prev est démontée. */}
       <style>{`
-        @keyframes iconique-slide-fwd {
-          0% { opacity: 0; transform: translateX(60px) scale(0.985); filter: blur(14px); }
-          60% { filter: blur(3px); }
-          100% { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+        @keyframes iconique-enter-fwd {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(0); }
         }
-        @keyframes iconique-slide-bwd {
-          0% { opacity: 0; transform: translateX(-60px) scale(0.985); filter: blur(14px); }
-          60% { filter: blur(3px); }
-          100% { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+        @keyframes iconique-enter-bwd {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(0); }
         }
-        .iconique-slide-fwd { animation: iconique-slide-fwd 0.55s cubic-bezier(0.16, 1, 0.3, 1); will-change: transform, opacity, filter; }
-        .iconique-slide-bwd { animation: iconique-slide-bwd 0.55s cubic-bezier(0.16, 1, 0.3, 1); will-change: transform, opacity, filter; }
+        @keyframes iconique-exit-fwd {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-100%); }
+        }
+        @keyframes iconique-exit-bwd {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(100%); }
+        }
+        .iconique-enter-fwd { animation: iconique-enter-fwd 0.55s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+        .iconique-enter-bwd { animation: iconique-enter-bwd 0.55s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+        .iconique-exit-fwd  { animation: iconique-exit-fwd  0.55s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+        .iconique-exit-bwd  { animation: iconique-exit-bwd  0.55s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
       `}</style>
 
       <div className="px-6 py-8 flex items-center justify-between gap-4" style={{ borderBottom: '1px solid #000' }}>
@@ -510,31 +581,30 @@ export default function IconiquesView({
 
         <div
           ref={sliderRef}
-          className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-          style={{ scrollbarWidth: 'none' }}
-          onScroll={(e) => {
-            const container = e.currentTarget
-            const scrollLeft = container.scrollLeft
-            const cardWidth = container.offsetWidth
-            const newIndex = Math.round(scrollLeft / cardWidth)
-            setCurrentIndex(newIndex)
-          }}
+          className="relative overflow-hidden"
         >
           {iconiques.map((item, idx) => {
-            // Layout : si 1-2 vidéos + produits matchés + pas soldOut → side-by-side desktop (vidéos gauche / produits droite).
-            // Si 3 vidéos ou plus → tout en pleine largeur empilé.
-            const hasVideos = item.videos && item.videos.length > 0
-            const hasProduits = produits[item.id] && produits[item.id].length > 0
             const sideBySide = false
-            // On cache les slides non-actives (mobile + desktop) pour que la hauteur du slider
-            // s'adapte à la slide visible (sinon flex prend la hauteur du plus grand → blanc en bas).
-            const hiddenIfInactive = idx !== currentIndex ? 'hidden' : ''
             const isActive = idx === currentIndex
-            const animClass = slideDir === 'backward' ? 'iconique-slide-bwd' : 'iconique-slide-fwd'
+            const isPrev = idx === prevIndex
+            // Rien à rendre si ni active ni sortante — évite le "blanc en bas"
+            // (hauteur du container = hauteur de la slide active).
+            if (!isActive && !isPrev) return null
+            const animClass = isPrev
+              ? (slideDir === 'backward' ? 'iconique-exit-bwd' : 'iconique-exit-fwd')
+              : (slideDir === 'backward' ? 'iconique-enter-bwd' : 'iconique-enter-fwd')
             return (
-            <div key={item.id} className={`min-w-full snap-center ${hiddenIfInactive}`}>
-              {isActive && (
-              <div key={`slide-${currentIndex}`} className={animClass}>
+            <div
+              key={item.id}
+              className={`min-w-full ${animClass}`}
+              style={{
+                position: isPrev ? 'absolute' : 'relative',
+                top: isPrev ? 0 : undefined,
+                left: isPrev ? 0 : undefined,
+                width: '100%',
+                zIndex: isPrev ? 0 : 1,
+              }}
+            >
               <div className="grid grid-cols-1 md:grid-cols-2">
                 <div
                   className="aspect-square bg-gray-50 overflow-hidden relative cursor-crosshair"
@@ -925,8 +995,6 @@ export default function IconiquesView({
                     </>
                   )
                 )
-              )}
-              </div>
               )}
             </div>
           )})}
