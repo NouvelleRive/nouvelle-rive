@@ -703,7 +703,6 @@ export default function IconiquesView({
                     style={{
                       fontFamily: 'Helvetica Neue, Helvetica, Arial, sans-serif',
                       fontSize: 'clamp(40px, 10vw, 55px)',
-                      top: '5%',
                       letterSpacing: '-0.02em',
                       lineHeight: '0.9',
                       whiteSpace: 'pre-line',
@@ -718,7 +717,6 @@ export default function IconiquesView({
                       style={{
                         fontFamily: 'Helvetica Neue, sans-serif',
                         fontSize: '12px',
-                        top: '3%',
                         color: '#0000FF',
                         letterSpacing: '0.25em'
                       }}
