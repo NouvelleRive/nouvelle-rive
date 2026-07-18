@@ -312,13 +312,17 @@ const getImageUrl = (p: ProduitPreview) => {
 
       <div>
         <label className="block text-sm font-medium mb-2">Page à configurer</label>
+        {/* key sur le <select> qui inclut la concat des labels : Chrome ne rafraîchit pas
+            le texte natif des <option> quand seules leurs props changent, on force donc
+            un remount complet du select quand un label du NavManager du dessus change. */}
         <select
+          key={configurablePages.map(p => `${p.id}:${p.label}:${p.inNav ? 1 : 0}`).join('|')}
           value={selectedPage}
           onChange={(e) => setSelectedPage(e.target.value)}
           className="border rounded px-3 py-2 w-full max-w-xs"
         >
           {configurablePages.map((p) => (
-            <option key={p.id} value={p.id}>
+            <option key={`${p.id}-${p.label}`} value={p.id}>
               {p.inNav ? '🔗 ' : ''}{p.label}
             </option>
           ))}
