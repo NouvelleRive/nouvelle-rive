@@ -351,6 +351,10 @@ export default function IconiquesView({
               0% { transform: translateX(0); }
               100% { transform: translateX(-50%); }
             }
+            @keyframes iconiques-marquee-intro {
+              0%   { opacity: 0; transform: translateX(40px); }
+              100% { opacity: 1; transform: translateX(0); }
+            }
             .iconiques-marquee-track {
               display: flex;
               width: max-content;
@@ -358,9 +362,15 @@ export default function IconiquesView({
               animation: iconiques-marquee 45s linear infinite;
               will-change: transform;
             }
+            .iconiques-marquee-intro {
+              opacity: 0;
+              animation: iconiques-marquee-intro 1s cubic-bezier(0.22, 1, 0.36, 1) 0.6s forwards;
+              will-change: opacity, transform;
+            }
             .iconiques-marquee-item {
               width: clamp(160px, 22vw, 320px);
               height: 100%;
+              margin-right: 16px;
             }
             @media (min-width: 768px) {
               .iconiques-marquee-track { animation-duration: 60s; }
@@ -369,7 +379,7 @@ export default function IconiquesView({
         )}
         <div className="relative overflow-hidden" style={{ borderBottom: marqueeImages.length > 0 ? '1px solid #000' : undefined }}>
           {marqueeImages.length > 0 && (
-            <div className="absolute inset-0 z-0 pointer-events-auto">
+            <div className="iconiques-marquee-intro absolute inset-0 z-0 pointer-events-auto">
               <div className="iconiques-marquee-track">
                 {[...marqueeImages, ...marqueeImages].map((it, i) => (
                   <button
