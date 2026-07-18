@@ -20,9 +20,12 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
   if (!imageResponse.ok) throw new Error('Erreur téléchargement image FASHN')
   const rawBuffer = await imageResponse.arrayBuffer()
   
-  // Redimensionner en carré 1200x1200
+  // Redimensionner en carré 1200x1200 sans rien couper (extend blanc si besoin)
   const buffer = await sharp(Buffer.from(rawBuffer))
-    .resize(1200, 1200, { fit: 'cover', position: 'top' })
+    .resize(1200, 1200, {
+      fit: 'contain',
+      background: { r: 255, g: 255, b: 255 },
+    })
     .flatten({ background: { r: 255, g: 255, b: 255 } })
     .png()
     .toBuffer()
