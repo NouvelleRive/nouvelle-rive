@@ -607,7 +607,7 @@ async function compressImage(file: File): Promise<string> {
           deletedVideo: false,
         })
       }
-    }, [initialData])
+    }, [initialData?.sku])
 
     // Reset taille et modele quand catégorie change
     const [initialized, setInitialized] = useState(false)
