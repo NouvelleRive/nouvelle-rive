@@ -108,8 +108,17 @@ const AdminContext = createContext<AdminContextType | undefined>(undefined)
 // =====================
 // PROVIDER
 // =====================
+const SELECTED_CHINEUSE_KEY = 'admin.selectedChineuseUid'
+
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [selectedChineuse, setSelectedChineuse] = useState<Chineuse | null>(null)
+  const [selectedChineuse, setSelectedChineuseState] = useState<Chineuse | null>(null)
+  const setSelectedChineuse = (c: Chineuse | null) => {
+    setSelectedChineuseState(c)
+    try {
+      if (c) localStorage.setItem(SELECTED_CHINEUSE_KEY, c.uid)
+      else localStorage.removeItem(SELECTED_CHINEUSE_KEY)
+    } catch {}
+  }
   const [chineusesList, setChineusesList] = useState<Chineuse[]>([])
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
@@ -146,6 +155,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         stockType: u.stockType,
       }))
       setChineusesList(chineuses)
+
+      // Restaurer la sélection persistée (si toujours valide)
+      try {
+        const savedUid = localStorage.getItem(SELECTED_CHINEUSE_KEY)
+        if (savedUid) {
+          const found = chineuses.find(c => c.uid === savedUid)
+          if (found) setSelectedChineuseState(found)
+          else localStorage.removeItem(SELECTED_CHINEUSE_KEY)
+        }
+      } catch {}
 
       // Catégories
       const snapCats = await getDocs(collection(db, 'categories'))
