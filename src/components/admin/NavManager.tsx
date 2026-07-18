@@ -6,7 +6,28 @@ import { db } from '@/lib/firebaseConfig'
 import { Eye, EyeOff, ArrowUp, ArrowDown, Trash2, Save, Plus, Lock } from 'lucide-react'
 import { NAV_DOC_ID, seedNavFromStatic, type NavPage } from '@/lib/nav-config'
 
-export default function NavManager() {
+type Props = {
+  onPagesChange?: (pages: NavPage[]) => void
+}
+
+// Firestore refuse `undefined` : on nettoie tous les champs optionnels.
+function sanitize(p: NavPage): NavPage {
+  const out: NavPage = {
+    id: p.id,
+    path: p.path,
+    labelFr: p.labelFr,
+    labelEn: p.labelEn,
+    navOrder: p.navOrder,
+    hidden: !!p.hidden,
+    isBuiltin: !!p.isBuiltin,
+    configurable: !!p.configurable,
+  }
+  if (p.hash) out.hash = p.hash
+  if (p.hasIconiquesManager) out.hasIconiquesManager = true
+  return out
+}
+
+export default function NavManager({ onPagesChange }: Props) {
   const [pages, setPages] = useState<NavPage[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -16,20 +37,22 @@ export default function NavManager() {
     ;(async () => {
       try {
         const snap = await getDoc(doc(db, 'siteConfig', NAV_DOC_ID))
-        if (snap.exists() && Array.isArray(snap.data().pages)) {
-          setPages(snap.data().pages as NavPage[])
-        } else {
-          setPages(seedNavFromStatic())
-        }
+        const loaded = snap.exists() && Array.isArray(snap.data().pages)
+          ? (snap.data().pages as NavPage[])
+          : seedNavFromStatic()
+        setPages(loaded)
+        onPagesChange?.(loaded)
       } finally {
         setLoading(false)
       }
     })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function update(next: NavPage[]) {
     setPages(next)
     setDirty(true)
+    onPagesChange?.(next)
   }
 
   function move(idx: number, dir: -1 | 1) {
@@ -91,15 +114,16 @@ export default function NavManager() {
   async function save() {
     setSaving(true)
     try {
+      const clean = pages.map(sanitize)
       await setDoc(doc(db, 'siteConfig', NAV_DOC_ID), {
-        pages,
+        pages: clean,
         updatedAt: new Date(),
       })
       setDirty(false)
       alert('✅ Navigation sauvegardée')
-    } catch (e) {
+    } catch (e: any) {
       console.error(e)
-      alert('❌ Erreur de sauvegarde')
+      alert('❌ Erreur : ' + (e?.message || e?.code || 'inconnue'))
     } finally {
       setSaving(false)
     }

@@ -11,6 +11,7 @@ import ProductList, { Produit } from '@/components/ProductList'
 import IconiquesManager from '@/components/admin/IconiquesManager'
 import NavManager from '@/components/admin/NavManager'
 import { getConfigurablePages } from '@/lib/site-pages'
+import type { NavPage } from '@/lib/nav-config'
 
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
@@ -48,9 +49,9 @@ type ProduitPreview = {
   masque?: boolean
 }
 
-// Source unique : src/lib/site-pages.ts (filtre configurable).
-// Nav pages en premier (Été, Le Luxe, …), puis les configurables hors nav (New In, Femme, …).
-const PAGES = getConfigurablePages().map(p => ({
+// Fallback statique utilisé le temps que NavManager charge `siteConfig/_nav`.
+// Une fois chargé, le dropdown est alimenté par les pages du NavManager.
+const FALLBACK_PAGES = getConfigurablePages().map(p => ({
   id: p.id,
   label: p.labelAdmin || p.id,
   inNav: !!p.inNav,
@@ -82,7 +83,11 @@ function generateId() {
 }
 
 export default function AdminSitePage() {
-  const [selectedPage, setSelectedPage] = useState(PAGES[0].id)
+  const [navPages, setNavPages] = useState<NavPage[]>([])
+  const configurablePages = (navPages.length > 0
+    ? navPages.filter(p => p.configurable).map(p => ({ id: p.id, label: p.labelFr, inNav: !p.hidden }))
+    : FALLBACK_PAGES)
+  const [selectedPage, setSelectedPage] = useState(FALLBACK_PAGES[0].id)
   const [config, setConfig] = useState<PageConfig>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -301,7 +306,7 @@ const getImageUrl = (p: ProduitPreview) => {
 
   return (
     <div className="space-y-6">
-      <NavManager />
+      <NavManager onPagesChange={setNavPages} />
 
       <h1 className="text-xl font-bold text-[#22209C]">Configuration des pages</h1>
 
@@ -312,7 +317,7 @@ const getImageUrl = (p: ProduitPreview) => {
           onChange={(e) => setSelectedPage(e.target.value)}
           className="border rounded px-3 py-2 w-full max-w-xs"
         >
-          {PAGES.map((p) => (
+          {configurablePages.map((p) => (
             <option key={p.id} value={p.id}>
               {p.inNav ? '🔗 ' : ''}{p.label}
             </option>
