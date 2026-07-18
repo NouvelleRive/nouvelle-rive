@@ -2,7 +2,7 @@
     'use client'
 
     import { useState, useMemo, useEffect, useRef } from 'react'
-    import { db } from '@/lib/firebaseConfig'
+    import { db, auth } from '@/lib/firebaseConfig'
     import { doc, updateDoc, onSnapshot, Timestamp, writeBatch, deleteField, collection } from 'firebase/firestore'
     import { format } from 'date-fns'
     import { fr } from 'date-fns/locale'
@@ -870,6 +870,22 @@
           else if (detailsUrls.length === 0) updateData['photos.details'] = deleteField()
           
           await updateDoc(doc(db, 'produits', productId), updateData)
+
+          // Le blob `produits-all` (TTL 6h) sert la liste admin : sans ce patch,
+          // au rechargement on réaffiche l'ancienne fiche (ancienne photo).
+          try {
+            const token = await auth.currentUser?.getIdToken()
+            await fetch('/api/admin/refresh-produit', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({ productId }),
+            })
+          } catch (err) {
+            console.warn('Refresh cache produit échoué (non bloquant):', err)
+          }
 
           // Si le produit est publié sur eBay, on re-pousse les modifs (description, etc.)
           if (editingProduct.ebayListingId && editingProduct.ebayOfferId) {

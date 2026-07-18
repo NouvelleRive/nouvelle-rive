@@ -30,7 +30,10 @@ export default function NosProduits() {
         const token = await auth.currentUser?.getIdToken()
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined
         const [prodRes, chRes] = await Promise.all([
-          fetch('/api/admin/produits-full', { headers }),
+          // no-store : la réponse porte un `max-age=300`, sans ça le navigateur
+          // resservait une liste vieille de 5 min après une modification de fiche.
+          // Le cache serveur (blob) reste en place — 0 read Firestore de plus.
+          fetch('/api/admin/produits-full', { headers, cache: 'no-store' }),
           fetch('/api/admin/chineuses-full', { headers }),
         ])
         const prodData = prodRes.ok ? await prodRes.json() : { produits: [] }
