@@ -840,6 +840,14 @@
             updateData.imageUrls = finalUrls
             updateData.imageUrl = finalUrls[0]
           }
+
+          // Vidéo : update ou suppression
+          if ((data as any).deletedVideo && !(data as any).videoUrl) {
+            updateData.videos = deleteField()
+            updateData.videoUrl = deleteField()
+          } else if ((data as any).videoUrl) {
+            updateData.videos = [(data as any).videoUrl]
+          }
           
           // Réordonner photos.details selon l'ordre dans finalUrls
           const reorderedDetails = finalUrls.filter(url => detailsUrls.includes(url))
@@ -1692,6 +1700,8 @@
                       shoeType: (editingProduct as any).shoeType,
                       photos: editingProduct.photos,
                       imageUrls: editingProduct.imageUrls,
+                      videos: (editingProduct as any).videos,
+                      videoUrl: (editingProduct as any).videoUrl,
                     } : undefined}
                     onSubmit={handleSaveProduct}
                     onCancel={() => { setShowForm(false); setEditingProduct(null) }}

@@ -216,6 +216,7 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
         photos: photosData,
         imageUrls,
         imageUrl: imageUrls[0] || '',
+        ...(formData.videoUrl ? { videos: [formData.videoUrl] } : {}),
         photosReady,
         vendu: false,
         recu: false,
