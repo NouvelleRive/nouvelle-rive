@@ -3,7 +3,7 @@
 // Utilise les caches serveur mutualisés (produits + iconiques) — 0 read Firestore par visite.
 
 export const runtime = 'nodejs'
-export const revalidate = 21600
+export const revalidate = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     if (!current) {
       return NextResponse.json(
         { produits: [] },
-        { headers: { 'Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400' } },
+        { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400' } },
       )
     }
 
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
     if (!needleNom && !needleMarque && !needleMaterial && trigs.length === 0 && catsIn.length === 0 && marquesIn.length === 0) {
       return NextResponse.json(
         { produits: [] },
-        { headers: { 'Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400' } },
+        { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400' } },
       )
     }
 
@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       { produits },
-      { headers: { 'Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400' } },
+      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=86400' } },
     )
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'error' }, { status: 500 })
