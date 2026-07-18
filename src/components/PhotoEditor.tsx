@@ -361,36 +361,86 @@
 
     const handleConfirm = async () => {
       if (!processedUrl) return
-      
+
       const totalRot = rotation + fineRotation
       const hasOffset = offset.x !== 0 || offset.y !== 0
-      
       const hasZoom = zoom !== 1
-      
-      console.log('🔄 handleConfirm - rotation:', totalRot, 'offset:', offset, 'zoom:', zoom)
-      
-      // Si pas de rotation, pas d'offset et pas de zoom, envoyer directement
+
+      // Si aucune transformation, on garde l'URL détourée telle quelle
       if (totalRot === 0 && !hasOffset && !hasZoom) {
         onConfirm(processedUrl)
         return
       }
-      
-      // Sinon, appliquer la rotation côté serveur
+
+      const container = previewContainerRef.current
+      if (!container) {
+        setError('FA500')
+        return
+      }
+
       setProcessing(true)
       try {
+        // Rendu côté client sur canvas 1200x1200 qui reproduit EXACTEMENT le
+        // transform CSS de l'aperçu : scale(zoom) rotate(deg) translate(px,px)
+        // avec origin center. Évite le pipeline serveur boguée (offset px CSS
+        // appliqué comme px image, zoom crop centre en ignorant l'offset…).
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.src = processedUrl
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = () => reject(new Error('image load'))
+        })
+
+        const containerSize = container.offsetWidth
+        const canvasSize = 1200
+        const cssToCanvas = canvasSize / containerSize
+
+        const iW = img.naturalWidth
+        const iH = img.naturalHeight
+        // object-contain dans un carré → taille affichée = fit inside
+        const containRatio = Math.min(containerSize / iW, containerSize / iH)
+        const dispW = iW * containRatio * cssToCanvas
+        const dispH = iH * containRatio * cssToCanvas
+
+        const canvas = document.createElement('canvas')
+        canvas.width = canvasSize
+        canvas.height = canvasSize
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, canvasSize, canvasSize)
+
+        // scale(z) rotate(d) translate(x,y) autour du centre
+        ctx.translate(canvasSize / 2, canvasSize / 2)
+        ctx.scale(zoom, zoom)
+        ctx.rotate((totalRot * Math.PI) / 180)
+        ctx.translate(offset.x * cssToCanvas, offset.y * cssToCanvas)
+        ctx.drawImage(img, -dispW / 2, -dispH / 2, dispW, dispH)
+
+        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/png'))
+        const arrayBuffer = await blob.arrayBuffer()
+        const uint8 = new Uint8Array(arrayBuffer)
+        let binary = ''
+        const chunk = 8192
+        for (let i = 0; i < uint8.length; i += chunk) {
+          binary += String.fromCharCode(...uint8.slice(i, i + chunk))
+        }
+        const base64 = btoa(binary)
+
         const res = await fetch('/api/detourage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: processedUrl, rotation: totalRot, offset, zoom, applyTransform: true })
+          body: JSON.stringify({ base64, uploadOnly: true, skipDetourage: true }),
         })
         const data = await res.json()
-        
+
         if (data.success && data.maskUrl) {
           onConfirm(data.maskUrl)
         } else {
           setError('FA500')
         }
       } catch (err: any) {
+        console.error('Erreur handleConfirm transform:', err)
         setError('FA500')
       } finally {
         setProcessing(false)
@@ -406,7 +456,7 @@
 
       <div className="flex-1 flex flex-col md:flex-row min-h-0 p-2 md:p-3 gap-2 md:gap-4 overflow-hidden">
         {/* Image à gauche - maximum de place */}
-        <div className="h-[45vh] md:h-full md:aspect-square relative bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0">
+        <div ref={previewContainerRef} className="h-[45vh] md:h-full md:aspect-square relative bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0">
           {(mode === 'erase' || mode === 'restore') ? (
             <canvas
               ref={canvasRef}
