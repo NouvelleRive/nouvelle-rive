@@ -109,7 +109,6 @@ export default function AdminAjouterPage() {
         }),
         imageUrls,
         imageUrl: imageUrls[0] || '', photosReady: Boolean(data.existingPhotos.face),
-        ...((data as any).videoUrl ? { videos: [(data as any).videoUrl] } : {}),
         vendu: false, createdAt: serverTimestamp(),
         recu: false,
       }
