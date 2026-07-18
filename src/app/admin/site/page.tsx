@@ -84,6 +84,7 @@ function generateId() {
 
 export default function AdminSitePage() {
   const [navPages, setNavPages] = useState<NavPage[]>([])
+  const [selectedPage, setSelectedPage] = useState(FALLBACK_PAGES[0].id)
   // Dropdown "Page à configurer" : on liste TOUTES les pages du NavManager (pas seulement
   // celles marquées `configurable`), pour que ce qui est édité en haut soit sélectionnable
   // en bas. Les pages non-configurables (statiques comme /nos-creatrices) sont sélectionnables
@@ -93,7 +94,6 @@ export default function AdminSitePage() {
     : FALLBACK_PAGES.map(p => ({ ...p, configurable: true })))
   const selectedPageMeta = configurablePages.find(p => p.id === selectedPage)
   const isPageConfigurable = selectedPageMeta?.configurable !== false
-  const [selectedPage, setSelectedPage] = useState(FALLBACK_PAGES[0].id)
   const [config, setConfig] = useState<PageConfig>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
