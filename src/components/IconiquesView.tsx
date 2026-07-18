@@ -340,11 +340,9 @@ export default function IconiquesView({
   // Vue "cover" : grille de toutes les favorites (tuile = #N + image + nom + marque).
   // Clic sur une tuile → on cache la cover et on ouvre le slider sur cet iconique.
   if (showCover) {
-    // Marquee upcy : bandeau infini en haut avec toutes les images des iconiques.
+    // Marquee : bandeau infini en haut avec toutes les images des iconiques (vintage + upcy).
     // Duplication ×2 pour boucle sans couture (translate -50%).
-    const marqueeImages = typeFilter === 'upcy'
-      ? iconiques.flatMap(i => (i.images && i.images.length > 0 ? [{ id: i.id, slug: i.slug, src: i.images[0], nom: i.nom, idx: iconiques.indexOf(i) }] : []))
-      : []
+    const marqueeImages = iconiques.flatMap(i => (i.images && i.images.length > 0 ? [{ id: i.id, slug: i.slug, src: i.images[0], nom: i.nom, idx: iconiques.indexOf(i) }] : []))
     return (
       <main className="bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
         {marqueeImages.length > 0 && (
