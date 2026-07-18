@@ -368,7 +368,6 @@ export default function IconiquesView({
           .iconiques-marquee-item {
             width: clamp(160px, 22vw, 320px);
             height: 100%;
-            margin-right: 30cm;
             background: #fff;
           }
           @media (min-width: 768px) {
