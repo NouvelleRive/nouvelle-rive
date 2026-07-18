@@ -368,7 +368,9 @@ export default function IconiquesView({
           .iconiques-marquee-item {
             width: clamp(160px, 22vw, 320px);
             height: 100%;
-            margin-right: 16px;
+            margin-right: 24px;
+            padding: 16px;
+            background: #fff;
           }
           @media (min-width: 768px) {
             .iconiques-marquee-track { animation-duration: 60s; }
@@ -393,7 +395,7 @@ export default function IconiquesView({
                   <img
                     src={it.src}
                     alt={it.nom}
-                    className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                    className="w-full h-full object-contain transition duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
                 </button>
