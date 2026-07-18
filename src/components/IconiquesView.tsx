@@ -17,6 +17,8 @@ export type Iconique = {
   histoire: string
   histoireEn?: string
   valeurNeuf: number
+  /** Borne haute optionnelle : si défini, affiché en fourchette "min € / max €". */
+  valeurNeufMax?: number
   tendancePrix: 'monte' | 'descend'
   pourquoiMust: string
   pourquoiMustEn?: string
@@ -128,6 +130,7 @@ export default function IconiquesView({
           histoire: docData.histoire || '',
           histoireEn: docData.histoireEn || '',
           valeurNeuf: docData.valeurNeuf || 0,
+          valeurNeufMax: typeof docData.valeurNeufMax === 'number' && docData.valeurNeufMax > 0 ? docData.valeurNeufMax : undefined,
           tendancePrix: docData.tendancePrix || 'monte',
           pourquoiMust: docData.pourquoiMust || '',
           pourquoiMustEn: docData.pourquoiMustEn || '',
@@ -760,7 +763,10 @@ export default function IconiquesView({
                           style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', lineHeight: '1.4' }}
                         >
                           {t('VALEUR NEUF', 'RETAIL VALUE', lang)} :{' '}
-                          <span className="font-normal">{item.valeurNeuf.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')}€</span>
+                          <span className="font-normal">
+                            {item.valeurNeuf.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')}€
+                            {item.valeurNeufMax ? ` / ${item.valeurNeufMax.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')}€` : ''}
+                          </span>
                         </p>
                       </div>
 

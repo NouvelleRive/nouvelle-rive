@@ -30,6 +30,8 @@ type Iconique = {
   pourquoiMust?: string
   pourquoiMustEn?: string
   valeurNeuf?: number
+  /** Borne haute optionnelle : si défini, affiché en fourchette "min € / max €". */
+  valeurNeufMax?: number
   tendancePrix?: 'monte' | 'stable' | 'baisse'
   categorieRecherche?: string
   categoriesIn?: string[]
@@ -288,6 +290,7 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
         categoriesIn: (draft.categoriesIn || []).map(c => c.toLowerCase().trim()).filter(Boolean),
         marquesIn: (draft.marquesIn || []).map(m => m.trim()).filter(Boolean),
         valeurNeuf: Number(draft.valeurNeuf) || 0,
+        valeurNeufMax: draft.valeurNeufMax && Number(draft.valeurNeufMax) > 0 ? Number(draft.valeurNeufMax) : null,
         ordre: Number(draft.ordre) || 0,
         displayOnWebsite: draft.displayOnWebsite !== false,
         soldOut: !!draft.soldOut,
@@ -512,8 +515,24 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
           <Field label="Date de création (année ou période)">
             <input className={inputCls} value={draft.dateCreation || ''} onChange={e => setDraft({ ...draft, dateCreation: e.target.value })} placeholder="1954" />
           </Field>
-          <Field label="Valeur neuf (€)">
-            <input className={inputCls} type="number" value={draft.valeurNeuf ?? 0} onChange={e => setDraft({ ...draft, valeurNeuf: Number(e.target.value) })} />
+          <Field label="Valeur neuf (€) — min / max (optionnel)">
+            <div className="flex items-center gap-2">
+              <input
+                className={inputCls}
+                type="number"
+                placeholder="min"
+                value={draft.valeurNeuf ?? ''}
+                onChange={e => setDraft({ ...draft, valeurNeuf: e.target.value === '' ? 0 : Number(e.target.value) })}
+              />
+              <span className="text-gray-400">/</span>
+              <input
+                className={inputCls}
+                type="number"
+                placeholder="max (facultatif)"
+                value={draft.valeurNeufMax ?? ''}
+                onChange={e => setDraft({ ...draft, valeurNeufMax: e.target.value === '' ? undefined : Number(e.target.value) })}
+              />
+            </div>
           </Field>
           <Field label="Tendance prix">
             <select
