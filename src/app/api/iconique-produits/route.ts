@@ -109,9 +109,15 @@ export async function GET(req: NextRequest) {
       matchedSold.sort((a: any, b: any) => toMillis(b.createdAt) - toMillis(a.createdAt))
       result = matchedSold.slice(0, 8)
     } else {
+      // Mêmes règles d'ordre que /[type], /[marque], /boutique (produitsServer.ts) :
+      // 1. tri optionnel par categoriesOrder de l'iconique (appliqué à tout le mélange)
+      // 2. tri stable par vendu (non-vendu d'abord, vendu à la fin) — plus de groupes séparés
+      //    actifs/ruptures/vendus qui donnaient un ordre incohérent selon l'iconique.
+      // Ruptures (rupture=true) restent avec les actifs (les 2 ont vendu=false).
+      const matched = [...matchedActive, ...matchedRupture, ...matchedSold]
       if (current.categoriesOrder && current.categoriesOrder.length > 0) {
         const order = current.categoriesOrder.map(c => norm(c))
-        const sortByOrder = (a: any, b: any) => {
+        matched.sort((a: any, b: any) => {
           const catA = typeof a.categorie === 'object' ? norm(a.categorie?.label || '') : norm(a.categorie || '')
           const catB = typeof b.categorie === 'object' ? norm(b.categorie?.label || '') : norm(b.categorie || '')
           const idxA = order.findIndex(o => catA.includes(o))
@@ -119,16 +125,16 @@ export async function GET(req: NextRequest) {
           const fa = idxA === -1 ? 999 : idxA
           const fb = idxB === -1 ? 999 : idxB
           return fa - fb
-        }
-        matchedActive.sort(sortByOrder)
-        matchedRupture.sort(sortByOrder)
-        matchedSold.sort(sortByOrder)
+        })
       }
-      // Cap les pièces vendues à 30 max (plus récentes en premier) — les vieilles
-      // vendues polluaient la grille (ex: "Nos Sacs Chanel" avec 100+ vendus).
-      matchedSold.sort((a: any, b: any) => toMillis(b.createdAt) - toMillis(a.createdAt))
-      const cappedSold = matchedSold.slice(0, 30)
-      result = [...matchedActive, ...matchedRupture, ...cappedSold]
+      matched.sort((a: any, b: any) => Number(!!a.vendu) - Number(!!b.vendu))
+      // Cap les pièces vendues à 30 max (plus récentes en premier).
+      const nonVendu = matched.filter(p => !p.vendu)
+      const vendu = matched
+        .filter(p => !!p.vendu)
+        .sort((a: any, b: any) => toMillis(b.createdAt) - toMillis(a.createdAt))
+        .slice(0, 30)
+      result = [...nonVendu, ...vendu]
     }
 
     // Sérialise Timestamp createdAt/dateVente en ms (JSON-safe).
