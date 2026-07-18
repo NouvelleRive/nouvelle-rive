@@ -6,7 +6,11 @@
 //        pour que le changement d'ordre/label soit visible immédiatement.
 
 export const runtime = 'nodejs'
-export const revalidate = 21600
+// force-dynamic + no-store en réponse : le CDN edge ne garde plus la réponse en cache,
+// donc l'invalidation admin est visible dès le prochain reload public. Zéro read Firestore
+// quand même parce que getNavPagesCached sert depuis blob 6h + memory worker.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -18,7 +22,7 @@ export async function GET() {
     const pages = await getNavPagesCached()
     return NextResponse.json(
       { pages },
-      { headers: { 'Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400' } },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
     )
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'error' }, { status: 500 })
