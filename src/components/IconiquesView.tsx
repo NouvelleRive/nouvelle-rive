@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, ReactNode } from 'react'
 import Link from 'next/link'
 import ProductGrid from '@/components/ProductGrid'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -340,7 +340,16 @@ export default function IconiquesView({
   // Marquee : bandeau infini en haut avec toutes les images des iconiques (vintage + upcy).
   // Duplication ×2 pour boucle sans couture (translate -50%). Utilisé sur cover ET sur pages
   // individuelles pour garder la même taille/style de hero (demande cliente).
-  const marqueeImages = iconiques.flatMap((i, idx) => (i.images || []).map(src => ({ id: i.id, slug: i.slug, src, nom: i.nom, idx })))
+  // Mélange les images de tous les iconiques (au lieu de les afficher d'affilée iconique par iconique).
+  // Fisher-Yates stable via useMemo — ne se re-shuffle pas à chaque render.
+  const marqueeImages = useMemo(() => {
+    const flat = iconiques.flatMap((i, idx) => (i.images || []).map(src => ({ id: i.id, slug: i.slug, src, nom: i.nom, idx })))
+    for (let k = flat.length - 1; k > 0; k--) {
+      const j = Math.floor(Math.random() * (k + 1))
+      ;[flat[k], flat[j]] = [flat[j], flat[k]]
+    }
+    return flat
+  }, [iconiques])
   const renderHero = () => (
     <>
       {marqueeImages.length > 0 && (
