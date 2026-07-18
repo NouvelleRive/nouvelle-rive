@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
-import { Eye, EyeOff, Plus, Trash2, Save, ArrowLeft, ImagePlus, X, Film } from 'lucide-react'
+import { Eye, EyeOff, Plus, Trash2, Save, ArrowLeft, ImagePlus, X, Film, ArrowUp, ArrowDown } from 'lucide-react'
 
 type IconiqueType = 'vintage' | 'upcy'
 
@@ -129,6 +129,34 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
     loadIconiques()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter])
+
+  // Swap l'ordre d'un iconique avec son voisin (direction -1 = up, +1 = down).
+  // Écrit les deux docs Firestore + met à jour l'état local (re-tri par ordre).
+  const moveIconique = async (icon: Iconique, direction: -1 | 1) => {
+    const currentIdx = iconiques.findIndex(i => i.id === icon.id)
+    const swapIdx = currentIdx + direction
+    if (swapIdx < 0 || swapIdx >= iconiques.length) return
+    const other = iconiques[swapIdx]
+    const currentOrdre = icon.ordre ?? currentIdx + 1
+    const otherOrdre = other.ordre ?? swapIdx + 1
+    // Si les 2 ordres sont identiques (ex : legacy à 0), on force une différence
+    // pour que le swap ait un effet.
+    const newCurrentOrdre = currentOrdre === otherOrdre ? swapIdx + 1 : otherOrdre
+    const newOtherOrdre = currentOrdre === otherOrdre ? currentIdx + 1 : currentOrdre
+    try {
+      await Promise.all([
+        setDoc(doc(db, 'iconiques', icon.id), { ordre: newCurrentOrdre }, { merge: true }),
+        setDoc(doc(db, 'iconiques', other.id), { ordre: newOtherOrdre }, { merge: true }),
+      ])
+      setIconiques(prev => prev
+        .map(i => i.id === icon.id ? { ...i, ordre: newCurrentOrdre } : i.id === other.id ? { ...i, ordre: newOtherOrdre } : i)
+        .sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
+      )
+    } catch (err) {
+      console.error('moveIconique error:', err)
+      alert('Erreur : déplacement impossible')
+    }
+  }
 
   const toggleDisplay = async (icon: Iconique) => {
     const next = !(icon.displayOnWebsite !== false)
@@ -299,7 +327,7 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
                 </tr>
               </thead>
               <tbody>
-                {iconiques.map(icon => {
+                {iconiques.map((icon, idx) => {
                   const displayed = icon.displayOnWebsite !== false
                   const preview = icon.images?.[0] || ''
                   const rules: string[] = []
@@ -308,9 +336,33 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
                   if (icon.chineuseTrigrammes && icon.chineuseTrigrammes.length > 0) rules.push(`tri=${icon.chineuseTrigrammes.join(',')}`)
                   if (icon.categoriesIn && icon.categoriesIn.length > 0) rules.push(`cat=${icon.categoriesIn.join(',')}`)
                   if (icon.categorieRecherche) rules.push(`rech=${icon.categorieRecherche}`)
+                  const isFirst = idx === 0
+                  const isLast = idx === iconiques.length - 1
                   return (
                     <tr key={icon.id} className={`border-b hover:bg-gray-50 ${!displayed ? 'opacity-50' : ''}`}>
-                      <td className="px-3 py-2 text-sm text-gray-500">{icon.ordre ?? '?'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <span className="w-6 text-right">{icon.ordre ?? '?'}</span>
+                          <div className="flex flex-col">
+                            <button
+                              onClick={() => moveIconique(icon, -1)}
+                              disabled={isFirst}
+                              title="Monter"
+                              className={`p-0.5 ${isFirst ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:text-black hover:bg-gray-100 rounded'}`}
+                            >
+                              <ArrowUp size={14} />
+                            </button>
+                            <button
+                              onClick={() => moveIconique(icon, 1)}
+                              disabled={isLast}
+                              title="Descendre"
+                              className={`p-0.5 ${isLast ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:text-black hover:bg-gray-100 rounded'}`}
+                            >
+                              <ArrowDown size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-3 py-2">
                         {preview ? (
                           // eslint-disable-next-line @next/next/no-img-element
