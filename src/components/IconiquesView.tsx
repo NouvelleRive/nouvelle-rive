@@ -451,7 +451,6 @@ export default function IconiquesView({
                       lineHeight: 1,
                       top: '4%',
                       right: '4%',
-                      textShadow: '0 2px 12px rgba(0,0,0,0.15)',
                     }}
                   >
                     #{idx + 1}
