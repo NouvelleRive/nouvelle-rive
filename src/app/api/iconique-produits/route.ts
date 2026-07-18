@@ -124,7 +124,11 @@ export async function GET(req: NextRequest) {
         matchedRupture.sort(sortByOrder)
         matchedSold.sort(sortByOrder)
       }
-      result = [...matchedActive, ...matchedRupture, ...matchedSold]
+      // Cap les pièces vendues à 30 max (plus récentes en premier) — les vieilles
+      // vendues polluaient la grille (ex: "Nos Sacs Chanel" avec 100+ vendus).
+      matchedSold.sort((a: any, b: any) => toMillis(b.createdAt) - toMillis(a.createdAt))
+      const cappedSold = matchedSold.slice(0, 30)
+      result = [...matchedActive, ...matchedRupture, ...cappedSold]
     }
 
     // Sérialise Timestamp createdAt/dateVente en ms (JSON-safe).
