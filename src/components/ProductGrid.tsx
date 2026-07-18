@@ -83,6 +83,9 @@ type Produit = {
   promotion?: boolean
   createdAt?: any
   sku?: string
+  /** Rupture temporaire de stock (quantite=0 mais pas vendu). Utilisé sur /iconiques* pour
+   *  afficher un produit de la collection en rupture avec un badge dédié. */
+  rupture?: boolean
 }
 
 interface ProductGridProps {
@@ -683,6 +686,13 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <span className="bg-black text-white text-[10px] md:text-xs font-bold uppercase tracking-widest px-3 py-1.5" style={{ letterSpacing: '0.2em' }}>
                       {t('Vendu', 'Sold out', lang)}
+                    </span>
+                  </div>
+                )}
+                {!produit.vendu && produit.rupture && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="bg-white text-black text-[10px] md:text-xs font-bold uppercase tracking-widest px-3 py-1.5" style={{ letterSpacing: '0.2em', border: '1px solid #000' }}>
+                      {t('Rupture', 'Out of stock', lang)}
                     </span>
                   </div>
                 )}

@@ -93,10 +93,14 @@ export async function GET(req: NextRequest) {
       p.hidden !== true &&
       !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face)
 
-    const matchedActive = activeRaw
+    const matchedActiveAll = activeRaw
       .filter(commonFilter)
-      .filter((p: any) => (p.quantite ?? 1) > 0)
       .filter(matchPredicate)
+    const matchedActive = matchedActiveAll.filter((p: any) => (p.quantite ?? 1) > 0)
+    // Ruptures (quantite=0 mais non vendus) — on les affiche en fin de grille avec badge.
+    const matchedRupture = matchedActiveAll
+      .filter((p: any) => (p.quantite ?? 1) <= 0)
+      .map((p: any) => ({ ...p, rupture: true }))
 
     const matchedSold = soldRaw.filter(commonFilter).filter(matchPredicate)
 
@@ -117,9 +121,10 @@ export async function GET(req: NextRequest) {
           return fa - fb
         }
         matchedActive.sort(sortByOrder)
+        matchedRupture.sort(sortByOrder)
         matchedSold.sort(sortByOrder)
       }
-      result = [...matchedActive, ...matchedSold]
+      result = [...matchedActive, ...matchedRupture, ...matchedSold]
     }
 
     // Sérialise Timestamp createdAt/dateVente en ms (JSON-safe).
