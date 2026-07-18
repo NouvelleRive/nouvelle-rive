@@ -340,7 +340,7 @@ export default function IconiquesView({
   // Marquee : bandeau infini en haut avec toutes les images des iconiques (vintage + upcy).
   // Duplication ×2 pour boucle sans couture (translate -50%). Utilisé sur cover ET sur pages
   // individuelles pour garder la même taille/style de hero (demande cliente).
-  const marqueeImages = iconiques.flatMap(i => (i.images && i.images.length > 0 ? [{ id: i.id, slug: i.slug, src: i.images[0], nom: i.nom, idx: iconiques.indexOf(i) }] : []))
+  const marqueeImages = iconiques.flatMap((i, idx) => (i.images || []).map(src => ({ id: i.id, slug: i.slug, src, nom: i.nom, idx })))
   const renderHero = () => (
     <>
       {marqueeImages.length > 0 && (
