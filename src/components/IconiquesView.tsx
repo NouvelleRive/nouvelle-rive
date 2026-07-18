@@ -337,87 +337,94 @@ export default function IconiquesView({
     )
   }
 
+  // Marquee : bandeau infini en haut avec toutes les images des iconiques (vintage + upcy).
+  // Duplication ×2 pour boucle sans couture (translate -50%). Utilisé sur cover ET sur pages
+  // individuelles pour garder la même taille/style de hero (demande cliente).
+  const marqueeImages = iconiques.flatMap(i => (i.images && i.images.length > 0 ? [{ id: i.id, slug: i.slug, src: i.images[0], nom: i.nom, idx: iconiques.indexOf(i) }] : []))
+  const renderHero = () => (
+    <>
+      {marqueeImages.length > 0 && (
+        <style>{`
+          @keyframes iconiques-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          @keyframes iconiques-marquee-intro {
+            0%   { opacity: 0; transform: translateX(40px); }
+            100% { opacity: 1; transform: translateX(0); }
+          }
+          .iconiques-marquee-track {
+            display: flex;
+            width: max-content;
+            height: 100%;
+            animation: iconiques-marquee 45s linear infinite;
+            will-change: transform;
+          }
+          .iconiques-marquee-intro {
+            opacity: 0;
+            animation: iconiques-marquee-intro 1s cubic-bezier(0.22, 1, 0.36, 1) 0.6s forwards;
+            will-change: opacity, transform;
+          }
+          .iconiques-marquee-item {
+            width: clamp(160px, 22vw, 320px);
+            height: 100%;
+            margin-right: 16px;
+          }
+          @media (min-width: 768px) {
+            .iconiques-marquee-track { animation-duration: 60s; }
+          }
+        `}</style>
+      )}
+      <div className="relative overflow-hidden" style={{ borderBottom: marqueeImages.length > 0 ? '1px solid #000' : undefined }}>
+        {marqueeImages.length > 0 && (
+          <div className="iconiques-marquee-intro absolute inset-0 z-0 pointer-events-auto">
+            <div className="iconiques-marquee-track">
+              {[...marqueeImages, ...marqueeImages].map((it, i) => (
+                <button
+                  key={`${it.id}-${i}`}
+                  onClick={() => {
+                    setSlideDir('forward')
+                    setCurrentIndex(it.idx)
+                    setShowCover(false)
+                  }}
+                  className="iconiques-marquee-item shrink-0 relative group overflow-hidden bg-white"
+                  aria-label={it.nom}
+                >
+                  <img
+                    src={it.src}
+                    alt={it.nom}
+                    className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="relative z-10 px-6 py-20 pointer-events-none">
+          <h1
+            id="titre"
+            style={{
+              fontSize: 'clamp(40px, 8vw, 120px)',
+              fontWeight: 700,
+              letterSpacing: '-0.03em',
+              lineHeight: 0.9,
+              textTransform: 'uppercase',
+            }}
+          >
+            {lang === 'en' ? titleEn : titleFr}
+          </h1>
+        </div>
+      </div>
+    </>
+  )
+
   // Vue "cover" : grille de toutes les favorites (tuile = #N + image + nom + marque).
   // Clic sur une tuile → on cache la cover et on ouvre le slider sur cet iconique.
   if (showCover) {
-    // Marquee : bandeau infini en haut avec toutes les images des iconiques (vintage + upcy).
-    // Duplication ×2 pour boucle sans couture (translate -50%).
-    const marqueeImages = iconiques.flatMap(i => (i.images && i.images.length > 0 ? [{ id: i.id, slug: i.slug, src: i.images[0], nom: i.nom, idx: iconiques.indexOf(i) }] : []))
     return (
       <main className="bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-        {marqueeImages.length > 0 && (
-          <style>{`
-            @keyframes iconiques-marquee {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            @keyframes iconiques-marquee-intro {
-              0%   { opacity: 0; transform: translateX(40px); }
-              100% { opacity: 1; transform: translateX(0); }
-            }
-            .iconiques-marquee-track {
-              display: flex;
-              width: max-content;
-              height: 100%;
-              animation: iconiques-marquee 45s linear infinite;
-              will-change: transform;
-            }
-            .iconiques-marquee-intro {
-              opacity: 0;
-              animation: iconiques-marquee-intro 1s cubic-bezier(0.22, 1, 0.36, 1) 0.6s forwards;
-              will-change: opacity, transform;
-            }
-            .iconiques-marquee-item {
-              width: clamp(160px, 22vw, 320px);
-              height: 100%;
-              margin-right: 16px;
-            }
-            @media (min-width: 768px) {
-              .iconiques-marquee-track { animation-duration: 60s; }
-            }
-          `}</style>
-        )}
-        <div className="relative overflow-hidden" style={{ borderBottom: marqueeImages.length > 0 ? '1px solid #000' : undefined }}>
-          {marqueeImages.length > 0 && (
-            <div className="iconiques-marquee-intro absolute inset-0 z-0 pointer-events-auto">
-              <div className="iconiques-marquee-track">
-                {[...marqueeImages, ...marqueeImages].map((it, i) => (
-                  <button
-                    key={`${it.id}-${i}`}
-                    onClick={() => {
-                      setSlideDir('forward')
-                      setCurrentIndex(it.idx)
-                      setShowCover(false)
-                    }}
-                    className="iconiques-marquee-item shrink-0 relative group overflow-hidden bg-white"
-                    aria-label={it.nom}
-                  >
-                    <img
-                      src={it.src}
-                      alt={it.nom}
-                      className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="relative z-10 px-6 py-20 pointer-events-none">
-            <h1
-              id="titre"
-              style={{
-                fontSize: 'clamp(40px, 8vw, 120px)',
-                fontWeight: 700,
-                letterSpacing: '-0.03em',
-                lineHeight: 0.9,
-                textTransform: 'uppercase',
-              }}
-            >
-              {lang === 'en' ? titleEn : titleFr}
-            </h1>
-          </div>
-        </div>
+        {renderHero()}
         <div className="w-full border-t border-black" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4" style={{ borderLeft: '1px solid #000' }}>
           {iconiques.map((item, idx) => {
@@ -528,20 +535,7 @@ export default function IconiquesView({
         </span>
       </div>
 
-      <div className="px-6 py-20">
-        <h1
-          id="titre"
-          style={{
-            fontSize: 'clamp(40px, 8vw, 120px)',
-            fontWeight: '700',
-            letterSpacing: '-0.03em',
-            lineHeight: '0.9',
-            textTransform: 'uppercase'
-          }}
-        >
-          {lang === 'en' ? titleEn : titleFr}
-        </h1>
-      </div>
+      {renderHero()}
       <div className="w-full border-t border-black" />
 
       <div className="relative" style={{ borderBottom: '1px solid #000' }}>
@@ -1008,20 +1002,21 @@ export default function IconiquesView({
           )})}
         </div>
 
-        <div className="hidden md:flex justify-center items-center gap-3 py-6 flex-wrap px-4">
+        <div className="hidden md:flex justify-center items-center gap-5 py-8 flex-wrap px-4">
           {iconiques.map((_, idx) => (
             <button
               key={idx}
               onClick={() => goToIndex(idx)}
               aria-label={`Aller à l'iconique ${idx + 1}`}
-              className="uppercase transition-opacity"
+              className="uppercase transition-opacity hover:opacity-70"
               style={{
                 fontFamily: 'Helvetica Neue, sans-serif',
-                fontSize: idx === currentIndex ? '13px' : '11px',
-                fontWeight: idx === currentIndex ? 700 : 500,
-                letterSpacing: '0.15em',
+                fontSize: idx === currentIndex ? '28px' : '22px',
+                fontWeight: idx === currentIndex ? 800 : 500,
+                letterSpacing: '0.05em',
                 color: idx === currentIndex ? '#000' : '#999',
-                padding: '4px 8px',
+                padding: '6px 10px',
+                lineHeight: 1,
               }}
             >
               #{idx + 1}
