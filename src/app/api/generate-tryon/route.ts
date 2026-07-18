@@ -20,26 +20,33 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
   if (!imageResponse.ok) throw new Error('Erreur téléchargement image FASHN')
   const rawBuffer = await imageResponse.arrayBuffer()
   
-  // Redimensionner en carré 1200x1200 sans rien couper (extend blanc si besoin)
-  const insideBuffer = await sharp(Buffer.from(rawBuffer))
-    .resize(1200, 1200, { fit: 'inside' })
-    .toBuffer()
-  const meta = await sharp(insideBuffer).metadata()
-  const w = meta.width || 1200
-  const h = meta.height || 1200
+  // FASHN reçoit aspect_ratio: '1:1' → sa sortie est déjà carrée. On la met juste
+  // à l'échelle 1200, sans padding : aucune bande à ajouter.
+  const src = sharp(Buffer.from(rawBuffer))
+  const meta = await src.metadata()
+  const carre = meta.width === meta.height
 
-  const buffer = await sharp(insideBuffer)
-    .extend({
-      top: Math.floor((1200 - h) / 2),
-      bottom: Math.ceil((1200 - h) / 2),
-      left: Math.floor((1200 - w) / 2),
-      right: Math.ceil((1200 - w) / 2),
-      // Prolonge le fond studio jusqu'au bord du carré (pas de bande blanche visible)
-      extendWith: 'copy',
-    })
-    .flatten({ background: { r: 255, g: 255, b: 255 } })
-    .png()
-    .toBuffer()
+  const buffer = carre
+    ? await src.resize(1200, 1200).flatten({ background: { r: 255, g: 255, b: 255 } }).png().toBuffer()
+    // Filet de sécurité si FASHN renvoyait un jour autre chose qu'un carré : on
+    // complète avec les pixels du bord (fond studio) sans rien couper du mannequin.
+    : await (async () => {
+        const inside = await src.resize(1200, 1200, { fit: 'inside' }).toBuffer()
+        const m = await sharp(inside).metadata()
+        const w = m.width || 1200
+        const h = m.height || 1200
+        return sharp(inside)
+          .extend({
+            top: Math.floor((1200 - h) / 2),
+            bottom: Math.ceil((1200 - h) / 2),
+            left: Math.floor((1200 - w) / 2),
+            right: Math.ceil((1200 - w) / 2),
+            extendWith: 'copy',
+          })
+          .flatten({ background: { r: 255, g: 255, b: 255 } })
+          .png()
+          .toBuffer()
+      })()
 
   // Générer un nom de fichier unique
   const timestamp = Date.now()

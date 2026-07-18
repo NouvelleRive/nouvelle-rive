@@ -1,20 +1,22 @@
-// Même correction de bandes blanches, appliquée aux photos des produits.
-// Usage : node scripts/_fix-bandes-blanches-produits.mjs [--dry] [filtre-nom]
+// Retire les bandes blanches sur toutes les photos des produits "trench".
+// La liste des produits vient du cache blob (aucune lecture Firestore),
+// on n'écrit que sur les docs réellement corrigés.
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
+import { getStorage } from 'firebase-admin/storage'
+import { gunzipSync } from 'node:zlib'
 import sharp from 'sharp'
 import { config } from 'dotenv'
 config({ path: new URL('../.env.local', import.meta.url).pathname })
 
-const args = process.argv.slice(2)
-const DRY = args.includes('--dry')
-const FILTRE = args.find(a => !a.startsWith('--')) || 'trench'
+const DRY = process.argv.includes('--dry')
 
 if (!getApps().length) initializeApp({ credential: cert({
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
   privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-})})
+}), storageBucket: process.env.FIREBASE_STORAGE_BUCKET })
+
 const db = getFirestore()
 
 async function debander(input) {
@@ -33,6 +35,8 @@ async function debander(input) {
   if (W - w < 8 && H - h < 8) return null
   if (w < W * 0.5 || h < H * 0.5) return null
 
+  // On ne prolonge que du fond clair uni : si le bord contient le sujet,
+  // copier l'étalerait sur tout le carré → on laisse l'image tranquille.
   const fond = (x, y) => {
     const i = (y * W + x) * ch
     const [r, g, b] = [data[i], data[i+1], data[i+2]]
@@ -71,19 +75,23 @@ async function upload(buffer) {
   return `${process.env.NEXT_PUBLIC_BUNNY_CDN_URL}/${path}`
 }
 
-// --all = toute la collection ; sinon on reste sur les NR filtrés par nom
-const TOUT = args.includes('--all')
-const snap = TOUT
-  ? await db.collection('produits').get()
-  : await db.collection('produits').where('sku', '>=', 'NR').where('sku', '<', 'NS').get()
-const produits = TOUT ? snap.docs : snap.docs.filter(d => new RegExp(FILTRE, 'i').test(d.data().nom || ''))
-console.log(`${produits.length} produits${TOUT ? '' : ` NR "${FILTRE}"`}`)
+// Liste des trench depuis le cache blob (gratuit)
+const [buf] = await getStorage().bucket().file('_cache/produits-all.json.gz').download()
+const raw = buf[0] === 0x1f && buf[1] === 0x8b ? gunzipSync(buf) : buf
+const parsed = JSON.parse(raw.toString())
+// le cache stocke { id, raw } → on remet à plat
+const tous = (Array.isArray(parsed) ? parsed : Object.values(parsed).find(Array.isArray))
+  .map(e => (e && e.raw ? { id: e.id, ...e.raw } : e))
+const trenches = tous.filter(p => /trench/i.test(`${p.nom || ''} ${p.categorie || ''} ${p.sousCategorie || ''}`))
+console.log(`${trenches.length} trench dans le cache (sur ${tous.length} produits)`)
 
-let checked = 0, touched = 0
-for (const doc of produits) {
-  const p = doc.data()
-  const mapping = new Map() // ancienne URL → nouvelle
-  const urls = [...new Set([p.photos?.face, p.photos?.dos, ...(p.photos?.details || []), ...(p.imageUrls || [])].filter(Boolean))]
+let checked = 0, touched = 0, docs = 0
+for (const p of trenches) {
+  const mapping = new Map()
+  const urls = [...new Set([
+    p.photos?.face, p.photos?.dos, p.photos?.faceOnModel, p.photos?.dosOnModel,
+    ...(p.photos?.details || []), ...(p.imageUrls || []), p.imageUrl,
+  ].filter(Boolean))]
   for (const url of urls) {
     checked++
     try {
@@ -95,20 +103,28 @@ for (const doc of produits) {
       mapping.set(url, DRY ? url : await upload(fixed.buffer))
       touched++
     } catch (e) {
-      console.warn('  erreur', url, e.message)
+      console.warn('  erreur', p.sku, e.message)
     }
   }
   if (!mapping.size || DRY) continue
   const sub = u => (u ? mapping.get(u) || u : u)
+  // Le cache blob peut être daté : on repart de la fiche Firestore à jour
+  const ref = db.collection('produits').doc(p.id)
+  const snap = await ref.get()
+  if (!snap.exists) continue
+  const cur = snap.data()
   const update = {}
-  if (p.photos) update.photos = {
-    ...p.photos,
-    ...(p.photos.face ? { face: sub(p.photos.face) } : {}),
-    ...(p.photos.dos ? { dos: sub(p.photos.dos) } : {}),
-    ...(p.photos.details ? { details: p.photos.details.map(sub) } : {}),
+  if (cur.photos) update.photos = {
+    ...cur.photos,
+    ...(cur.photos.face ? { face: sub(cur.photos.face) } : {}),
+    ...(cur.photos.dos ? { dos: sub(cur.photos.dos) } : {}),
+    ...(cur.photos.faceOnModel ? { faceOnModel: sub(cur.photos.faceOnModel) } : {}),
+    ...(cur.photos.dosOnModel ? { dosOnModel: sub(cur.photos.dosOnModel) } : {}),
+    ...(cur.photos.details ? { details: cur.photos.details.map(sub) } : {}),
   }
-  if (p.imageUrls) update.imageUrls = p.imageUrls.map(sub)
-  if (p.imageUrl) update.imageUrl = sub(p.imageUrl)
-  await doc.ref.update(update)
+  if (cur.imageUrls) update.imageUrls = cur.imageUrls.map(sub)
+  if (cur.imageUrl) update.imageUrl = sub(cur.imageUrl)
+  await ref.update(update)
+  docs++
 }
-console.log(`\n${checked} images vérifiées, ${touched} corrigées${DRY ? ' (dry-run)' : ''}`)
+console.log(`\n${trenches.length} trench, ${checked} images vérifiées, ${touched} corrigées, ${docs} fiches mises à jour${DRY ? ' (dry-run)' : ''}`)
