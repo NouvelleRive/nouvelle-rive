@@ -652,6 +652,21 @@
         updateData.imageUrls = newUrls
         updateData.imageUrl = newUrls[0]
         await updateDoc(doc(db, 'produits', p.id), updateData)
+        // Sync state local : sans ça, ouvrir la modale d'édition juste après
+        // charge un produit stale (photos.faceOnModel absent), et le save du
+        // formulaire écrase les portées avec deleteField().
+        if (onProductUpdated) {
+          const nextPhotos = {
+            ...(p.photos || {}),
+            ...(updateData['photos.faceOnModel'] ? { faceOnModel: updateData['photos.faceOnModel'] } : {}),
+            ...(updateData['photos.dosOnModel'] ? { dosOnModel: updateData['photos.dosOnModel'] } : {}),
+          }
+          onProductUpdated(p.id, {
+            photos: nextPhotos as any,
+            imageUrls: newUrls,
+            imageUrl: newUrls[0],
+          } as any)
+        }
         alert(`${results.length} photo(s) portée(s) générée(s) !`)
       } catch (err: any) {
         console.error('Erreur génération photo portée:', err)
