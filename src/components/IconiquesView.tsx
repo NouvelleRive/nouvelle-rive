@@ -346,29 +346,30 @@ export default function IconiquesView({
     return (
       <main className="bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
         {marqueeImages.length > 0 && (
-          <>
-            <style>{`
-              @keyframes iconiques-marquee {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-50%); }
-              }
-              .iconiques-marquee-track {
-                display: flex;
-                width: max-content;
-                animation: iconiques-marquee 45s linear infinite;
-                will-change: transform;
-              }
-              .iconiques-marquee-track:hover { animation-play-state: paused; }
-              .iconiques-marquee-item {
-                width: 45vh;
-                height: 45vh;
-              }
-              @media (min-width: 768px) {
-                .iconiques-marquee-item { width: 65vh; height: 65vh; }
-                .iconiques-marquee-track { animation-duration: 60s; }
-              }
-            `}</style>
-            <div className="relative w-full overflow-hidden bg-white" style={{ borderBottom: '1px solid #000' }}>
+          <style>{`
+            @keyframes iconiques-marquee {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            .iconiques-marquee-track {
+              display: flex;
+              width: max-content;
+              height: 100%;
+              animation: iconiques-marquee 45s linear infinite;
+              will-change: transform;
+            }
+            .iconiques-marquee-item {
+              width: clamp(160px, 22vw, 320px);
+              height: 100%;
+            }
+            @media (min-width: 768px) {
+              .iconiques-marquee-track { animation-duration: 60s; }
+            }
+          `}</style>
+        )}
+        <div className="relative overflow-hidden" style={{ borderBottom: marqueeImages.length > 0 ? '1px solid #000' : undefined }}>
+          {marqueeImages.length > 0 && (
+            <div className="absolute inset-0 z-0 pointer-events-auto">
               <div className="iconiques-marquee-track">
                 {[...marqueeImages, ...marqueeImages].map((it, i) => (
                   <button
@@ -391,21 +392,21 @@ export default function IconiquesView({
                 ))}
               </div>
             </div>
-          </>
-        )}
-        <div className="px-6 py-20">
-          <h1
-            id="titre"
-            style={{
-              fontSize: 'clamp(40px, 8vw, 120px)',
-              fontWeight: 700,
-              letterSpacing: '-0.03em',
-              lineHeight: 0.9,
-              textTransform: 'uppercase',
-            }}
-          >
-            {lang === 'en' ? titleEn : titleFr}
-          </h1>
+          )}
+          <div className="relative z-10 px-6 py-20 pointer-events-none">
+            <h1
+              id="titre"
+              style={{
+                fontSize: 'clamp(40px, 8vw, 120px)',
+                fontWeight: 700,
+                letterSpacing: '-0.03em',
+                lineHeight: 0.9,
+                textTransform: 'uppercase',
+              }}
+            >
+              {lang === 'en' ? titleEn : titleFr}
+            </h1>
+          </div>
         </div>
         <div className="w-full border-t border-black" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4" style={{ borderLeft: '1px solid #000' }}>
