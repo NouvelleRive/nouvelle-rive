@@ -393,7 +393,7 @@ export default function IconiquesView({
                   <img
                     src={it.src}
                     alt={it.nom}
-                    className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                    className="w-full h-full object-contain transition duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
                 </button>
