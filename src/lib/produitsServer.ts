@@ -36,7 +36,19 @@ export type ProduitInitial = {
   sku?: string
 }
 
-function serialize(id: string, raw: any): ProduitInitial {
+export function toMillis(v: any): number {
+  if (!v) return 0
+  if (typeof v.toMillis === 'function') return v.toMillis()
+  if (typeof v === 'number') return v
+  if (typeof v === 'string') {
+    const t = new Date(v).getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+  if (v?.seconds) return v.seconds * 1000
+  return 0
+}
+
+export function serialize(id: string, raw: any): ProduitInitial {
   return {
     id,
     nom: raw.nom || '',
@@ -54,6 +66,34 @@ function serialize(id: string, raw: any): ProduitInitial {
     vendu: !!raw.vendu,
     promotion: !!raw.promotion,
     sku: raw.sku,
+  }
+}
+
+// Toute la boutique triée par plus récent — sert /boutique ("TOUT VOIR") SSR + API.
+// Réutilise getAllProduitsCached (blob 6h + memory + inflight dedupe) : 0 read Firestore
+// par visite en régime nominal, ~4 scans/jour tous workers confondus.
+export async function getAllBoutiqueProduitsServer(): Promise<ProduitInitial[]> {
+  try {
+    const all = await getAllProduitsCached()
+    const filtered = all
+      .filter(({ raw }) =>
+        raw.statut !== 'supprime' &&
+        raw.statut !== 'retour' &&
+        raw.recu !== false &&
+        raw.hidden !== true &&
+        raw.forceDisplay !== false &&
+        raw.vendu !== true &&
+        (raw.quantite ?? 1) > 0 &&
+        raw.prix > 0 &&
+        (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)
+      )
+      .map(({ id, raw }) => ({ id, raw, ms: toMillis(raw.createdAt) }))
+      .sort((a, b) => b.ms - a.ms)
+      .map(({ id, raw }) => serialize(id, raw))
+    return filtered
+  } catch (err) {
+    console.error('[produitsServer] getAllBoutiqueProduitsServer error:', err)
+    return []
   }
 }
 

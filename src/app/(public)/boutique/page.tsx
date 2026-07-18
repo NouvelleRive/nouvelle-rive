@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import BoutiqueListing from '@/components/BoutiqueListing'
-import { getRecentProduitsServer } from '@/lib/produitsServer'
+import { getAllBoutiqueProduitsServer } from '@/lib/produitsServer'
 
-export const revalidate = 3600
+export const revalidate = 21600
 
 export const metadata: Metadata = {
   title: 'Toute la boutique — Vintage et upcyclé chinés à Paris',
@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 }
 
 export default async function BoutiquePage() {
-  const initialProduits = await getRecentProduitsServer(50)
-  return <BoutiqueListing initialProduits={initialProduits} />
+  // Même source (cache blob 6h) que l'API client : 0 read Firestore pour le SSR aussi.
+  const all = await getAllBoutiqueProduitsServer()
+  return <BoutiqueListing initialProduits={all.slice(0, 60)} allBoutiqueMode />
 }

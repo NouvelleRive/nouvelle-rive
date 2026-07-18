@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFilteredProducts } from '@/lib/siteConfig'
 import ProductGrid from '@/components/ProductGrid'
 import CountdownPromo from '@/components/CountdownPromo'
 import { useLang, t } from '@/lib/i18n'
 import type { ProduitInitial } from '@/lib/produitsServer'
+
+const INFINITE_PAGE_SIZE = 60
 
 type BoutiqueListingProps = {
   initialProduits?: ProduitInitial[]
@@ -15,6 +17,10 @@ type BoutiqueListingProps = {
   /** true → on n'ré-appelle pas useFilteredProducts, on affiche uniquement initialProduits.
    *  Utile pour les pages qui font un filtre custom SSR non représentable dans siteConfig. */
   skipClientRefetch?: boolean
+  /** Mode /boutique "TOUT VOIR" : on ignore pageId + siteConfig, on charge la liste complète
+   *  depuis /api/boutique-produits (cache 6h à l'edge, 0 read Firestore) et on paginate côté
+   *  client via IntersectionObserver. */
+  allBoutiqueMode?: boolean
 }
 
 export default function BoutiqueListing({
@@ -23,19 +29,61 @@ export default function BoutiqueListing({
   h1Fr,
   h1En,
   skipClientRefetch = false,
+  allBoutiqueMode = false,
 }: BoutiqueListingProps) {
-  const { produits, loadingMore } = useFilteredProducts(pageId, { skip: skipClientRefetch })
+  const { produits, loadingMore } = useFilteredProducts(pageId, {
+    skip: skipClientRefetch || allBoutiqueMode,
+  })
   const [nombreAchats, setNombreAchats] = useState(0)
   const lang = useLang()
+
+  // Mode "toute la boutique" — liste complète cachée + infinite scroll côté client.
+  const [allBoutique, setAllBoutique] = useState<ProduitInitial[]>([])
+  const [infiniteCount, setInfiniteCount] = useState(INFINITE_PAGE_SIZE)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const achats = localStorage.getItem('nouvelle-rive-achats')
     setNombreAchats(achats ? parseInt(achats) : 0)
   }, [])
 
-  // Affiche les produits pré-rendus côté serveur tant que le client n'a pas fini son fetch.
-  // Dès que useFilteredProducts a des résultats, on bascule sur la liste complète.
-  const displayProduits = (produits.length > 0 ? produits : initialProduits) as any
+  useEffect(() => {
+    if (!allBoutiqueMode) return
+    let cancelled = false
+    fetch('/api/boutique-produits')
+      .then(r => (r.ok ? r.json() : { produits: [] }))
+      .then((data: { produits?: ProduitInitial[] }) => {
+        if (cancelled) return
+        if (Array.isArray(data.produits)) setAllBoutique(data.produits)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [allBoutiqueMode])
+
+  // Choix de la source affichée : mode all-boutique = liste API paginée, sinon logique siteConfig.
+  const allBoutiqueSource = allBoutique.length > 0 ? allBoutique : initialProduits
+  const displayProduits = (
+    allBoutiqueMode
+      ? allBoutiqueSource.slice(0, infiniteCount)
+      : (produits.length > 0 ? produits : initialProduits)
+  ) as any
+  const hasMore = allBoutiqueMode && allBoutiqueSource.length > infiniteCount
+
+  useEffect(() => {
+    if (!hasMore) return
+    const el = sentinelRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) setInfiniteCount(c => c + INFINITE_PAGE_SIZE)
+      },
+      { rootMargin: '600px 0px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [hasMore])
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
@@ -60,8 +108,8 @@ export default function BoutiqueListing({
       )}
       <ProductGrid produits={displayProduits} columns={3} />
 
-      {loadingMore && (
-        <div className="py-8 text-center">
+      {(loadingMore || hasMore) && (
+        <div ref={hasMore ? sentinelRef : undefined} className="py-8 text-center">
           <p className="text-gray-500 text-sm">{t('Chargement...', 'Loading...', lang)}</p>
         </div>
       )}
