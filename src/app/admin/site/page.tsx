@@ -9,6 +9,7 @@ import { Save, Plus, X, Trash2 } from 'lucide-react'
 import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-react'
 import ProductList, { Produit } from '@/components/ProductList'
 import IconiquesManager from '@/components/admin/IconiquesManager'
+import NavManager from '@/components/admin/NavManager'
 import { getConfigurablePages } from '@/lib/site-pages'
 
 type Critere = {
@@ -300,6 +301,8 @@ const getImageUrl = (p: ProduitPreview) => {
 
   return (
     <div className="space-y-6">
+      <NavManager />
+
       <h1 className="text-xl font-bold text-[#22209C]">Configuration des pages</h1>
 
       <div>
