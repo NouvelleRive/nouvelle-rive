@@ -310,6 +310,18 @@ export default function IconiquesView({
     setImageIndices(prev => ({ ...prev, [itemId]: 0 }))
   }
 
+  // Mélange les images de tous les iconiques (au lieu de les afficher d'affilée iconique par iconique).
+  // Fisher-Yates stable via useMemo — ne se re-shuffle pas à chaque render.
+  // ⚠️ Doit rester AVANT tout return conditionnel (Rules of Hooks).
+  const marqueeImages = useMemo(() => {
+    const flat = iconiques.flatMap((i, idx) => (i.images || []).map(src => ({ id: i.id, slug: i.slug, src, nom: i.nom, idx })))
+    for (let k = flat.length - 1; k > 0; k--) {
+      const j = Math.floor(Math.random() * (k + 1))
+      ;[flat[k], flat[j]] = [flat[j], flat[k]]
+    }
+    return flat
+  }, [iconiques])
+
   if (loadingIcons) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
@@ -340,16 +352,6 @@ export default function IconiquesView({
   // Marquee : bandeau infini en haut avec toutes les images des iconiques (vintage + upcy).
   // Duplication ×2 pour boucle sans couture (translate -50%). Utilisé sur cover ET sur pages
   // individuelles pour garder la même taille/style de hero (demande cliente).
-  // Mélange les images de tous les iconiques (au lieu de les afficher d'affilée iconique par iconique).
-  // Fisher-Yates stable via useMemo — ne se re-shuffle pas à chaque render.
-  const marqueeImages = useMemo(() => {
-    const flat = iconiques.flatMap((i, idx) => (i.images || []).map(src => ({ id: i.id, slug: i.slug, src, nom: i.nom, idx })))
-    for (let k = flat.length - 1; k > 0; k--) {
-      const j = Math.floor(Math.random() * (k + 1))
-      ;[flat[k], flat[j]] = [flat[j], flat[k]]
-    }
-    return flat
-  }, [iconiques])
   const renderHero = () => (
     <>
       {marqueeImages.length > 0 && (
