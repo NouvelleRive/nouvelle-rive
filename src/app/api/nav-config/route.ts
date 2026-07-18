@@ -35,6 +35,10 @@ export async function POST() {
     } catch {
       /* pas grave si le blob n'existe pas */
     }
+    // Invalide la réponse edge de /api/nav-config lui-même + la home layout (où
+    // NavbarPublic est monté). NavbarPublic fetch en no-store donc la prochaine visite
+    // tape le serveur qui renverra du frais.
+    revalidatePath('/api/nav-config')
     revalidatePath('/', 'layout')
     return NextResponse.json({ ok: true })
   } catch (e: any) {

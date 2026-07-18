@@ -39,7 +39,10 @@ export default function NavbarPublic() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/nav-config')
+    // cache: 'no-store' → contourne le cache navigateur pour toujours taper le serveur
+    // (qui sert depuis blob 6h : 0 read Firestore). Sans ça, la nav restait figée après
+    // une save admin même après full reload.
+    fetch('/api/nav-config', { cache: 'no-store' })
       .then(r => (r.ok ? r.json() : { pages: [] }))
       .then((data: { pages?: NavPage[] }) => {
         if (cancelled) return
