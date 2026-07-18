@@ -21,10 +21,21 @@ async function uploadToBunny(imageUrl: string): Promise<string> {
   const rawBuffer = await imageResponse.arrayBuffer()
   
   // Redimensionner en carré 1200x1200 sans rien couper (extend blanc si besoin)
-  const buffer = await sharp(Buffer.from(rawBuffer))
-    .resize(1200, 1200, {
-      fit: 'contain',
-      background: { r: 255, g: 255, b: 255 },
+  const insideBuffer = await sharp(Buffer.from(rawBuffer))
+    .resize(1200, 1200, { fit: 'inside' })
+    .toBuffer()
+  const meta = await sharp(insideBuffer).metadata()
+  const w = meta.width || 1200
+  const h = meta.height || 1200
+
+  const buffer = await sharp(insideBuffer)
+    .extend({
+      top: Math.floor((1200 - h) / 2),
+      bottom: Math.ceil((1200 - h) / 2),
+      left: Math.floor((1200 - w) / 2),
+      right: Math.ceil((1200 - w) / 2),
+      // Prolonge le fond studio jusqu'au bord du carré (pas de bande blanche visible)
+      extendWith: 'copy',
     })
     .flatten({ background: { r: 255, g: 255, b: 255 } })
     .png()

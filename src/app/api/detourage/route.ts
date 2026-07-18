@@ -72,7 +72,9 @@
               bottom: Math.ceil((1200 - h) / 2),
               left: Math.floor((1200 - w) / 2),
               right: Math.ceil((1200 - w) / 2),
-              background: { r: 255, g: 255, b: 255 }
+              // Prolonge les pixels du bord (fond studio) au lieu d'une bande blanche.
+              // Sur une image détourée les bords sont transparents → flatten = blanc, inchangé.
+              extendWith: 'copy',
             })
             .flatten({ background: { r: 255, g: 255, b: 255 } })
             .png({ quality: 90 })
