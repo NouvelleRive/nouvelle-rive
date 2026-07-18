@@ -14,5 +14,12 @@ export const metadata: Metadata = {
 export default async function BoutiquePage() {
   // Même source (cache blob 6h) que l'API client : 0 read Firestore pour le SSR aussi.
   const all = await getAllBoutiqueProduitsServer()
-  return <BoutiqueListing initialProduits={all.slice(0, 60)} allBoutiqueMode />
+  return (
+    <BoutiqueListing
+      initialProduits={all.slice(0, 60)}
+      allBoutiqueMode
+      h1Fr="TOUTES NOS PIÈCES"
+      h1En="ALL OUR PIECES"
+    />
+  )
 }

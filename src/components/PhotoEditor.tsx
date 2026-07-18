@@ -35,6 +35,9 @@
     const cropImgRef = useRef<HTMLImageElement>(null)
     const cropDragStart = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 })
     const [cropDragging, setCropDragging] = useState(false)
+    // Ref sur le container d'aperçu (vue post-détourage) pour reproduire
+    // exactement le transform CSS lors de la validation.
+    const previewContainerRef = useRef<HTMLDivElement>(null)
 
     if (!imageUrl) {
       return (
