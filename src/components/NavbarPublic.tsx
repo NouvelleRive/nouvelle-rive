@@ -10,6 +10,19 @@ import { useCart } from '@/lib/cart'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { useLang, t } from '@/lib/i18n'
 import { getNavPages } from '@/lib/site-pages'
+import type { NavPage } from '@/lib/nav-config'
+
+// Fallback statique utilisé le temps que /api/nav-config réponde. Une fois la config
+// dynamique chargée depuis siteConfig/_nav (via NavManager /admin/site), on switch dessus.
+const STATIC_LINKS = getNavPages().map(p => ({
+  id: p.id,
+  path: p.path,
+  hash: p.hash,
+  labelFr: p.labels?.fr || '',
+  labelEn: p.labels?.en || '',
+  hidden: false,
+  navOrder: p.navOrder ?? 999,
+}))
 
 export default function NavbarPublic() {
   const pathname = usePathname()
@@ -20,6 +33,34 @@ export default function NavbarPublic() {
   const showVideo = pathname === '/'
   const [stickyVisible, setStickyVisible] = useState(false)
   const [stickyMenuOpen, setStickyMenuOpen] = useState(false)
+  // Nav dynamique : SSR/premier paint = STATIC_LINKS (fallback), puis remplacée par la
+  // config Firestore/blob cachée dès que /api/nav-config répond (0 read Firestore).
+  const [dynamicNav, setDynamicNav] = useState<typeof STATIC_LINKS | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/nav-config')
+      .then(r => (r.ok ? r.json() : { pages: [] }))
+      .then((data: { pages?: NavPage[] }) => {
+        if (cancelled) return
+        if (!Array.isArray(data?.pages) || data.pages.length === 0) return
+        const mapped = data.pages
+          .filter(p => !p.hidden)
+          .sort((a, b) => (a.navOrder ?? 999) - (b.navOrder ?? 999))
+          .map(p => ({
+            id: p.id,
+            path: p.path,
+            hash: p.hash,
+            labelFr: p.labelFr,
+            labelEn: p.labelEn,
+            hidden: false,
+            navOrder: p.navOrder,
+          }))
+        setDynamicNav(mapped)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   // Barre sticky : apparaît après ~120px de scroll (quand la barre boutons du haut a disparu).
   useEffect(() => {
@@ -91,10 +132,12 @@ export default function NavbarPublic() {
   // Hash #titre : chaque page de destination a un id="titre" sur son h1 principal.
   // Le navigateur (et Next.js) scrollent automatiquement à cet ancrage à l'arrivée,
   // ce qui place le titre de la page en haut du viewport (la navbar passe au-dessus).
-  // Source unique : src/lib/site-pages.ts (filtre inNav, ordonné par navOrder).
-  const boutiqueLinks = getNavPages().map(p => ({
+  // Source : dynamicNav (siteConfig/_nav) une fois chargé, sinon STATIC_LINKS pour le
+  // premier paint (SSR + hydratation).
+  const activeLinks = dynamicNav ?? STATIC_LINKS
+  const boutiqueLinks = activeLinks.map(p => ({
     href: `${p.path}${p.hash || ''}`,
-    label: t(p.labels?.fr || '', p.labels?.en || '', lang),
+    label: t(p.labelFr, p.labelEn, lang),
   }))
 
   const cartLabel = t('PANIER', 'CART', lang)

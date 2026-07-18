@@ -70,9 +70,12 @@ export const SITE_PAGES: SitePage[] = [
   {
     id: 'sac',
     path: '/sac',
+    hash: '#titre',
+    labelAdmin: 'Sacs de Designer',
     labels: { fr: 'SACS DE DESIGNER', en: 'DESIGNER BAGS' },
     inNav: true,
     navOrder: 3,
+    configurable: true,
     inSitemap: true,
     sitemap: { changeFrequency: 'weekly', priority: 0.8 },
   },
@@ -91,6 +94,7 @@ export const SITE_PAGES: SitePage[] = [
   {
     id: 'iconiques-upcy',
     path: '/iconiques-upcy',
+    hash: '#titre',
     labelAdmin: 'Iconiques Upcy',
     labels: { fr: 'NOS PIÈCES UPCY FAVORITES', en: 'FAVORITE UPCYCLED PIECES' },
     inNav: true,
@@ -102,6 +106,7 @@ export const SITE_PAGES: SitePage[] = [
   {
     id: 'iconiques-vintage',
     path: '/les-iconiques',
+    hash: '#titre',
     labelAdmin: 'Iconiques Vintage',
     labels: { fr: 'LES ICONIQUES DU VINTAGE', en: 'VINTAGE ICONICS' },
     inNav: true,
@@ -145,6 +150,7 @@ export const SITE_PAGES: SitePage[] = [
   {
     id: 'boutique',
     path: '/boutique',
+    hash: '#titre',
     labels: { fr: 'TOUT VOIR', en: 'SEE ALL' },
     inNav: true,
     navOrder: 10,

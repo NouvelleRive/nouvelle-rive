@@ -8,6 +8,15 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 import { getChineusesLiteCached } from '@/lib/getChineusesLiteCached'
 
+// Copie serveur de LUXURY_BRANDS (défini dans lib/admin/helpers.ts) : ce fichier tire
+// le SDK Firebase client, donc pas importable depuis un Server Component / route API.
+const LUXURY_BRANDS = [
+  'hermès', 'hermes', 'chanel', 'louis vuitton', 'lv', 'dior', 'christian dior',
+  'céline', 'celine', 'yves saint laurent', 'ysl', 'saint laurent', 'gucci',
+  'burberry', 'givenchy', 'lanvin', 'nina ricci', 'balenciaga', 'bottega veneta',
+  'prada', 'fendi', 'valentino', 'loewe', 'cartier', 'van cleef', 'boucheron',
+]
+
 type Critere = {
   type: 'categorie' | 'nom' | 'description' | 'marque' | 'chineuse'
   valeur: string
@@ -37,8 +46,17 @@ function matchCritere(
       return (p.nom || '').toLowerCase().includes(v)
     case 'description':
       return (p.description || '').toLowerCase().includes(v)
-    case 'marque':
-      return (p.marque || '').toLowerCase().includes(v)
+    case 'marque': {
+      const marque = (p.marque || '').toLowerCase().trim()
+      // Special : valeur "luxe" matche toutes les marques dans LUXURY_BRANDS
+      // (comme dans /api/iconique-produits, pour que les rules de /sac, /luxe, etc.
+      // n'aient pas à énumérer les ~25 marques luxe manuellement).
+      if (v === 'luxe') {
+        if (!marque) return false
+        return LUXURY_BRANDS.some(b => marque.includes(b) || b.includes(marque))
+      }
+      return marque.includes(v)
+    }
     case 'chineuse': {
       const ch = chineusesByUid.get(c.valeur)
       if (!ch) return false

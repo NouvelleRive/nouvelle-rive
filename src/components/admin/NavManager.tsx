@@ -119,6 +119,13 @@ export default function NavManager({ onPagesChange }: Props) {
         pages: clean,
         updatedAt: new Date(),
       })
+      // Invalide le cache serveur (blob + memory) + revalide le layout public → le nouveau
+      // menu (ordre / labels / visibilité) est visible immédiatement sur nouvellerive.eu.
+      try {
+        await fetch('/api/nav-config', { method: 'POST' })
+      } catch {
+        /* la save Firestore a réussi, si l'invalidation échoue le TTL 6h finira le job */
+      }
       setDirty(false)
       alert('✅ Navigation sauvegardée')
     } catch (e: any) {
