@@ -1849,7 +1849,10 @@
                   })
                   const igData = await igRes.json()
                   if (igData.success) igOk.push(p.sku || p.id)
-                  else failures.push(`${p.sku}: IG ${igData.error || 'erreur'}`)
+                  else {
+                    const metaMsg = igData.details?.error?.message || igData.details?.error?.error_user_msg
+                    failures.push(`${p.sku}: IG ${igData.error || 'erreur'}${metaMsg ? ` — ${metaMsg}` : ''}`)
+                  }
 
                   const fbRes = await fetch('/api/facebook/publish-post', {
                     method: 'POST',
@@ -1858,7 +1861,10 @@
                   })
                   const fbData = await fbRes.json()
                   if (fbData.success) fbOk.push(p.sku || p.id)
-                  else failures.push(`${p.sku}: FB ${fbData.error || 'erreur'}`)
+                  else {
+                    const metaMsg = fbData.details?.error?.message || fbData.details?.error?.error_user_msg
+                    failures.push(`${p.sku}: FB ${fbData.error || 'erreur'}${metaMsg ? ` — ${metaMsg}` : ''}`)
+                  }
                 } catch (err: any) {
                   failures.push(`${p.sku}: ${err?.message || 'erreur réseau'}`)
                 }
