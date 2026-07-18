@@ -97,10 +97,13 @@ interface ProductGridProps {
    *  fournir une vidéo intercalée dans la grille. Utilisé sur /luxe pour ne montrer
    *  que les vidéos PS / SOI / PRI. */
   videoTrigrammeWhitelist?: string[]
+  /** Liste complète utilisée pour construire les facettes (marques…) même quand
+   *  `produits` ne contient qu'une slice paginée. */
+  facetSource?: Produit[]
 }
 
 
-export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist }: ProductGridProps) {
+export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist, facetSource }: ProductGridProps) {
   const lang = useLang()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
@@ -218,7 +221,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       )].sort((a, b) => a.localeCompare(b, 'fr'))
     : []
 
-  const marques = [...new Set(produits.map(p => p.marque).filter(Boolean))].sort((a, b) => a!.localeCompare(b!, 'fr'))
+  // Marques : on utilise `facetSource` si fourni (liste complète boutique) pour
+  // ne pas restreindre l'accordéon aux 60 premiers produits paginés côté client.
+  const marquesSource = facetSource && facetSource.length > 0 ? facetSource : produits
+  const marques = [...new Set(marquesSource.map(p => p.marque).filter(Boolean))].sort((a, b) => a!.localeCompare(b!, 'fr'))
 
   const isMarqueLuxe = (m: string) => {
     const low = m.toLowerCase().trim()

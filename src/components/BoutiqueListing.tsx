@@ -106,7 +106,11 @@ export default function BoutiqueListing({
           <div className="w-full border-t border-black" />
         </>
       )}
-      <ProductGrid produits={displayProduits} columns={3} />
+      <ProductGrid
+        produits={displayProduits}
+        columns={3}
+        facetSource={allBoutiqueMode ? (allBoutiqueSource as any) : undefined}
+      />
 
       {(loadingMore || hasMore) && (
         <div ref={hasMore ? sentinelRef : undefined} className="py-8 text-center">
