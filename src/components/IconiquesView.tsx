@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo, ReactNode } from 'react'
+import { useState, useEffect, useRef, ReactNode } from 'react'
 import Link from 'next/link'
 import ProductGrid from '@/components/ProductGrid'
 import FavoriteButton from '@/components/FavoriteButton'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t } from '@/lib/i18n'
+import { getCloudinaryUrl } from '@/lib/cloudinary'
 
 export type Iconique = {
   id: string
@@ -313,16 +314,18 @@ export default function IconiquesView({
     setImageIndices(prev => ({ ...prev, [itemId]: 0 }))
   }
 
-  // Mélange les images de tous les iconiques (au lieu de les afficher d'affilée iconique par iconique).
-  // Fisher-Yates stable via useMemo — ne se re-shuffle pas à chaque render.
-  // ⚠️ Doit rester AVANT tout return conditionnel (Rules of Hooks).
-  const marqueeImages = useMemo(() => {
+  // Marquee : images shuffled à chaque montage (setter appelé une fois iconiques chargés).
+  // Passé en state (au lieu de useMemo) parce que useMemo mémorise trop agressivement
+  // et donnait toujours le même ordre visuel entre reloads.
+  const [marqueeImages, setMarqueeImages] = useState<{ id: string; slug: string; src: string; nom: string; idx: number }[]>([])
+  useEffect(() => {
+    if (iconiques.length === 0) { setMarqueeImages([]); return }
     const flat = iconiques.flatMap((i, idx) => (i.images || []).map(src => ({ id: i.id, slug: i.slug, src, nom: i.nom, idx })))
     for (let k = flat.length - 1; k > 0; k--) {
       const j = Math.floor(Math.random() * (k + 1))
       ;[flat[k], flat[j]] = [flat[j], flat[k]]
     }
-    return flat
+    setMarqueeImages(flat)
   }, [iconiques])
 
   if (loadingIcons) {
@@ -410,10 +413,12 @@ export default function IconiquesView({
                   aria-label={it.nom}
                 >
                   <img
-                    src={it.src}
+                    src={getCloudinaryUrl(it.src, 600)}
                     alt={it.nom}
                     className="transition duration-500 group-hover:scale-105"
-                    loading="lazy"
+                    loading={i < 6 ? 'eager' : 'lazy'}
+                    decoding="async"
+                    fetchPriority={i < 4 ? 'high' : 'low'}
                   />
                 </button>
               ))}
