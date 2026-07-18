@@ -7,6 +7,16 @@ import { Eye, EyeOff, Plus, Trash2, Save, ArrowLeft, ImagePlus, X, Film, ArrowUp
 
 type IconiqueType = 'vintage' | 'upcy'
 
+// ⚠️ Field DOIT rester au niveau module — s'il était défini dans le composant, sa
+// référence changerait à chaque render → React démonterait/remonterait tous les inputs
+// enfants → focus perdu à chaque frappe (bug historique).
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <label className="block">
+    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">{label}</div>
+    {children}
+  </label>
+)
+
 type Iconique = {
   id: string
   slug?: string
@@ -101,6 +111,7 @@ function slugify(s: string): string {
 
 export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueType }) {
   const [iconiques, setIconiques] = useState<Iconique[]>([])
+  const [chineuses, setChineuses] = useState<{ trigramme: string; nom: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null) // null = list; 'new' = new; string = edit
   const [draft, setDraft] = useState<Iconique>(emptyDraft(typeFilter, 999))
@@ -108,6 +119,23 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
   const [uploadingCount, setUploadingCount] = useState(0)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+
+  // Charge la liste des chineuses (trigramme + nom) — utilisée pour le sélecteur
+  // dans le formulaire d'iconique. Pas de re-fetch (les chineuses changent rarement).
+  useEffect(() => {
+    getDocs(collection(db, 'chineuse'))
+      .then(snap => {
+        const list = snap.docs
+          .map(d => ({
+            trigramme: (d.data() as any).trigramme?.toUpperCase() || '',
+            nom: (d.data() as any).nom || '',
+          }))
+          .filter(c => !!c.trigramme)
+          .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+        setChineuses(list)
+      })
+      .catch(err => console.error('loadChineuses error:', err))
+  }, [])
 
   const loadIconiques = async () => {
     setLoading(true)
@@ -409,13 +437,6 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
   }
 
   // ================= EDIT VIEW =================
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <label className="block">
-      <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">{label}</div>
-      {children}
-    </label>
-  )
-
   const inputCls = 'border rounded px-3 py-2 w-full text-sm'
   const textareaCls = 'border rounded px-3 py-2 w-full text-sm min-h-[120px]'
 
@@ -488,14 +509,6 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
               disabled={editingId !== 'new'}
             />
           </Field>
-          <Field label="Ordre">
-            <input
-              className={inputCls}
-              type="number"
-              value={draft.ordre ?? 0}
-              onChange={e => setDraft({ ...draft, ordre: Number(e.target.value) })}
-            />
-          </Field>
           <Field label="Date de création (année ou période)">
             <input className={inputCls} value={draft.dateCreation || ''} onChange={e => setDraft({ ...draft, dateCreation: e.target.value })} placeholder="1954" />
           </Field>
@@ -552,13 +565,32 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
             <Field label="Catégorie de recherche (mot-clé dans nom/catégorie)">
               <input className={inputCls} value={draft.categorieRecherche || ''} onChange={e => setDraft({ ...draft, categorieRecherche: e.target.value })} placeholder="tweed, carré, foulard…" />
             </Field>
-            <Field label="Trigrammes chineuses (séparés par virgule)">
-              <input
-                className={inputCls}
-                value={(draft.chineuseTrigrammes || []).join(', ')}
-                onChange={e => setDraft({ ...draft, chineuseTrigrammes: e.target.value.split(',').map(x => x.trim()).filter(Boolean) })}
-                placeholder="DISI, AGE, IP"
-              />
+            <Field label="Chineuses (coche celles à inclure)">
+              <div className="border rounded p-2 max-h-48 overflow-y-auto bg-white">
+                {chineuses.length === 0 ? (
+                  <div className="text-xs text-gray-500 py-2 text-center">Chargement...</div>
+                ) : (
+                  chineuses.map(c => {
+                    const checked = (draft.chineuseTrigrammes || []).includes(c.trigramme)
+                    return (
+                      <label key={c.trigramme} className="flex items-center gap-2 py-1 px-1 hover:bg-gray-50 rounded cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={e => {
+                            const set = new Set(draft.chineuseTrigrammes || [])
+                            if (e.target.checked) set.add(c.trigramme)
+                            else set.delete(c.trigramme)
+                            setDraft({ ...draft, chineuseTrigrammes: Array.from(set) })
+                          }}
+                        />
+                        <span className="font-mono text-xs text-gray-500 w-12">{c.trigramme}</span>
+                        <span>{c.nom || <span className="italic text-gray-400">(sans nom)</span>}</span>
+                      </label>
+                    )
+                  })
+                )}
+              </div>
             </Field>
             <Field label="Catégories in (séparées par virgule)">
               <input
