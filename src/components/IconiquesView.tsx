@@ -485,7 +485,7 @@ export default function IconiquesView({
                   <div
                     className="absolute pointer-events-none select-none"
                     style={{
-                      fontSize: 'clamp(80px, 14vw, 180px)',
+                      fontSize: 'clamp(22px, 4vw, 45px)',
                       fontFamily: 'Helvetica Neue, sans-serif',
                       fontWeight: 900,
                       color: 'rgba(255,255,255,0.55)',
