@@ -95,12 +95,13 @@ async function fetchPageConfig(pageId: string): Promise<PageConfig> {
 }
 
 // Cache la config Firestore de la page séparément (pageId dans la clé) — 1 read
-// toutes les 6h par pageId, aucun read Firestore ensuite.
+// toutes les 6h par pageId, aucun read Firestore ensuite. Le tag `site-config-<pageId>`
+// permet à /api/site-config POST de revalider ce cache immédiatement après une save admin.
 const getPageConfigCached = (pageId: string) =>
   unstable_cache(
     async () => fetchPageConfig(pageId),
     ['site-config', pageId],
-    { revalidate: 21600 },
+    { revalidate: 21600, tags: [`site-config-${pageId}`] },
   )()
 
 export async function getPageProduits(pageId: string) {

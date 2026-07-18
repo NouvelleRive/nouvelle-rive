@@ -196,10 +196,21 @@ export default function AdminSitePage() {
         ...config,
         updatedAt: new Date()
       })
+      // Invalide le cache serveur (unstable_cache tag + edge cache /api/page-produits)
+      // → la page publique reflète les nouvelles règles immédiatement.
+      try {
+        await fetch('/api/site-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageId: selectedPage }),
+        })
+      } catch {
+        /* la save Firestore est OK, si l'invalidation échoue le TTL 6h finira le job */
+      }
       alert('✅ Sauvegardé !')
     } catch (error) {
       console.error('Erreur:', error)
-      alert('❌ Erreur : FI')
+      alert('❌ Erreur de sauvegarde')
     } finally {
       setSaving(false)
     }
