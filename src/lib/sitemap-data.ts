@@ -112,17 +112,20 @@ function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;')
 }
 
+// Format calqué sur Sezane (sitemap accepté par GSC sans souci) : header sans
+// encoding, urlset avec xmlns xhtml, chaque url indentée sur plusieurs lignes.
 export function renderSitemapXml(entries: SitemapEntry[]): string {
   const urls = entries.map(e => {
-    const loc = `<loc>${escapeXml(e.url)}</loc>`
-    const lastmod = `<lastmod>${e.lastModified.toISOString().slice(0, 10)}</lastmod>`
-    const changefreq = `<changefreq>${e.changeFrequency}</changefreq>`
-    const priority = `<priority>${e.priority.toFixed(1)}</priority>`
-    return `  <url>${loc}${lastmod}${changefreq}${priority}</url>`
+    return `    <url>
+        <loc>${escapeXml(e.url)}</loc>
+        <lastmod>${e.lastModified.toISOString().slice(0, 10)}</lastmod>
+        <changefreq>${e.changeFrequency}</changefreq>
+        <priority>${e.priority.toFixed(1)}</priority>
+    </url>`
   }).join('\n')
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  return `<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${urls}
 </urlset>`
 }
