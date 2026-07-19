@@ -9,6 +9,38 @@ import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t } from '@/lib/i18n'
 import { getCloudinaryUrl } from '@/lib/cloudinary'
 
+/**
+ * Effet machine à écrire — même réglage que les fiches créatrices
+ * (50 ms par caractère, curseur clignotant tant que le texte n'est pas fini).
+ * Relancé à chaque changement de texte : slide suivante ou changement de langue.
+ */
+function Typewriter({ text }: { text: string }) {
+  const [displayed, setDisplayed] = useState('')
+
+  useEffect(() => {
+    setDisplayed('')
+    let currentIndex = 0
+
+    const interval = setInterval(() => {
+      if (currentIndex <= text.length) {
+        setDisplayed(text.slice(0, currentIndex))
+        currentIndex++
+      } else {
+        clearInterval(interval)
+      }
+    }, 50)
+
+    return () => clearInterval(interval)
+  }, [text])
+
+  return (
+    <>
+      {displayed}
+      {displayed.length < text.length && <span className="animate-pulse">|</span>}
+    </>
+  )
+}
+
 export type Iconique = {
   id: string
   nom: string
@@ -718,10 +750,15 @@ export default function IconiquesView({
                         fontFamily: 'Helvetica Neue, sans-serif',
                         fontSize: '12px',
                         color: '#0000FF',
-                        letterSpacing: '0.25em'
+                        letterSpacing: '0.25em',
+                        minHeight: '1.4em'
                       }}
                     >
-                      {lang === 'en' && item.pourquoiMustEn ? item.pourquoiMustEn : item.pourquoiMust}
+                      {isActive ? (
+                        <Typewriter text={(lang === 'en' && item.pourquoiMustEn ? item.pourquoiMustEn : item.pourquoiMust) as string} />
+                      ) : (
+                        lang === 'en' && item.pourquoiMustEn ? item.pourquoiMustEn : item.pourquoiMust
+                      )}
                     </p>
                   )}
 
