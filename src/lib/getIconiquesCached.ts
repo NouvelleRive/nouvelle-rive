@@ -29,6 +29,8 @@ export type IconiqueDoc = {
   nomPluriel?: string
   nomPlurielEn?: string
   images?: string[]
+  /** Cadrage par photo (zoom + focus), aligné index par index sur `images`. */
+  imageTransforms?: { scale: number; x: number; y: number }[]
   ordre?: number
   soldOut?: boolean
   buyLink?: string

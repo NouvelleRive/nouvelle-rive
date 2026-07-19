@@ -2,8 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
-import { Eye, EyeOff, Plus, Trash2, Save, ArrowLeft, ImagePlus, X, Film, ArrowUp, ArrowDown } from 'lucide-react'
+import { auth, db } from '@/lib/firebaseConfig'
+import { Eye, EyeOff, Plus, Trash2, Save, ArrowLeft, ImagePlus, X, Film, ArrowUp, ArrowDown, Crop } from 'lucide-react'
+import {
+  DEFAULT_IMAGE_TRANSFORM,
+  getImageTransform,
+  imageTransformStyle,
+  type ImageTransform,
+} from '@/lib/imageTransform'
 
 type IconiqueType = 'vintage' | 'upcy'
 
@@ -40,6 +46,8 @@ type Iconique = {
   chineuseTrigrammes?: string[]
   materialContient?: string
   images?: string[]
+  /** Cadrage par photo, aligné index par index sur `images` (zoom + point de focus). */
+  imageTransforms?: ImageTransform[]
   videos?: string[]
   videosLabel?: string
   videosLabelEn?: string
@@ -49,6 +57,40 @@ type Iconique = {
   soldOut?: boolean
   buyLink?: string
 }
+
+// Même contrainte que Field : défini au niveau module pour ne pas remonter le slider
+// à chaque frappe (sinon le drag se coupe dès que le draft change).
+const CropSlider = ({
+  label,
+  value,
+  min,
+  max,
+  step,
+  display,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  display: string
+  onChange: (v: number) => void
+}) => (
+  <label className="flex items-center gap-1.5">
+    <span className="text-[10px] text-gray-500 w-14 shrink-0">{label}</span>
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={e => onChange(Number(e.target.value))}
+      className="flex-1 h-1 accent-black"
+    />
+    <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{display}</span>
+  </label>
+)
 
 const emptyDraft = (type: IconiqueType, ordre: number): Iconique => ({
   id: '',
@@ -71,6 +113,7 @@ const emptyDraft = (type: IconiqueType, ordre: number): Iconique => ({
   chineuseTrigrammes: [],
   materialContient: '',
   images: [],
+  imageTransforms: [],
   videos: [],
   videosLabel: '',
   videosLabelEn: '',
@@ -119,6 +162,8 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
   const [draft, setDraft] = useState<Iconique>(emptyDraft(typeFilter, 999))
   const [saving, setSaving] = useState(false)
   const [uploadingCount, setUploadingCount] = useState(0)
+  /** Index de la photo dont le panneau de recadrage est ouvert (une seule à la fois). */
+  const [croppingIndex, setCroppingIndex] = useState<number | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
 
@@ -201,15 +246,20 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
 
   const openNew = () => {
     setDraft(emptyDraft(typeFilter, (iconiques[iconiques.length - 1]?.ordre || 0) + 1))
+    setCroppingIndex(null)
     setEditingId('new')
   }
 
   const openEdit = (icon: Iconique) => {
     setDraft({ ...emptyDraft(typeFilter, icon.ordre || 0), ...icon })
+    setCroppingIndex(null)
     setEditingId(icon.id)
   }
 
-  const backToList = () => setEditingId(null)
+  const backToList = () => {
+    setCroppingIndex(null)
+    setEditingId(null)
+  }
 
   const uploadFile = async (file: File, kind: 'image' | 'video') => {
     setUploadingCount(c => c + 1)
@@ -223,7 +273,11 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
         })
         const data = await res.json()
         if (!data.success || !data.maskUrl) throw new Error(data.error || 'upload failed')
-        setDraft(prev => ({ ...prev, images: [...(prev.images || []), data.maskUrl] }))
+        setDraft(prev => ({
+          ...prev,
+          images: [...(prev.images || []), data.maskUrl],
+          imageTransforms: [...alignTransforms(prev), { ...DEFAULT_IMAGE_TRANSFORM }],
+        }))
       } else {
         // Vidéo : upload brut sur Bunny via une API dédiée ? Pour l'instant fallback : URL manuelle.
         alert('Upload vidéo pas encore branché — colle une URL dans le champ.')
@@ -244,17 +298,41 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
     if (imageInputRef.current) imageInputRef.current.value = ''
   }
 
-  const removeImage = (url: string) => {
-    setDraft(prev => ({ ...prev, images: (prev.images || []).filter(x => x !== url) }))
+  /**
+   * Les cadrages sont alignés index par index sur `images` : les fiches créées avant
+   * cette fonctionnalité n'en ont pas, on complète donc au cadrage neutre avant
+   * toute manipulation (ajout, suppression, déplacement).
+   */
+  const alignTransforms = (icon: Iconique): ImageTransform[] =>
+    (icon.images || []).map((_, i) => getImageTransform(icon.imageTransforms, i))
+
+  const removeImage = (idx: number) => {
+    setDraft(prev => ({
+      ...prev,
+      images: (prev.images || []).filter((_, i) => i !== idx),
+      imageTransforms: alignTransforms(prev).filter((_, i) => i !== idx),
+    }))
   }
 
   const moveImage = (idx: number, dir: 'left' | 'right') => {
     setDraft(prev => {
       const arr = [...(prev.images || [])]
+      const transforms = alignTransforms(prev)
       const target = dir === 'left' ? idx - 1 : idx + 1
       if (target < 0 || target >= arr.length) return prev
       ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
-      return { ...prev, images: arr }
+      ;[transforms[idx], transforms[target]] = [transforms[target], transforms[idx]]
+      return { ...prev, images: arr, imageTransforms: transforms }
+    })
+  }
+
+  /** Applique un réglage de cadrage (zoom ou focus) à une seule photo. */
+  const updateImageTransform = (idx: number, patch: Partial<ImageTransform>) => {
+    setDraft(prev => {
+      const transforms = alignTransforms(prev)
+      if (!transforms[idx]) return prev
+      transforms[idx] = { ...transforms[idx], ...patch }
+      return { ...prev, imageTransforms: transforms }
     })
   }
 
@@ -292,12 +370,30 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
         valeurNeuf: Number(draft.valeurNeuf) || 0,
         valeurNeufMax: draft.valeurNeufMax && Number(draft.valeurNeufMax) > 0 ? Number(draft.valeurNeufMax) : null,
         ordre: Number(draft.ordre) || 0,
+        imageTransforms: alignTransforms(draft),
         displayOnWebsite: draft.displayOnWebsite !== false,
         soldOut: !!draft.soldOut,
         updatedAt: new Date(),
       }
       delete payload.id
       await setDoc(doc(db, 'iconiques', docId), payload, { merge: true })
+
+      // Le blob `iconiques` (TTL 6h) sert les pages publiques : sans ce patch, un
+      // recadrage photo ou un texte modifié met jusqu'à 6h à s'y voir.
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        await fetch('/api/admin/refresh-iconique', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ iconiqueId: docId }),
+        })
+      } catch (err) {
+        console.warn('Refresh cache iconique échoué (non bloquant):', err)
+      }
+
       alert('✅ Sauvegardé')
       await loadIconiques()
       setEditingId(null)
@@ -655,16 +751,34 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
             <div className="py-6 text-center text-sm text-gray-400 border border-dashed rounded">Aucune photo.</div>
           ) : (
             <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-              {(draft.images || []).map((url, idx) => (
+              {(draft.images || []).map((url, idx) => {
+                const transform = getImageTransform(draft.imageTransforms, idx)
+                const isCropping = croppingIndex === idx
+                return (
                 <div key={url + idx} className="relative group border rounded overflow-hidden bg-gray-50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="w-full aspect-square object-cover" />
+                  {/* Aperçu carré = exact cadre du site, réglages appliqués en direct. */}
+                  <div className="w-full aspect-square overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      style={imageTransformStyle(transform)}
+                    />
+                  </div>
                   <button
-                    onClick={() => removeImage(url)}
+                    onClick={() => removeImage(idx)}
                     className="absolute top-1 right-1 bg-white/90 hover:bg-white p-1 rounded-full shadow"
                     title="Supprimer"
                   >
                     <X size={14} />
+                  </button>
+                  <button
+                    onClick={() => setCroppingIndex(isCropping ? null : idx)}
+                    className={`absolute top-1 left-1 p-1 rounded-full shadow ${isCropping ? 'bg-black text-white' : 'bg-white/90 hover:bg-white'}`}
+                    title="Recadrer (zoom et position)"
+                  >
+                    <Crop size={14} />
                   </button>
                   <div className="absolute bottom-1 left-1 right-1 flex justify-between gap-1 opacity-0 group-hover:opacity-100 transition">
                     <button
@@ -682,8 +796,47 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
                       →
                     </button>
                   </div>
+
+                  {isCropping && (
+                    <div className="absolute inset-x-0 bottom-0 bg-white/95 border-t p-2 space-y-1.5">
+                      <CropSlider
+                        label="Zoom"
+                        value={transform.scale}
+                        min={1}
+                        max={3}
+                        step={0.05}
+                        display={`${Math.round(transform.scale * 100)} %`}
+                        onChange={v => updateImageTransform(idx, { scale: v })}
+                      />
+                      <CropSlider
+                        label="Horizontal"
+                        value={transform.x}
+                        min={0}
+                        max={100}
+                        step={1}
+                        display={`${Math.round(transform.x)} %`}
+                        onChange={v => updateImageTransform(idx, { x: v })}
+                      />
+                      <CropSlider
+                        label="Vertical"
+                        value={transform.y}
+                        min={0}
+                        max={100}
+                        step={1}
+                        display={`${Math.round(transform.y)} %`}
+                        onChange={v => updateImageTransform(idx, { y: v })}
+                      />
+                      <button
+                        onClick={() => updateImageTransform(idx, DEFAULT_IMAGE_TRANSFORM)}
+                        className="w-full text-[10px] text-gray-500 hover:text-black underline"
+                      >
+                        Réinitialiser
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

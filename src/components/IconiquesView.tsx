@@ -8,6 +8,7 @@ import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t } from '@/lib/i18n'
 import { getCloudinaryUrl } from '@/lib/cloudinary'
+import { getImageTransform, imageTransformStyle, type ImageTransform } from '@/lib/imageTransform'
 
 /**
  * Effet machine à écrire — même réglage que les fiches créatrices
@@ -63,6 +64,8 @@ export type Iconique = {
   categoriesOrder?: string[]
   materialContient?: string
   images: string[]
+  /** Cadrage par photo réglé au back-office, aligné index par index sur `images`. */
+  imageTransforms?: ImageTransform[]
   ordre: number
   soldOut?: boolean
   /** Lien d'achat externe (site de la créatrice) — affiché en bouton sous le bloc texte. */
@@ -176,6 +179,7 @@ export default function IconiquesView({
           nomPluriel: docData.nomPluriel || '',
           nomPlurielEn: docData.nomPlurielEn || '',
           images: docData.images || [],
+          imageTransforms: Array.isArray(docData.imageTransforms) ? docData.imageTransforms : undefined,
           ordre: docData.ordre || 0,
           soldOut: docData.soldOut === true,
           buyLink: docData.buyLink || '',
@@ -502,6 +506,9 @@ export default function IconiquesView({
                       src={img}
                       alt={item.nom}
                       className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+                      // Seul le point de focus est repris ici : le zoom reste celui du survol,
+                      // pour ne pas écraser l'animation group-hover:scale-105 des tuiles.
+                      style={{ objectPosition: `${getImageTransform(item.imageTransforms, 0).x}% ${getImageTransform(item.imageTransforms, 0).y}%` }}
                       onError={(e) => {
                         const el = e.currentTarget
                         el.style.display = 'none'
@@ -676,6 +683,7 @@ export default function IconiquesView({
                         src={item.images[imageIndices[item.id] || 0]}
                         alt={item.nom}
                         className="w-full h-full object-cover"
+                        style={imageTransformStyle(getImageTransform(item.imageTransforms, imageIndices[item.id] || 0))}
                         onError={(e) => {
                           // Fallback si URL 404 en base : on retire l'image et laisse le placeholder.
                           const img = e.currentTarget
