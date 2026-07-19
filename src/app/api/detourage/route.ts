@@ -26,6 +26,28 @@
     auth: process.env.REPLICATE_API_TOKEN,
   })
 
+  // Les colonnes de bord sont-elles un fond lisse (mur, cyclo studio) ?
+  // Si oui on peut les étirer pour combler le carré ; sinon l'étirement
+  // ferait des traînées et il vaut mieux garder du blanc.
+  async function bordEstLisse(buffer: Buffer): Promise<boolean> {
+    try {
+      const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+      const { width, height, channels } = info
+      const ecartMax = (x: number) => {
+        let max = 0
+        for (let y = 1; y < height; y++) {
+          const i = (y * width + x) * channels
+          const j = ((y - 1) * width + x) * channels
+          max = Math.max(max, Math.abs(data[i] - data[j]), Math.abs(data[i + 1] - data[j + 1]), Math.abs(data[i + 2] - data[j + 2]))
+        }
+        return max
+      }
+      return ecartMax(0) <= 12 && ecartMax(width - 1) <= 12
+    } catch {
+      return false
+    }
+  }
+
   export async function POST(req: NextRequest) {
     try {
       const { imageUrl, rotation = 0, base64, uploadOnly, skipDetourage, mode, applyTransform, offset, zoom = 1, formatOnly, categorie } = await req.json()
@@ -66,15 +88,20 @@
           const meta = await sharp(tempBuffer).metadata()
           const w = meta.width || 1200
           const h = meta.height || 1200
+          // Prolonger les pixels du bord évite la bande blanche, mais si ce bord
+          // n'est pas un fond lisse (photo d'intérieur, meuble, plinthe) l'étirement
+          // ferait des traînées : dans ce cas on garde le blanc. Même garde-fou que
+          // scripts/photos-prolonger-fond.mjs.
+          const lisse = await bordEstLisse(tempBuffer)
           finalBuffer = await sharp(tempBuffer)
             .extend({
               top: Math.floor((1200 - h) / 2),
               bottom: Math.ceil((1200 - h) / 2),
               left: Math.floor((1200 - w) / 2),
               right: Math.ceil((1200 - w) / 2),
-              // Prolonge les pixels du bord (fond studio) au lieu d'une bande blanche.
-              // Sur une image détourée les bords sont transparents → flatten = blanc, inchangé.
-              extendWith: 'copy',
+              ...(lisse
+                ? { extendWith: 'copy' as const }
+                : { background: { r: 255, g: 255, b: 255 } }),
             })
             .flatten({ background: { r: 255, g: 255, b: 255 } })
             .png({ quality: 90 })

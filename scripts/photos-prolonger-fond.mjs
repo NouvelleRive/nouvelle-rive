@@ -1,7 +1,41 @@
-// Prolonge le fond studio jusqu'aux bords du carré sur TOUTES les photos.
-// Usage : node scripts/_prolonger-fond-tous.mjs [--dry] [filtre-nom]
-// Une colonne de fond prise juste à côté du sujet est étirée vers le bord :
-// le dégradé gris et l'ombre au sol continuent, plus aucune zone blanche.
+// ─────────────────────────────────────────────────────────────────────────────
+// PHOTOS — PROLONGER LE FOND JUSQU'AUX BORDS DU CARRÉ
+//
+// À QUOI ÇA SERT
+//   Une photo verticale mise au carré laisse deux zones vides à gauche et à
+//   droite du sujet. Ce script les remplit avec le fond de la photo elle-même :
+//   il prend une colonne de fond juste à côté du sujet et l'étire jusqu'au bord.
+//   Le dégradé du mur et l'ombre au sol continuent, il ne reste aucune bande
+//   blanche. Le sujet n'est jamais recadré ni déplacé.
+//
+// QUAND LE RELANCER
+//   Après un lot de nouvelles fiches, ou si des photos anciennes montrent encore
+//   des côtés vides. Le script est idempotent : une photo déjà pleine bord à
+//   bord est ignorée, on peut le relancer sans risque.
+//
+// UTILISATION
+//   node scripts/photos-prolonger-fond.mjs --dry            # simulation, n'écrit rien
+//   node scripts/photos-prolonger-fond.mjs                  # tout le catalogue + iconiques
+//   node scripts/photos-prolonger-fond.mjs trench           # seulement les fiches "trench"
+//   node scripts/photos-prolonger-fond.mjs --dry "trench|manteau"
+//   Le filtre est une expression régulière testée sur nom + catégorie + sous-catégorie.
+//   TOUJOURS faire un --dry d'abord pour voir le volume concerné.
+//
+//   Puis, pour que le site serve les nouvelles images :
+//     node scripts/cache-invalider.mjs produits-all iconiques
+//     git commit --allow-empty -m "redeploy" && git push   # purge la mémoire des workers
+//
+// CE QU'IL NE TOUCHE PAS
+//   - Les photos dont la colonne de fond n'est pas lisse (intérieur, meuble,
+//     plinthe) : les étirer ferait des traînées, elles restent intactes.
+//   - Les photos déjà pleines bord à bord.
+//   - Les fichiers d'origine : chaque correction est un NOUVEAU fichier sur
+//     Bunny, l'ancienne URL reste en place. Tout est réversible.
+//
+// COÛT
+//   La liste des produits vient du cache blob, donc zéro lecture Firestore pour
+//   le parcours. Seules les fiches réellement modifiées sont relues puis écrites.
+// ─────────────────────────────────────────────────────────────────────────────
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
