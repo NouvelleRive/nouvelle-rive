@@ -130,15 +130,30 @@ export async function GET(req: NextRequest) {
 
   const produits = allProduits.map(({ id, raw }) => ({ id, ...raw }))
 
+  // Genre : champ `gender` du produit s'il existe, sinon wearType de la chineuse.
+  // Les chineuses en `unisex` ne donnent pas de genre -> eBay refuse (GENDER_REQUIRED).
+  const resolveGender = (p: any): EbayGender | undefined => {
+    if (p.gender === 'women' || p.gender === 'men') return p.gender
+    const trigramme = (p.chineuse || p.trigramme || (p.sku ? p.sku.match(/^([A-Z]{2,4})/i)?.[1] : null) || '').toString().toUpperCase()
+    const wearType = trigramme ? wearTypeByTri.get(trigramme) : undefined
+    return wearTypeToGender(wearType) || undefined
+  }
+
   const toPublish: any[] = []
   const toRemove: any[] = []
+  const sansGenre: string[] = []
 
   for (const p of produits) {
     const isOnEbay = !!p.ebayListingId
     const visible = isVisibleOnSite(p, config)
     const matchLuxe = visible && matchesLuxeRules(p, config, chineuses)
 
-    if (matchLuxe && !isOnEbay) toPublish.push(p)
+    if (matchLuxe && !isOnEbay) {
+      // Sans genre, publishToEbay échouerait en GENDER_REQUIRED et bloquerait
+      // le quota `max` à chaque passage : on les écarte pour que la file avance.
+      if (!resolveGender(p)) sansGenre.push(p.sku || p.id)
+      else toPublish.push(p)
+    }
     else if (!matchLuxe && isOnEbay) toRemove.push(p)
   }
 
@@ -151,11 +166,7 @@ export async function GET(req: NextRequest) {
   for (const p of publishBatch) {
     const sku = p.sku || p.id
     try {
-      const trigramme = (p.chineuse || p.trigramme || (p.sku ? p.sku.match(/^([A-Z]{2,4})/i)?.[1] : null) || '').toString().toUpperCase()
-      const wearType = trigramme ? wearTypeByTri.get(trigramme) : undefined
-      const gender: EbayGender | undefined = wearTypeToGender(wearType) || undefined
-
-      const ebayProduct = prepareProductForEbay(p, gender)
+      const ebayProduct = prepareProductForEbay(p, resolveGender(p))
       if (ebayProduct.imageUrls.length === 0) {
         published.push({ sku, error: 'no-image' })
         continue
@@ -211,8 +222,10 @@ export async function GET(req: NextRequest) {
       publishedAttempted: publishBatch.length,
       publishedOk: published.filter(x => x.listingId).length,
       removedOk: removed.filter(x => x.ok).length,
+      skippedSansGenre: sansGenre.length,
     },
     published,
     removed,
+    sansGenre,
   })
 }
