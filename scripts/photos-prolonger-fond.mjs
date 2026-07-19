@@ -94,6 +94,23 @@ async function prolongerFond(buf) {
   if (margeG >= MARGE_MIN && !colLisse(margeG)) return null
   if (largeurD >= MARGE_MIN && !colLisse(margeD)) return null
 
+  // Déjà traitée ? Si la marge reproduit déjà la colonne de fond voisine, il n'y
+  // a rien à faire — sans ce test le script retraiterait sans fin toute photo
+  // dont le sujet ne touche pas le bord.
+  const memeQueColonne = (xDebut, xFin, xRef) => {
+    for (let y = 0; y < H; y += 7) {
+      const ref = (y * W + xRef) * ch
+      for (let x = xDebut; x <= xFin; x += 13) {
+        const i = (y * W + x) * ch
+        if (Math.abs(data[i] - data[ref]) > 3 || Math.abs(data[i+1] - data[ref+1]) > 3 || Math.abs(data[i+2] - data[ref+2]) > 3) return false
+      }
+    }
+    return true
+  }
+  const gaucheFaite = margeG < MARGE_MIN || memeQueColonne(0, margeG - 1, margeG)
+  const droiteFaite = largeurD < MARGE_MIN || memeQueColonne(margeD + 1, W - 1, margeD)
+  if (gaucheFaite && droiteFaite) return null
+
   const pieces = []
   if (margeG >= MARGE_MIN) {
     pieces.push({
