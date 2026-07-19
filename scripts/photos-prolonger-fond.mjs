@@ -18,6 +18,7 @@
 //   node scripts/photos-prolonger-fond.mjs                  # tout le catalogue + iconiques
 //   node scripts/photos-prolonger-fond.mjs trench           # seulement les fiches "trench"
 //   node scripts/photos-prolonger-fond.mjs --dry "trench|manteau"
+//   node scripts/photos-prolonger-fond.mjs --marge-min=4 Pineau   # rattrape les petites marges
 //   Le filtre est une expression régulière testée sur nom + catégorie + sous-catégorie.
 //   TOUJOURS faire un --dry d'abord pour voir le volume concerné.
 //
@@ -45,6 +46,10 @@ import { config } from 'dotenv'
 config({ path: new URL('../.env.local', import.meta.url).pathname })
 
 const DRY = process.argv.includes('--dry')
+// Marge minimale (en px) à partir de laquelle on comble. Par défaut 20, pour ne
+// pas retoucher une photo déjà quasi pleine ; baisser (ex --marge-min=4) pour
+// rattraper les toutes petites marges résiduelles.
+const MARGE_MIN = Number(process.argv.find(a => a.startsWith('--marge-min='))?.split('=')[1] || 20)
 
 if (!getApps().length) initializeApp({ credential: cert({
   projectId: process.env.FIREBASE_PROJECT_ID,
@@ -72,7 +77,7 @@ async function prolongerFond(buf) {
   const margeG = Math.max(0, x0 - 12)
   const largeurD = W - 1 - Math.min(W - 1, x1 + 12)
   const margeD = Math.min(W - 1, x1 + 12)
-  if (margeG < 20 && largeurD < 20) return null // déjà plein bord à bord
+  if (margeG < MARGE_MIN && largeurD < MARGE_MIN) return null // déjà plein bord à bord
 
   // La colonne étirée doit être un fond lisse (studio). Sur une photo d'intérieur
   // elle contient des contours → l'étirer ferait des traînées, on s'abstient.
@@ -84,18 +89,20 @@ async function prolongerFond(buf) {
     }
     return ecartMax <= 12
   }
-  if (margeG >= 20 && !colLisse(margeG)) return null
-  if (largeurD >= 20 && !colLisse(margeD)) return null
+  // Fond chargé (photo d'intérieur, décor) : l'étirer ferait des traînées,
+  // on laisse l'image intacte.
+  if (margeG >= MARGE_MIN && !colLisse(margeG)) return null
+  if (largeurD >= MARGE_MIN && !colLisse(margeD)) return null
 
   const pieces = []
-  if (margeG >= 20) {
+  if (margeG >= MARGE_MIN) {
     pieces.push({
       input: await sharp(buf).extract({ left: margeG, top: 0, width: 1, height: H })
         .resize(margeG, H, { fit: 'fill' }).toBuffer(),
       left: 0, top: 0,
     })
   }
-  if (largeurD >= 20) {
+  if (largeurD >= MARGE_MIN) {
     pieces.push({
       input: await sharp(buf).extract({ left: margeD, top: 0, width: 1, height: H })
         .resize(largeurD, H, { fit: 'fill' }).toBuffer(),
@@ -137,7 +144,7 @@ async function traiter(urls) {
   return mapping
 }
 
-// --- Iconiques trench ---
+// --- Iconiques ---
 const icoSnap = await db.collection('iconiques').get()
 for (const doc of icoSnap.docs) {
   const images = doc.data().images || []
@@ -147,20 +154,20 @@ for (const doc of icoSnap.docs) {
   console.log(`  ${map.size} prolongées`)
 }
 
-// --- Produits trench (liste depuis le cache blob, gratuit) ---
+// --- Produits (liste depuis le cache blob, gratuit) ---
 const [blob] = await getStorage().bucket().file('_cache/produits-all.json.gz').download()
 const raw = blob[0] === 0x1f && blob[1] === 0x8b ? gunzipSync(blob) : blob
 const parsed = JSON.parse(raw.toString())
 const tous = (Array.isArray(parsed) ? parsed : Object.values(parsed).find(Array.isArray))
   .map(e => (e && e.raw ? { id: e.id, ...e.raw } : e))
 const filtre = process.argv.slice(2).find(a => !a.startsWith('--'))
-const trenches = filtre
+const produits = filtre
   ? tous.filter(p => new RegExp(filtre, 'i').test(`${p.nom || ''} ${p.categorie || ''} ${p.sousCategorie || ''}`))
   : tous
-console.log(`${trenches.length} produits à traiter${filtre ? ` (filtre "${filtre}")` : ''}`)
+console.log(`${produits.length} produits à traiter${filtre ? ` (filtre "${filtre}")` : ''}`)
 
 let total = 0
-for (const p of trenches) {
+for (const p of produits) {
   const urls = [...new Set([
     p.photos?.face, p.photos?.dos, p.photos?.faceOnModel, p.photos?.dosOnModel,
     ...(p.photos?.details || []), ...(p.imageUrls || []), p.imageUrl,
