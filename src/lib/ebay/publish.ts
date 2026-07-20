@@ -70,6 +70,10 @@ const EBAY_CATEGORY_WOMEN: Record<string, { categoryId: string; type: string }> 
   'foulard': { categoryId: '4251', type: 'accessories' },
   'chapeau': { categoryId: '4251', type: 'accessories' },
   'bijoux': { categoryId: '4251', type: 'accessories' },
+  // Lunettes : tout le stock MAKI est en "MAK - Lunettes", sans cette clé
+  // il retombait sur la catégorie par défaut, qui n'est pas une feuille eBay.
+  'lunette': { categoryId: '79720', type: 'sunglasses' },
+  'lunettes': { categoryId: '79720', type: 'sunglasses' },
 }
 
 // Catégories eBay HOMME
@@ -528,6 +532,15 @@ export function buildProductAspects(produit: EbayProduct, categoryType: string, 
       aspects['Style'] = ['Vintage']
       aspects['Material'] = [translateMaterial(produit.material || 'Silk')]
       aspects['Handmade'] = ['No']
+      break
+
+    case 'sunglasses':
+      // Lunettes (79720) — eBay exige Frame Color, sinon la publication est refusée.
+      aspects['Department'] = [department]
+      aspects['Style'] = ['Vintage']
+      aspects['Frame Color'] = [translateColor(produit.color || 'Multicolor')]
+      aspects['Lens Color'] = [translateColor(produit.color || 'Multicolor')]
+      aspects['Frame Material'] = [translateMaterial(produit.material || 'Plastic')]
       break
 
     default:
