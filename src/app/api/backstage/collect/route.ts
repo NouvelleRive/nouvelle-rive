@@ -36,8 +36,46 @@ function str(v: unknown, max = 200) {
   return typeof v === 'string' ? v.slice(0, max) : ''
 }
 
+// --- Garde-fou anti-spam ---------------------------------------------------
+// L'endpoint est forcément public (sendBeacon depuis le navigateur, sans auth).
+// Sans limite, une boucle POST génère des writes Firestore facturables.
+// Compteur en mémoire par IP : imparfait en serverless (une Map par instance),
+// mais ça coupe la boucle naïve pour 0€ et 0 read supplémentaire.
+const RL_WINDOW_MS = 10 * 60 * 1000
+const RL_MAX = 60 // ~2 flush/visiteur : 60 laisse passer un usage normal partagé
+const hits = new Map<string, { n: number; resetAt: number }>()
+
+function rateLimited(ip: string) {
+  const now = Date.now()
+  // Purge opportuniste pour que la Map ne grossisse pas indéfiniment.
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) if (v.resetAt < now) hits.delete(k)
+  }
+  const cur = hits.get(ip)
+  if (!cur || cur.resetAt < now) {
+    hits.set(ip, { n: 1, resetAt: now + RL_WINDOW_MS })
+    return false
+  }
+  cur.n += 1
+  return cur.n > RL_MAX
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // Les bots ne sont pas des visiteurs : ni stats fausses, ni writes.
+    const ua = req.headers.get('user-agent') || ''
+    if (!ua || /bot|crawl|spider|slurp|headless|curl|wget|python-requests|axios|scrapy|lighthouse|preview/i.test(ua)) {
+      return NextResponse.json({ ok: true }, { status: 200 })
+    }
+
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      req.headers.get('x-real-ip') ||
+      'unknown'
+    if (rateLimited(ip)) {
+      return NextResponse.json({ ok: false }, { status: 429 })
+    }
+
     const body = await req.json()
     const sid = str(body?.sid, 60)
     if (!sid || !/^[a-zA-Z0-9-]+$/.test(sid)) {
