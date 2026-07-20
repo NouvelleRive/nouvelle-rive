@@ -37,12 +37,22 @@ snap.docs.forEach((d) => {
 let cursor = maxNum + 1
 console.log(`Prochain SKU : ${TRIGRAMME}${cursor}`)
 
-// Photo test (produit random déjà existant du CDN, doit être dispo)
-const PHOTO_TEST = 'https://nouvellerive.b-cdn.net/produits/placeholder-test.jpg'
+// Photo test : on réutilise une vraie photo d'un produit existant (une URL
+// bidon passerait quand même le filtre "a une photo" et casserait l'affichage).
+const realSnap = await db.collection('produits').where('vendu', '==', false).limit(30).get()
+const PHOTO_TEST = realSnap.docs
+  .map(d => d.data())
+  .map(r => r.photos?.face || r.imageUrls?.[0] || r.imageUrl)
+  .find(Boolean)
+if (!PHOTO_TEST) {
+  console.error('Aucune photo réelle trouvée')
+  process.exit(1)
+}
 
+// Catégories différentes : vérifie que couleurs + matières changent d'ordre
 const items = [
-  { titre: 'test1', prix: 50 },
-  { titre: 'test2', prix: 60 },
+  { titre: 'test1', prix: 50, categorie: 'sac' },
+  { titre: 'test2', prix: 60, categorie: 'pull' },
 ]
 
 for (const it of items) {
@@ -51,7 +61,7 @@ for (const it of items) {
   const payload = {
     nom: `${sku} - ${it.titre}`,
     description: 'produit test restock',
-    categorie: '',
+    categorie: it.categorie,
     marque: '',
     taille: '',
     sku,

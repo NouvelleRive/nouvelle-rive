@@ -8,11 +8,12 @@
     Search, X, Check, AlertTriangle, Package, PackageCheck,
     ImageIcon, Edit3, Filter, Camera, Upload
   } from 'lucide-react'
-  import { COLORS, MATERIALS } from '@/lib/dico'
+  import { getColorsPrioritized } from '@/lib/couleurs'
+  import { getMatieresForCategorie } from '@/lib/matieres'
 
-  // Listes triées pour les selects du popup vérif réception
-  const COLOR_OPTIONS = Object.keys(COLORS).sort((a, b) => a.localeCompare(b, 'fr'))
-  const MATERIAL_OPTIONS = Object.keys(MATERIALS).sort((a, b) => a.localeCompare(b, 'fr'))
+  // Libellé catégorie (le champ peut être une string ou { label })
+  const catLabel = (c: unknown): string =>
+    typeof c === 'object' && c !== null ? String((c as any).label || '') : String(c || '')
 
   // =====================
   // TYPES
@@ -175,6 +176,9 @@
     const [sessionReceivedIds, setSessionReceivedIds] = useState<Set<string>>(new Set())
     const [restockPhotoIndex, setRestockPhotoIndex] = useState(0)
     const [restockShowGrid, setRestockShowGrid] = useState(false)
+    // Phase A (pièces à gérer) : affichée seulement à la toute fin du parcours,
+    // après les photos (phase B) et les pièces préférées (phase C).
+    const [restockShowPhaseA, setRestockShowPhaseA] = useState(false)
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const [igPublishingId, setIgPublishingId] = useState<string | null>(null)
@@ -193,6 +197,7 @@
     const [photoCheckMaterial, setPhotoCheckMaterial] = useState('')
     const [photoCheckSaving, setPhotoCheckSaving] = useState(false)
     const [photoCheckReuploading, setPhotoCheckReuploading] = useState(false)
+    const [photoCheckShowAllColors, setPhotoCheckShowAllColors] = useState(false)
     const photoCheckCameraRef = useRef<HTMLInputElement>(null)
     // Reset la session Phase A dès que le popup ferme (peu importe la sortie)
     useEffect(() => {
@@ -1483,10 +1488,28 @@
         {photoCheckPiece && (() => {
           const p = photoCheckPiece
           const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+          // Couleurs et matières : mêmes modules que la création (ordre par catégorie)
+          const cat = catLabel(p.categorie)
+          const { priority: priorityColors, others: otherColors } = getColorsPrioritized(cat)
+          const displayedColors = photoCheckShowAllColors ? [...priorityColors, ...otherColors] : priorityColors
+          const matieresDisponibles = getMatieresForCategorie(cat)
+          const selectedColors = photoCheckColor ? photoCheckColor.split(', ').filter(Boolean) : []
+          const selectedMatieres = photoCheckMaterial ? photoCheckMaterial.split(', ').filter(Boolean) : []
+          const toggleColor = (name: string) => {
+            setPhotoCheckColor(
+              (selectedColors.includes(name) ? selectedColors.filter(x => x !== name) : [...selectedColors, name]).join(', ')
+            )
+          }
+          const toggleMatiere = (name: string) => {
+            setPhotoCheckMaterial(
+              (selectedMatieres.includes(name) ? selectedMatieres.filter(x => x !== name) : [...selectedMatieres, name]).join(', ')
+            )
+          }
           const closePopup = () => {
             setPhotoCheckPiece(null)
             setPhotoCheckColor('')
             setPhotoCheckMaterial('')
+            setPhotoCheckShowAllColors(false)
             // À la fermeture : si c'était la dernière pièce à recevoir pour ce
             // trigramme (dans le stock non-reçu actuel), enchaîner Phase A/B/C.
             const tri = getTri(p)
@@ -1527,7 +1550,7 @@
           }
           return (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-3">
-              <div className="bg-white rounded-xl w-full max-w-md p-3 flex flex-col gap-2">
+              <div className="bg-white rounded-xl w-full max-w-md p-3 flex flex-col gap-2 max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono text-gray-500">{p.sku}</span>
                   <button
@@ -1542,46 +1565,83 @@
                   <img
                     src={face}
                     alt={p.nom}
-                    className="w-full h-[42vh] object-contain bg-gray-50 rounded-lg"
+                    className="w-full h-[32vh] flex-shrink-0 object-contain bg-gray-50 rounded-lg"
                   />
                 ) : (
-                  <div className="w-full h-[42vh] bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                  <div className="w-full h-[32vh] flex-shrink-0 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-sm">
                     Pas de photo
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-600 w-14 flex-shrink-0">Couleur</label>
-                  <select
-                    value={photoCheckColor}
-                    onChange={(e) => setPhotoCheckColor(e.target.value)}
-                    className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
-                  >
-                    <option value="">— choisir —</option>
-                    {photoCheckColor && !COLOR_OPTIONS.includes(photoCheckColor) && (
-                      <option value={photoCheckColor}>{photoCheckColor} (actuel)</option>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Couleur</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {displayedColors.map((c) => {
+                      const isSel = selectedColors.includes(c.name)
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => toggleColor(c.name)}
+                          title={c.name}
+                          className={`relative w-7 h-7 rounded-full border-2 transition-all ${
+                            isSel
+                              ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30'
+                              : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                          style={{
+                            background: c.hex,
+                            boxShadow: ['Blanc', 'Ivoire', 'Crème'].includes(c.name) ? 'inset 0 0 0 1px #ddd' : undefined,
+                          }}
+                        >
+                          {isSel && (
+                            <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+                              ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet', 'Prune', 'Aubergine'].includes(c.name)
+                                ? 'text-white'
+                                : 'text-gray-800'
+                            }`}>
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                    {otherColors.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPhotoCheckShowAllColors(!photoCheckShowAllColors)}
+                        className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 text-xs font-bold"
+                      >
+                        {photoCheckShowAllColors ? '−' : '+'}
+                      </button>
                     )}
-                    {COLOR_OPTIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  </div>
+                  {photoCheckColor && (
+                    <p className="text-xs text-[#22209C] mt-1 font-medium">{photoCheckColor}</p>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-600 w-14 flex-shrink-0">Matière</label>
-                  <select
-                    value={photoCheckMaterial}
-                    onChange={(e) => setPhotoCheckMaterial(e.target.value)}
-                    className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20"
-                  >
-                    <option value="">— choisir —</option>
-                    {photoCheckMaterial && !MATERIAL_OPTIONS.includes(photoCheckMaterial) && (
-                      <option value={photoCheckMaterial}>{photoCheckMaterial} (actuel)</option>
-                    )}
-                    {MATERIAL_OPTIONS.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Matière</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {matieresDisponibles.map((m) => {
+                      const isSel = selectedMatieres.includes(m)
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => toggleMatiere(m)}
+                          className={`px-2.5 py-1 rounded-full border text-xs transition-all ${
+                            isSel
+                              ? 'border-[#22209C] bg-[#22209C] text-white'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
 
                 <input
@@ -1675,7 +1735,45 @@
             ...prixABaisser.map(p => ({ p, kind: 'orange' as const })),
           ].filter(({ p }) => !phaseASession.has(p.id))
 
-          if (aGerer.length > 0) {
+          // Fin complète du parcours restock
+          const fullClose = () => {
+            setRestockShowGrid(false)
+            setRestockShowPhaseA(false)
+            setRestockFiniChineuse(null)
+            setRestockPhotoIndex(0)
+            setPhaseASession(new Set())
+            setPricesInput({})
+          }
+          // Après les photos + les pièces préférées : les pièces à gérer, sinon on ferme
+          const goToPhaseAOrClose = () => {
+            if (aGerer.length > 0) {
+              setRestockShowGrid(false)
+              setRestockShowPhaseA(true)
+            } else {
+              fullClose()
+            }
+          }
+
+          // Phase A — pièces à gérer : toujours en toute fin de parcours
+          if (restockShowPhaseA) {
+            if (aGerer.length === 0) {
+              return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-xl max-w-md w-full p-6">
+                    <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Tout est OK 💙</h3>
+                    <p className="text-sm text-gray-700 mb-5">
+                      Restock de <strong>{restockFiniChineuse.nom}</strong> terminé.
+                    </p>
+                    <button
+                      onClick={fullClose}
+                      className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              )
+            }
             const baisserPrix = async (p: Produit) => {
               const raw = pricesInput[p.id]
               const nouveau = parseFloat((raw || '').replace(',', '.'))
@@ -1797,10 +1895,10 @@
                     Restock de <strong>{restockFiniChineuse.nom}</strong> terminé.
                   </p>
                   <button
-                    onClick={() => setRestockFiniChineuse(null)}
+                    onClick={goToPhaseAOrClose}
                     className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
                   >
-                    Fermer
+                    {aGerer.length > 0 ? 'Continuer' : 'Fermer'}
                   </button>
                 </div>
               </div>
@@ -1826,13 +1924,7 @@
                 setFavTogglingId(null)
               }
             }
-            const closeAll = () => {
-              setRestockShowGrid(false)
-              setRestockFiniChineuse(null)
-              setRestockPhotoIndex(0)
-              setPhaseASession(new Set())
-              setPricesInput({})
-            }
+            const closeAll = goToPhaseAOrClose
             const favoriteProducts = photosACheck.filter(p => (p as any).favoriEquipe === true)
             const publishAllFavorites = async () => {
               if (igPublishingId || favoriteProducts.length === 0) return
