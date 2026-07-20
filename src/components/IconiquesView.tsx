@@ -8,6 +8,7 @@ import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t } from '@/lib/i18n'
 import { getCloudinaryUrl } from '@/lib/cloudinary'
+import InfiniteImageMarquee from '@/components/InfiniteImageMarquee'
 import { getImageTransform, imageTransformStyle, type ImageTransform } from '@/lib/imageTransform'
 
 /**
@@ -396,71 +397,20 @@ export default function IconiquesView({
   // individuelles pour garder la même taille/style de hero (demande cliente).
   const renderHero = () => (
     <>
-      {marqueeImages.length > 0 && (
-        <style>{`
-          @keyframes iconiques-marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-          @keyframes iconiques-marquee-intro {
-            0%   { opacity: 0; transform: translateX(40px); }
-            100% { opacity: 1; transform: translateX(0); }
-          }
-          .iconiques-marquee-track {
-            display: flex;
-            width: max-content;
-            height: 100%;
-            animation: iconiques-marquee 45s linear infinite;
-            will-change: transform;
-          }
-          .iconiques-marquee-intro {
-            opacity: 0;
-            animation: iconiques-marquee-intro 1s cubic-bezier(0.22, 1, 0.36, 1) 0.6s forwards;
-            will-change: opacity, transform;
-          }
-          .iconiques-marquee-item {
-            height: 100%;
-            width: auto;
-            background: #fff;
-          }
-          .iconiques-marquee-item img {
-            height: 100%;
-            width: auto;
-            display: block;
-          }
-          @media (min-width: 768px) {
-            .iconiques-marquee-track { animation-duration: 60s; }
-          }
-        `}</style>
-      )}
       <div className="relative overflow-hidden" style={{ borderBottom: marqueeImages.length > 0 ? '1px solid #000' : undefined }}>
-        {marqueeImages.length > 0 && (
-          <div className="iconiques-marquee-intro absolute inset-0 z-0 pointer-events-auto">
-            <div className="iconiques-marquee-track">
-              {[...marqueeImages, ...marqueeImages].map((it, i) => (
-                <button
-                  key={`${it.id}-${i}`}
-                  onClick={() => {
-                    setSlideDir('forward')
-                    setCurrentIndex(it.idx)
-                    setShowCover(false)
-                  }}
-                  className="iconiques-marquee-item shrink-0 relative group overflow-hidden bg-white"
-                  aria-label={it.nom}
-                >
-                  <img
-                    src={getCloudinaryUrl(it.src, 600)}
-                    alt={it.nom}
-                    className="transition duration-500 group-hover:scale-105"
-                    loading={i < 6 ? 'eager' : 'lazy'}
-                    decoding="async"
-                    fetchPriority={i < 4 ? 'high' : 'low'}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <InfiniteImageMarquee
+          className="absolute inset-0 z-0 pointer-events-auto"
+          items={marqueeImages.map(it => ({
+            key: it.id,
+            src: it.src,
+            alt: it.nom,
+            onClick: () => {
+              setSlideDir('forward')
+              setCurrentIndex(it.idx)
+              setShowCover(false)
+            },
+          }))}
+        />
         <div className="relative z-10 px-6 py-20 pointer-events-none">
           <h1
             id="titre"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useLang, t } from '@/lib/i18n'
@@ -8,6 +8,7 @@ import { getCreatriceI18n } from '@/lib/creatricesI18n'
 import FavoriteButton from '@/components/FavoriteButton'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { buildProduitSlug } from '@/lib/produitSlug'
+import InfiniteImageMarquee from '@/components/InfiniteImageMarquee'
 import { formatPrix } from '@/lib/formatPrix'
 
 type Creatrice = {
@@ -104,15 +105,48 @@ export default function CreateurPage() {
     }
   }, [slug])
   
+  // Retour d'une pièce : on remonte au même endroit. Il faut d'abord rétablir la
+  // pagination (sans ça la page est trop courte pour atteindre le scroll sauvé),
+  // puis réessayer le scrollTo tant que la hauteur n'est pas suffisante.
+  // Tant qu'une restauration est en cours, on n'applique pas le scroll-to-title.
+  const restoringScroll = useRef(false)
+  const saveScrollPos = () => {
+    try {
+      sessionStorage.setItem(`creatrice_scrollY_${slug}`, String(window.scrollY))
+      sessionStorage.setItem(`creatrice_count_${slug}`, String(visibleCount))
+    } catch {
+      /* storage bloqué : sans persistance on repart du haut, rien de cassé */
+    }
+  }
+  useEffect(() => {
+    const savedCount = Number(sessionStorage.getItem(`creatrice_count_${slug}`))
+    if (Number.isFinite(savedCount) && savedCount > 12) setVisibleCount(savedCount)
+    restoringScroll.current = !!sessionStorage.getItem(`creatrice_scrollY_${slug}`)
+  }, [slug])
+
   // Scroll to title
   useEffect(() => {
-    if (creatrice) {
-      const titleElement = document.getElementById('creatrice-title')
-      if (titleElement) {
-        titleElement.scrollIntoView({ behavior: 'instant', block: 'start' })
+    if (!creatrice) return
+
+    const saved = sessionStorage.getItem(`creatrice_scrollY_${slug}`)
+    if (saved) {
+      sessionStorage.removeItem(`creatrice_scrollY_${slug}`)
+      const y = parseInt(saved)
+      const deadline = performance.now() + 2000
+      let raf = 0
+      const tryScroll = () => {
+        window.scrollTo(0, y)
+        const reachable = document.body.scrollHeight - window.innerHeight >= y - 2
+        if (!reachable && performance.now() < deadline) raf = requestAnimationFrame(tryScroll)
+        else restoringScroll.current = false
       }
+      raf = requestAnimationFrame(tryScroll)
+      return () => cancelAnimationFrame(raf)
     }
-  }, [creatrice])
+
+    if (restoringScroll.current) return
+    document.getElementById('creatrice-title')?.scrollIntoView({ behavior: 'instant', block: 'start' })
+  }, [creatrice, slug])
 
   // Infinite scroll
   useEffect(() => {
@@ -224,6 +258,19 @@ export default function CreateurPage() {
           {creatrice.nom}
         </h1>
       </div>
+
+      {/* Bandeau infini : les 20 dernières pièces de la chineuse (même composant que les Iconiques). */}
+      <InfiniteImageMarquee
+        height="clamp(180px, 26vw, 320px)"
+        style={{ borderBottom: '1px solid #000' }}
+        items={produits.slice(0, 20).filter(p => p.imageUrl).map(p => ({
+          key: p.id,
+          src: p.imageUrl!,
+          alt: `${p.marque || ''} ${p.nom || ''}`.trim(),
+          href: '/' + buildProduitSlug(p) + '#titre',
+          onClick: saveScrollPos,
+        }))}
+      />
 
       {/* Content */}
       <div className="grid grid-cols-1 md:grid-cols-2" style={{ borderBottom: '1px solid #000' }}>
@@ -369,6 +416,7 @@ export default function CreateurPage() {
                 <Link
                   key={p.id}
                   href={'/' + buildProduitSlug(p) + '#titre'}
+                  onClick={saveScrollPos}
                   className="group flex flex-col h-full"
                   style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
                 >
