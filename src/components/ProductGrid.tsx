@@ -15,6 +15,7 @@ import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
 import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/lib/cloudinary'
+import { trackSearch } from '@/lib/backstage'
 
 type ChineuseLite = {
   uid: string
@@ -100,16 +101,22 @@ interface ProductGridProps {
   /** Liste complète utilisée pour construire les facettes (marques…) même quand
    *  `produits` ne contient qu'une slice paginée. */
   facetSource?: Produit[]
+  /** Notifie le parent qu'une recherche est active, pour qu'il suspende sa pagination. */
+  onSearchActiveChange?: (active: boolean) => void
 }
 
 
-export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist, facetSource }: ProductGridProps) {
+export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist, facetSource, onSearchActiveChange }: ProductGridProps) {
   const lang = useLang()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const triRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    onSearchActiveChange?.(searchQuery.trim().length > 0)
+  }, [searchQuery, onSearchActiveChange])
 
   // Fréquence d'intercalation des vidéos : 7 partout (desktop + mobile).
   const [isDesktop, setIsDesktop] = useState(false)
@@ -311,7 +318,13 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     const motifsPresents = [...new Set(produitsParCat.map(p => p.motif).filter(Boolean))] as string[]
   const motifs = MOTIFS.filter(m => motifsPresents.includes(m))
 
-  let filteredProduits = [...produits]
+  // Quand une recherche est active, on cherche dans la liste complète (`facetSource`,
+  // déjà en mémoire via /api/boutique-produits) et non dans la slice paginée affichée,
+  // sinon un SKU au-delà des 60 premiers produits ne remonte jamais.
+  const searchActive = searchQuery.trim().length > 0
+  const sourceProduits = searchActive && facetSource && facetSource.length > 0 ? facetSource : produits
+
+  let filteredProduits = [...sourceProduits]
 
   if (filters.categorie) {
     filteredProduits = filteredProduits.filter(p => {
@@ -534,11 +547,17 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
-                  setSearchQuery(searchInput.trim())
+                  const q = searchInput.trim()
+                  setSearchQuery(q)
+                  trackSearch(q)
                 }
               }}
               onBlur={() => {
-                if (searchInput.trim() !== searchQuery) setSearchQuery(searchInput.trim())
+                const q = searchInput.trim()
+                if (q !== searchQuery) {
+                  setSearchQuery(q)
+                  trackSearch(q)
+                }
               }}
               placeholder={t('Rechercher', 'Search', lang)}
               className="w-full px-4 py-2 pl-9 bg-gray-50 border border-gray-200 rounded-full focus:outline-none focus:border-black focus:bg-white transition-colors"

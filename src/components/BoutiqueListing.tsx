@@ -69,7 +69,10 @@ export default function BoutiqueListing({
       ? allBoutiqueSource.slice(0, infiniteCount)
       : (produits.length > 0 ? produits : initialProduits)
   ) as any
-  const hasMore = allBoutiqueMode && allBoutiqueSource.length > infiniteCount
+  // Pendant une recherche, ProductGrid cherche dans la liste complète : on suspend
+  // la pagination pour ne pas afficher un "Chargement..." qui n'a plus de sens.
+  const [searchActive, setSearchActive] = useState(false)
+  const hasMore = allBoutiqueMode && !searchActive && allBoutiqueSource.length > infiniteCount
 
   useEffect(() => {
     if (!hasMore) return
@@ -110,6 +113,7 @@ export default function BoutiqueListing({
         produits={displayProduits}
         columns={3}
         facetSource={allBoutiqueMode ? (allBoutiqueSource as any) : undefined}
+        onSearchActiveChange={allBoutiqueMode ? setSearchActive : undefined}
       />
 
       {(loadingMore || hasMore) && (
