@@ -37,6 +37,8 @@ type Stats = {
   entrees: Array<{ page: string; n: number }>
   recherches: Array<{ terme: string; n: number }>
   sources: Array<{ source: string; n: number }>
+  villes: Array<{ ville: string; n: number }>
+  pays: Array<{ pays: string; n: number }>
 }
 
 function duree(ms: number) {
@@ -288,6 +290,18 @@ export default function BackstagePerformancePage() {
               titre="Provenance"
               sousTitre="Site d'où viennent les visiteurs"
               lignes={stats.sources.map((s) => ({ label: s.source, valeur: formatPrix(s.n) }))}
+              vide="Pas encore de données."
+            />
+            <Classement
+              titre="Villes"
+              sousTitre="D'où se connectent les visiteurs"
+              lignes={(stats.villes || []).map((v) => ({ label: v.ville, valeur: formatPrix(v.n) }))}
+              vide="Pas encore de données."
+            />
+            <Classement
+              titre="Pays"
+              sousTitre="Répartition par pays"
+              lignes={(stats.pays || []).map((p) => ({ label: p.pays, valeur: formatPrix(p.n) }))}
               vide="Pas encore de données."
             />
           </div>

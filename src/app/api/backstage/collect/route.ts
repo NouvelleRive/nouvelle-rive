@@ -27,6 +27,23 @@ function dayKey(ts: number) {
   return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
 }
 
+// Localisation : Vercel pose ces en-têtes sur chaque requête, gratuitement.
+// Aucun service tiers, aucune IP stockée — seulement ville + pays agrégés.
+function geoFrom(req: NextRequest) {
+  const dec = (h: string) => {
+    const raw = req.headers.get(h)
+    if (!raw) return ''
+    try {
+      return decodeURIComponent(raw).slice(0, 60)
+    } catch {
+      return raw.slice(0, 60)
+    }
+  }
+  const pays = dec('x-vercel-ip-country').toUpperCase()
+  const ville = dec('x-vercel-ip-city')
+  return { pays, ville }
+}
+
 function num(v: unknown) {
   const n = Number(v)
   return Number.isFinite(n) && n >= 0 ? n : 0
@@ -180,6 +197,13 @@ export async function POST(req: NextRequest) {
       agg.refs = { [encKey(incoming.ref)]: { p: incoming.ref, n: FieldValue.increment(1) } }
       const entry = incoming.order[0] || incoming.exit
       if (entry) agg.entries = { [encKey(entry)]: { p: entry, n: FieldValue.increment(1) } }
+
+      const { pays, ville } = geoFrom(req)
+      if (pays) agg.pays = { [encKey(pays)]: { p: pays, n: FieldValue.increment(1) } }
+      if (ville) {
+        const label = pays ? `${ville}|${pays}` : ville
+        agg.villes = { [encKey(label)]: { p: label, n: FieldValue.increment(1) } }
+      }
     }
 
     // Page de sortie : si elle a changé depuis le dernier flush, on décrémente

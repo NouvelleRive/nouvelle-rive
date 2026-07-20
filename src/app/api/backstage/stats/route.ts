@@ -46,6 +46,16 @@ function toList(m: Map<string, { label: string; v: number; ms: number; n: number
   return [...m.values()]
 }
 
+// "FR" -> "France". Intl est natif : aucune table à maintenir.
+const nomsPays = new Intl.DisplayNames(['fr'], { type: 'region' })
+function nomPays(code: string) {
+  try {
+    return nomsPays.of(code) || code
+  } catch {
+    return code
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     // --- Auth admin ---
@@ -77,6 +87,8 @@ export async function GET(req: NextRequest) {
     const entries = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const searches = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const sources = new Map<string, { label: string; v: number; ms: number; n: number }>()
+    const villes = new Map<string, { label: string; v: number; ms: number; n: number }>()
+    const pays = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const devices = { mobile: 0, desktop: 0 }
 
     snaps.forEach((snap, i) => {
@@ -101,6 +113,8 @@ export async function GET(req: NextRequest) {
       mergeBuckets(entries, d.entries as Record<string, Bucket>)
       mergeBuckets(searches, d.searches as Record<string, Bucket>)
       mergeBuckets(sources, d.refs as Record<string, Bucket>)
+      mergeBuckets(villes, d.villes as Record<string, Bucket>)
+      mergeBuckets(pays, d.pays as Record<string, Bucket>)
 
       const dev = (d.devices as Record<string, number>) || {}
       devices.mobile += Number(dev.mobile) || 0
@@ -147,6 +161,19 @@ export async function GET(req: NextRequest) {
         sources: toList(sources)
           .map((s) => ({ source: s.label, n: s.n }))
           .filter((s) => s.n > 0)
+          .sort((a, b) => b.n - a.n)
+          .slice(0, 20),
+        villes: toList(villes)
+          .map((v) => {
+            const [ville, code] = v.label.split('|')
+            return { ville: code ? `${ville} (${nomPays(code)})` : ville, n: v.n }
+          })
+          .filter((v) => v.n > 0)
+          .sort((a, b) => b.n - a.n)
+          .slice(0, 30),
+        pays: toList(pays)
+          .map((p) => ({ pays: nomPays(p.label), n: p.n }))
+          .filter((p) => p.n > 0)
           .sort((a, b) => b.n - a.n)
           .slice(0, 20),
       },
