@@ -42,6 +42,27 @@ export default function BoutiqueListing({
   const [infiniteCount, setInfiniteCount] = useState(INFINITE_PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
+  // Au retour d'une pièce, on remonte au même niveau de scroll infini : sans ça
+  // la pièce d'où l'on vient n'est même pas rendue et le scroll ne peut pas
+  // être restauré. Clé par onglet, comme le reste de l'état de navigation.
+  const countKey = 'boutique_infiniteCount'
+  const countRestored = useRef(false)
+  useEffect(() => {
+    if (!allBoutiqueMode) return
+    const saved = Number(sessionStorage.getItem(countKey))
+    if (Number.isFinite(saved) && saved > INFINITE_PAGE_SIZE) setInfiniteCount(saved)
+    countRestored.current = true
+  }, [allBoutiqueMode])
+
+  useEffect(() => {
+    if (!allBoutiqueMode || !countRestored.current) return
+    try {
+      sessionStorage.setItem(countKey, String(infiniteCount))
+    } catch {
+      /* storage bloqué : sans persistance on repart du haut, rien de casse */
+    }
+  }, [allBoutiqueMode, infiniteCount])
+
   useEffect(() => {
     const achats = localStorage.getItem('nouvelle-rive-achats')
     setNombreAchats(achats ? parseInt(achats) : 0)

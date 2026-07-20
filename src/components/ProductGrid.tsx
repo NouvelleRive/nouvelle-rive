@@ -128,22 +128,50 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     return () => mql.removeEventListener('change', update)
   }, [])
 
-  // Restaurer la position de scroll au retour d'une page produit
+  // --- Persistance de la navigation (recherche / filtres / tri) --------------
+  // Au retour d'une pièce, on doit retomber exactement où on en était. L'état
+  // est gardé dans sessionStorage (donc par onglet, effacé à la fermeture) et
+  // clé par page pour que /boutique et /luxe ne se marchent pas dessus.
+  const stateKey = `productGrid_state_${typeof window !== 'undefined' ? window.location.pathname : ''}`
+  const restored = useRef(false)
+
   useEffect(() => {
-    const saved = sessionStorage.getItem('productGrid_scrollY')
-    if (saved) {
-      const y = parseInt(saved)
-      sessionStorage.removeItem('productGrid_scrollY')
-      // Scroll immédiat sans smooth pour éviter le flash
-      window.scrollTo(0, y)
-      // Re-scroll après le premier paint au cas où le layout n'était pas prêt
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo(0, y)
-        })
-      })
+    // Restauration de l'état AVANT le scroll : sinon on scrolle sur une grille
+    // qui n'a pas encore le bon contenu.
+    try {
+      const raw = sessionStorage.getItem(stateKey)
+      if (raw) {
+        const s = JSON.parse(raw)
+        if (typeof s.searchQuery === 'string') {
+          setSearchQuery(s.searchQuery)
+          setSearchInput(s.searchQuery)
+        }
+        if (s.filters && typeof s.filters === 'object') setFilters(f => ({ ...f, ...s.filters }))
+        if (typeof s.tri === 'string') setTri(s.tri)
+      }
+    } catch {
+      /* storage bloqué ou JSON corrompu : on repart d'un état neuf */
     }
-  }, [])
+    restored.current = true
+
+    // Position de scroll : la liste complète arrive par fetch et la pagination
+    // se ré-étend après coup, donc la page peut être trop courte au premier
+    // paint. On réessaie jusqu'à ce qu'elle soit assez haute (2s max).
+    const saved = sessionStorage.getItem('productGrid_scrollY')
+    if (!saved) return
+    const y = parseInt(saved)
+    sessionStorage.removeItem('productGrid_scrollY')
+    const deadline = Date.now() + 2000
+    let raf = 0
+    const tryScroll = () => {
+      window.scrollTo(0, y)
+      const reachable = document.body.scrollHeight - window.innerHeight >= y - 2
+      if (!reachable && Date.now() < deadline) raf = requestAnimationFrame(tryScroll)
+    }
+    raf = requestAnimationFrame(tryScroll)
+    return () => cancelAnimationFrame(raf)
+  }, [stateKey])
+
 
   // Chineuses (avec leurs videos) — pour intercaler une vidéo toutes les 7 pièces.
   // Fetch via /api/chineuses-lite (cache Vercel 1h) au lieu d'un getDocs Firestore
@@ -175,6 +203,17 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     motif: [] as string[],
   })
   const [tri, setTri] = useState('nouveautes')
+
+  // Sauvegarde à chaque changement — mais jamais avant la restauration, sinon
+  // l'état par défaut du premier rendu écraserait ce qu'on vient de relire.
+  useEffect(() => {
+    if (!restored.current) return
+    try {
+      sessionStorage.setItem(stateKey, JSON.stringify({ searchQuery, filters, tri }))
+    } catch {
+      /* quota ou storage bloqué : la persistance est un confort, pas un besoin */
+    }
+  }, [stateKey, searchQuery, filters, tri])
 
   const [marqueSearch, setMarqueSearch] = useState('')
 
