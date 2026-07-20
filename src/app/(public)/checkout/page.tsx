@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCart, calculerLivraison, PAYS_LIVRAISON } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
+import { trackCheckoutStart } from '@/lib/backstage'
 
 type ClientInfo = {
   prenom: string
@@ -45,6 +46,16 @@ function CheckoutContent() {
   useEffect(() => {
     if (hydrated && count === 0) router.push('/panier')
   }, [hydrated, count, router])
+
+  // Backstage : le visiteur a atteint le tunnel de paiement avec un panier rempli.
+  // Une seule fois par arrivée sur la page, même s'il retire un article ensuite.
+  const checkoutTracked = useRef(false)
+  useEffect(() => {
+    if (hydrated && count > 0 && !checkoutTracked.current) {
+      checkoutTracked.current = true
+      trackCheckoutStart()
+    }
+  }, [hydrated, count])
 
   const fraisLivraison = calculerLivraison(sousTotal, modeLivraison, adresse.paysCode)
   const fraisLivraisonPreview = calculerLivraison(sousTotal, 'livraison', adresse.paysCode)

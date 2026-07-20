@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useCart } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
+import { trackConversion } from '@/lib/backstage'
 
 const bleuElectrique = '#0000FF'
 const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i, '')
@@ -71,6 +72,10 @@ function ConfirmationContent() {
         setProduits(fetched)
 
         if (!isTest && fetched.length > 0) {
+          trackConversion(
+            orderId || `sans-id-${fetched.map(p => p.id).join('-')}`,
+            fetched.reduce((s, p) => s + (Number(p.prix) || 0), 0)
+          )
           const dejaTraite = sessionStorage.getItem(`commande-${orderId}`)
           if (!dejaTraite) {
             const clientInfoStr = localStorage.getItem('nouvelle-rive-client')

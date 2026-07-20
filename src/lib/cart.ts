@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { trackAddToCart } from './backstage'
 
 export type CartItem = {
   id: string
@@ -68,6 +69,7 @@ export function useCart() {
     const current = readCart()
     if (current.some(i => i.id === item.id)) return false
     writeCart([...current, item])
+    trackAddToCart()
     return true
   }, [])
 

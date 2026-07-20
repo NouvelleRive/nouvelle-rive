@@ -1,5 +1,6 @@
 // src/app/(public)/layout.tsx
 import NavbarPublic from '@/components/NavbarPublic'
+import BackstageTracker from '@/components/BackstageTracker'
 
 const localBusinessJsonLd = {
   '@context': 'https://schema.org',
@@ -80,6 +81,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
+      <BackstageTracker />
       <NavbarPublic />
       {children}
     </>

@@ -43,7 +43,16 @@
       { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
       { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', adminOnly: true },
       { key: 'perf', label: 'Perf', href: '/admin/performance' },
-      { key: 'site', label: 'Site', href: '/admin/site', adminOnly: true },
+      {
+        key: 'site',
+        label: 'Site',
+        href: '/admin/site',
+        adminOnly: true,
+        dropdown: [
+          { label: 'Structure', href: '/admin/site' },
+          { label: 'Performance', href: '/admin/site/performance' },
+        ],
+      },
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
       { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
       { key: 'paiements', label: 'Paiements', href: '/admin/paiements', adminOnly: true },
@@ -107,6 +116,31 @@
             <div className="hidden lg:flex items-center gap-x-6 border-t pt-2 pb-2">
               {visibleTabs.map((tab) => {
                 const active = isActive(tab.href)
+                if (tab.dropdown) {
+                  return (
+                    <div key={tab.key} className="relative group">
+                      <button className={`text-sm font-medium transition-all flex items-center gap-1 ${getTabClassName(active)}`}>
+                        {tab.label}
+                        <span className="text-[10px] leading-none">▾</span>
+                      </button>
+                      <div className="absolute left-0 top-full pt-2 hidden group-hover:block z-50">
+                        <div className="bg-white border rounded-md shadow-lg py-1 min-w-[150px]">
+                          {tab.dropdown.map((sub) => (
+                            <Link
+                              key={sub.href}
+                              href={sub.href}
+                              className={`block px-4 py-2 text-sm no-underline hover:bg-gray-50 ${
+                                pathname === sub.href ? 'text-[#22209C] font-semibold' : 'text-gray-600'
+                              }`}
+                            >
+                              {sub.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
                 return (
                   <Link key={tab.key} href={tab.href} className={`text-sm font-medium transition-all ${getTabClassName(active)}`}>
                     {tab.label}
@@ -167,10 +201,32 @@
               {/* Tabs Mobile */}
               {visibleTabs.map((tab) => {
                 const active = isActive(tab.href)
+                if (tab.dropdown) {
+                  return (
+                    <div key={tab.key} className="py-1">
+                      <div className={`text-sm font-medium py-1 ${active ? 'text-[#22209C]' : 'text-gray-500'}`}>
+                        {tab.label}
+                      </div>
+                      <div className="pl-4 flex flex-col">
+                        {tab.dropdown.map((sub) => (
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            className={`text-sm py-1.5 no-underline ${
+                              pathname === sub.href ? 'text-[#22209C] font-semibold' : 'text-gray-600'
+                            }`}
+                          >
+                            {sub.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                }
                 return (
-                  <Link 
-                    key={tab.key} 
-                    href={tab.href} 
+                  <Link
+                    key={tab.key}
+                    href={tab.href}
                     className={`text-sm font-medium py-2 transition-all ${getTabClassName(active)}`}
                   >
                     {tab.label}
@@ -245,6 +301,8 @@
           router.push('/app')
           return
         }
+        // Backstage : on ne compte pas nos propres visites sur le site public
+        try { localStorage.setItem('nr-no-track', '1') } catch {}
         setUser(u)
         setAuthLoading(false)
       })
