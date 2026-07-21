@@ -416,15 +416,25 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
   // Filtrage par recherche (texte libre, multi-mots)
   if (searchQuery.trim()) {
-    const stripAccents = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    const searchTerms = stripAccents(searchQuery).split(/\s+/).filter(t => t.length > 0)
+    // Normalisation tolérante des deux côtés (requête + produit) :
+    //  - accents supprimés (ê→e) via décomposition NFD
+    //  - apostrophes de toutes formes ('’‘`´ʼ) retirées → « d'orange », « d'orange »
+    //    et « dorange » deviennent identiques. Sans ça « Tête d'Orange » (apostrophe
+    //    typographique en base) ne remontait jamais.
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/['’‘`´ʼ]/g, '')
+    const searchTerms = normalize(searchQuery).split(/\s+/).filter(t => t.length > 0)
 
     filteredProduits = filteredProduits.filter(p => {
       const cat = typeof p.categorie === 'object' ? (p.categorie as any)?.label : p.categorie
       const description = (p as { description?: string }).description
       const descriptionEn = (p as { descriptionEn?: string }).descriptionEn
       const trigramme = (p as { trigramme?: string }).trigramme
-      const text = stripAccents(
+      const text = normalize(
         [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn, p.sku, trigramme]
           .filter(Boolean)
           .join(' ')
