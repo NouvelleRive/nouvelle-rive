@@ -63,11 +63,14 @@ const EBAY_CATEGORY_WOMEN: Record<string, { categoryId: string; type: string }> 
   'sandales': { categoryId: '55793', type: 'shoes' },
   'mocassins': { categoryId: '55793', type: 'shoes' },
   // Accessoires
+  // Foulards / carrés / écharpes → feuille eBay "Scarves & Wraps" (45238).
+  // 4251 est le parent "Women's Accessories", pas une feuille → publication refusée.
+  'foulard': { categoryId: '45238', type: 'accessories' },
+  'carré': { categoryId: '45238', type: 'accessories' },
+  'écharpe': { categoryId: '45238', type: 'accessories' },
   'accessoire': { categoryId: '4251', type: 'accessories' },
   'accessoires': { categoryId: '4251', type: 'accessories' },
   'ceinture': { categoryId: '4251', type: 'accessories' },
-  'écharpe': { categoryId: '4251', type: 'accessories' },
-  'foulard': { categoryId: '4251', type: 'accessories' },
   'chapeau': { categoryId: '4251', type: 'accessories' },
   'bijoux': { categoryId: '4251', type: 'accessories' },
   // Lunettes : tout le stock MAKI est en "MAK - Lunettes", sans cette clé
