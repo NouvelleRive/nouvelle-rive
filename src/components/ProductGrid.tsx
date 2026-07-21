@@ -24,6 +24,7 @@ type ChineuseLite = {
   email: string
   emails: string[]
   videos: string[]
+  nom?: string
 }
 
 function formatDisplayTitle(produit: Produit, lang: Lang = 'fr'): string {
@@ -429,13 +430,29 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
         .replace(/['’‘`´ʼ]/g, '')
     const searchTerms = normalize(searchQuery).split(/\s+/).filter(t => t.length > 0)
 
+    // Nom public de la créatrice indexé par trigramme : le SKU ne porte que le
+    // trigramme (TDO), pas le nom (« Tête d'Orange »). On résout le trigramme du
+    // SKU par plus-long-préfixe (comme resolveTrigrammeFromSku côté serveur, ex.
+    // MAKCHA avant MA) puis on ajoute ce nom au texte cherché.
+    const nomByTrigramme = new Map<string, string>()
+    for (const c of chineuses) {
+      const tri = (c.trigramme || '').toUpperCase()
+      if (tri && c.nom) nomByTrigramme.set(tri, c.nom)
+    }
+    const trisByLength = [...nomByTrigramme.keys()].sort((a, b) => b.length - a.length)
+    const creatriceNom = (sku?: string) => {
+      const s = (sku || '').toUpperCase()
+      const tri = trisByLength.find(t => s.startsWith(t))
+      return tri ? nomByTrigramme.get(tri) || '' : ''
+    }
+
     filteredProduits = filteredProduits.filter(p => {
       const cat = typeof p.categorie === 'object' ? (p.categorie as any)?.label : p.categorie
       const description = (p as { description?: string }).description
       const descriptionEn = (p as { descriptionEn?: string }).descriptionEn
       const trigramme = (p as { trigramme?: string }).trigramme
       const text = normalize(
-        [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn, p.sku, trigramme]
+        [p.nom, p.nomEn, p.marque, cat, p.taille, p.color, p.material, p.modele, p.motif, description, descriptionEn, p.sku, trigramme, creatriceNom(p.sku)]
           .filter(Boolean)
           .join(' ')
       )

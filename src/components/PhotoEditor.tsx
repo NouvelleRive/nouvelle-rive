@@ -196,7 +196,7 @@
           setError(data.error || 'Erreur lors du détourage')
         }
       } catch (err: any) {
-        setError('FA500')
+        setError(err?.message || 'Erreur réseau lors du détourage')
       } finally {
         setProcessing(false)
       }
@@ -299,7 +299,7 @@
         }
       } catch (err) {
         console.error('Erreur crop confirm:', err)
-        setError('FA500')
+        setError((err as any)?.message || 'Erreur lors du recadrage')
       } finally {
         setProcessing(false)
       }
@@ -353,7 +353,7 @@
         setMode('view')
         setCanvasReady(false)
       } catch (err: any) {
-        setError('FA500')
+        setError(err?.message || 'Erreur lors de la sauvegarde de la gomme')
       } finally {
         setProcessing(false)
       }
@@ -374,7 +374,7 @@
 
       const container = previewContainerRef.current
       if (!container) {
-        setError('FA500')
+        setError('Aperçu introuvable, rouvre l’éditeur')
         return
       }
 
@@ -437,11 +437,11 @@
         if (data.success && data.maskUrl) {
           onConfirm(data.maskUrl)
         } else {
-          setError('FA500')
+          setError(data.error || 'Échec de l’upload de l’image transformée')
         }
       } catch (err: any) {
         console.error('Erreur handleConfirm transform:', err)
-        setError('FA500')
+        setError(err?.message || 'Erreur lors de la transformation')
       } finally {
         setProcessing(false)
       }

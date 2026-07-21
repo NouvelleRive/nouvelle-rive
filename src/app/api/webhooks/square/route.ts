@@ -177,7 +177,7 @@ async function traiterProduit(opts: {
     modeLivraison,
     adresse: modeLivraison === 'livraison' ? adresse : null,
 
-    statut: 'en_attente',
+    statut: 'payée',
 
     dateCommande: Timestamp.now(),
     datePaiement: Timestamp.now(),
@@ -187,9 +187,18 @@ async function traiterProduit(opts: {
 
     createdAt: Timestamp.now(),
   }
-  const commandeRef = await adminDb.collection('commandes').add(nouvelleCommande)
-  const commandeId = commandeRef.id
-  console.log('✅ Commande créée:', commandeId)
+  // ID déterministe (même clé que la vente) → un seul doc même si payment.created re-tire.
+  // On ne crée que si absent, pour ne jamais réécraser un statut déjà avancé (preparee, expediee…).
+  const commandeDocId = `${orderId}_${lineItem?.uid || productId}`
+  const commandeRef = adminDb.collection('commandes').doc(commandeDocId)
+  const commandeSnapBefore = await commandeRef.get()
+  if (!commandeSnapBefore.exists) {
+    await commandeRef.set(nouvelleCommande)
+    console.log('✅ Commande créée:', commandeDocId)
+  } else {
+    console.log('⏭️ Commande déjà existante (skip):', commandeDocId)
+  }
+  const commandeId = commandeDocId
 
   // Création de la vente — priorité au trigramme du produit (MAK) plutôt qu'au préfixe SKU (MAKCHA, MAKDIO…)
   const trigramme =

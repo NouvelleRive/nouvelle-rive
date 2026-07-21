@@ -19,6 +19,10 @@ export async function GET() {
       email: c.email,
       emails: c.emails,
       videos: c.videos,
+      // nom = nom public de la créatrice (déjà affiché sur /nos-creatrices) :
+      // permet à la recherche boutique de retrouver ses pièces par son nom,
+      // le SKU ne portant que le trigramme.
+      nom: c.nom || '',
     }))
     return NextResponse.json(publicList, {
       headers: {
