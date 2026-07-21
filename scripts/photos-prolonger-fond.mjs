@@ -59,78 +59,105 @@ if (!getApps().length) initializeApp({ credential: cert({
 
 const db = getFirestore()
 
-async function prolongerFond(buf) {
-  const img = sharp(buf)
-  const { width: W, height: H } = await img.metadata()
-  const { data, info } = await img.ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-  const ch = info.channels
-  const sujet = (x, y) => {
-    const i = (y * W + x) * ch
-    const [r, g, b] = [data[i], data[i+1], data[i+2]]
-    return Math.min(r, g, b) < 215 || Math.max(r, g, b) - Math.min(r, g, b) > 25
-  }
-  const colOk = x => { let n = 0; for (let y = 0; y < H; y++) if (sujet(x, y)) n++; return n > H * 0.005 }
-  let x0 = 0; while (x0 < W && !colOk(x0)) x0++
-  let x1 = W - 1; while (x1 > x0 && !colOk(x1)) x1--
-  if (x0 >= x1) return null // aucun sujet détecté
+// Étire le fond vers les deux bords d'UN axe (horizontal = colonnes, vertical =
+// lignes). Renvoie { buffer, avant, apres } si quelque chose a été comblé, sinon null.
+async function etendreAxe(buf, axe) {
+  const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  const W = info.width, H = info.height, ch = info.channels
+  // N = nombre de tranches sur l'axe traité, M = longueur d'une tranche.
+  const horizontal = axe === 'h'
+  const N = horizontal ? W : H
+  const M = horizontal ? H : W
+  const idx = (n, m) => (horizontal ? (m * W + n) : (n * W + m)) * ch
 
-  const margeG = Math.max(0, x0 - 12)
-  const largeurD = W - 1 - Math.min(W - 1, x1 + 12)
-  const margeD = Math.min(W - 1, x1 + 12)
-  if (margeG < MARGE_MIN && largeurD < MARGE_MIN) return null // déjà plein bord à bord
+  // La marge à combler est une bordure uniformément blanche (padding). On étire
+  // le fond réel qui commence juste après. Une tranche est "bord blanc" si tous
+  // ses pixels sont quasi blancs (>= 249).
+  const bordBlanc = n => { for (let m = 0; m < M; m++) { const i = idx(n, m); if (data[i] < 249 || data[i+1] < 249 || data[i+2] < 249) return false } return true }
+  let n0 = 0; while (n0 < N && bordBlanc(n0)) n0++
+  let n1 = N - 1; while (n1 > n0 && bordBlanc(n1)) n1--
+  if (n0 >= n1) return null // image entièrement blanche
 
-  // La colonne étirée doit être un fond lisse (studio). Sur une photo d'intérieur
-  // elle contient des contours → l'étirer ferait des traînées, on s'abstient.
-  const colLisse = x => {
+  const margeAvant = n0                 // largeur de la bordure blanche avant
+  const refApres = n1                   // dernière tranche de fond réel
+  const margeApres = N - 1 - n1         // largeur de la bordure blanche après
+  if (margeAvant < MARGE_MIN && margeApres < MARGE_MIN) return null
+
+  // Bornes de contenu sur l'axe perpendiculaire : on ignore la bordure blanche de
+  // cet axe, sinon une tranche de bord (gris) contiendrait aussi les coins blancs
+  // et paraîtrait « non lisse ». Les coins seront comblés par le second passage.
+  const bordBlancPerp = m => { for (let n = 0; n < N; n++) { const i = idx(n, m); if (data[i] < 249 || data[i+1] < 249 || data[i+2] < 249) return false } return true }
+  let m0 = 0; while (m0 < M && bordBlancPerp(m0)) m0++
+  let m1 = M - 1; while (m1 > m0 && bordBlancPerp(m1)) m1--
+  const mLen = m1 - m0 + 1
+
+  // La tranche étirée doit être un fond lisse : sinon (photo d'intérieur, décor)
+  // l'étirement ferait des traînées, on laisse l'image intacte.
+  const trancheLisse = n => {
     let ecartMax = 0
-    for (let y = 1; y < H; y++) {
-      const i = (y * W + x) * ch, j = ((y - 1) * W + x) * ch
+    for (let m = m0 + 1; m <= m1; m++) {
+      const i = idx(n, m), j = idx(n, m - 1)
       ecartMax = Math.max(ecartMax, Math.abs(data[i] - data[j]), Math.abs(data[i+1] - data[j+1]), Math.abs(data[i+2] - data[j+2]))
     }
-    return ecartMax <= 12
+    return ecartMax <= 50
   }
-  // Fond chargé (photo d'intérieur, décor) : l'étirer ferait des traînées,
-  // on laisse l'image intacte.
-  if (margeG >= MARGE_MIN && !colLisse(margeG)) return null
-  if (largeurD >= MARGE_MIN && !colLisse(margeD)) return null
+  if (margeAvant >= MARGE_MIN && !trancheLisse(margeAvant)) return null
+  if (margeApres >= MARGE_MIN && !trancheLisse(refApres)) return null
 
-  // Déjà traitée ? Si la marge reproduit déjà la colonne de fond voisine, il n'y
-  // a rien à faire — sans ce test le script retraiterait sans fin toute photo
-  // dont le sujet ne touche pas le bord.
-  const memeQueColonne = (xDebut, xFin, xRef) => {
-    for (let y = 0; y < H; y += 7) {
-      const ref = (y * W + xRef) * ch
-      for (let x = xDebut; x <= xFin; x += 13) {
-        const i = (y * W + x) * ch
+  // Déjà comblée ? Si la marge reproduit déjà la tranche de fond voisine, rien à
+  // faire — sans ce test on retraiterait sans fin une photo dont le sujet ne
+  // touche pas le bord.
+  const memeQueTranche = (nDebut, nFin, nRef) => {
+    for (let m = m0; m <= m1; m += 7) {
+      const ref = idx(nRef, m)
+      for (let n = nDebut; n <= nFin; n += 13) {
+        const i = idx(n, m)
         if (Math.abs(data[i] - data[ref]) > 3 || Math.abs(data[i+1] - data[ref+1]) > 3 || Math.abs(data[i+2] - data[ref+2]) > 3) return false
       }
     }
     return true
   }
-  const gaucheFaite = margeG < MARGE_MIN || memeQueColonne(0, margeG - 1, margeG)
-  const droiteFaite = largeurD < MARGE_MIN || memeQueColonne(margeD + 1, W - 1, margeD)
-  if (gaucheFaite && droiteFaite) return null
+  const avantFait = margeAvant < MARGE_MIN || memeQueTranche(0, margeAvant - 1, margeAvant)
+  const apresFait = margeApres < MARGE_MIN || memeQueTranche(refApres + 1, N - 1, refApres)
+  if (avantFait && apresFait) return null
 
+  // On n'étire que la portion de contenu (hauteur mLen à partir de m0) ; les
+  // bandes blanches perpendiculaires restent, comblées par le passage suivant.
   const pieces = []
-  if (margeG >= MARGE_MIN) {
-    pieces.push({
-      input: await sharp(buf).extract({ left: margeG, top: 0, width: 1, height: H })
-        .resize(margeG, H, { fit: 'fill' }).toBuffer(),
-      left: 0, top: 0,
-    })
+  if (margeAvant >= MARGE_MIN) {
+    const region = horizontal
+      ? { left: margeAvant, top: m0, width: 1, height: mLen }
+      : { left: m0, top: margeAvant, width: mLen, height: 1 }
+    const taille = horizontal ? { width: margeAvant, height: mLen } : { width: mLen, height: margeAvant }
+    const pos = horizontal ? { left: 0, top: m0 } : { left: m0, top: 0 }
+    pieces.push({ input: await sharp(buf).extract(region).resize({ ...taille, fit: 'fill' }).toBuffer(), ...pos })
   }
-  if (largeurD >= MARGE_MIN) {
-    pieces.push({
-      input: await sharp(buf).extract({ left: margeD, top: 0, width: 1, height: H })
-        .resize(largeurD, H, { fit: 'fill' }).toBuffer(),
-      left: margeD + 1, top: 0,
-    })
+  if (margeApres >= MARGE_MIN) {
+    const region = horizontal
+      ? { left: refApres, top: m0, width: 1, height: mLen }
+      : { left: m0, top: refApres, width: mLen, height: 1 }
+    const taille = horizontal ? { width: margeApres, height: mLen } : { width: mLen, height: margeApres }
+    const pos = horizontal ? { left: refApres + 1, top: m0 } : { left: m0, top: refApres + 1 }
+    pieces.push({ input: await sharp(buf).extract(region).resize({ ...taille, fit: 'fill' }).toBuffer(), ...pos })
   }
   if (!pieces.length) return null
   return {
-    zone: { sujet: `${x0}-${x1}`, gauche: margeG, droite: largeurD },
+    avant: margeAvant, apres: margeApres,
     buffer: await sharp(buf).composite(pieces).flatten({ background: { r: 255, g: 255, b: 255 } }).png().toBuffer(),
   }
+}
+
+// Comble le fond sur les 4 côtés : d'abord gauche/droite, puis haut/bas sur le
+// résultat (les tranches horizontales étirées remplissent alors aussi les coins).
+async function prolongerFond(buf) {
+  const zone = {}
+  let courant = buf
+  const h = await etendreAxe(courant, 'h')
+  if (h) { courant = h.buffer; zone.gauche = h.avant; zone.droite = h.apres }
+  const v = await etendreAxe(courant, 'v')
+  if (v) { courant = v.buffer; zone.haut = v.avant; zone.bas = v.apres }
+  if (!h && !v) return null
+  return { zone, buffer: courant }
 }
 
 async function upload(buffer) {
