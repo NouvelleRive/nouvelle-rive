@@ -397,7 +397,7 @@ export function formatEbayDescription(description: string, produit: Partial<Ebay
   parts.push('<p>Shipped from Paris, France with tracking. Dispatched within 1-2 business days.</p>')
   
   parts.push('<h3>About Nouvelle Rive</h3>')
-  parts.push('<p>We are a vintage boutique in Le Marais, Paris. Every piece is carefully selected for quality and authenticity.</p>')
+  parts.push('<p>We are a vintage boutique in Le Marais, Paris. Every piece is carefully selected for its quality and condition.</p>')
   
   parts.push('</div>')
   
