@@ -133,10 +133,14 @@ useEffect(() => {
         alert(`✅ ${successCount} produit(s) publié(s) sur eBay !`)
         await loadData()
       } else {
-        alert('❌ Erreur : EB500')
+        const raisons = data.results
+          ?.filter((r: any) => !r.success)
+          .map((r: any) => `${r.productId} : ${r.error || 'erreur inconnue'}`)
+          .join('\n')
+        alert(`❌ Échec publication eBay :\n${raisons || data.error || 'erreur inconnue'}`)
       }
     } catch (err: any) {
-      alert('❌ Erreur : EB500')
+      alert(`❌ Erreur réseau : ${err?.message || 'inconnue'}`)
     } finally {
       setPublishing(false)
       setSelectedIds(new Set())
