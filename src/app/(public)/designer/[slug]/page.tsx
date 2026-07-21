@@ -49,6 +49,7 @@ async function getProduitsByMarque(slug: string) {
       .filter(({ raw }) =>
         raw.statut !== 'supprime' &&
         raw.statut !== 'retour' &&
+        !raw.statutRecuperation &&
         raw.vendu !== true &&
         (raw.quantite ?? 1) > 0 &&
         raw.prix > 0 &&

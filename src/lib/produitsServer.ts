@@ -79,6 +79,7 @@ export async function getAllBoutiqueProduitsServer(): Promise<ProduitInitial[]> 
       .filter(({ raw }) =>
         raw.statut !== 'supprime' &&
         raw.statut !== 'retour' &&
+        !raw.statutRecuperation &&
         raw.recu !== false &&
         raw.hidden !== true &&
         raw.forceDisplay !== false &&
@@ -111,6 +112,7 @@ export async function getRecentProduitsServer(limit: number = 50): Promise<Produ
       .filter(({ raw }) =>
         raw.statut !== 'supprime' &&
         raw.statut !== 'retour' &&
+        !raw.statutRecuperation &&
         raw.recu !== false &&
         raw.hidden !== true &&
         (raw.quantite ?? 1) > 0 &&
@@ -175,6 +177,7 @@ export async function getCoupsDeCoeurServer(limit: number = 50): Promise<Produit
       .filter(({ raw }) =>
         raw.statut !== 'supprime' &&
         raw.statut !== 'retour' &&
+        !raw.statutRecuperation &&
         raw.recu !== false &&
         raw.hidden !== true &&
         raw.forceDisplay !== false &&
@@ -231,6 +234,7 @@ export async function getInitialProduitsForPage(pageId: string, limit: number = 
       .filter(({ id, raw }) => {
         if (exclus.has(id)) return false
         if (raw.statut === 'supprime' || raw.statut === 'retour') return false
+        if (raw.statutRecuperation) return false
         if (raw.recu === false || raw.hidden === true) return false
         if ((raw.quantite ?? 1) <= 0) return false
         if (!raw.prix || raw.prix <= 0) return false
@@ -279,6 +283,7 @@ export async function getSacsHauteCoutureProduits(): Promise<ProduitInitial[]> {
       .filter(({ raw }) => {
         // ---- reprise EXACTE de [type]/page.tsx filter ----
         if (raw.statut === 'supprime' || raw.statut === 'retour') return false
+        if (raw.statutRecuperation) return false
         if (!(raw.prix > 0)) return false
         if (!(raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)) return false
         if (getTypeSlug(raw.categorie) !== 'sac') return false

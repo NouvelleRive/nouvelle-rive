@@ -794,7 +794,7 @@ async function regenSitemap() {
   }
 
   const snap = await db.collection('produits')
-    .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
+    .select('statut', 'statutRecuperation', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
     .get()
 
   const luxurySlugs = new Set(SITEMAP_LUXURY_BRANDS.map(sitemapSlugify))
@@ -805,6 +805,7 @@ async function regenSitemap() {
   for (const doc of snap.docs) {
     const p = { id: doc.id, ...doc.data() }
     if (p.statut === 'supprime' || p.statut === 'retour') continue
+    if (p.statutRecuperation) continue
     if (p.vendu === true) continue
     if ((p.quantite == null ? 1 : p.quantite) <= 0) continue
     if (!p.prix || p.prix <= 0) continue

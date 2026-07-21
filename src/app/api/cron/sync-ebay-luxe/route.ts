@@ -70,6 +70,7 @@ function isVisibleOnSite(p: any, config: LuxeConfig): boolean {
   const quantite = p.quantite ?? 1
   if (quantite <= 0) return false
   if (p.statut === 'retour' || p.statut === 'supprime') return false
+  if (p.statutRecuperation) return false
   if (p.recu === false) return false
   if (p.hidden === true) return false
   if (p.forceDisplay === false) return false

@@ -189,6 +189,7 @@ let q = options?.lastDoc
     }
 
     if ((p as any).statut === 'retour' || (p as any).statut === 'supprime') return false
+    if ((p as any).statutRecuperation) return false
     if ((p as any).recu === false) return false
     if ((p as any).hidden === true) return false
     if ((p as any).forceDisplay === false) return false

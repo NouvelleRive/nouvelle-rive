@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
         if (p.vendu) return false
         if ((p.quantite ?? 1) <= 0) return false
         if (p.statut === 'retour' || p.statut === 'supprime') return false
+        if (p.statutRecuperation) return false
         if (p.hidden === true) return false
         if (p.forceDisplay === false) return false
         if (p.recu === false) return false

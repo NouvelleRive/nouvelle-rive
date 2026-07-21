@@ -52,6 +52,7 @@ const getProduitsByTypeMarque = cache(async (type: string, marque: string) => {
     const docs = all
       .filter(({ raw }) => {
         if (raw.statut === 'supprime' || raw.statut === 'retour') return false
+        if (raw.statutRecuperation) return false
         if (!(raw.prix > 0)) return false
         if (!(raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)) return false
         if (getTypeSlug(raw.categorie) !== type) return false

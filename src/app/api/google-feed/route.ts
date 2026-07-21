@@ -33,6 +33,7 @@ export async function GET() {
       .filter(p =>
         p.statut !== 'supprime' &&
         p.statut !== 'retour' &&
+        !p.statutRecuperation &&
         p.vendu !== true &&
         p.recu !== false &&
         (p.quantite ?? 1) > 0 &&

@@ -52,13 +52,14 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     // Fallback : première exécution avant que la Firebase Function `regenSitemapCache` ait tourné.
     try {
       const snap = await adminDb.collection('produits')
-        .select('statut', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
+        .select('statut', 'statutRecuperation', 'vendu', 'quantite', 'prix', 'photos', 'imageUrls', 'imageUrl', 'marque', 'categorie', 'nom', 'color', 'taille')
         .get()
       const typeSet = new Set<string>()
       const luxSet = new Set<string>()
       for (const doc of snap.docs) {
         const p = { id: doc.id, ...doc.data() } as any
         if (p.statut === 'supprime' || p.statut === 'retour') continue
+        if (p.statutRecuperation) continue
         if (p.vendu === true) continue
         if ((p.quantite ?? 1) <= 0) continue
         if (!p.prix || p.prix <= 0) continue

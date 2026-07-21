@@ -12,6 +12,7 @@ export async function GET() {
     const all = await getAllProduitsCached()
 
     const produits = all
+      .filter(({ raw: d }) => !d.statutRecuperation)
       .map(({ id, raw: d }) => ({
         id,
         sku: d.sku || '',

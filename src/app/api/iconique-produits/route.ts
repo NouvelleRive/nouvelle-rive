@@ -90,6 +90,7 @@ export async function GET(req: NextRequest) {
     const commonFilter = (p: any) =>
       p.statut !== 'retour' &&
       p.statut !== 'supprime' &&
+      !p.statutRecuperation &&
       p.hidden !== true &&
       !!(p.imageUrls?.[0] || p.imageUrl || p.photos?.face)
 
