@@ -5,10 +5,34 @@
   import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
   import { FieldValue } from 'firebase-admin/firestore'
   import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
+  import { patchBlobCache } from '@/lib/blobCache'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
+  const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
 
   type Reason = 'erreur' | 'produit_recupere' | 'valider_destock'
+
+  // Le blob `produits-all` (TTL 6h) sert la liste admin : sans ce patch, la
+  // pièce réapparaissait dans son état d'avant pendant des heures, même après
+  // rechargement complet de la page.
+  async function refreshBlob(productId: string) {
+    try {
+      const snap = await adminDb.collection('produits').doc(productId).get()
+      await patchBlobCache<{ id: string; raw: any }[]>('produits-all', (items) => {
+        if (!snap.exists) return items.filter(it => it.id !== productId)
+        const fresh = { id: productId, raw: snap.data() }
+        let found = false
+        const next = items.map(it => {
+          if (it.id !== productId) return it
+          found = true
+          return fresh
+        })
+        return found ? next : [...next, fresh]
+      })
+    } catch (e: any) {
+      console.warn('⚠️ Patch cache produits-all KO:', e?.message)
+    }
+  }
 
   export async function POST(req: NextRequest) {
     try {
@@ -39,6 +63,7 @@
           dateRetour: FieldValue.serverTimestamp(),
           derniereAction: 'retour_valide',
         })
+        await refreshBlob(String(productId))
 
         // Le produit n'est plus sur le site → on le retire aussi d'eBay s'il y était.
         await removeFromAllChannels({
@@ -70,7 +95,7 @@
       }
 
       const userEmail = String(decoded?.email || '')
-      const isAdmin = userEmail === ADMIN_EMAIL
+      const isAdmin = userEmail === ADMIN_EMAIL || userEmail === VENDEUSE_EMAIL
 
       const data = produitSnap.data() as any
 
@@ -119,6 +144,7 @@
           dateDemandeRecuperation: FieldValue.serverTimestamp(),
           derniereAction: 'demande_recuperation',
         })
+        await refreshBlob(String(productId))
 
         // Le produit ne doit plus être achetable pendant la récupération → retrait eBay (et autres canaux).
         await removeFromAllChannels({
@@ -146,6 +172,7 @@
 
         // Suppression Firestore → Cloud Function supprimera de Square
         await produitRef.delete()
+        await refreshBlob(String(productId))
 
         console.log(`✅ Produit ${productId} supprimé`)
 
