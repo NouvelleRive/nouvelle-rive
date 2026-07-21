@@ -590,6 +590,13 @@
             throw new Error(data.error || 'Erreur suppression')
           }
 
+          // Aucune des surfaces qui montent ProductList ne refetch après cette
+          // action : sans update local, la carte reste telle quelle jusqu'au
+          // prochain chargement complet.
+          if (deleteReason === 'produit_recupere') {
+            onProductUpdated?.(idsToDelete[i], { statutRecuperation: 'aRecuperer' })
+          }
+
           if (idsToDelete.length > 1) {
             setDeleteProgress({ current: i + 1, total: idsToDelete.length })
           }
