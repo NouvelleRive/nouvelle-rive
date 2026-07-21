@@ -62,17 +62,21 @@ const EBAY_CATEGORY_WOMEN: Record<string, { categoryId: string; type: string }> 
   'bottines': { categoryId: '55793', type: 'shoes' },
   'sandales': { categoryId: '55793', type: 'shoes' },
   'mocassins': { categoryId: '55793', type: 'shoes' },
-  // Accessoires
-  // Foulards / carrés / écharpes → feuille eBay "Scarves & Wraps" (45238).
-  // 4251 est le parent "Women's Accessories", pas une feuille → publication refusée.
-  'foulard': { categoryId: '45238', type: 'accessories' },
+  // Accessoires — 4251 "Women's Accessories" n'est PAS une feuille eBay :
+  // chaque type d'accessoire doit pointer sur sa vraie catégorie feuille, sinon refus.
+  'foulard': { categoryId: '45238', type: 'accessories' },   // Scarves & Wraps
   'carré': { categoryId: '45238', type: 'accessories' },
   'écharpe': { categoryId: '45238', type: 'accessories' },
-  'accessoire': { categoryId: '4251', type: 'accessories' },
-  'accessoires': { categoryId: '4251', type: 'accessories' },
-  'ceinture': { categoryId: '4251', type: 'accessories' },
-  'chapeau': { categoryId: '4251', type: 'accessories' },
-  'bijoux': { categoryId: '4251', type: 'accessories' },
+  'ceinture': { categoryId: '3003', type: 'belts' },          // Belts
+  'chapeau': { categoryId: '45230', type: 'hats' },           // Hats
+  'boucle': { categoryId: '50647', type: 'jewelry' },         // Earrings
+  'boucles': { categoryId: '50647', type: 'jewelry' },
+  'collier': { categoryId: '155101', type: 'jewelry' },       // Necklaces & Pendants
+  'bijou': { categoryId: '50647', type: 'jewelry' },
+  'bijoux': { categoryId: '50647', type: 'jewelry' },
+  'ensemble': { categoryId: '260011', type: 'outfits' },      // Outfits & Sets
+  'accessoire': { categoryId: '45238', type: 'accessories' },
+  'accessoires': { categoryId: '45238', type: 'accessories' },
   // Lunettes : tout le stock MAKI est en "MAK - Lunettes", sans cette clé
   // il retombait sur la catégorie par défaut, qui n'est pas une feuille eBay.
   'lunette': { categoryId: '79720', type: 'sunglasses' },
@@ -211,13 +215,16 @@ function getBagStyle(modele?: string): string {
 export function findEbayCategoryFromFirebase(
   categoryId?: string,
   sousCat?: string,
-  gender: EbayGender = 'women'
+  gender: EbayGender = 'women',
+  title?: string
 ): { categoryId: string; type: string } {
   const categoryMap = gender === 'men' ? EBAY_CATEGORY_MEN : EBAY_CATEGORY_WOMEN
   const defaultCategory = gender === 'men' ? DEFAULT_EBAY_CATEGORY_MEN : DEFAULT_EBAY_CATEGORY_WOMEN
 
-  // Chercher d'abord dans sousCat, puis dans categoryId
-  const searchTerms = [sousCat, categoryId].filter(Boolean)
+  // Chercher d'abord dans sousCat, puis dans categoryId, enfin dans le titre.
+  // Le titre sert de filet quand la sous-cat ne matche aucun mot-clé
+  // (ex. une jupe rangée en "Ensemble" → "jupe" est dans le titre).
+  const searchTerms = [sousCat, categoryId, title].filter(Boolean)
 
   for (const term of searchTerms) {
     if (!term) continue
@@ -529,12 +536,39 @@ export function buildProductAspects(produit: EbayProduct, categoryType: string, 
       break
 
     case 'accessories':
-      // Accessoires (4251)
+      // Foulards / écharpes (45238 Scarves & Wraps)
       aspects['Department'] = [department]
       aspects['Type'] = ['Scarf']
       aspects['Style'] = ['Vintage']
       aspects['Material'] = [translateMaterial(produit.material || 'Silk')]
       aspects['Handmade'] = ['No']
+      break
+
+    case 'belts':
+      // Ceintures (3003 Belts)
+      aspects['Department'] = [department]
+      aspects['Style'] = ['Vintage']
+      aspects['Belt Material'] = [translateMaterial(produit.material || 'Leather')]
+      break
+
+    case 'hats':
+      // Chapeaux (45230 Hats)
+      aspects['Department'] = [department]
+      aspects['Style'] = ['Vintage']
+      aspects['Material'] = [translateMaterial(produit.material || 'Wool')]
+      break
+
+    case 'jewelry':
+      // Bijoux : boucles d'oreilles (50647), colliers (155101)
+      aspects['Style'] = ['Vintage']
+      break
+
+    case 'outfits':
+      // Ensembles (260011 Outfits & Sets)
+      aspects['Department'] = [department]
+      aspects['Style'] = ['Vintage']
+      aspects['Size'] = [produit.size || 'M']
+      aspects['Material'] = [translateMaterial(produit.material || 'Cotton')]
       break
 
     case 'sunglasses':
@@ -717,9 +751,17 @@ async function publishOffer(offerId: string): Promise<string> {
     console.log(`✅ Listing publié: ${response.listingId}`)
     return response.listingId
   } catch (error: any) {
-    // Si l'offer est déjà publiée, récupérer le listingId existant
-    if (error?.message?.includes('already published') || error?.message?.includes('PUBLISHED')) {
-      console.log(`ℹ️ Offer déjà publiée: ${offerId}, récupération du listingId...`)
+    // Si l'offer est déjà publiée (eBay répond "already published", "PUBLISHED",
+    // ou "Cannot revise listing" quand un listing existe déjà pour ce SKU),
+    // on récupère le listingId existant au lieu de planter.
+    const msg = error?.message || ''
+    const dejaPubliee =
+      msg.includes('already published') ||
+      msg.includes('PUBLISHED') ||
+      msg.includes('Cannot revise') ||
+      msg.includes('cannot be listed or modified')
+    if (dejaPubliee) {
+      console.log(`ℹ️ Listing peut-être déjà présent pour offer ${offerId}, récupération du listingId...`)
       const existingListingId = await getOfferListingId(offerId)
       if (existingListingId) {
         console.log(`✅ ListingId existant récupéré: ${existingListingId}`)
@@ -763,7 +805,7 @@ export async function publishToEbay(produit: EbayProduct): Promise<EbayListingRe
     console.log(`📤 Publication eBay: ${produit.title} (${gender})`)
 
     // Trouver la catégorie eBay à partir de la catégorie Firebase et du genre
-    const ebayCategory = findEbayCategoryFromFirebase(produit.categoryId, produit.sousCat, gender)
+    const ebayCategory = findEbayCategoryFromFirebase(produit.categoryId, produit.sousCat, gender, produit.title)
     console.log(`📂 Catégorie eBay: ${ebayCategory.categoryId} (${ebayCategory.type}) - ${gender}`)
 
     // 1. Créer l'inventoryItem avec les aspects adaptés à la catégorie et au genre
@@ -800,7 +842,7 @@ export async function updateEbayListing(
     }
 
     const gender: EbayGender = produit.gender
-    const ebayCategory = findEbayCategoryFromFirebase(produit.categoryId, produit.sousCat, gender)
+    const ebayCategory = findEbayCategoryFromFirebase(produit.categoryId, produit.sousCat, gender, produit.title)
     await createOrUpdateInventoryItem(produit, ebayCategory.type, gender)
 
     return { success: true, offerId: existingOfferId }
