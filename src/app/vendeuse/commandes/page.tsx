@@ -6,10 +6,9 @@ import CommandesPanel from '@/components/CommandesPanel'
 export default function VendeuseCommandesPage() {
   return (
     <>
-      {/* Header */}
+      {/* Header — même display que la page Produits */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Commandes</h1>
-        <p className="text-gray-600 mt-1">Gestion des commandes</p>
+        <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">Commandes</h1>
       </div>
 
       {/* Commandes */}

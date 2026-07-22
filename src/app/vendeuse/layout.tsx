@@ -61,9 +61,10 @@ function VendeuseNavbar() {
     return () => { unsubDep(); unsubRestocks() }
   }, [])
 
-  // Commandes payées en attente de préparation
+  // Commandes non terminées : reste tant que ce n'est pas dans l'historique
+  // (à préparer = payée + à poster = preparee)
   useEffect(() => {
-    const q = query(collection(db, 'commandes'), where('statut', '==', 'payée'))
+    const q = query(collection(db, 'commandes'), where('statut', 'in', ['payée', 'preparee']))
     const unsub = onSnapshot(q, (snap) => setCommandesCount(snap.size))
     return () => unsub()
   }, [])

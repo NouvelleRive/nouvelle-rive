@@ -474,13 +474,7 @@ export default function CommandesPanel({
   return (
     <div className={compact ? '' : 'space-y-6'}>
       {!compact && (
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Gestion des commandes</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {aPreparer.length + aPoster.length} commande(s) en cours
-            </p>
-          </div>
+        <div className="flex justify-end">
           <button
             onClick={() => chargerCommandes(true)}
             disabled={refreshing}
@@ -492,8 +486,8 @@ export default function CommandesPanel({
         </div>
       )}
 
-      {/* Onglets — les 3 tiennent en pleine largeur, pas de scroll */}
-      <div className="flex border-b">
+      {/* Onglets — même display que RE/DEstock (pleine largeur, pastille de compteur) */}
+      <div className="flex border-b border-gray-200">
         {([
           { key: 'apreparer', label: 'À préparer', count: aPreparer.length },
           { key: 'aposter', label: 'À poster', count: aPoster.length },
@@ -502,13 +496,18 @@ export default function CommandesPanel({
           <button
             key={t.key}
             onClick={() => setOnglet(t.key)}
-            className={`flex-1 px-1 py-2 font-medium text-[13px] text-center whitespace-nowrap transition-colors ${
+            className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
               onglet === t.key
-                ? 'text-[#22209C] border-b-2 border-[#22209C]'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'border-[#22209C] text-[#22209C]'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
-            {t.label} ({t.count})
+            <span className="whitespace-nowrap">{t.label}</span>
+            {t.count > 0 && (
+              <span className="px-2 py-0.5 bg-[#22209C] text-white text-xs rounded-full">
+                {t.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
