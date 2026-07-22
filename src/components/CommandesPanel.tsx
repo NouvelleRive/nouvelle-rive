@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { collection, query, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
-import { Package, Clock, CheckCircle, Truck, XCircle, RefreshCw, FileText, ShoppingBag } from 'lucide-react'
+import { Package, RefreshCw, FileText, ShoppingBag } from 'lucide-react'
 import { formatPrix } from '@/lib/formatPrix'
 
 // =====================
@@ -54,15 +54,6 @@ interface Commande {
   ebayBuyerUsername?: string
 }
 
-interface GroupeCommandes {
-  numeroGroupe: string
-  commandes: Commande[]
-  client: Commande['client']
-  modeLivraison: 'livraison' | 'retrait'
-  adresse?: Commande['adresse']
-  totalPrix: number
-}
-
 interface CommandesPanelProps {
   mode?: 'admin' | 'vendeuse'
   vendeuseEmail?: string
@@ -70,31 +61,35 @@ interface CommandesPanelProps {
   compact?: boolean
 }
 
+type Onglet = 'apreparer' | 'aposter' | 'historique'
+
 // =====================
 // COMPONENT
 // =====================
-export default function CommandesPanel({ 
-  mode = 'admin', 
+export default function CommandesPanel({
+  mode = 'admin',
   vendeuseEmail,
   filterProduitIds,
-  compact = false 
+  compact = false
 }: CommandesPanelProps) {
-  const [onglet, setOnglet] = useState<'attente' | 'historique'>('attente')
-  const [commandesEnAttente, setCommandesEnAttente] = useState<Commande[]>([])
-  const [commandesHistorique, setCommandesHistorique] = useState<Commande[]>([])
-  const [groupes, setGroupes] = useState<GroupeCommandes[]>([])
+  const [onglet, setOnglet] = useState<Onglet>('apreparer')
+  const [aPreparer, setAPreparer] = useState<Commande[]>([])
+  const [aPoster, setAPoster] = useState<Commande[]>([])
+  const [historique, setHistorique] = useState<Commande[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  
+
   const [showModalExpedition, setShowModalExpedition] = useState(false)
   const [commandePourExpedition, setCommandePourExpedition] = useState<Commande | null>(null)
   const [numeroSuivi, setNumeroSuivi] = useState('')
   const [transporteur, setTransporteur] = useState('Colissimo')
 
+  const bordereauBase = mode === 'vendeuse' ? '/vendeuse/commandes/bordereau' : '/admin/nos-commandes/bordereau'
+
   const chargerCommandes = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true)
     else setLoading(true)
-    
+
     try {
       // =====================
       // 1. Charger commandes Firebase (site + square)
@@ -103,16 +98,16 @@ export default function CommandesPanel({
         collection(db, 'commandes'),
         orderBy('dateCommande', 'desc')
       )
-      
+
       const snapAll = await getDocs(qAll)
       const commandesSite = snapAll.docs.map(docSnap => {
         const data = docSnap.data()
         return {
           id: docSnap.id,
-          produit: data.produit || '',
-          produitId: data.produitId || '',
-          imageUrl: data.imageUrl || null,
-          marque: data.marque || null,
+          produit: data.produit || data.productName || '',
+          produitId: data.produitId || data.productId || '',
+          imageUrl: data.imageUrl || data.productImage || null,
+          marque: data.marque || data.productMarque || null,
           sku: data.sku || data.productSku || '',
           taille: data.taille || data.productTaille || '',
           couleur: data.couleur || data.productCouleur || '',
@@ -136,7 +131,7 @@ export default function CommandesPanel({
           source: data.source || (data.squareOrderId ? 'square' : 'site'),
         } as Commande
       })
-      
+
       // =====================
       // 2. Charger commandes eBay
       // =====================
@@ -149,14 +144,14 @@ export default function CommandesPanel({
         const snapEbay = await getDocs(qEbay)
         commandesEbay = snapEbay.docs.map(docSnap => {
           const data = docSnap.data()
-          
+
           // Mapper le statut eBay vers notre système
           let statut: Commande['statut'] = 'payée'
           const ebayStatus = (data.orderFulfillmentStatus || data.status || '').toLowerCase()
           if (ebayStatus === 'fulfilled' || ebayStatus === 'shipped') statut = 'expediee'
           else if (ebayStatus === 'cancelled') statut = 'annulee'
           else if (data.prepared || data.statut === 'preparee') statut = 'preparee'
-          
+
           return {
             id: docSnap.id,
             produit: data.title || data.itemTitle || data.produit || 'Article eBay',
@@ -197,57 +192,34 @@ export default function CommandesPanel({
       } catch (err) {
         console.log('Pas de collection ebayOrders ou erreur:', err)
       }
-      
+
       // =====================
-      // 3. Fusionner toutes les commandes
+      // 3. Fusionner + trier
       // =====================
       const toutes = [...commandesSite, ...commandesEbay]
-      
-      // Trier par date décroissante
       toutes.sort((a, b) => b.dateCommande.getTime() - a.dateCommande.getTime())
-      
+
       // =====================
       // 4. Filtrage par chineuse
       // =====================
       let commandesFiltrees = toutes
-      
       if (filterProduitIds && filterProduitIds.length > 0) {
         commandesFiltrees = toutes.filter(c => filterProduitIds.includes(c.produitId))
       } else if (vendeuseEmail) {
-        commandesFiltrees = toutes.filter(c => 
-          c.vendeurEmail === vendeuseEmail || 
+        commandesFiltrees = toutes.filter(c =>
+          c.vendeurEmail === vendeuseEmail ||
           c.chineurEmail === vendeuseEmail ||
           c.chineur === vendeuseEmail
         )
       }
-      
-      const attente = commandesFiltrees.filter(c => ['payée', 'preparee'].includes(c.statut))
-      const historique = commandesFiltrees.filter(c => ['expediee', 'retiree', 'annulee'].includes(c.statut))
-      
-      setCommandesEnAttente(attente)
-      setCommandesHistorique(historique)
-      
-      // Groupes
-      const groupesMap = new Map<string, GroupeCommandes>()
-      attente.forEach(commande => {
-        if (commande.numeroGroupe && commande.source !== 'ebay') {
-          if (!groupesMap.has(commande.numeroGroupe)) {
-            groupesMap.set(commande.numeroGroupe, {
-              numeroGroupe: commande.numeroGroupe,
-              commandes: [],
-              client: commande.client,
-              modeLivraison: commande.modeLivraison,
-              adresse: commande.adresse,
-              totalPrix: 0
-            })
-          }
-          const groupe = groupesMap.get(commande.numeroGroupe)!
-          groupe.commandes.push(commande)
-          groupe.totalPrix += commande.prix
-        }
-      })
-      setGroupes(Array.from(groupesMap.values()).filter(g => g.commandes.length > 1))
-      
+
+      // =====================
+      // 5. Répartition par onglet (le statut découle de l'onglet, pas de badge)
+      // =====================
+      setAPreparer(commandesFiltrees.filter(c => c.statut === 'payée'))
+      setAPoster(commandesFiltrees.filter(c => c.statut === 'preparee'))
+      setHistorique(commandesFiltrees.filter(c => ['expediee', 'retiree', 'annulee'].includes(c.statut)))
+
     } catch (error) {
       console.error('Erreur chargement commandes:', error)
     } finally {
@@ -282,7 +254,7 @@ export default function CommandesPanel({
   }
 
   const marquerRetiree = async (commande: Commande) => {
-    if (!confirm('Confirmer que le client a bien retiré sa commande ?')) return
+    if (!confirm('Confirmer que le client a bien récupéré sa commande ?')) return
     try {
       await updateDoc(doc(db, 'commandes', commande.id), {
         statut: 'retiree',
@@ -307,7 +279,7 @@ export default function CommandesPanel({
     if (!commandePourExpedition) return
     try {
       const collectionName = commandePourExpedition.source === 'ebay' ? 'ebayOrders' : 'commandes'
-      
+
       await updateDoc(doc(db, collectionName, commandePourExpedition.id), {
         statut: 'expediee',
         orderFulfillmentStatus: 'FULFILLED',
@@ -319,8 +291,8 @@ export default function CommandesPanel({
         shippingCarrier: transporteur || null,
         updatedAt: Timestamp.now()
       })
-      
-      // Si c'est une commande eBay, on pourrait aussi appeler l'API eBay pour mettre à jour le tracking
+
+      // eBay : pousser le tracking vers l'API
       if (commandePourExpedition.source === 'ebay' && numeroSuivi) {
         try {
           await fetch('/api/ebay/update-tracking', {
@@ -336,7 +308,7 @@ export default function CommandesPanel({
           console.warn('Erreur mise à jour tracking eBay:', err)
         }
       }
-      
+
       setShowModalExpedition(false)
       setCommandePourExpedition(null)
       setNumeroSuivi('')
@@ -349,16 +321,14 @@ export default function CommandesPanel({
   }
 
   const genererBordereau = (commande: Commande) => {
-    window.open(`/bordereau?groupe=${commande.numeroGroupe || commande.id}`, '_blank')
+    window.open(`${bordereauBase}?groupe=${commande.numeroGroupe || commande.id}`, '_blank')
   }
 
   // =====================
-  // BADGES
+  // BADGE SOURCE (admin uniquement)
   // =====================
   const SourceBadge = ({ source }: { source?: string }) => {
-    // En mode vendeuse, on ne montre pas les badges de source
     if (mode === 'vendeuse') return null
-    
     if (source === 'ebay') {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
@@ -380,33 +350,115 @@ export default function CommandesPanel({
     return null
   }
 
-  const Badge = ({ statut }: { statut: string }) => {
-    const config: Record<string, { bg: string; icon: any; label: string }> = {
-      payée: { bg: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'À préparer' },
-      preparee: { bg: 'bg-blue-100 text-blue-800', icon: Package, label: 'Préparée' },
-      expediee: { bg: 'bg-green-100 text-green-800', icon: Truck, label: 'Expédiée' },
-      retiree: { bg: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Retirée' },
-      annulee: { bg: 'bg-red-100 text-red-800', icon: XCircle, label: 'Annulée' }
-    }
-    const { bg, icon: Icon, label } = config[statut] || config.payée
+  // Date lisible : "20/07 à 19:39"
+  const formatDate = (d: Date) =>
+    `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+
+  // =====================
+  // CARTE (à préparer & à poster)
+  // =====================
+  const Carte = ({ commande }: { commande: Commande }) => {
+    const livraison = commande.modeLivraison === 'livraison'
+    const { client, adresse } = commande
     return (
-      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${bg}`}>
-        <Icon size={12} />
-        {label}
-      </span>
+      <div className={`bg-white border rounded-lg p-4 space-y-3 ${
+        mode !== 'vendeuse' && commande.source === 'ebay' ? 'border-l-4 border-l-yellow-400' : ''
+      }`}>
+        {/* Ligne produit */}
+        <div className="flex gap-3">
+          {commande.imageUrl ? (
+            <img src={commande.imageUrl} alt={commande.produit} className="w-16 h-16 object-cover rounded flex-shrink-0" />
+          ) : (
+            <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center text-gray-400 flex-shrink-0">Ø</div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium text-sm">{commande.produit}</p>
+              <SourceBadge source={commande.source} />
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {commande.sku && <span className="font-mono bg-gray-100 px-1 rounded mr-1">{commande.sku}</span>}
+              {commande.marque && <span>{commande.marque}</span>}
+              {commande.taille && <span> • T.{commande.taille}</span>}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Commandé le {formatDate(commande.dateCommande)}</p>
+          </div>
+          <p className="font-bold text-sm whitespace-nowrap">{formatPrix(commande.prix, { decimals: 2 })} €</p>
+        </div>
+
+        {/* Bloc destinataire — nom + adresse pour le colis */}
+        <div className="text-sm bg-gray-50 rounded-lg p-3 leading-relaxed">
+          <p className="font-semibold text-gray-900">
+            {client.prenom} {client.nom}
+          </p>
+          {livraison ? (
+            adresse ? (
+              <p className="text-gray-700">
+                {adresse.rue}<br />
+                {adresse.complementAdresse && <>{adresse.complementAdresse}<br /></>}
+                {adresse.codePostal} {adresse.ville}<br />
+                {adresse.pays}
+              </p>
+            ) : (
+              <p className="text-red-500 text-xs">⚠️ Adresse manquante</p>
+            )
+          ) : null}
+          {client.telephone && <p className="text-gray-600 mt-1">📞 {client.telephone}</p>}
+          <p className="text-gray-500 text-xs mt-1">
+            {livraison ? '📦 Livraison' : '🏪 Retrait en boutique'}
+            {adresse?.pays && adresse.pays !== 'France' && adresse.pays !== 'FR' && (
+              <span className="ml-1 text-blue-600">🌍 {adresse.pays}</span>
+            )}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {onglet === 'apreparer' ? (
+            <button
+              onClick={() => marquerPreparee(commande)}
+              className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1a7e]"
+            >
+              Préparée
+            </button>
+          ) : livraison ? (
+            <button
+              onClick={() => ouvrirModalExpedition(commande)}
+              className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1a7e]"
+            >
+              Postée
+            </button>
+          ) : (
+            <button
+              onClick={() => marquerRetiree(commande)}
+              className="flex-1 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1a7e]"
+            >
+              Récupérée
+            </button>
+          )}
+          {commande.numeroGroupe && (
+            <button
+              onClick={() => genererBordereau(commande)}
+              className="p-2 border rounded-lg hover:bg-gray-100"
+              title="Bordereau à imprimer"
+            >
+              <FileText size={18} className="text-gray-500" />
+            </button>
+          )}
+        </div>
+      </div>
     )
   }
 
-  const commandesIndividuelles = commandesEnAttente.filter(c => {
-    if (c.source === 'ebay') return true // eBay toujours individuel
-    if (!c.numeroGroupe) return true
-    const groupe = groupes.find(g => g.numeroGroupe === c.numeroGroupe)
-    return !groupe || groupe.commandes.length <= 1
-  })
+  // Libellé de sortie dans l'historique (sans badge de statut)
+  const libelleHistorique = (c: Commande) => {
+    if (c.statut === 'expediee') return c.dateExpedition ? `Postée le ${c.dateExpedition.toLocaleDateString('fr-FR')}` : 'Postée'
+    if (c.statut === 'retiree') return 'Récupérée en boutique'
+    if (c.statut === 'annulee') return 'Annulée'
+    return ''
+  }
 
-  // Stats
-  const statsEbay = commandesEnAttente.filter(c => c.source === 'ebay').length
-  const statsSite = commandesEnAttente.filter(c => c.source !== 'ebay').length
+  const listeActive = onglet === 'apreparer' ? aPreparer : onglet === 'aposter' ? aPoster : historique
 
   if (loading) {
     return (
@@ -426,9 +478,7 @@ export default function CommandesPanel({
           <div>
             <h2 className="text-xl font-bold text-gray-900">Gestion des commandes</h2>
             <p className="text-sm text-gray-600 mt-1">
-              {commandesEnAttente.length} commande(s) à traiter
-              {mode !== 'vendeuse' && statsEbay > 0 && <span className="text-yellow-600"> • {statsEbay} eBay</span>}
-              {groupes.length > 0 && ` • ${groupes.length} groupe(s)`}
+              {aPreparer.length + aPoster.length} commande(s) en cours
             </p>
           </div>
           <button
@@ -442,176 +492,48 @@ export default function CommandesPanel({
         </div>
       )}
 
-      <div className="flex gap-4 border-b">
-        <button
-          onClick={() => setOnglet('attente')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            onglet === 'attente'
-              ? 'text-[#22209C] border-b-2 border-[#22209C]'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          À traiter ({commandesEnAttente.length})
-        </button>
-        <button
-          onClick={() => setOnglet('historique')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            onglet === 'historique'
-              ? 'text-[#22209C] border-b-2 border-[#22209C]'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Historique ({commandesHistorique.length})
-        </button>
+      {/* Onglets */}
+      <div className="flex gap-1 border-b overflow-x-auto">
+        {([
+          { key: 'apreparer', label: 'À préparer', count: aPreparer.length },
+          { key: 'aposter', label: 'À poster', count: aPoster.length },
+          { key: 'historique', label: 'Historique', count: historique.length },
+        ] as { key: Onglet; label: string; count: number }[]).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setOnglet(t.key)}
+            className={`px-4 py-2 font-medium text-sm whitespace-nowrap transition-colors ${
+              onglet === t.key
+                ? 'text-[#22209C] border-b-2 border-[#22209C]'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {t.label} ({t.count})
+          </button>
+        ))}
       </div>
 
+      {/* Liste */}
       <div className="mt-4 space-y-4">
-        {onglet === 'attente' ? (
+        {onglet !== 'historique' ? (
           <>
-            {/* Groupes de commandes (site uniquement) */}
-            {groupes.map(groupe => (
-              <div key={groupe.numeroGroupe} className="bg-white rounded-lg shadow border-2 border-orange-300">
-                <div className="bg-orange-50 px-4 py-3 border-b border-orange-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-orange-900">
-                        📦 Groupe - {groupe.commandes.length} produits
-                      </h3>
-                      <p className="text-sm text-orange-700">
-                        {groupe.client.prenom} {groupe.client.nom} • {groupe.client.email}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-orange-900">{formatPrix(groupe.totalPrix, { decimals: 2 })} €</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 space-y-3">
-                  {groupe.commandes.map(commande => (
-                    <div key={commande.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      {commande.imageUrl && (
-                        <img src={commande.imageUrl} alt={commande.produit} className="w-16 h-16 object-cover rounded" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{commande.produit}</p>
-                        <p className="text-xs text-gray-500">
-                          {commande.sku && <span className="font-mono bg-gray-100 px-1 rounded mr-1">{commande.sku}</span>}
-                          {commande.marque && <span>{commande.marque}</span>}
-                          {commande.taille && <span> • T.{commande.taille}</span>}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
-                        <Badge statut={commande.statut} />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {commande.statut === 'payée' && (
-                          <button onClick={() => marquerPreparee(commande)} className="px-3 py-1.5 bg-[#22209C] text-white rounded text-xs hover:bg-[#1a1a7e]">
-                            Préparée
-                          </button>
-                        )}
-                        {commande.statut === 'preparee' && commande.modeLivraison === 'livraison' && (
-                          <button onClick={() => ouvrirModalExpedition(commande)} className="px-3 py-1.5 bg-[#22209C] text-white rounded text-xs hover:bg-[#1a1a7e]">
-                            Envoyée
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {groupe.adresse && (
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs font-semibold text-blue-900 mb-1">📍 Adresse de livraison</p>
-                      <p className="text-xs text-blue-800">
-                        {groupe.adresse.rue}<br />
-                        {groupe.adresse.complementAdresse && <>{groupe.adresse.complementAdresse}<br /></>}
-                        {groupe.adresse.codePostal} {groupe.adresse.ville}<br />
-                        {groupe.adresse.pays}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {listeActive.map(commande => (
+              <Carte key={commande.id} commande={commande} />
             ))}
-
-            {/* Commandes individuelles */}
-            {commandesIndividuelles.map(commande => (
-              <div 
-                key={commande.id} 
-                className={`flex items-center gap-3 p-3 bg-white border rounded-lg hover:shadow-sm ${
-                  mode !== 'vendeuse' && commande.source === 'ebay' ? 'border-l-4 border-l-yellow-400' : ''
-                }`}
-              >
-                {commande.imageUrl ? (
-                  <img src={commande.imageUrl} alt={commande.produit} className="w-14 h-14 object-cover rounded" />
-                ) : (
-                  <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center text-gray-400">Ø</div>
-                )}
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm truncate">{commande.produit}</p>
-                    <SourceBadge source={commande.source} />
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    {commande.sku && <span className="font-mono bg-gray-100 px-1 rounded mr-1">{commande.sku}</span>}
-                    {commande.marque && <span>{commande.marque}</span>}
-                    {commande.taille && <span> • T.{commande.taille}</span>}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {commande.client.prenom} {commande.client.nom?.charAt(0)}.
-                    {mode !== 'vendeuse' && commande.source === 'ebay' && commande.ebayBuyerUsername && (
-                      <span className="text-yellow-600"> (@{commande.ebayBuyerUsername})</span>
-                    )}
-                    {' • '}
-                    {commande.modeLivraison === 'livraison' ? '📦 Livraison' : '🏪 Retrait'}
-                    {commande.adresse?.pays && commande.adresse.pays !== 'France' && (
-                      <span className="ml-1 text-blue-600">🌍 {commande.adresse.pays}</span>
-                    )}
-                  </p>
-                </div>
-                
-                <div className="text-right">
-                  <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
-                  <Badge statut={commande.statut} />
-                </div>
-                
-                <div className="flex gap-1">
-                  {commande.statut === 'payée' && (
-                    <button onClick={() => marquerPreparee(commande)} className="px-3 py-1.5 bg-[#22209C] text-white rounded text-xs hover:bg-[#1a1a7e]">
-                      Préparée
-                    </button>
-                  )}
-                  {commande.statut === 'preparee' && commande.modeLivraison === 'livraison' && (
-                    <button onClick={() => ouvrirModalExpedition(commande)} className="px-3 py-1.5 bg-[#22209C] text-white rounded text-xs hover:bg-[#1a1a7e]">
-                      Envoyée
-                    </button>
-                  )}
-                  {commande.statut === 'preparee' && commande.modeLivraison === 'retrait' && (
-                    <button onClick={() => marquerRetiree(commande)} className="px-3 py-1.5 bg-[#22209C] text-white rounded text-xs hover:bg-[#1a1a7e]">
-                      Récupérée
-                    </button>
-                  )}
-                  <button onClick={() => genererBordereau(commande)} className="p-1.5 hover:bg-gray-100 rounded" title="Bordereau">
-                    <FileText size={16} className="text-gray-500" />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {commandesEnAttente.length === 0 && (
+            {listeActive.length === 0 && (
               <div className="text-center py-12">
                 <Package size={48} className="mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500">Aucune commande à traiter</p>
+                <p className="text-gray-500">
+                  {onglet === 'apreparer' ? 'Aucune commande à préparer' : 'Aucune commande à poster'}
+                </p>
               </div>
             )}
           </>
         ) : (
           <>
-            {commandesHistorique.map(commande => (
-              <div 
-                key={commande.id} 
+            {historique.map(commande => (
+              <div
+                key={commande.id}
                 className={`flex items-center gap-3 p-3 bg-white border rounded-lg ${
                   mode !== 'vendeuse' && commande.source === 'ebay' ? 'border-l-4 border-l-yellow-400' : ''
                 }`}
@@ -631,20 +553,19 @@ export default function CommandesPanel({
                     {commande.marque}{commande.taille && ` • T.${commande.taille}`}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {commande.client.prenom} {commande.client.nom} • {commande.dateCommande.toLocaleDateString('fr-FR')}
+                    {commande.client.prenom} {commande.client.nom} • {libelleHistorique(commande)}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
-                  <Badge statut={commande.statut} />
                   {commande.numeroSuivi && (
-                    <p className="text-xs text-gray-500 mt-1">Suivi: {commande.numeroSuivi}</p>
+                    <p className="text-xs text-gray-500 mt-1">Suivi : {commande.numeroSuivi}</p>
                   )}
                 </div>
               </div>
             ))}
-            
-            {commandesHistorique.length === 0 && (
+
+            {historique.length === 0 && (
               <div className="text-center py-12">
                 <Package size={48} className="mx-auto text-gray-300 mb-3" />
                 <p className="text-gray-500">Aucune commande dans l'historique</p>
@@ -659,12 +580,12 @@ export default function CommandesPanel({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <h3 className="text-xl font-bold mb-4">
-              📦 Expédition
+              📦 Marquer comme postée
               {mode !== 'vendeuse' && commandePourExpedition.source === 'ebay' && (
                 <span className="ml-2 text-sm font-normal text-yellow-600">(eBay)</span>
               )}
             </h3>
-            
+
             {commandePourExpedition.adresse && (
               <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-xs font-semibold text-blue-900 mb-1">📍 Destination</p>
@@ -676,7 +597,7 @@ export default function CommandesPanel({
                 </p>
               </div>
             )}
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Transporteur</label>
@@ -696,7 +617,7 @@ export default function CommandesPanel({
                   <option value="Autre">Autre</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Numéro de suivi {mode !== 'vendeuse' && commandePourExpedition.source === 'ebay' && <span className="text-yellow-600">(requis pour eBay)</span>}
@@ -710,7 +631,7 @@ export default function CommandesPanel({
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => {

@@ -207,7 +207,7 @@ export default function VendeuseLayout({ children }: { children: React.ReactNode
     <div className="min-h-screen bg-gray-50">
       <NotifsAutoSubscribe ownerId="boutique" />
       <VendeuseNavbar />
-      <main>
+      <main className="max-w-6xl mx-auto px-4 py-6">
         {children}
       </main>
     </div>
