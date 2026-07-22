@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 import { collection, query, orderBy, getDocs, doc, updateDoc, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
-import { Package, RefreshCw, FileText, ShoppingBag } from 'lucide-react'
+import { Package, FileText, ShoppingBag } from 'lucide-react'
 import { formatPrix } from '@/lib/formatPrix'
 
 // =====================
@@ -473,19 +473,6 @@ export default function CommandesPanel({
 
   return (
     <div className={compact ? '' : 'space-y-6'}>
-      {!compact && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => chargerCommandes(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            Actualiser
-          </button>
-        </div>
-      )}
-
       {/* Onglets — même display que RE/DEstock (pleine largeur, pastille de compteur) */}
       <div className="flex border-b border-gray-200">
         {([
