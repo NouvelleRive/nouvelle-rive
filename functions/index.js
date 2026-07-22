@@ -577,6 +577,22 @@ exports.pingEbaySync = functions
     } catch (err) {
       console.error('regenSitemap (from pingEbaySync) failed:', err)
     }
+    // 3. Publication luxe sur eBay — 1×/jour seulement (à 08h UTC), 10 pièces max.
+    //    Volontairement lent : publier en masse a déjà valu une restriction compte
+    //    eBay de 10 jours (juillet 2026). 10/jour draine la file sans re-déclencher
+    //    l'alarme. Tant que le compte est restreint, publishToEbay échoue sans effet
+    //    et réessaie le lendemain ; dès le déblocage, la file se vide toute seule.
+    if (new Date().getUTCHours() === 8) {
+      try {
+        const luxeRes = await fetch('https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?max=10', {
+          headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+        })
+        const luxeBody = await luxeRes.text()
+        console.log(`pingEbayLuxe ${luxeRes.status}: ${luxeBody.slice(0, 300)}`)
+      } catch (err) {
+        console.error('pingEbayLuxe failed:', err)
+      }
+    }
     return null
   })
 
