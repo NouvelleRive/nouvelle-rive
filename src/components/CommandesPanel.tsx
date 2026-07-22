@@ -492,8 +492,8 @@ export default function CommandesPanel({
         </div>
       )}
 
-      {/* Onglets */}
-      <div className="flex gap-1 border-b overflow-x-auto">
+      {/* Onglets — les 3 tiennent en pleine largeur, pas de scroll */}
+      <div className="flex border-b">
         {([
           { key: 'apreparer', label: 'À préparer', count: aPreparer.length },
           { key: 'aposter', label: 'À poster', count: aPoster.length },
@@ -502,7 +502,7 @@ export default function CommandesPanel({
           <button
             key={t.key}
             onClick={() => setOnglet(t.key)}
-            className={`px-4 py-2 font-medium text-sm whitespace-nowrap transition-colors ${
+            className={`flex-1 px-1 py-2 font-medium text-[13px] text-center whitespace-nowrap transition-colors ${
               onglet === t.key
                 ? 'text-[#22209C] border-b-2 border-[#22209C]'
                 : 'text-gray-600 hover:text-gray-900'
