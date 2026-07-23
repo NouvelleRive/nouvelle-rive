@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Vintage été — robes, tops, lin, coton',
+  title: 'ÉTÉ — Pièces légères, estivales, colorées',
   description:
-    "Pièces vintage et upcyclées d'été chez NOUVELLE RIVE : robes légères, tops, lin, coton, paillettes pour la plage. Sélection chinée à Paris.",
+    "Robe florale, jupes Y2K, top tank, camo top, floral skirt — pièces vintage et upcyclées d'été chinées à Paris.",
   alternates: { canonical: 'https://www.nouvellerive.eu/ete' },
   openGraph: {
-    title: 'Vintage été — NOUVELLE RIVE',
-    description: "Pièces vintage et upcyclées pour l'été chinées à Paris.",
+    title: 'ÉTÉ — Pièces légères, estivales, colorées | NOUVELLE RIVE',
+    description: "Robe florale, jupes Y2K, top tank, camo top, floral skirt — pièces vintage et upcyclées d'été chinées à Paris.",
     url: 'https://www.nouvellerive.eu/ete',
     type: 'website',
     siteName: 'NOUVELLE RIVE',
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vintage été — NOUVELLE RIVE',
-    description: "Pièces vintage et upcyclées pour l'été.",
+    title: 'ÉTÉ — Pièces légères, estivales, colorées | NOUVELLE RIVE',
+    description: "Robe florale, jupes Y2K, top tank, camo top, floral skirt — pièces vintage et upcyclées d'été.",
     images: ['/facade%20paysage.jpg'],
   },
 }

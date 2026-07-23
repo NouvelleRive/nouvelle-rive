@@ -5,9 +5,9 @@ import { getAllBoutiqueProduitsServer } from '@/lib/produitsServer'
 export const revalidate = 21600
 
 export const metadata: Metadata = {
-  title: 'Toute la boutique — Vintage et upcyclé chinés à Paris',
+  title: 'SÉLECTION EN BOUTIQUE — Vintage, Archives, Designers, Luxe, Y2K, 80s, 90s, Upcycling, Régénéré',
   description:
-    "Toutes les pièces uniques chinées par nos créatrices indépendantes — vintage de luxe, upcycling, créateurs. Boutique au 8 rue des Ecouffes, Paris.",
+    "Prêt-à-porter, maroquinerie, bijouterie, souliers — vintage, archives, designers, luxe, Y2K, 80s, 90s, upcycling et régénéré chez NOUVELLE RIVE.",
   alternates: { canonical: 'https://www.nouvellerive.eu/boutique' },
 }
 

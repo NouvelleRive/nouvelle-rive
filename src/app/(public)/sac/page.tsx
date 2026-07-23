@@ -5,9 +5,9 @@ import { getInitialProduitsForPage } from '@/lib/produitsServer'
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Sacs haute couture et jeunes créatrices — Nouvelle Rive',
+  title: 'SAC — Luxe, Designers, Vintage, Jeune créateurice',
   description:
-    "Sélection de sacs vintage de luxe et de sacs upcyclés par nos jeunes créatrices, chinés à Paris. 8 rue des Écouffes.",
+    "Chanel, Dior, YSL, Bottega, Prada, Gucci, pièces uniques upcyclées — sacs de luxe et créations chinés à Paris.",
   alternates: { canonical: 'https://www.nouvellerive.eu/sac' },
 }
 
