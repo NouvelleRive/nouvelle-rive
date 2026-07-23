@@ -6,13 +6,13 @@ import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Vintage Upcycling Paris',
+  title: { absolute: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais' },
   description:
-    "Boutique vintage et upcycling au cœur du Marais à Paris. Pièces uniques chinées ou designées par des créatrices indépendantes — vintage de luxe, archives, upcycling, créateurs.",
+    "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées — vintage de luxe, upcycling, créatrices. 8 rue des Ecouffes, 75004 Paris.",
   alternates: { canonical: 'https://www.nouvellerive.eu/' },
   openGraph: {
-    title: 'VINTAGE UPCYCLING PARIS | NOUVELLE RIVE',
-    description: "Boutique vintage et upcycling au cœur du Marais à Paris. Pièces uniques chinées ou designées par des créatrices indépendantes — vintage de luxe, archives, upcycling, créateurs.",
+    title: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais',
+    description: "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées — vintage de luxe, upcycling, créatrices. 8 rue des Ecouffes, 75004 Paris.",
     url: 'https://www.nouvellerive.eu',
     type: 'website',
     siteName: 'NOUVELLE RIVE',
@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'VINTAGE UPCYCLING PARIS | NOUVELLE RIVE',
-    description: "Boutique vintage et upcycling au cœur du Marais à Paris. Pièces uniques chinées ou designées par des créatrices indépendantes — vintage de luxe, archives, upcycling, créateurs.",
+    title: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais',
+    description: "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées — vintage de luxe, upcycling, créatrices. 8 rue des Ecouffes, 75004 Paris.",
     images: ['/facade%20paysage.jpg'],
   },
 }
