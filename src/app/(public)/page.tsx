@@ -6,13 +6,13 @@ import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Vintage et upcyclé chinés à Paris',
+  title: 'Vintage Upcycling Paris',
   description:
-    "Boutique vintage et upcyclée au cœur du Marais à Paris. Pièces uniques chinées par des créatrices indépendantes — vintage de luxe, upcycling, créateurs. 8 rue des Ecouffes, 75004 Paris.",
+    "Boutique vintage et upcycling au cœur du Marais à Paris. Pièces uniques chinées ou designées par des créatrices indépendantes — vintage de luxe, archives, upcycling, créateurs.",
   alternates: { canonical: 'https://www.nouvellerive.eu/' },
   openGraph: {
-    title: 'NOUVELLE RIVE — Vintage et upcyclé chinés à Paris',
-    description: "Boutique vintage et upcyclée au cœur du Marais à Paris.",
+    title: 'VINTAGE UPCYCLING PARIS | NOUVELLE RIVE',
+    description: "Boutique vintage et upcycling au cœur du Marais à Paris. Pièces uniques chinées ou designées par des créatrices indépendantes — vintage de luxe, archives, upcycling, créateurs.",
     url: 'https://www.nouvellerive.eu',
     type: 'website',
     siteName: 'NOUVELLE RIVE',
@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NOUVELLE RIVE — Vintage et upcyclé chinés à Paris',
-    description: "Boutique vintage et upcyclée au cœur du Marais à Paris.",
+    title: 'VINTAGE UPCYCLING PARIS | NOUVELLE RIVE',
+    description: "Boutique vintage et upcycling au cœur du Marais à Paris. Pièces uniques chinées ou designées par des créatrices indépendantes — vintage de luxe, archives, upcycling, créateurs.",
     images: ['/facade%20paysage.jpg'],
   },
 }
