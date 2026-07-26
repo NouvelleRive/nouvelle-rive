@@ -4,6 +4,7 @@
   import { useState, useEffect, useRef } from 'react'
   import { X, Image as ImageIcon, Upload, RefreshCw, FileSpreadsheet, Download, Camera } from 'lucide-react'
   import PhotoEditor from '@/components/PhotoEditor'
+  import VideoUploader from '@/components/VideoUploader'
   import ExcelJS from 'exceljs'
   import * as XLSX from 'xlsx'
   import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
@@ -525,44 +526,6 @@ async function compressImage(file: File): Promise<string> {
     const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null)
 
     // Upload vidéo (optionnel)
-    const videoInputRef = useRef<HTMLInputElement>(null)
-    const [uploadingVideo, setUploadingVideo] = useState(false)
-    const handleVideoUpload = async (file: File) => {
-      // Limite Vercel body ~4,5 Mo → cap à 4 Mo (base64 gonfle ~33%)
-      const MAX_SIZE = 4 * 1024 * 1024
-      if (file.size > MAX_SIZE) {
-        alert(`La vidéo fait ${(file.size / 1024 / 1024).toFixed(1)} Mo. Merci de la raccourcir/compresser à moins de 4 Mo.`)
-        return
-      }
-      if (!/\.(mp4|mov|m4v)$/i.test(file.name) && !file.type.startsWith('video/')) {
-        alert('Format vidéo non reconnu. Utilisez un fichier .mp4')
-        return
-      }
-      setUploadingVideo(true)
-      try {
-        // Lire en base64
-        const buf = new Uint8Array(await file.arrayBuffer())
-        const base64 = uint8ArrayToBase64(buf)
-        const timestamp = Date.now()
-        const random = Math.random().toString(36).substring(2, 8)
-        const skuPart = (formData.sku || 'produit').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
-        const path = `produits/videos/${skuPart}_${timestamp}_${random}.mp4`
-        const res = await fetch('/api/upload-bunny', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ base64, path, contentType: 'video/mp4' }),
-        })
-        const data = await res.json()
-        if (!res.ok || !data.url) throw new Error(data.error || 'upload failed')
-        setFormData(prev => ({ ...prev, videoUrl: data.url, deletedVideo: false }))
-      } catch (err) {
-        console.error('Erreur upload vidéo:', err)
-        alert('Erreur upload vidéo. Réessayez ou choisissez une vidéo plus légère.')
-      } finally {
-        setUploadingVideo(false)
-      }
-    }
-
     // Compteur d'uploads en cours (pour le loader)
     const [uploadingCount, setUploadingCount] = useState(0)
     const [generatingDesc, setGeneratingDesc] = useState(false)
@@ -2249,77 +2212,11 @@ async function compressImage(file: File): Promise<string> {
               </div>
 
               {/* Vidéo (optionnel) */}
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-gray-600">Vidéo <span className="text-gray-400 font-normal">(optionnel)</span></label>
-                <p className="text-[10px] text-gray-400 leading-tight">Formats acceptés : .mp4 · max 4 Mo</p>
-
-                {formData.videoUrl && !formData.deletedVideo && (
-                  <div className="relative group">
-                    <video
-                      src={formData.videoUrl}
-                      className="w-full h-32 object-cover rounded border bg-black"
-                      muted
-                      playsInline
-                      controls
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, videoUrl: '', deletedVideo: true }))}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                      title="Supprimer la vidéo"
-                    >
-                      <X size={14} />
-                    </button>
-                    <span className="absolute bottom-1 left-1 text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">✓</span>
-                  </div>
-                )}
-
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault()
-                    e.currentTarget.classList.add('border-blue-500', 'bg-blue-100')
-                  }}
-                  onDragLeave={(e) => {
-                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault()
-                    e.currentTarget.classList.remove('border-blue-500', 'bg-blue-100')
-                    const file = e.dataTransfer.files[0]
-                    if (file && (file.type.startsWith('video/') || /\.(mp4|mov|m4v)$/i.test(file.name))) {
-                      handleVideoUpload(file)
-                    } else {
-                      alert('Veuillez déposer une vidéo (.mp4)')
-                    }
-                  }}
-                  className="border-2 border-dashed border-gray-300 rounded p-2 text-center transition-colors"
-                >
-                  {uploadingVideo ? (
-                    <div className="flex items-center justify-center gap-2 text-blue-600 h-12">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span className="text-xs">Upload en cours…</span>
-                    </div>
-                  ) : (
-                    <label className="cursor-pointer block h-12 flex items-center justify-center">
-                      <div className="flex items-center gap-2 text-gray-500">
-                        <Upload size={16} />
-                        <span className="text-xs">{formData.videoUrl && !formData.deletedVideo ? 'Remplacer' : 'Ajouter une vidéo'}</span>
-                      </div>
-                      <input
-                        ref={videoInputRef}
-                        type="file"
-                        accept="video/mp4,video/quicktime,.mp4,.mov,.m4v"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) handleVideoUpload(file)
-                          e.target.value = ''
-                        }}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
+              <VideoUploader
+                value={formData.deletedVideo ? '' : (formData.videoUrl || '')}
+                skuHint={formData.sku}
+                onChange={(url) => setFormData(prev => ({ ...prev, videoUrl: url, deletedVideo: !url }))}
+              />
             </div>
 
             {formData.existingPhotos.faceOnModel && !formData.deletedPhotos.faceOnModel && (
