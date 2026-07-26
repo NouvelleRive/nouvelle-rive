@@ -44,19 +44,21 @@ export default function VideoUploader({ value, onChange, skuHint, className }: P
     }
     setUploading(true)
     try {
-      if (file.size > MAX_SIZE) {
-        setStatus('Compression en cours…')
-        const compressed = await compressVideoToMp4(file, MAX_SIZE, setStatus)
-        if (!compressed) {
-          alert(`La vidéo fait ${(file.size / 1024 / 1024).toFixed(1)} Mo et votre navigateur ne sait pas la compresser. Réduisez-la à moins de 3,5 Mo, ou utilisez Chrome/Safari.`)
+      // Ré-encode toujours : supprime le son sur TOUTES les vidéos + compresse si trop lourde
+      setStatus('Traitement de la vidéo…')
+      const processed = await compressVideoToMp4(file, MAX_SIZE, setStatus)
+      if (processed) {
+        if (processed.size > MAX_SIZE) {
+          alert(`Même compressée, la vidéo fait ${(processed.size / 1024 / 1024).toFixed(1)} Mo. Merci de la raccourcir un peu (vidéo trop longue).`)
           return
         }
-        if (compressed.size > MAX_SIZE) {
-          alert(`Même compressée, la vidéo fait ${(compressed.size / 1024 / 1024).toFixed(1)} Mo. Merci de la raccourcir un peu (vidéo trop longue).`)
-          return
-        }
-        file = new File([compressed], file.name.replace(/\.[^.]+$/, '') + '.mp4', { type: 'video/mp4' })
+        file = new File([processed], file.name.replace(/\.[^.]+$/, '') + '.mp4', { type: 'video/mp4' })
+      } else if (file.size > MAX_SIZE) {
+        // Navigateur incapable de ré-encoder ET fichier trop lourd → on bloque
+        alert(`La vidéo fait ${(file.size / 1024 / 1024).toFixed(1)} Mo et votre navigateur ne sait pas la compresser. Réduisez-la à moins de 3,5 Mo, ou utilisez Chrome/Safari.`)
+        return
       }
+      // (si processed === null mais fichier léger : upload tel quel, son conservé faute de mieux)
 
       setStatus('Upload en cours…')
       const buf = new Uint8Array(await file.arrayBuffer())

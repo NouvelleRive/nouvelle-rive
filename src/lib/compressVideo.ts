@@ -73,8 +73,10 @@ async function encodeOnce(file: File, { maxDim = 720, bitrate = 2_000_000 }: Opt
 }
 
 /**
- * Compresse `file` jusqu'à passer sous `targetBytes`.
- * Réduit progressivement bitrate puis résolution si nécessaire.
+ * Ré-encode `file` en MP4 SANS SON, jusqu'à passer sous `targetBytes`.
+ * Part de la résolution d'origine (cap 1080p) puis réduit bitrate/résolution
+ * seulement si nécessaire. Appelé sur TOUTES les vidéos (le son est toujours
+ * supprimé, même sur les fichiers déjà légers).
  * Renvoie un Blob MP4, ou null si le navigateur ne sait pas produire de MP4.
  */
 export async function compressVideoToMp4(
@@ -85,15 +87,15 @@ export async function compressVideoToMp4(
   if (!canCompressToMp4()) return null
 
   const attempts: Opts[] = [
-    { maxDim: 720, bitrate: 2_000_000 },
-    { maxDim: 720, bitrate: 1_200_000 },
-    { maxDim: 540, bitrate: 900_000 },
-    { maxDim: 480, bitrate: 650_000 },
+    { maxDim: 1080, bitrate: 2_500_000 },
+    { maxDim: 720, bitrate: 1_500_000 },
+    { maxDim: 720, bitrate: 1_000_000 },
+    { maxDim: 540, bitrate: 700_000 },
   ]
 
   let best: Blob | null = null
   for (let i = 0; i < attempts.length; i++) {
-    onProgress?.(`Compression en cours… (essai ${i + 1})`)
+    onProgress?.(i === 0 ? 'Traitement de la vidéo…' : `Compression en cours… (essai ${i + 1})`)
     const blob = await encodeOnce(file, attempts[i])
     if (!best || blob.size < best.size) best = blob
     if (blob.size <= targetBytes) return blob
