@@ -7,7 +7,7 @@ import RegisterSW from "@/components/RegisterSW";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.nouvellerive.eu"),
   title: {
-    default: "NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais",
+    default: "NOUVELLE RIVE — Vintage Upcycling Régénéré Marais",
     template: "%s | NOUVELLE RIVE",
   },
   description:
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     siteName: "NOUVELLE RIVE",
     url: "https://www.nouvellerive.eu",
-    title: "NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais",
+    title: "NOUVELLE RIVE — Vintage Upcycling Régénéré Marais",
     description:
       "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées.",
     images: [
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais",
+    title: "NOUVELLE RIVE — Vintage Upcycling Régénéré Marais",
     description:
       "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Vintage, upcycling, créatrices indépendantes.",
     images: ["/facade%20paysage.jpg"],

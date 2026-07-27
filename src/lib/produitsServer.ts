@@ -34,6 +34,7 @@ export type ProduitInitial = {
   vendu: boolean
   promotion?: boolean
   sku?: string
+  createdAt?: number
 }
 
 export function toMillis(v: any): number {
@@ -66,6 +67,7 @@ export function serialize(id: string, raw: any): ProduitInitial {
     vendu: !!raw.vendu,
     promotion: !!raw.promotion,
     sku: raw.sku,
+    createdAt: toMillis(raw.createdAt) || undefined,
   }
 }
 

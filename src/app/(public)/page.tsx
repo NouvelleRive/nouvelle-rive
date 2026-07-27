@@ -6,12 +6,12 @@ import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: { absolute: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais' },
+  title: { absolute: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Marais' },
   description:
     "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées — vintage de luxe, upcycling, créatrices. 8 rue des Ecouffes, 75004 Paris.",
   alternates: { canonical: 'https://www.nouvellerive.eu/' },
   openGraph: {
-    title: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais',
+    title: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Marais',
     description: "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées — vintage de luxe, upcycling, créatrices. 8 rue des Ecouffes, 75004 Paris.",
     url: 'https://www.nouvellerive.eu',
     type: 'website',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Paris le Marais',
+    title: 'NOUVELLE RIVE — Vintage Upcycling Régénéré Marais',
     description: "Boutique slow fashion au cœur du Marais à Paris. Woman owned. Pièces uniques chinées ou designées par des créatrices indépendantes et engagées — vintage de luxe, upcycling, créatrices. 8 rue des Ecouffes, 75004 Paris.",
     images: ['/facade%20paysage.jpg'],
   },

@@ -68,6 +68,19 @@ function formatDisplayTitle(produit: Produit, lang: Lang = 'fr'): string {
   return baseTitle.replace(/\s+/g, ' ').trim()
 }
 
+// createdAt peut arriver en Timestamp Firestore (client) ou en millis (liste boutique sérialisée).
+function toMs(v: any): number {
+  if (!v) return 0
+  if (typeof v.toMillis === 'function') return v.toMillis()
+  if (typeof v === 'number') return v
+  if (typeof v === 'string') {
+    const t = new Date(v).getTime()
+    return Number.isFinite(t) ? t : 0
+  }
+  if (v?.seconds) return v.seconds * 1000
+  return 0
+}
+
 type Produit = {
   id: string
   nom: string
@@ -469,8 +482,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       filteredProduits.sort((a, b) => b.prix - a.prix)
     } else if (tri === 'nouveautes') {
       filteredProduits.sort((a, b) => {
-        const dateA = a.createdAt?.toMillis?.() || 0
-        const dateB = b.createdAt?.toMillis?.() || 0
+        const dateA = toMs(a.createdAt)
+        const dateB = toMs(b.createdAt)
         return dateB - dateA
       })
     }
