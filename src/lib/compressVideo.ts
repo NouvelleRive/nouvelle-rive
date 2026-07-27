@@ -259,9 +259,13 @@ export async function compressVideoToMp4(
   let best: Blob | null = null
   for (let i = 0; i < attempts.length; i++) {
     onProgress?.(i === 0 ? 'Traitement de la vidéo…' : `Compression en cours… (essai ${i + 1})`)
-    const blob = await encodeMediaRecorder(file, attempts[i])
-    if (!best || blob.size < best.size) best = blob
-    if (blob.size <= targetBytes) return blob
+    try {
+      const blob = await encodeMediaRecorder(file, attempts[i])
+      if (!best || blob.size < best.size) best = blob
+      if (blob.size <= targetBytes) return blob
+    } catch (e) {
+      console.warn(`Essai MediaRecorder ${i + 1} échoué :`, e)
+    }
   }
   return best
 }

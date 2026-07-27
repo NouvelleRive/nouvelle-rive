@@ -75,9 +75,9 @@ export default function VideoUploader({ value, onChange, skuHint, className }: P
       const data = await res.json()
       if (!res.ok || !data.url) throw new Error(data.error || 'upload failed')
       onChange(data.url)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur upload vidéo:', err)
-      alert('Erreur upload vidéo. Réessayez ou choisissez une vidéo plus légère.')
+      alert(`Erreur upload vidéo : ${err?.message || err}. Réessayez, ou choisissez une vidéo plus légère.`)
     } finally {
       setUploading(false)
       setStatus('')
