@@ -40,6 +40,8 @@ async function encodeOnce(file: File, { maxDim = 720, bitrate = 2_000_000 }: Opt
     canvas.width = w
     canvas.height = h
     const ctx = canvas.getContext('2d')!
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
 
     const stream = canvas.captureStream(30)
     const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitrate })
@@ -72,11 +74,31 @@ async function encodeOnce(file: File, { maxDim = 720, bitrate = 2_000_000 }: Opt
   }
 }
 
+/** Durée de la vidéo en secondes (0 si indéterminable). */
+async function getDuration(file: File): Promise<number> {
+  const url = URL.createObjectURL(file)
+  const v = document.createElement('video')
+  v.src = url
+  v.muted = true
+  try {
+    await new Promise<void>((res, rej) => {
+      v.onloadedmetadata = () => res()
+      v.onerror = () => rej(new Error('meta'))
+    })
+    return isFinite(v.duration) && v.duration > 0 ? v.duration : 0
+  } catch {
+    return 0
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
 /**
- * Ré-encode `file` en MP4 SANS SON, jusqu'à passer sous `targetBytes`.
- * Part de la résolution d'origine (cap 1080p) puis réduit bitrate/résolution
- * seulement si nécessaire. Appelé sur TOUTES les vidéos (le son est toujours
- * supprimé, même sur les fichiers déjà légers).
+ * Ré-encode `file` en MP4 SANS SON, en visant la meilleure qualité possible
+ * sous `targetBytes`. Le bitrate est calculé à partir de la durée pour utiliser
+ * tout le budget de taille disponible (au lieu d'un bitrate fixe trop bas).
+ * Ne réduit la résolution que si le bitrate calculé reste insuffisant.
+ * Appelé sur TOUTES les vidéos (le son est toujours supprimé).
  * Renvoie un Blob MP4, ou null si le navigateur ne sait pas produire de MP4.
  */
 export async function compressVideoToMp4(
@@ -86,11 +108,20 @@ export async function compressVideoToMp4(
 ): Promise<Blob | null> {
   if (!canCompressToMp4()) return null
 
+  const duration = await getDuration(file)
+  // Bitrate budget : 88 % de la cible réparti sur la durée (marge conteneur/keyframes).
+  const budget =
+    duration > 0
+      ? Math.min(12_000_000, Math.max(800_000, Math.floor((targetBytes * 8 * 0.88) / duration)))
+      : 3_000_000
+
+  // On garde la résolution d'origine (cap 1080p) tant que possible ; on ne
+  // downscale qu'en dernier recours si le fichier dépasse encore la cible.
   const attempts: Opts[] = [
-    { maxDim: 1080, bitrate: 2_500_000 },
-    { maxDim: 720, bitrate: 1_500_000 },
-    { maxDim: 720, bitrate: 1_000_000 },
-    { maxDim: 540, bitrate: 700_000 },
+    { maxDim: 1080, bitrate: budget },
+    { maxDim: 1080, bitrate: Math.floor(budget * 0.75) },
+    { maxDim: 720, bitrate: Math.floor(budget * 0.6) },
+    { maxDim: 540, bitrate: Math.floor(budget * 0.5) },
   ]
 
   let best: Blob | null = null
