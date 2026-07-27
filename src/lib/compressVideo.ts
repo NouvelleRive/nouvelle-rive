@@ -115,13 +115,15 @@ export async function compressVideoToMp4(
       ? Math.min(12_000_000, Math.max(800_000, Math.floor((targetBytes * 8 * 0.88) / duration)))
       : 3_000_000
 
-  // On garde la résolution d'origine (cap 1080p) tant que possible ; on ne
-  // downscale qu'en dernier recours si le fichier dépasse encore la cible.
+  // Priorité à la résolution : on épuise le 1080p en baissant le bitrate AVANT
+  // de downscaler (une vidéo produit = peu de mouvement, 1080p à bitrate modéré
+  // reste bien plus net qu'un 720p). On ne downscale qu'en tout dernier recours.
   const attempts: Opts[] = [
     { maxDim: 1080, bitrate: budget },
-    { maxDim: 1080, bitrate: Math.floor(budget * 0.75) },
-    { maxDim: 720, bitrate: Math.floor(budget * 0.6) },
-    { maxDim: 540, bitrate: Math.floor(budget * 0.5) },
+    { maxDim: 1080, bitrate: Math.floor(budget * 0.7) },
+    { maxDim: 1080, bitrate: Math.floor(budget * 0.5) },
+    { maxDim: 900, bitrate: Math.floor(budget * 0.5) },
+    { maxDim: 720, bitrate: Math.floor(budget * 0.45) },
   ]
 
   let best: Blob | null = null

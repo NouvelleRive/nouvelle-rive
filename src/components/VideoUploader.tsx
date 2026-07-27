@@ -4,8 +4,8 @@ import { useRef, useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import { compressVideoToMp4 } from '@/lib/compressVideo'
 
-// Limite Vercel body ~4,5 Mo → cible 3,5 Mo une fois en base64
-const MAX_SIZE = 3.5 * 1024 * 1024
+// Limite Vercel body ~4,5 Mo → cible 3,2 Mo (base64 ~4,3 Mo, sous la limite)
+const MAX_SIZE = 3.2 * 1024 * 1024
 
 function uint8ArrayToBase64(uint8Array: Uint8Array): string {
   const CHUNK_SIZE = 0x8000 // 32KB chunks
@@ -29,7 +29,7 @@ type Props = {
 
 /**
  * Uploader vidéo réutilisable pour les fiches produit.
- * Compresse automatiquement (navigateur, son coupé) toute vidéo > 3,5 Mo
+ * Compresse automatiquement (navigateur, son coupé) toute vidéo > 3,2 Mo
  * avant l'upload vers Bunny. Sortie MP4 lisible partout.
  */
 export default function VideoUploader({ value, onChange, skuHint, className }: Props) {
@@ -55,7 +55,7 @@ export default function VideoUploader({ value, onChange, skuHint, className }: P
         file = new File([processed], file.name.replace(/\.[^.]+$/, '') + '.mp4', { type: 'video/mp4' })
       } else if (file.size > MAX_SIZE) {
         // Navigateur incapable de ré-encoder ET fichier trop lourd → on bloque
-        alert(`La vidéo fait ${(file.size / 1024 / 1024).toFixed(1)} Mo et votre navigateur ne sait pas la compresser. Réduisez-la à moins de 3,5 Mo, ou utilisez Chrome/Safari.`)
+        alert(`La vidéo fait ${(file.size / 1024 / 1024).toFixed(1)} Mo et votre navigateur ne sait pas la compresser. Réduisez-la à moins de 3,2 Mo, ou utilisez Chrome/Safari.`)
         return
       }
       // (si processed === null mais fichier léger : upload tel quel, son conservé faute de mieux)
