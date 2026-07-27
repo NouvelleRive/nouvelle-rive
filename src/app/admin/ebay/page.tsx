@@ -6,6 +6,7 @@ import { useAdmin } from '@/lib/admin/context'
 import { getBrandPriority } from '@/lib/admin/helpers'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot } from 'firebase/firestore'
+import EbayPostingCalendar from './EbayPostingCalendar'
 
 export default function AdminEbayPage() {
   const { produitsFiltres, loadData, loading } = useAdmin()
@@ -174,6 +175,36 @@ useEffect(() => {
   const publishedCount = produitsActifs.filter(p => p.ebayListingId).length
   const totalCount = produitsActifs.length
 
+  // Stock disponible (non publié) pour le calendrier de re-publication
+  const nonLuxeDispo = produitsActifs.filter(p => !p.ebayListingId && getBrandPriority(p.marque) >= 20).length
+  const luxeDispo = produitsActifs.filter(p => !p.ebayListingId && getBrandPriority(p.marque) < 20).length
+
+  // Pièces prévues pour la phase de chauffe : non publiées, non-luxe.
+  // Priorité aux sacs STRC (chineuse "strass chronique") — pas chers, pas de taille, canons.
+  const candidatsChauffe = useMemo(() => {
+    return produitsActifs
+      .filter(p => !p.ebayListingId && getBrandPriority(p.marque) >= 20)
+      .map(p => {
+        const tri = p.sku?.match(/^[A-Z]+/)?.[0]?.toUpperCase() || ''
+        return { p, tri }
+      })
+      .sort((a, b) => {
+        const aStrc = a.tri === 'STRC' ? 0 : 1
+        const bStrc = b.tri === 'STRC' ? 0 : 1
+        if (aStrc !== bStrc) return aStrc - bStrc      // STRC d'abord
+        return (a.p.prix ?? 0) - (b.p.prix ?? 0)        // puis moins cher d'abord
+      })
+      .slice(0, 15)
+      .map(({ p }) => ({
+        id: p.id,
+        nom: p.nom || '—',
+        marque: p.marque || '',
+        prix: p.prix ?? null,
+        sku: p.sku || '',
+        image: getMainImage(p),
+      }))
+  }, [produitsActifs])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -184,6 +215,9 @@ useEffect(() => {
 
   return (
     <div className="space-y-4">
+      {/* Calendrier de re-publication (compte en déblocage) */}
+      <EbayPostingCalendar nonLuxeDispo={nonLuxeDispo} luxeDispo={luxeDispo} candidats={candidatsChauffe} />
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
