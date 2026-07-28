@@ -169,6 +169,21 @@
       }
     }
 
+    // Vercel renvoie un 413 "Request Entity Too Large" en TEXTE brut (pas de
+    // JSON) quand le corps dépasse ~4,5 Mo : res.json() plantait alors avec
+    // "Unexpected token 'R'". On lit d'abord le texte et on donne un message clair.
+    const parseDetourage = async (res: Response) => {
+      const text = await res.text()
+      try {
+        return JSON.parse(text)
+      } catch {
+        if (res.status === 413 || /request entity too large/i.test(text)) {
+          throw new Error('Image trop lourde pour l’envoi — réessaie, elle sera compressée.')
+        }
+        throw new Error(`Erreur serveur (${res.status})`)
+      }
+    }
+
     const handleAutoRemove = async () => {
       setProcessing(true)
       setError(null)
@@ -276,7 +291,10 @@
           drawH_display * k,
         )
 
-        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/png'))
+        // JPEG (fond blanc opaque garanti) au lieu de PNG : ~5× plus léger, ça
+        // reste sous la limite 4,5 Mo de Vercel (fin du 413 "Request Entity Too
+        // Large"). Le serveur re-encode en PNG via sharp de toute façon.
+        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.95))
         const arrayBuffer = await blob.arrayBuffer()
         const uint8 = new Uint8Array(arrayBuffer)
         let binary = ''
@@ -291,7 +309,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ base64, uploadOnly: true, skipDetourage: true }),
         })
-        const data = await res.json()
+        const data = await parseDetourage(res)
         if (data.success && data.maskUrl) {
           onConfirm(data.maskUrl)
         } else {
@@ -417,7 +435,10 @@
         ctx.translate(offset.x * cssToCanvas, offset.y * cssToCanvas)
         ctx.drawImage(img, -dispW / 2, -dispH / 2, dispW, dispH)
 
-        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/png'))
+        // JPEG (fond blanc opaque garanti) au lieu de PNG : ~5× plus léger, ça
+        // reste sous la limite 4,5 Mo de Vercel (fin du 413 "Request Entity Too
+        // Large"). Le serveur re-encode en PNG via sharp de toute façon.
+        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/jpeg', 0.95))
         const arrayBuffer = await blob.arrayBuffer()
         const uint8 = new Uint8Array(arrayBuffer)
         let binary = ''
@@ -432,7 +453,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ base64, uploadOnly: true, skipDetourage: true }),
         })
-        const data = await res.json()
+        const data = await parseDetourage(res)
 
         if (data.success && data.maskUrl) {
           onConfirm(data.maskUrl)
