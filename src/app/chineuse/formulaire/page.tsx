@@ -226,6 +226,20 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
       // setDoc avec SKU comme ID = impossible de créer un doublon même en double-cliquant
       await setDoc(doc(db, 'produits', sku), payload)
 
+      // Insère la pièce dans le cache blob `produits-all` (sinon invisible côté
+      // admin jusqu'à expiration du TTL 6h). Fire-and-forget : un échec ici ne
+      // doit pas bloquer la chineuse.
+      try {
+        const token = await user.getIdToken()
+        await fetch('/api/produits/patch-cache', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ productId: sku }),
+        })
+      } catch {
+        /* ignore */
+      }
+
       alert('✅ Produit ajouté avec succès !')
 
       // Refresh SKU for next product
@@ -251,7 +265,8 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
       let currentSkuNum = extractSkuNumFromSkuOrName(sku, trigramme) || 0
       
       let successCount = 0
-      
+      const createdSkus: string[] = []
+
       for (const produit of produits) {
         // Générer le SKU si pas fourni
         let rowSku = produit.sku
@@ -293,10 +308,26 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
         }
         
         await setDoc(doc(db, 'produits', rowSku), payload)
+        createdSkus.push(rowSku)
 
         successCount++
       }
-      
+
+      // Insère le lot dans le cache blob `produits-all` (sinon invisible côté
+      // admin jusqu'à expiration du TTL 6h). Fire-and-forget.
+      if (createdSkus.length) {
+        try {
+          const token = await user.getIdToken()
+          await fetch('/api/produits/patch-cache', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ productIds: createdSkus }),
+          })
+        } catch {
+          /* ignore */
+        }
+      }
+
       alert(`✅ ${successCount} produit(s) importé(s) avec succès !`)
       
       // Refresh SKU
