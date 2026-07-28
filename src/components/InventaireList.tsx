@@ -10,6 +10,30 @@
   } from 'lucide-react'
   import { getColorsPrioritized } from '@/lib/couleurs'
   import { getMatieresForCategorie } from '@/lib/matieres'
+  import PhotoEditor from '@/components/PhotoEditor'
+
+  // Compression d'une photo (camera) -> base64 JPEG, avant upload/détourage.
+  async function compressImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      img.onload = () => {
+        let { width, height } = img
+        const maxDim = 1600
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = (height / width) * maxDim; width = maxDim }
+          else { width = (width / height) * maxDim; height = maxDim }
+        }
+        canvas.width = width
+        canvas.height = height
+        ctx?.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1])
+      }
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+  }
 
   // Libellé catégorie (le champ peut être une string ou { label })
   const catLabel = (c: unknown): string =>
@@ -191,14 +215,13 @@
     const [phaseAProcessingId, setPhaseAProcessingId] = useState<string | null>(null)
     const [phaseBReuploadingId, setPhaseBReuploadingId] = useState<string | null>(null)
     const phaseBCameraRef = useRef<HTMLInputElement>(null)
-    // Vérif photo/couleur/matière déclenchée à chaque réception d'une pièce chineuse
-    const [photoCheckPiece, setPhotoCheckPiece] = useState<Produit | null>(null)
+    // Couleur / matière éditées dans le carousel photos de fin de restock (Phase B)
     const [photoCheckColor, setPhotoCheckColor] = useState('')
     const [photoCheckMaterial, setPhotoCheckMaterial] = useState('')
-    const [photoCheckSaving, setPhotoCheckSaving] = useState(false)
-    const [photoCheckReuploading, setPhotoCheckReuploading] = useState(false)
     const [photoCheckShowAllColors, setPhotoCheckShowAllColors] = useState(false)
-    const photoCheckCameraRef = useRef<HTMLInputElement>(null)
+    // Reprise photo en fin de restock : éditeur de détourage (même interface qu'à la saisie)
+    const [photoEditProduct, setPhotoEditProduct] = useState<Produit | null>(null)
+    const [photoEditUrl, setPhotoEditUrl] = useState<string | null>(null)
     // Reset la session Phase A dès que le popup ferme (peu importe la sortie)
     useEffect(() => {
       if (!restockFiniChineuse) {
@@ -206,6 +229,30 @@
         setPricesInput({})
       }
     }, [restockFiniChineuse])
+
+    // Phase B (validation des photos) : quand on arrive sur une pièce du carousel,
+    // pré-charger sa couleur + sa matière dans les sélecteurs (édités puis sauvés
+    // au « OK → »). Volontairement PAS déclenché sur `produits` pour ne pas écraser
+    // une sélection en cours à chaque snapshot Firestore.
+    useEffect(() => {
+      if (!restockFiniChineuse || restockShowGrid) return
+      const tri = restockFiniChineuse.trigramme
+      const pieces = produits.filter(p =>
+        getTri(p) === tri &&
+        p.statut !== 'supprime' && p.statut !== 'vendu' && p.statut !== 'retour' &&
+        p.vendu !== true
+      )
+      const photosACheck = pieces
+        .filter(p => sessionReceivedIds.has(p.id) && (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
+        .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
+      const cur = photosACheck[Math.min(restockPhotoIndex, photosACheck.length - 1)]
+      if (cur) {
+        setPhotoCheckColor(cur.color || '')
+        setPhotoCheckMaterial(cur.material || '')
+        setPhotoCheckShowAllColors(false)
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [restockFiniChineuse, restockPhotoIndex, restockShowGrid])
     // Infinite scroll
     const [visibleCount, setVisibleCount] = useState(20)
     const loaderRef = useRef<HTMLDivElement>(null)
@@ -489,13 +536,24 @@
         nextReceived.add(p.id)
         setSessionReceivedIds(nextReceived)
 
-        // Vérif immédiate photo/couleur/matière (pièce-par-pièce, en réception)
-        // Le trigger fin-de-restock (Phase A/B/C) est reporté à la fermeture
-        // de ce popup pour ne pas ouvrir deux popups en même temps.
+        // Plus de check photo pièce-par-pièce : tout se valide en une fois à la fin.
+        // Si c'était la dernière pièce à recevoir pour ce trigramme, on enchaîne
+        // directement la validation groupée (Phase A pièces / B photos / C favoris).
         if (mode === 'reception') {
-          setPhotoCheckColor(p.color || '')
-          setPhotoCheckMaterial(p.material || '')
-          setPhotoCheckPiece(p)
+          const tri = getTri(p)
+          if (tri) {
+            const remaining = produits.filter(o =>
+              o.id !== p.id &&
+              !nextReceived.has(o.id) &&
+              getTri(o) === tri &&
+              o.statut !== 'supprime' &&
+              (((o as any).statutRestock === 'enAttente') || o.recu === false)
+            )
+            if (remaining.length === 0) {
+              setRestockPhotoIndex(0)
+              setRestockFiniChineuse({ trigramme: tri, nom: getNomFromTri(tri) })
+            }
+          }
         }
       } catch (err) {
         console.error('Erreur réception:', err)
@@ -1484,219 +1542,6 @@
           </div>
         )}
 
-        {/* Popup vérif à chaque réception : photo face + couleur + matière */}
-        {photoCheckPiece && (() => {
-          const p = photoCheckPiece
-          const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
-          // Couleurs et matières : mêmes modules que la création (ordre par catégorie)
-          const cat = catLabel(p.categorie)
-          const { priority: priorityColors, others: otherColors } = getColorsPrioritized(cat)
-          const displayedColors = photoCheckShowAllColors ? [...priorityColors, ...otherColors] : priorityColors
-          const matieresDisponibles = getMatieresForCategorie(cat)
-          const selectedColors = photoCheckColor ? photoCheckColor.split(', ').filter(Boolean) : []
-          const selectedMatieres = photoCheckMaterial ? photoCheckMaterial.split(', ').filter(Boolean) : []
-          const toggleColor = (name: string) => {
-            setPhotoCheckColor(
-              (selectedColors.includes(name) ? selectedColors.filter(x => x !== name) : [...selectedColors, name]).join(', ')
-            )
-          }
-          const toggleMatiere = (name: string) => {
-            setPhotoCheckMaterial(
-              (selectedMatieres.includes(name) ? selectedMatieres.filter(x => x !== name) : [...selectedMatieres, name]).join(', ')
-            )
-          }
-          const closePopup = () => {
-            setPhotoCheckPiece(null)
-            setPhotoCheckColor('')
-            setPhotoCheckMaterial('')
-            setPhotoCheckShowAllColors(false)
-            // À la fermeture : si c'était la dernière pièce à recevoir pour ce
-            // trigramme (dans le stock non-reçu actuel), enchaîner Phase A/B/C.
-            const tri = getTri(p)
-            if (mode === 'reception' && tri) {
-              const remaining = produits.filter(o =>
-                o.id !== p.id &&
-                !sessionReceivedIds.has(o.id) &&
-                getTri(o) === tri &&
-                o.statut !== 'supprime' &&
-                (((o as any).statutRestock === 'enAttente') || o.recu === false)
-              )
-              if (remaining.length === 0) {
-                setRestockPhotoIndex(0)
-                setRestockFiniChineuse({ trigramme: tri, nom: getNomFromTri(tri) })
-              }
-            }
-          }
-          const valider = async () => {
-            if (photoCheckSaving) return
-            const newColor = photoCheckColor.trim()
-            const newMaterial = photoCheckMaterial.trim()
-            const colorChanged = newColor !== (p.color || '').trim()
-            const materialChanged = newMaterial !== (p.material || '').trim()
-            if (!colorChanged && !materialChanged) { closePopup(); return }
-            setPhotoCheckSaving(true)
-            try {
-              const update: Record<string, unknown> = {}
-              if (colorChanged) update.color = newColor
-              if (materialChanged) update.material = newMaterial
-              await updateDoc(doc(db, 'produits', p.id), update)
-              onProductUpdate?.()
-              closePopup()
-            } catch (err: any) {
-              alert('Erreur : ' + (err?.message || 'inconnue'))
-            } finally {
-              setPhotoCheckSaving(false)
-            }
-          }
-          return (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-3">
-              <div className="bg-white rounded-xl w-full max-w-md p-3 flex flex-col gap-2 max-h-[92vh] overflow-y-auto">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-gray-500">{p.sku}</span>
-                  <button
-                    onClick={closePopup}
-                    className="text-gray-400 hover:text-gray-600 -mr-1"
-                    aria-label="Fermer"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                {face ? (
-                  <img
-                    src={face}
-                    alt={p.nom}
-                    className="w-full h-[32vh] flex-shrink-0 object-contain bg-gray-50 rounded-lg"
-                  />
-                ) : (
-                  <div className="w-full h-[32vh] flex-shrink-0 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-sm">
-                    Pas de photo
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Couleur</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {displayedColors.map((c) => {
-                      const isSel = selectedColors.includes(c.name)
-                      return (
-                        <button
-                          key={c.name}
-                          type="button"
-                          onClick={() => toggleColor(c.name)}
-                          title={c.name}
-                          className={`relative w-7 h-7 rounded-full border-2 transition-all ${
-                            isSel
-                              ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30'
-                              : 'border-gray-200 hover:border-gray-400'
-                          }`}
-                          style={{
-                            background: c.hex,
-                            boxShadow: ['Blanc', 'Ivoire', 'Crème'].includes(c.name) ? 'inset 0 0 0 1px #ddd' : undefined,
-                          }}
-                        >
-                          {isSel && (
-                            <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
-                              ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet', 'Prune', 'Aubergine'].includes(c.name)
-                                ? 'text-white'
-                                : 'text-gray-800'
-                            }`}>
-                              ✓
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                    {otherColors.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setPhotoCheckShowAllColors(!photoCheckShowAllColors)}
-                        className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 text-xs font-bold"
-                      >
-                        {photoCheckShowAllColors ? '−' : '+'}
-                      </button>
-                    )}
-                  </div>
-                  {photoCheckColor && (
-                    <p className="text-xs text-[#22209C] mt-1 font-medium">{photoCheckColor}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Matière</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {matieresDisponibles.map((m) => {
-                      const isSel = selectedMatieres.includes(m)
-                      return (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => toggleMatiere(m)}
-                          className={`px-2.5 py-1 rounded-full border text-xs transition-all ${
-                            isSel
-                              ? 'border-[#22209C] bg-[#22209C] text-white'
-                              : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <input
-                  ref={photoCheckCameraRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0]
-                    e.target.value = ''
-                    if (!file) return
-                    setPhotoCheckReuploading(true)
-                    try {
-                      const url = await uploadToBunny(file)
-                      await updateDoc(doc(db, 'produits', p.id), {
-                        'photos.face': url,
-                        imageUrl: url,
-                        imageUrls: [url, ...(p.imageUrls || []).filter(u => u !== face)],
-                      })
-                      setPhotoCheckPiece({
-                        ...p,
-                        photos: { ...(p.photos || {}), face: url },
-                        imageUrl: url,
-                        imageUrls: [url, ...(p.imageUrls || []).filter(u => u !== face)],
-                      })
-                      onProductUpdate?.()
-                    } catch (err: any) {
-                      alert('Erreur upload : ' + (err?.message || 'inconnue'))
-                    } finally {
-                      setPhotoCheckReuploading(false)
-                    }
-                  }}
-                />
-                <div className="flex gap-2 mt-1">
-                  <button
-                    onClick={() => photoCheckCameraRef.current?.click()}
-                    disabled={photoCheckReuploading || photoCheckSaving}
-                    className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {photoCheckReuploading ? 'Upload…' : 'Pas OK'}
-                  </button>
-                  <button
-                    onClick={valider}
-                    disabled={photoCheckReuploading || photoCheckSaving}
-                    className="flex-1 px-3 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878] disabled:opacity-50"
-                  >
-                    {photoCheckSaving ? '...' : 'OK'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })()}
-
         {/* Popup : restock chineuse fini — phase A (pièces à gérer) puis phase B (photos face à valider) */}
         {restockFiniChineuse && (() => {
           const tri = restockFiniChineuse.trigramme
@@ -2041,9 +1886,50 @@
           const idx = Math.min(restockPhotoIndex, photosACheck.length - 1)
           const current = photosACheck[idx]
           const currentFace = current.photos?.face || current.imageUrls?.[0] || current.imageUrl || ''
-          const goNext = () => {
+          // Couleur + matière de la pièce courante (mêmes modules que la saisie)
+          const cat = catLabel(current.categorie)
+          const { priority: priorityColors, others: otherColors } = getColorsPrioritized(cat)
+          const displayedColors = photoCheckShowAllColors ? [...priorityColors, ...otherColors] : priorityColors
+          const matieresDisponibles = getMatieresForCategorie(cat)
+          const selectedColors = photoCheckColor ? photoCheckColor.split(', ').filter(Boolean) : []
+          const selectedMatieres = photoCheckMaterial ? photoCheckMaterial.split(', ').filter(Boolean) : []
+          const toggleColor = (name: string) => {
+            setPhotoCheckColor(
+              (selectedColors.includes(name) ? selectedColors.filter(x => x !== name) : [...selectedColors, name]).join(', ')
+            )
+          }
+          const toggleMatiere = (name: string) => {
+            setPhotoCheckMaterial(
+              (selectedMatieres.includes(name) ? selectedMatieres.filter(x => x !== name) : [...selectedMatieres, name]).join(', ')
+            )
+          }
+          // Sauve la couleur/matière éditée sur la pièce courante (si changée)
+          const saveColorMat = async () => {
+            const newColor = photoCheckColor.trim()
+            const newMaterial = photoCheckMaterial.trim()
+            const update: Record<string, unknown> = {}
+            if (newColor !== (current.color || '').trim()) update.color = newColor
+            if (newMaterial !== (current.material || '').trim()) update.material = newMaterial
+            if (Object.keys(update).length) {
+              await updateDoc(doc(db, 'produits', current.id), update as any)
+              onProductUpdate?.()
+            }
+          }
+          const goNext = async () => {
+            try { await saveColorMat() }
+            catch (err: any) { alert('Erreur : ' + (err?.message || 'inconnue')); return }
             if (idx + 1 >= photosACheck.length) {
-              // Fin du carousel → passe à la grille "pièces préférées"
+              // Fin du carousel photos : toutes les pièces sont reçues et leurs
+              // photos refaites/validées → on rafraîchit le cache pour que les
+              // pièces soient live sur le site + l'app (donc les fav postables),
+              // sans attendre le TTL edge ni un redéploiement. Fire-and-forget.
+              const chineuseId = deposants.find(d => (d.trigramme || '').toUpperCase() === tri)?.id || ''
+              fetch('/api/cache/refresh-produits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productIds: photosACheck.map(p => p.id), chineuseId }),
+              }).catch(() => {})
+              // Passe à la grille "pièces préférées"
               setRestockShowGrid(true)
               setRestockPhotoIndex(0)
             } else {
@@ -2111,7 +1997,79 @@
                   alt={current.nom}
                   className="w-full aspect-square object-contain bg-gray-50 rounded-lg mb-3"
                 />
-                <p className="text-sm text-gray-700 mb-3 truncate">{(current.nom || '').replace(`${current.sku || ''} - `, '')}</p>
+                <p className="text-sm text-gray-700 mb-2 truncate">{(current.nom || '').replace(`${current.sku || ''} - `, '')}</p>
+
+                <div className="mb-2">
+                  <label className="block text-xs text-gray-600 mb-1">Couleur</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {displayedColors.map((c) => {
+                      const isSel = selectedColors.includes(c.name)
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => toggleColor(c.name)}
+                          title={c.name}
+                          className={`relative w-7 h-7 rounded-full border-2 transition-all ${
+                            isSel
+                              ? 'border-[#22209C] scale-110 ring-2 ring-[#22209C]/30'
+                              : 'border-gray-200 hover:border-gray-400'
+                          }`}
+                          style={{
+                            background: c.hex,
+                            boxShadow: ['Blanc', 'Ivoire', 'Crème'].includes(c.name) ? 'inset 0 0 0 1px #ddd' : undefined,
+                          }}
+                        >
+                          {isSel && (
+                            <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+                              ['Noir', 'Bleu marine', 'Marron', 'Anthracite', 'Bordeaux', 'Vert', 'Kaki', 'Violet', 'Prune', 'Aubergine'].includes(c.name)
+                                ? 'text-white'
+                                : 'text-gray-800'
+                            }`}>
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                    {otherColors.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setPhotoCheckShowAllColors(!photoCheckShowAllColors)}
+                        className="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-gray-500 text-xs font-bold"
+                      >
+                        {photoCheckShowAllColors ? '−' : '+'}
+                      </button>
+                    )}
+                  </div>
+                  {photoCheckColor && (
+                    <p className="text-xs text-[#22209C] mt-1 font-medium">{photoCheckColor}</p>
+                  )}
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-600 mb-1">Matière</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {matieresDisponibles.map((m) => {
+                      const isSel = selectedMatieres.includes(m)
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => toggleMatiere(m)}
+                          className={`px-2.5 py-1 rounded-full border text-xs transition-all ${
+                            isSel
+                              ? 'border-[#22209C] bg-[#22209C] text-white'
+                              : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                          }`}
+                        >
+                          {m}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 <input
                   ref={phaseBCameraRef}
                   type="file"
@@ -2122,15 +2080,20 @@
                     const file = e.target.files?.[0]
                     e.target.value = ''
                     if (!file) return
+                    // Reprise photo : upload brut puis ouverture de l'éditeur de
+                    // détourage (même interface qu'à la saisie d'une pièce).
                     setPhaseBReuploadingId(current.id)
                     try {
-                      const url = await uploadToBunny(file)
-                      await updateDoc(doc(db, 'produits', current.id), {
-                        'photos.face': url,
-                        imageUrl: url,
-                        imageUrls: [url, ...(current.imageUrls || []).filter(u => u !== currentFace)],
+                      const base64 = await compressImage(file)
+                      const res = await fetch('/api/detourage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ base64, uploadOnly: true }),
                       })
-                      onProductUpdate?.()
+                      const data = await res.json()
+                      if (!data.success) throw new Error(data.error || 'Erreur upload')
+                      setPhotoEditProduct(current)
+                      setPhotoEditUrl(data.maskUrl)
                     } catch (err: any) {
                       alert('Erreur upload : ' + (err?.message || 'inconnue'))
                     } finally {
@@ -2164,6 +2127,32 @@
             </div>
           )
         })()}
+
+        {/* Éditeur de détourage pour la reprise d'une photo en fin de restock (Phase B) */}
+        {photoEditProduct && photoEditUrl && (
+          <PhotoEditor
+            imageUrl={photoEditUrl}
+            categorie={catLabel(photoEditProduct.categorie)}
+            onCancel={() => { setPhotoEditProduct(null); setPhotoEditUrl(null) }}
+            onConfirm={async (processedUrl: string) => {
+              const p = photoEditProduct
+              setPhotoEditProduct(null)
+              setPhotoEditUrl(null)
+              if (!p) return
+              const oldFace = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+              try {
+                await updateDoc(doc(db, 'produits', p.id), {
+                  'photos.face': processedUrl,
+                  imageUrl: processedUrl,
+                  imageUrls: [processedUrl, ...(p.imageUrls || []).filter(u => u !== oldFace)],
+                })
+                onProductUpdate?.()
+              } catch (err: any) {
+                alert('Erreur : ' + (err?.message || 'inconnue'))
+              }
+            }}
+          />
+        )}
 
         {/* Popup : toutes les pièces DEP de ce trigramme reçues → générer le bon de dépôt */}
         {bonDepotTrigramme && (
