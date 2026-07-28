@@ -36,6 +36,8 @@ type Stats = {
   sorties: Array<{ page: string; n: number }>
   entrees: Array<{ page: string; n: number }>
   recherches: Array<{ terme: string; n: number }>
+  paniers: Array<{ nom: string; n: number }>
+  favoris: Array<{ nom: string; n: number }>
   sources: Array<{ source: string; n: number }>
   villes: Array<{ ville: string; n: number }>
   pays: Array<{ pays: string; n: number }>
@@ -279,6 +281,18 @@ export default function BackstagePerformancePage() {
               sousTitre="Dernière page avant de quitter le site"
               lignes={stats.sorties.map((e) => ({ label: e.page, valeur: formatPrix(e.n) }))}
               vide="Pas encore de données."
+            />
+            <Classement
+              titre="Produits ajoutés au panier"
+              sousTitre={`Les plus mis au panier — sur ${days} jours`}
+              lignes={(stats.paniers || []).map((p) => ({ label: p.nom, valeur: formatPrix(p.n) }))}
+              vide="Aucun ajout au panier pour l'instant."
+            />
+            <Classement
+              titre="Produits les plus mis en favoris"
+              sousTitre="Cœurs cumulés depuis toujours"
+              lignes={(stats.favoris || []).map((f) => ({ label: f.nom, valeur: formatPrix(f.n) }))}
+              vide="Aucun favori pour l'instant."
             />
             <Classement
               titre="Mots recherchés"

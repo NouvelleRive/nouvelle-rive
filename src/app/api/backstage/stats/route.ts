@@ -86,6 +86,7 @@ export async function GET(req: NextRequest) {
     const exits = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const entries = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const searches = new Map<string, { label: string; v: number; ms: number; n: number }>()
+    const paniers = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const sources = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const villes = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const pays = new Map<string, { label: string; v: number; ms: number; n: number }>()
@@ -112,6 +113,7 @@ export async function GET(req: NextRequest) {
       mergeBuckets(exits, d.exits as Record<string, Bucket>)
       mergeBuckets(entries, d.entries as Record<string, Bucket>)
       mergeBuckets(searches, d.searches as Record<string, Bucket>)
+      mergeBuckets(paniers, d.paniers as Record<string, Bucket>)
       mergeBuckets(sources, d.refs as Record<string, Bucket>)
       mergeBuckets(villes, d.villes as Record<string, Bucket>)
       mergeBuckets(pays, d.pays as Record<string, Bucket>)
@@ -120,6 +122,28 @@ export async function GET(req: NextRequest) {
       devices.mobile += Number(dev.mobile) || 0
       devices.desktop += Number(dev.desktop) || 0
     })
+
+    // Produits les plus mis en favoris : likesCount est déjà tenu à jour sur
+    // chaque produit (FavoriteButton). Cumul depuis toujours, pas fenêtré.
+    // ~25 reads, page admin rare → coût négligeable.
+    let favoris: Array<{ nom: string; n: number }> = []
+    try {
+      const favSnap = await adminDb
+        .collection('produits')
+        .where('likesCount', '>', 0)
+        .orderBy('likesCount', 'desc')
+        .limit(25)
+        .get()
+      favoris = favSnap.docs
+        .map((doc) => {
+          const r = doc.data() as Record<string, unknown>
+          const nom = [r.marque, r.nom].filter(Boolean).join(' — ') || String(r.nom || 'Produit')
+          return { nom, n: Number(r.likesCount) || 0 }
+        })
+        .filter((f) => f.n > 0)
+    } catch (e) {
+      console.error('[backstage/stats] favoris', e)
+    }
 
     const pagesList = toList(pages)
       .map((p) => ({
@@ -158,6 +182,12 @@ export async function GET(req: NextRequest) {
           .filter((s) => s.n > 0)
           .sort((a, b) => b.n - a.n)
           .slice(0, 60),
+        paniers: toList(paniers)
+          .map((p) => ({ nom: p.label, n: p.n }))
+          .filter((p) => p.n > 0)
+          .sort((a, b) => b.n - a.n)
+          .slice(0, 30),
+        favoris,
         sources: toList(sources)
           .map((s) => ({ source: s.label, n: s.n }))
           .filter((s) => s.n > 0)

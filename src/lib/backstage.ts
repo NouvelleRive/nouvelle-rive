@@ -21,6 +21,7 @@ export type BackstageState = {
   pages: Record<string, { p: string; v: number; ms: number }>
   order: string[]
   searches: string[]
+  carts: string[]
   addToCart: number
   checkoutStart: number
   conversions: number
@@ -85,6 +86,7 @@ function load(): BackstageState {
     pages: {},
     order: [],
     searches: [],
+    carts: [],
     addToCart: 0,
     checkoutStart: 0,
     conversions: 0,
@@ -181,8 +183,17 @@ export function trackSearch(term: string) {
   save()
 }
 
-export function trackAddToCart() {
+// label = nom du produit (idéalement « Marque — Nom »), pour le classement
+// des produits les plus ajoutés au panier. Le compteur global reste séparé.
+export function trackAddToCart(label?: string) {
   bump('addToCart')
+  if (typeof window === 'undefined' || optedOut()) return
+  const clean = (label || '').trim().slice(0, 160)
+  if (!clean) return
+  const s = load()
+  if (s.carts.length >= MAX_ORDER) return
+  s.carts.push(clean)
+  save()
 }
 
 export function trackCheckoutStart() {

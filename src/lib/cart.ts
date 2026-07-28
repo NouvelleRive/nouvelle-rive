@@ -69,7 +69,7 @@ export function useCart() {
     const current = readCart()
     if (current.some(i => i.id === item.id)) return false
     writeCart([...current, item])
-    trackAddToCart()
+    trackAddToCart([item.marque, item.nom].filter(Boolean).join(' — ') || item.nom)
     return true
   }, [])
 

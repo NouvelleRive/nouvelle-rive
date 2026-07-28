@@ -113,6 +113,10 @@ export async function POST(req: NextRequest) {
       ? body.searches.slice(0, 40).map((s: unknown) => str(s, 60).toLowerCase()).filter(Boolean)
       : []
 
+    const cartsIn: string[] = Array.isArray(body?.carts)
+      ? body.carts.slice(0, 60).map((s: unknown) => str(s, 160)).filter(Boolean)
+      : []
+
     const incoming = {
       sid,
       device: body?.device === 'mobile' ? 'mobile' : 'desktop',
@@ -122,6 +126,7 @@ export async function POST(req: NextRequest) {
       pages: pagesIn,
       order: Array.isArray(body?.order) ? body.order.slice(0, 60).map((s: unknown) => str(s, 160)) : [],
       searches: searchesIn,
+      carts: cartsIn,
       addToCart: num(body?.addToCart),
       checkoutStart: num(body?.checkoutStart),
       conversions: num(body?.conversions),
@@ -137,6 +142,7 @@ export async function POST(req: NextRequest) {
 
     const prevPages = (prev?.pages as typeof pagesIn) || {}
     const prevSearches = (prev?.searches as string[]) || []
+    const prevCarts = (prev?.carts as string[]) || []
 
     // --- Delta à appliquer sur l'agrégat du jour ---
     const agg: Record<string, unknown> = { day, updatedAt: Date.now() }
@@ -176,6 +182,23 @@ export async function POST(req: NextRequest) {
       }
       agg.searches = sDelta
       agg.searchCount = FieldValue.increment(newSearches.length)
+    }
+
+    // Nouveaux produits ajoutés au panier depuis le dernier flush → classement
+    const newCarts = incoming.carts.slice(prevCarts.length)
+    if (newCarts.length) {
+      const counts = new Map<string, { p: string; n: number }>()
+      for (const nom of newCarts) {
+        const k = encKey(nom)
+        const cur = counts.get(k)
+        if (cur) cur.n += 1
+        else counts.set(k, { p: nom, n: 1 })
+      }
+      const cDelta: Record<string, unknown> = {}
+      for (const [k, { p, n }] of counts) {
+        cDelta[k] = { p, n: FieldValue.increment(n) }
+      }
+      agg.paniers = cDelta
     }
 
     // Compteurs entonnoir
