@@ -19,6 +19,7 @@ import { parseWhatnotPurchase, whatnotDocId } from '@/modules/achat/parser/whatn
 import { fleekPieceDocId } from '@/modules/achat/parser/fleek'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
+import { patchBlobCache } from '@/lib/blobCache'
 
 const ADMIN_EMAILS = new Set(['nouvelleriveparis@gmail.com'])
 
@@ -132,6 +133,10 @@ async function handleValidatedItems(
 ) {
   let skuCursor = await computeNextSkuNum(target.trigramme)
   const created: { docId: string; sku: string }[] = []
+  // On garde les payloads écrits pour patcher le blob cache `produits-all` en
+  // fin d'import (sinon les pièces Fleek n'apparaissent sur /admin/nos-produits
+  // qu'après expiration du cache 6h).
+  const freshItems: { id: string; raw: any }[] = []
 
   for (let i = 0; i < items.length; i++) {
     const it = items[i]
@@ -204,11 +209,30 @@ async function handleValidatedItems(
       if (docId) {
         await adminDb.collection('produits').doc(docId).set(payload, { merge: true })
         created.push({ docId, sku })
+        freshItems.push({ id: docId, raw: payload })
       } else {
         const ref = await adminDb.collection('produits').add(payload)
         created.push({ docId: ref.id, sku })
+        freshItems.push({ id: ref.id, raw: payload })
       }
     }
+  }
+
+  // Patch du blob cache `produits-all` : insère/remplace les pièces créées sans
+  // rescan Firestore, pour qu'elles apparaissent immédiatement en admin.
+  if (freshItems.length > 0) {
+    const byId = new Map(freshItems.map((f) => [f.id, f]))
+    await patchBlobCache<{ id: string; raw: any }[]>('produits-all', (items) => {
+      const seen = new Set<string>()
+      const next = items.map((it) => {
+        const f = byId.get(it.id)
+        if (!f) return it
+        seen.add(it.id)
+        return f
+      })
+      for (const f of freshItems) if (!seen.has(f.id)) next.push(f)
+      return next
+    })
   }
 
   return NextResponse.json({ ok: true, kind: 'validated-items', count: created.length, docs: created })
