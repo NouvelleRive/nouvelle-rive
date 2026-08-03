@@ -183,7 +183,7 @@ useEffect(() => {
   // Priorité aux sacs STRC (chineuse "strass chronique") — pas chers, pas de taille, canons.
   const candidatsChauffe = useMemo(() => {
     return produitsActifs
-      .filter(p => !p.ebayListingId && getBrandPriority(p.marque) >= 20)
+      .filter(p => !p.ebayListingId && getBrandPriority(p.marque) >= 20 && getMainImage(p))
       .map(p => {
         const tri = p.sku?.match(/^[A-Z]+/)?.[0]?.toUpperCase() || ''
         return { p, tri }
