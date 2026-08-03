@@ -183,19 +183,13 @@ useEffect(() => {
   // Priorité aux sacs STRC (chineuse "strass chronique") — pas chers, pas de taille, canons.
   const candidatsChauffe = useMemo(() => {
     return produitsActifs
-      .filter(p => !p.ebayListingId && getBrandPriority(p.marque) >= 20 && getMainImage(p))
-      .map(p => {
+      .filter(p => {
         const tri = p.sku?.match(/^[A-Z]+/)?.[0]?.toUpperCase() || ''
-        return { p, tri }
+        return tri === 'STRC' && !p.ebayListingId && getMainImage(p)
       })
-      .sort((a, b) => {
-        const aStrc = a.tri === 'STRC' ? 0 : 1
-        const bStrc = b.tri === 'STRC' ? 0 : 1
-        if (aStrc !== bStrc) return aStrc - bStrc      // STRC d'abord
-        return (a.p.prix ?? 0) - (b.p.prix ?? 0)        // puis moins cher d'abord
-      })
+      .sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0))
       .slice(0, 15)
-      .map(({ p }) => ({
+      .map(p => ({
         id: p.id,
         nom: p.nom || '—',
         marque: p.marque || '',
