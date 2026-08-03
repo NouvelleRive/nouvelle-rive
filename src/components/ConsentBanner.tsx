@@ -71,8 +71,8 @@ export default function ConsentBanner() {
         </p>
         <p style={{ fontSize: 'clamp(14px, 1.5vw, 17px)', lineHeight: 1.6, color: '#1a1a1a', margin: 0 }}>
           {t(
-            'On utilise des cookies de mesure pour comprendre ce qui vous plaît et améliorer la boutique. Vous êtes libre d’accepter ou de refuser — ça ne change rien à votre navigation.',
-            'We use analytics cookies to understand what you love and improve the shop. You’re free to accept or decline — it won’t change your browsing.',
+            'On utilise des cookies de mesure pour comprendre ce qui vous plaît et améliorer la boutique. Nous ne revendons pas vos données, nous chinons mieux grâce à elles. Une façon simple et efficace de construire ensemble une alternative sexy à la fast fashion et de soutenir nos business girls locales 💙 Vous êtes libre d’accepter ou de refuser — ça ne change rien à votre navigation.',
+            'We use analytics cookies to understand what you love and improve the shop. We never sell your data — we just source better thanks to it. A simple, effective way to build a sexy alternative to fast fashion together and support our local business girls 💙 You’re free to accept or decline — it won’t change your browsing.',
             lang
           )}{' '}
           <a href="/legal/confidentialite" style={{ textDecoration: 'underline', color: '#1a1a1a', whiteSpace: 'nowrap' }}>
