@@ -46,6 +46,8 @@ export function toMillis(v: any): number {
     return Number.isFinite(t) ? t : 0
   }
   if (v?.seconds) return v.seconds * 1000
+  // Timestamp Firestore sérialisé en JSON dans le blob → { _seconds, _nanoseconds }
+  if (v?._seconds) return v._seconds * 1000
   return 0
 }
 
@@ -67,7 +69,8 @@ export function serialize(id: string, raw: any): ProduitInitial {
     vendu: !!raw.vendu,
     promotion: !!raw.promotion,
     sku: raw.sku,
-    createdAt: toMillis(raw.createdAt) || undefined,
+    // "Nouveautés" = date de réception en boutique (fallback création pour les vieilles pièces).
+    createdAt: (toMillis(raw.dateReception) || toMillis(raw.createdAt)) || undefined,
   }
 }
 
@@ -90,7 +93,7 @@ export async function getAllBoutiqueProduitsServer(): Promise<ProduitInitial[]> 
         raw.prix > 0 &&
         (raw.photos?.face || raw.imageUrls?.[0] || raw.imageUrl)
       )
-      .map(({ id, raw }) => ({ id, raw, ms: toMillis(raw.createdAt) }))
+      .map(({ id, raw }) => ({ id, raw, ms: toMillis(raw.dateReception) || toMillis(raw.createdAt) }))
       .sort((a, b) => b.ms - a.ms)
       .map(({ id, raw }) => serialize(id, raw))
     return filtered

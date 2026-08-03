@@ -227,6 +227,8 @@ useEffect(() => {
         candidats={candidatsChauffe}
         strcCount={strcDispo.length}
         makiCount={makiDispo.length}
+        onPublish={askGenderThenPublish}
+        publishing={publishing}
       />
 
       {/* Stats */}

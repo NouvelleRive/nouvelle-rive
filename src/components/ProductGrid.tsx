@@ -78,6 +78,7 @@ function toMs(v: any): number {
     return Number.isFinite(t) ? t : 0
   }
   if (v?.seconds) return v.seconds * 1000
+  if (v?._seconds) return v._seconds * 1000
   return 0
 }
 

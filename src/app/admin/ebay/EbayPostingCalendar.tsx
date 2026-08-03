@@ -48,12 +48,16 @@ export default function EbayPostingCalendar({
   candidats = [],
   strcCount = 0,
   makiCount = 0,
+  onPublish,
+  publishing = false,
 }: {
   nonLuxeDispo: number
   luxeDispo: number
   candidats?: Candidat[]
   strcCount?: number
   makiCount?: number
+  onPublish?: (ids: string[]) => void
+  publishing?: boolean
 }) {
   const today = new Date()
 
@@ -125,12 +129,23 @@ export default function EbayPostingCalendar({
       {/* Pièces concrètes prévues pour la chauffe */}
       {candidats.length > 0 && (
         <div className="mt-4 border-t pt-3">
-          <p className="text-xs font-semibold text-gray-700 mb-2">
-            Pièces prévues pour la chauffe{' '}
-            <span className="font-normal text-gray-400">
-              — {strcCount} Strass Chronique puis {makiCount} lunettes MAKI · 3/jour ({Math.ceil((strcCount + makiCount) / 3)} jours)
-            </span>
-          </p>
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+            <p className="text-xs font-semibold text-gray-700">
+              Pièces prévues pour la chauffe{' '}
+              <span className="font-normal text-gray-400">
+                — {strcCount} Strass Chronique puis {makiCount} lunettes MAKI · 3/jour ({Math.ceil((strcCount + makiCount) / 3)} jours)
+              </span>
+            </p>
+            {onPublish && candidats.length > 0 && (
+              <button
+                onClick={() => onPublish(candidats.slice(0, 3).map(c => c.id))}
+                disabled={publishing}
+                className="px-3 py-1.5 bg-yellow-500 text-white rounded text-xs font-medium hover:bg-yellow-600 disabled:opacity-50"
+              >
+                {publishing ? '⏳ Publication...' : '🚀 Publier les 3 du jour'}
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {candidats.map((c, i) => {
               const isStrc = c.groupe === 'STRC'
