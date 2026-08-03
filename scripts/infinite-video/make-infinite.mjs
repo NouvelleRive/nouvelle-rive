@@ -38,6 +38,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { execSync } from 'child_process'
 import { homedir } from 'os'
 import { join } from 'path'
+import { trimToLocal } from './trim-images.mjs'
 
 let chromium
 try { ({ chromium } = await import('playwright')) }
@@ -66,7 +67,7 @@ async function getText(url) { const r = await fetch(url); if (!r.ok) throw new E
 
 console.log(`→ chineuse: ${slug} | base: ${BASE}`)
 const page0 = await getJSON(`${BASE}/api/creatrice-page?slug=${encodeURIComponent(slug)}`)
-const NOM = (page0.chineuse?.nom || slug).toUpperCase()
+const NOM = (typeof opt('nom') === 'string' ? opt('nom') : (page0.chineuse?.nom || slug)).toUpperCase()
 
 let imgs
 if (SKUS) {
@@ -86,7 +87,11 @@ if (SKUS) {
   imgs = ALL ? all : all.slice(0, 20)
 }
 if (imgs.length === 0) { console.error('❌ aucune image trouvée'); process.exit(1) }
+// --bust : force le CDN à recharger (contourne une image encore en cache)
+if (opt('bust')) { const cb = Date.now(); imgs = imgs.map(u => u + (u.includes('?') ? '&' : '?') + 'cb=' + cb) }
 console.log(`→ ${imgs.length} pièces`)
+// crop auto du fond (sauf --notrim) -> objet collé au bord, espacement régulier
+if (!opt('notrim')) { imgs = await trimToLocal(imgs) }
 
 // ---------- rendu visuel ----------
 const cssFor = (period) => `

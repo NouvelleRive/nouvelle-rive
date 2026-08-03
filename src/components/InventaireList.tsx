@@ -12,6 +12,10 @@
   import { getMatieresForCategorie } from '@/lib/matieres'
   import PhotoEditor from '@/components/PhotoEditor'
 
+  // ⚠️ À REMPLACER par le vrai numéro (format international, sans +, ex: 33612345678)
+  // ou le lien du groupe (https://chat.whatsapp.com/XXXX). Lien wa.me = gratuit.
+  const WHATSAPP_PORTANT_URL = 'https://wa.me/33600000000'
+
   // Compression d'une photo (camera) -> base64 JPEG, avant upload/détourage.
   async function compressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -200,9 +204,10 @@
     const [sessionReceivedIds, setSessionReceivedIds] = useState<Set<string>>(new Set())
     const [restockPhotoIndex, setRestockPhotoIndex] = useState(0)
     const [restockShowGrid, setRestockShowGrid] = useState(false)
-    // Phase A (pièces à gérer) : affichée seulement à la toute fin du parcours,
-    // après les photos (phase B) et les pièces préférées (phase C).
+    // Phase A (pièces à gérer / déstock).
     const [restockShowPhaseA, setRestockShowPhaseA] = useState(false)
+    // Dernière étape : rappel d'envoyer la photo du portant finalisé sur WhatsApp.
+    const [restockShowWhatsapp, setRestockShowWhatsapp] = useState(false)
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const [igPublishingId, setIgPublishingId] = useState<string | null>(null)
@@ -222,6 +227,9 @@
     // Reprise photo en fin de restock : éditeur de détourage (même interface qu'à la saisie)
     const [photoEditProduct, setPhotoEditProduct] = useState<Produit | null>(null)
     const [photoEditUrl, setPhotoEditUrl] = useState<string | null>(null)
+    // true = on édite une photo déjà détourée (ajustement zoom/position/gomme sur
+    // le PNG existant) ; false = photo brute qui repasse par le détourage auto.
+    const [photoEditAlreadyProcessed, setPhotoEditAlreadyProcessed] = useState(false)
     // Reset la session Phase A dès que le popup ferme (peu importe la sortie)
     useEffect(() => {
       if (!restockFiniChineuse) {
@@ -1144,7 +1152,7 @@
                 value={recherche}
                 onChange={(e) => setRecherche(e.target.value)}
                 placeholder="SKU, nom, marque..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
               />
               {recherche && (
                 <button
@@ -1584,6 +1592,7 @@
           const fullClose = () => {
             setRestockShowGrid(false)
             setRestockShowPhaseA(false)
+            setRestockShowWhatsapp(false)
             setRestockFiniChineuse(null)
             setRestockPhotoIndex(0)
             setPhaseASession(new Set())
@@ -1599,8 +1608,33 @@
             }
           }
 
-          // Phase A — pièces à gérer : toujours en toute fin de parcours
-          if (restockShowPhaseA) {
+          // Pièces reçues cette session avec photo → à checker (étape PHOTOS)
+          const photosACheck = pieces
+            .filter(p => sessionReceivedIds.has(p.id) && (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
+            .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
+          // Toutes les pièces de la chineuse avec photo → grille des préférées (étape POST)
+          const piecesFav = pieces
+            .filter(p => p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
+            .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
+
+          // Enchaînement automatique des étapes :
+          //   1) RESTOCK (réception, déjà faite dans la liste)
+          //   2) DESTOCK  — pièces à gérer (sauté s'il n'y en a pas)
+          //   3) PHOTOS   — check/détourage des photos reçues (sauté si aucune)
+          //   4) POST     — pièces préférées → publication IG/FB
+          //   5) WHATSAPP — rappel d'envoyer la photo du portant finalisé
+          // Chaque étape vide est sautée automatiquement (fall-through).
+          let step: 'destock' | 'photos' | 'post' | 'whatsapp' =
+            restockShowWhatsapp ? 'whatsapp'
+            : restockShowGrid ? 'post'
+            : restockShowPhaseA ? 'photos'
+            : 'destock'
+          if (step === 'destock' && aGerer.length === 0) step = 'photos'
+          if (step === 'photos' && photosACheck.length === 0) step = 'post'
+          if (step === 'post' && piecesFav.length === 0) step = 'whatsapp'
+
+          // Étape DESTOCK — pièces à gérer (2e étape, après réception)
+          if (step === 'destock') {
             if (aGerer.length === 0) {
               return (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1724,34 +1758,26 @@
             )
           }
 
-          // Pièces reçues dans cette session ET qui ont une photo face
-          // (une pièce sans photo n'apparaît pas sur la fiche produit publique, donc
-          // ni Phase B — check photos — ni Phase C — favoris — ne la concernent)
-          const photosACheck = pieces
-            .filter(p => sessionReceivedIds.has(p.id) && (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
-            .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
-
-          if (photosACheck.length === 0) {
-            return (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl max-w-md w-full p-6">
-                  <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Tout est OK 💙</h3>
-                  <p className="text-sm text-gray-700 mb-5">
-                    Restock de <strong>{restockFiniChineuse.nom}</strong> terminé.
-                  </p>
-                  <button
-                    onClick={goToPhaseAOrClose}
-                    className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
-                  >
-                    {aGerer.length > 0 ? 'Continuer' : 'Fermer'}
-                  </button>
+          // Étape POST — grille des pièces préférées → publication IG/FB
+          if (step === 'post') {
+            if (piecesFav.length === 0) {
+              return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-xl max-w-md w-full p-6">
+                    <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Tout est OK 💙</h3>
+                    <p className="text-sm text-gray-700 mb-5">
+                      Restock de <strong>{restockFiniChineuse.nom}</strong> terminé.
+                    </p>
+                    <button
+                      onClick={goToPhaseAOrClose}
+                      className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
+                    >
+                      {aGerer.length > 0 ? 'Continuer' : 'Fermer'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          }
-
-          // Phase C — grille finale : elle choisit ses pièces préférées → coups-de-coeur
-          if (restockShowGrid) {
+              )
+            }
             const toggleFav = async (p: Produit) => {
               if (favTogglingId) return
               setFavTogglingId(p.id)
@@ -1769,8 +1795,9 @@
                 setFavTogglingId(null)
               }
             }
-            const closeAll = goToPhaseAOrClose
-            const favoriteProducts = photosACheck.filter(p => (p as any).favoriEquipe === true)
+            // Fin de l'étape POST → étape WhatsApp (photo du portant finalisé)
+            const closeAll = () => setRestockShowWhatsapp(true)
+            const favoriteProducts = piecesFav.filter(p => (p as any).favoriEquipe === true)
             const publishAllFavorites = async () => {
               if (igPublishingId || favoriteProducts.length === 0) return
               const igOk: string[] = []
@@ -1809,8 +1836,8 @@
               setIgPublishingId(null)
               onProductUpdate?.()
               const lines = [
-                `${igOk.length}/${favoriteProducts.length} stories IG publiées ✅`,
-                `${fbOk.length}/${favoriteProducts.length} posts FB publiés ✅`,
+                `${igOk.length}/${favoriteProducts.length} stories IG publiées ${igOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
+                `${fbOk.length}/${favoriteProducts.length} posts FB publiés ${fbOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
                 favoriteProducts.length > 0 && '\nPense à ajouter le sticker "Lien" sur chaque story IG si tu veux qu\'elle soit cliquable.',
                 failures.length > 0 && `\nErreurs :\n${failures.join('\n')}`,
               ].filter(Boolean).join('\n')
@@ -1834,7 +1861,7 @@
                     </button>
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-4">
-                    {photosACheck.map((p) => {
+                    {piecesFav.map((p) => {
                       const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
                       const isFav = (p as any).favoriEquipe === true
                       const busy = favTogglingId === p.id
@@ -1883,6 +1910,8 @@
             )
           }
 
+          // Étape PHOTOS — check / détourage des photos reçues
+          if (step === 'photos') {
           const idx = Math.min(restockPhotoIndex, photosACheck.length - 1)
           const current = photosACheck[idx]
           const currentFace = current.photos?.face || current.imageUrls?.[0] || current.imageUrl || ''
@@ -2092,6 +2121,7 @@
                       })
                       const data = await res.json()
                       if (!data.success) throw new Error(data.error || 'Erreur upload')
+                      setPhotoEditAlreadyProcessed(false)
                       setPhotoEditProduct(current)
                       setPhotoEditUrl(data.maskUrl)
                     } catch (err: any) {
@@ -2102,13 +2132,6 @@
                   }}
                 />
                 <div className="flex gap-2 mb-2">
-                  <button
-                    onClick={() => phaseBCameraRef.current?.click()}
-                    disabled={phaseBReuploadingId === current.id}
-                    className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {phaseBReuploadingId === current.id ? 'Upload…' : 'Pas OK'}
-                  </button>
                   <button
                     onClick={genererPorte}
                     disabled={generatingPorteId === current.id}
@@ -2123,9 +2146,63 @@
                     OK →
                   </button>
                 </div>
+                {/* Détourage / ajustement — même éditeur qu'à la création */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => {
+                      if (!currentFace) return
+                      // Éditeur création : détourage / gomme / rotation / zoom / position
+                      setPhotoEditAlreadyProcessed(true)
+                      setPhotoEditProduct(current)
+                      setPhotoEditUrl(currentFace)
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50"
+                  >
+                    Détourer / ajuster
+                  </button>
+                  <button
+                    onClick={() => phaseBCameraRef.current?.click()}
+                    disabled={phaseBReuploadingId === current.id}
+                    className="flex-1 px-3 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {phaseBReuploadingId === current.id ? 'Upload…' : 'Reprendre la photo'}
+                  </button>
+                </div>
               </div>
             </div>
           )
+          }
+
+          // Étape WHATSAPP — dernière étape : envoyer la photo du portant finalisé
+          if (step === 'whatsapp') {
+            return (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
+                  <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Dernière étape 💙</h3>
+                  <p className="text-sm text-gray-700 mb-5">
+                    Envoie une <strong>photo du portant finalisé</strong> de {restockFiniChineuse.nom} sur WhatsApp.
+                  </p>
+                  <a
+                    href={WHATSAPP_PORTANT_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={fullClose}
+                    className="block w-full mb-2 px-4 py-2.5 bg-[#25D366] text-white rounded-lg text-sm font-medium hover:opacity-90"
+                  >
+                    Ouvrir WhatsApp
+                  </a>
+                  <button
+                    onClick={fullClose}
+                    className="w-full px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
+                  >
+                    C'est envoyé
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          return null
         })()}
 
         {/* Éditeur de détourage pour la reprise d'une photo en fin de restock (Phase B) */}
@@ -2133,6 +2210,7 @@
           <PhotoEditor
             imageUrl={photoEditUrl}
             categorie={catLabel(photoEditProduct.categorie)}
+            alreadyProcessed={photoEditAlreadyProcessed}
             onCancel={() => { setPhotoEditProduct(null); setPhotoEditUrl(null) }}
             onConfirm={async (processedUrl: string) => {
               const p = photoEditProduct

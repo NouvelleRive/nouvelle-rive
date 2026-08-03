@@ -42,6 +42,31 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 1bis) Attendre que le container soit prêt (status_code = FINISHED).
+    // Publier trop tôt renvoie « Media ID is not available ».
+    let statusCode = ''
+    for (let i = 0; i < 12; i++) {
+      const statusRes = await fetch(
+        `https://graph.facebook.com/${API_VERSION}/${containerData.id}?fields=status_code&access_token=${IG_TOKEN}`
+      )
+      const statusData = await statusRes.json()
+      statusCode = statusData.status_code || ''
+      if (statusCode === 'FINISHED') break
+      if (statusCode === 'ERROR') {
+        return NextResponse.json(
+          { success: false, error: 'traitement image échoué', details: statusData },
+          { status: 500 }
+        )
+      }
+      await new Promise((r) => setTimeout(r, 2000))
+    }
+    if (statusCode !== 'FINISHED') {
+      return NextResponse.json(
+        { success: false, error: 'container pas prêt (timeout)', details: { status_code: statusCode } },
+        { status: 500 }
+      )
+    }
+
     // 2) Publier le container
     const publishRes = await fetch(
       `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media_publish?creation_id=${containerData.id}&access_token=${IG_TOKEN}`,

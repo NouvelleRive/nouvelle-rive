@@ -143,7 +143,7 @@ export default function EbayPostingCalendar({
                   <div className="p-1.5">
                     <p className="text-[10px] font-medium truncate">{c.nom}</p>
                     <p className="text-[10px] text-gray-500 flex justify-between">
-                      <span className="truncate">{c.marque || '—'}</span>
+                      <span className="truncate">{c.marque || (strc ? 'Strass Chronique' : '—')}</span>
                       <b className="text-gray-700">{c.prix != null ? `${c.prix}€` : '—'}</b>
                     </p>
                   </div>
