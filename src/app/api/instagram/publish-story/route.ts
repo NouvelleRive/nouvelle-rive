@@ -1,9 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
+import sharp from 'sharp'
 
 const IG_BUSINESS_ID = process.env.IG_BUSINESS_ACCOUNT_ID
 const IG_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN
 const API_VERSION = 'v25.0'
+
+// Compose une story 1080×1920 : photo carrée en haut, fond blanc dessous,
+// « NEW IN FAV » + infos boutique. Upload sur Bunny → renvoie l'URL publique
+// (l'API STORIES exige une image_url 9:16 accessible publiquement). Gratuit.
+async function buildStoryImage(imageUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(imageUrl)
+    if (!res.ok) return null
+    const srcBuf = Buffer.from(await res.arrayBuffer())
+
+    // Photo carrée collée en haut (fond blanc si non carrée)
+    const photo = await sharp(srcBuf)
+      .resize(1080, 1080, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+      .toBuffer()
+
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .title { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 130px; letter-spacing: 6px; fill: #111; }
+        .sub   { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 44px; fill: #222; }
+        .addr  { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 38px; fill: #666; letter-spacing: 1px; }
+      </style>
+      <text x="540" y="1340" text-anchor="middle" class="title">NEW IN FAV</text>
+      <text x="540" y="1470" text-anchor="middle" class="sub">available online and in store</text>
+      <text x="540" y="1545" text-anchor="middle" class="sub">www.nouvellerive.eu</text>
+      <text x="540" y="1615" text-anchor="middle" class="addr">${esc('8 rue des Écouffes · Paris · Le Marais')}</text>
+    </svg>`
+
+    const composed = await sharp({
+      create: { width: 1080, height: 1920, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+    })
+      .composite([
+        { input: photo, top: 0, left: 0 },
+        { input: Buffer.from(svg), top: 0, left: 0 },
+      ])
+      .jpeg({ quality: 90 })
+      .toBuffer()
+
+    const storageZone = process.env.BUNNY_STORAGE_ZONE
+    const apiKey = process.env.BUNNY_API_KEY
+    const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
+    if (!storageZone || !apiKey || !cdnUrl) return null
+    const path = `stories/fav_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.jpg`
+    const up = await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
+      method: 'PUT',
+      headers: { AccessKey: apiKey, 'Content-Type': 'image/jpeg' },
+      body: composed,
+    })
+    if (!up.ok) return null
+    return `${cdnUrl}/${path}`
+  } catch {
+    return null
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,9 +84,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'aucune photo pour ce produit' }, { status: 400 })
     }
 
+    // 0) Composer l'image story 9:16 (photo + « NEW IN FAV » + infos boutique).
+    // Si la compo échoue, on retombe sur la photo brute (mieux que rien).
+    const storyUrl = (await buildStoryImage(imageUrl)) || imageUrl
+
     // 1) Créer le container media STORIES
     const containerRes = await fetch(
-      `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media?media_type=STORIES&image_url=${encodeURIComponent(imageUrl)}&access_token=${IG_TOKEN}`,
+      `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media?media_type=STORIES&image_url=${encodeURIComponent(storyUrl)}&access_token=${IG_TOKEN}`,
       { method: 'POST' }
     )
     const containerData = await containerRes.json()

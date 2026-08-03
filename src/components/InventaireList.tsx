@@ -1839,7 +1839,6 @@
               const lines = [
                 `${igOk.length}/${favoriteProducts.length} stories IG publiées ${igOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
                 `${fbOk.length}/${favoriteProducts.length} posts FB publiés ${fbOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
-                favoriteProducts.length > 0 && '\nPense à ajouter le sticker "Lien" sur chaque story IG si tu veux qu\'elle soit cliquable.',
                 failures.length > 0 && `\nErreurs :\n${failures.join('\n')}`,
               ].filter(Boolean).join('\n')
               alert(lines)
