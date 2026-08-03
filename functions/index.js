@@ -577,20 +577,44 @@ exports.pingEbaySync = functions
     } catch (err) {
       console.error('regenSitemap (from pingEbaySync) failed:', err)
     }
-    // 3. Publication luxe sur eBay — 1×/jour seulement (à 08h UTC), 10 pièces max.
-    //    Volontairement lent : publier en masse a déjà valu une restriction compte
-    //    eBay de 10 jours (juillet 2026). 10/jour draine la file sans re-déclencher
-    //    l'alarme. Tant que le compte est restreint, publishToEbay échoue sans effet
-    //    et réessaie le lendemain ; dès le déblocage, la file se vide toute seule.
+    // 3. Publication eBay — 1×/jour (à 08h UTC), montée en charge par phases.
+    //    Compte remonté après la restriction de 10 j (juillet 2026, publish en masse).
+    //    Rampe calquée sur le calendrier de l'onglet admin/ebay :
+    //      - chauffe  (< 8 août)     : 3 non-luxe/j (STRC puis MAKI), 0 luxe
+    //      - montée   (8-12 août)    : 4 non-luxe/j, 0 luxe
+    //      - croisière (>= 13 août)  : 3 non-luxe/j + 1 luxe/j
+    //    Le non-luxe passe par /api/cron/ebay-warmup, le luxe par sync-ebay-luxe.
+    //    Tant que le compte est restreint, publishToEbay échoue sans effet et
+    //    réessaie le lendemain ; dès le déblocage, la file se vide toute seule.
     if (new Date().getUTCHours() === 8) {
+      const t = Date.now()
+      let warmMax, luxeMax
+      if (t >= Date.UTC(2026, 7, 13)) { warmMax = 3; luxeMax = 1 }        // 13 août+
+      else if (t >= Date.UTC(2026, 7, 8)) { warmMax = 4; luxeMax = 0 }    // 8-12 août
+      else { warmMax = 3; luxeMax = 0 }                                    // chauffe
+
+      // Non-luxe (chauffe STRC/MAKI)
       try {
-        const luxeRes = await fetch('https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?max=10', {
+        const warmRes = await fetch(`https://www.nouvellerive.eu/api/cron/ebay-warmup?max=${warmMax}`, {
           headers: secret ? { Authorization: `Bearer ${secret}` } : {},
         })
-        const luxeBody = await luxeRes.text()
-        console.log(`pingEbayLuxe ${luxeRes.status}: ${luxeBody.slice(0, 300)}`)
+        const warmBody = await warmRes.text()
+        console.log(`pingEbayWarmup(${warmMax}) ${warmRes.status}: ${warmBody.slice(0, 300)}`)
       } catch (err) {
-        console.error('pingEbayLuxe failed:', err)
+        console.error('pingEbayWarmup failed:', err)
+      }
+
+      // Luxe (à partir du 13 août seulement, 1/j)
+      if (luxeMax > 0) {
+        try {
+          const luxeRes = await fetch(`https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?max=${luxeMax}`, {
+            headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+          })
+          const luxeBody = await luxeRes.text()
+          console.log(`pingEbayLuxe(${luxeMax}) ${luxeRes.status}: ${luxeBody.slice(0, 300)}`)
+        } catch (err) {
+          console.error('pingEbayLuxe failed:', err)
+        }
       }
     }
     return null
