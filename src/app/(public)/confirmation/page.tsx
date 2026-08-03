@@ -9,6 +9,9 @@ import { useCart } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
 import { trackConversion } from '@/lib/backstage'
+import { marketingAllowed } from '@/lib/consent'
+import { pixelPurchase } from '@/lib/metaPixel'
+import { purchaseEventId } from '@/lib/attribution'
 
 const bleuElectrique = '#0000FF'
 const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i, '')
@@ -72,10 +75,20 @@ function ConfirmationContent() {
         setProduits(fetched)
 
         if (!isTest && fetched.length > 0) {
+          const totalConversion = fetched.reduce((s, p) => s + (Number(p.prix) || 0), 0)
           trackConversion(
             orderId || `sans-id-${fetched.map(p => p.id).join('-')}`,
-            fetched.reduce((s, p) => s + (Number(p.prix) || 0), 0)
+            totalConversion
           )
+          // Meta Pixel : Purchase navigateur, dédupliquée avec le CAPI serveur
+          // via un event_id partagé (basé sur l'orderId Square).
+          if (orderId && marketingAllowed()) {
+            pixelPurchase({
+              eventId: purchaseEventId(orderId),
+              ids: fetched.map(p => p.sku || p.id),
+              value: totalConversion,
+            })
+          }
           const dejaTraite = sessionStorage.getItem(`commande-${orderId}`)
           if (!dejaTraite) {
             const clientInfoStr = localStorage.getItem('nouvelle-rive-client')

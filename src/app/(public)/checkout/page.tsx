@@ -7,6 +7,9 @@ import { useCart, calculerLivraison, PAYS_LIVRAISON } from '@/lib/cart'
 import { useLang, t } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
 import { trackCheckoutStart } from '@/lib/backstage'
+import { marketingAllowed, getConsent } from '@/lib/consent'
+import { pixelInitiateCheckout } from '@/lib/metaPixel'
+import { getAttribution, getFbCookies } from '@/lib/attribution'
 
 type ClientInfo = {
   prenom: string
@@ -54,8 +57,11 @@ function CheckoutContent() {
     if (hydrated && count > 0 && !checkoutTracked.current) {
       checkoutTracked.current = true
       trackCheckoutStart()
+      if (marketingAllowed()) {
+        pixelInitiateCheckout({ ids: items.map(i => i.sku || i.id), value: sousTotal })
+      }
     }
-  }, [hydrated, count])
+  }, [hydrated, count, items, sousTotal])
 
   const fraisLivraison = calculerLivraison(sousTotal, modeLivraison, adresse.paysCode)
   const fraisLivraisonPreview = calculerLivraison(sousTotal, 'livraison', adresse.paysCode)
@@ -70,6 +76,11 @@ function CheckoutContent() {
       localStorage.setItem('nouvelle-rive-client', JSON.stringify(clientInfo))
       if (modeLivraison === 'livraison') localStorage.setItem('nouvelle-rive-adresse', JSON.stringify(adresse))
 
+      // Attribution marketing → transmise à Square via metadata, puis lue par le webhook.
+      // Les identifiants Meta (fbp/fbc) ne partent que si le consentement pub est accordé.
+      const attribution = getAttribution()
+      const fb = marketingAllowed() ? getFbCookies() : {}
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,6 +90,10 @@ function CheckoutContent() {
           adresse: modeLivraison === 'livraison' ? adresse : null,
           modeLivraison,
           paysCode: modeLivraison === 'livraison' ? adresse.paysCode : 'FR',
+          attribution,
+          fbp: fb.fbp,
+          fbc: fb.fbc,
+          consent: getConsent(),
         })
       })
       const data = await response.json()

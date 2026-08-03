@@ -9,6 +9,7 @@ import { Client, Environment } from 'square'
 import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { sendPushToOwner } from '@/lib/webpush'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
+import { sendCapiPurchase } from '@/lib/metaCapi'
 
 if (!getApps().length) {
   initializeApp({
@@ -50,8 +51,9 @@ async function traiterProduit(opts: {
   lineItem: any
   lineItemPrice: number
   productNameFallback: string
+  marketing: Record<string, string> | null
 }) {
-  const { productId, paymentId, orderId, saleTimestamp, clientInfo, modeLivraison, adresse, numeroGroupe, lineItem, lineItemPrice, productNameFallback } = opts
+  const { productId, paymentId, orderId, saleTimestamp, clientInfo, modeLivraison, adresse, numeroGroupe, lineItem, lineItemPrice, productNameFallback, marketing } = opts
 
   const produitRef = adminDb.collection('produits').doc(productId)
   const produitSnap = await produitRef.get()
@@ -238,6 +240,7 @@ async function traiterProduit(opts: {
     attribue: true,
     source: 'square',
     skuSource: 'webhook',
+    marketing: marketing || null,
     createdAt: saleTimestamp,
   }
   const venteDocId = `${orderId}_${lineItem?.uid || productId}`
@@ -263,6 +266,8 @@ async function traiterProduit(opts: {
     commandeId,
     produitData,
     nouvelleQuantite,
+    isNewVente,
+    contentId: produitData.sku || productId,
   }
 }
 
@@ -525,7 +530,17 @@ export async function POST(request: Request) {
     const numeroGroupe = genererNumeroGroupe(clientInfo.email, new Date())
     const lineItems = order?.lineItems || []
 
-    const traitements: { commandeId: string; produitData: any; nouvelleQuantite: number }[] = []
+    // Attribution marketing (posée par /api/checkout dans la metadata Square).
+    const marketingRaw: Record<string, string> = {}
+    for (const [k, mk] of [
+      ['utmSource', 'utmSource'], ['utmMedium', 'utmMedium'], ['utmCampaign', 'utmCampaign'],
+      ['utmContent', 'utmContent'], ['utmTerm', 'utmTerm'], ['fbclid', 'fbclid'],
+    ] as const) {
+      if (metadata[k]) marketingRaw[mk] = metadata[k]
+    }
+    const marketing = Object.keys(marketingRaw).length > 0 ? marketingRaw : null
+
+    const traitements: { commandeId: string; produitData: any; nouvelleQuantite: number; isNewVente: boolean; contentId: string }[] = []
     for (let i = 0; i < productIds.length; i++) {
       const productId = productIds[i]
       const lineItem = lineItems[i] || null
@@ -547,11 +562,34 @@ export async function POST(request: Request) {
           lineItem,
           lineItemPrice,
           productNameFallback,
+          marketing,
         })
         if (result) traitements.push(result)
       } catch (e: any) {
         console.error('❌ Erreur traitement produit', productId, e?.message)
       }
+    }
+
+    // Meta CAPI : Purchase serveur (fiable car le paiement se conclut sur Square).
+    // Une seule fois par commande, uniquement si consentement pub accordé et au
+    // moins une vente réellement nouvelle (les re-livraisons de webhook sont ignorées ;
+    // même si elle passait, l'event_id partagé la ferait dédupliquer côté Meta).
+    if (metadata.mktConsent === '1' && traitements.some(t => t.isNewVente)) {
+      const totalCapi = traitements.reduce((s, t) => s + (Number(t.produitData.prix) || 0), 0)
+      const contentIds = traitements.map(t => t.contentId).filter(Boolean)
+      await sendCapiPurchase({
+        eventId: `purchase_${orderId}`, // identique au Pixel navigateur (confirmation)
+        eventTimeMs: saleDate.getTime(),
+        value: totalCapi,
+        contentIds,
+        email: clientInfo.email,
+        phone: clientInfo.telephone,
+        firstName: clientInfo.prenom,
+        lastName: clientInfo.nom,
+        fbp: metadata.fbp,
+        fbc: metadata.fbc,
+        sourceUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/confirmation`,
+      })
     }
 
     // Lier toutes les commandes du même panier entre elles

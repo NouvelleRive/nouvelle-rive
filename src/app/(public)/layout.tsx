@@ -1,6 +1,8 @@
 // src/app/(public)/layout.tsx
 import NavbarPublic from '@/components/NavbarPublic'
 import BackstageTracker from '@/components/BackstageTracker'
+import MetaPixel from '@/components/MetaPixel'
+import ConsentBanner from '@/components/ConsentBanner'
 
 const localBusinessJsonLd = {
   '@context': 'https://schema.org',
@@ -82,8 +84,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
       <BackstageTracker />
+      <MetaPixel />
       <NavbarPublic />
       {children}
+      <ConsentBanner />
     </>
   )
 }

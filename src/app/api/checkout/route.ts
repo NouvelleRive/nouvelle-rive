@@ -41,13 +41,28 @@ export async function POST(request: Request) {
       clientInfo,
       adresse,
       modeLivraison,
-      paysCode
+      paysCode,
+      attribution,
+      fbp,
+      fbc,
+      consent
     }: {
       items: ItemPanier[]
       clientInfo: { prenom: string; nom: string; email: string; telephone?: string }
       adresse: any
       modeLivraison: 'retrait' | 'livraison'
       paysCode?: string
+      attribution?: {
+        utm_source?: string
+        utm_medium?: string
+        utm_campaign?: string
+        utm_content?: string
+        utm_term?: string
+        fbclid?: string
+      }
+      fbp?: string
+      fbc?: string
+      consent?: 'granted' | 'denied' | null
     } = body
 
     const codePays = (paysCode || adresse?.paysCode || 'FR').toUpperCase()
@@ -105,6 +120,23 @@ export async function POST(request: Request) {
 
     if (modeLivraison === 'livraison' && adresse) {
       metadata.adresseLivraison = JSON.stringify(adresse)
+    }
+
+    // Attribution marketing (survit à l'aller-retour Square → webhook).
+    // Valeurs Square metadata : max 255 caractères par champ.
+    const putMeta = (k: string, v?: string | null) => {
+      if (v && String(v).trim() !== '') metadata[k] = String(v).slice(0, 255)
+    }
+    putMeta('utmSource', attribution?.utm_source)
+    putMeta('utmMedium', attribution?.utm_medium)
+    putMeta('utmCampaign', attribution?.utm_campaign)
+    putMeta('utmContent', attribution?.utm_content)
+    putMeta('utmTerm', attribution?.utm_term)
+    putMeta('fbclid', attribution?.fbclid)
+    if (consent === 'granted') {
+      metadata.mktConsent = '1'
+      putMeta('fbp', fbp)
+      putMeta('fbc', fbc)
     }
 
     const lineItems: any[] = prixServeur.map((p, idx) => {

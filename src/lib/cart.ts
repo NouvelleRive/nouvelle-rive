@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { trackAddToCart } from './backstage'
+import { marketingAllowed } from './consent'
+import { pixelAddToCart } from './metaPixel'
 
 export type CartItem = {
   id: string
@@ -70,6 +72,9 @@ export function useCart() {
     if (current.some(i => i.id === item.id)) return false
     writeCart([...current, item])
     trackAddToCart([item.marque, item.nom].filter(Boolean).join(' — ') || item.nom)
+    if (marketingAllowed()) {
+      pixelAddToCart({ id: item.sku || item.id, value: item.prix, name: item.nom })
+    }
     return true
   }, [])
 

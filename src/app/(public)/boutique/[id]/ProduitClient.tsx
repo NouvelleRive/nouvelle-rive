@@ -12,6 +12,8 @@ import { getTypeSlug } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { formatPrix } from '@/lib/formatPrix'
+import { marketingAllowed } from '@/lib/consent'
+import { pixelViewContent } from '@/lib/metaPixel'
 
 const DIACRITICS_PROD = /[̀-ͯ]/g
 function slugifyMarqueLink(s: string): string {
@@ -146,6 +148,14 @@ export default function ProduitClient({
       window.scrollTo(0, 0)
     }
   }, [produit.id])
+
+  // Meta Pixel : vue produit (gated par consentement).
+  useEffect(() => {
+    if (produit.vendu) return
+    if (marketingAllowed()) {
+      pixelViewContent({ id: produit.sku || produit.id, value: produit.prix, name: produit.nom })
+    }
+  }, [produit.id, produit.vendu, produit.sku, produit.prix, produit.nom])
 
   const afficherTaille = (categorie: any) => {
     const catLower = (typeof categorie === 'string' ? categorie : categorie?.label || '').toLowerCase()
