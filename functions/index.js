@@ -577,45 +577,37 @@ exports.pingEbaySync = functions
     } catch (err) {
       console.error('regenSitemap (from pingEbaySync) failed:', err)
     }
-    // 3. Publication eBay — 1×/jour (à 08h UTC), montée en charge par phases.
-    //    Compte remonté après la restriction de 10 j (juillet 2026, publish en masse).
-    //    Rampe calquée sur le calendrier de l'onglet admin/ebay :
-    //      - chauffe  (< 8 août)     : 3 non-luxe/j (STRC puis MAKI), 0 luxe
-    //      - montée   (8-12 août)    : 4 non-luxe/j, 0 luxe
-    //      - croisière (>= 13 août)  : 3 non-luxe/j + 1 luxe/j
-    //    Le non-luxe passe par /api/cron/ebay-warmup, le luxe par sync-ebay-luxe.
-    //    Tant que le compte est restreint, publishToEbay échoue sans effet et
-    //    réessaie le lendemain ; dès le déblocage, la file se vide toute seule.
+    // 3. Publication eBay — 1×/jour (à 08h UTC), montée en charge auto.
+    //    Rampe pilotée par le NOMBRE de STRC/MAKI déjà en ligne (pas par des dates),
+    //    définie dans /api/cron/ebay-warmup (table PHASES) :
+    //      3 STRC → 2 STRC+1 MAKI → 1 STRC+2 MAKI → 2 MAKI+1 luxe.
+    //    L'endpoint choisit le mix non-luxe ET renvoie `luxeToday` (combien de luxe
+    //    publier aujourd'hui) ; on relaie ça à sync-ebay-luxe. Débit volontairement
+    //    lent : publier en masse (130 d'un coup) avait valu la restriction de juillet
+    //    2026. Pendant une restriction temporaire, publishToEbay échoue sans effet
+    //    et réessaie le lendemain ; ça repart tout seul à la levée.
     if (new Date().getUTCHours() === 8) {
-      const t = Date.now()
-      let warmMax, luxeMax
-      // LUXE COUPÉ : compte neuf (0 éval) flaggé en contrefaçon sur tout le luxe
-      // (20 annonces LV/Chanel/Dior retirées, restriction 3 j août 2026).
-      // Tant que le compte n'a pas d'historique, on ne poste QUE du non-luxe.
-      // Ré-autoriser le luxe plus tard (idéalement via Authenticity Guarantee).
-      luxeMax = 0
-      if (t >= Date.UTC(2026, 7, 8)) { warmMax = 4 }                       // 8 août+ : montée
-      else { warmMax = 3 }                                                 // chauffe
-
-      // Non-luxe (chauffe STRC/MAKI)
+      let luxeToday = 0
+      // Non-luxe (STRC/MAKI) — phase auto
       try {
-        const warmRes = await fetch(`https://www.nouvellerive.eu/api/cron/ebay-warmup?max=${warmMax}`, {
+        const warmRes = await fetch('https://www.nouvellerive.eu/api/cron/ebay-warmup', {
           headers: secret ? { Authorization: `Bearer ${secret}` } : {},
         })
         const warmBody = await warmRes.text()
-        console.log(`pingEbayWarmup(${warmMax}) ${warmRes.status}: ${warmBody.slice(0, 300)}`)
+        console.log(`pingEbayWarmup ${warmRes.status}: ${warmBody.slice(0, 300)}`)
+        try { luxeToday = JSON.parse(warmBody)?.luxeToday || 0 } catch (_) {}
       } catch (err) {
         console.error('pingEbayWarmup failed:', err)
       }
 
-      // Luxe (à partir du 13 août seulement, 1/j)
-      if (luxeMax > 0) {
+      // Luxe — quantité dictée par la phase courante (0 tant qu'on n'y est pas)
+      if (luxeToday > 0) {
         try {
-          const luxeRes = await fetch(`https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?max=${luxeMax}`, {
+          const luxeRes = await fetch(`https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?max=${luxeToday}`, {
             headers: secret ? { Authorization: `Bearer ${secret}` } : {},
           })
           const luxeBody = await luxeRes.text()
-          console.log(`pingEbayLuxe(${luxeMax}) ${luxeRes.status}: ${luxeBody.slice(0, 300)}`)
+          console.log(`pingEbayLuxe(${luxeToday}) ${luxeRes.status}: ${luxeBody.slice(0, 300)}`)
         } catch (err) {
           console.error('pingEbayLuxe failed:', err)
         }
