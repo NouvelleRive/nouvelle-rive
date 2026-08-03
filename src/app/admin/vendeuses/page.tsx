@@ -40,6 +40,7 @@
     vendeusePrenom?: string | null
     venteFamiliale?: boolean
     source?: string
+    skuSource?: string | null
     sku?: string | null
     nom?: string | null
     chineur?: string | null
@@ -388,7 +389,10 @@
       // Helper : familiale + ventes à distance (eBay, site en ligne via Square)
       // ne comptent JAMAIS pour le CA/bonus vendeuse — la vendeuse ne les traite pas
       const isFamiliale = (v: ProduitVente) => v.venteFamiliale === true || v.source === 'familiale'
-      const isDistance = (v: ProduitVente) => v.source === 'ebay' || v.source === 'square'
+      // Ventes à distance = eBay + vraies ventes en ligne Square (skuSource='webhook').
+      // La caisse boutique passe AUSSI par source='square' mais skuSource='webhook_caisse'
+      // → elle DOIT compter pour la vendeuse.
+      const isDistance = (v: ProduitVente) => v.source === 'ebay' || (v.source === 'square' && v.skuSource === 'webhook')
       const skipVendeuse = (v: ProduitVente) => isFamiliale(v) || isDistance(v)
 
       ventesAll.forEach(p => {

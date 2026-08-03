@@ -15,7 +15,7 @@ const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
 type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string> }
 type PlanningSlots = Record<string, string>
-type ProduitVente = { id: string; prix?: number; prixVenteReel?: number; dateVente?: Timestamp; venteFamiliale?: boolean; source?: string }
+type ProduitVente = { id: string; prix?: number; prixVenteReel?: number; dateVente?: Timestamp; venteFamiliale?: boolean; source?: string; skuSource?: string | null }
 type Produit = { id: string; chineur?: string; chineurUid?: string; createdAt?: Timestamp }
 type Deposante = { id: string; nom?: string; trigramme?: string; email?: string }
 type Task = { id: string; texte: string }
@@ -220,8 +220,11 @@ export default function VendeuseCalendrierPage() {
     const map = new Map<string, { ca: number; ventes: number; bonus: number; discountCount: number; discountTotal: number }>()
     // Familiale + ventes à distance (eBay / site en ligne via Square) ne comptent
     // jamais pour le CA/bonus vendeuse — la vendeuse ne les traite pas.
+    // La caisse boutique passe par source='square' avec skuSource='webhook_caisse'
+    // → elle compte. Seules les vraies ventes en ligne (skuSource='webhook') + eBay sont exclues.
     const skipVendeuse = (v: ProduitVente) =>
-      v.venteFamiliale === true || v.source === 'familiale' || v.source === 'ebay' || v.source === 'square'
+      v.venteFamiliale === true || v.source === 'familiale' || v.source === 'ebay' ||
+      (v.source === 'square' && v.skuSource === 'webhook')
     ventesAll.forEach(p => {
       if (skipVendeuse(p)) return
       if (!(p.dateVente instanceof Timestamp)) return

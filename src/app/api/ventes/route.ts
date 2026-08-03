@@ -98,6 +98,7 @@ export async function GET(req: NextRequest) {
         dateVente: d.dateVente?.toDate?.()?.toISOString?.() || null,
         remarque: d.remarque || d.noteArticle || null,
         source: d.source || 'manual',
+        skuSource: d.skuSource || null,
         venteFamiliale: d.venteFamiliale === true,
         vendeuseId: d.vendeuseId || null,
         vendeusePrenom: d.vendeusePrenom || null,
