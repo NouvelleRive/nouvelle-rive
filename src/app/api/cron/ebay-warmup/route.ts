@@ -84,6 +84,9 @@ export async function GET(req: NextRequest) {
   }
 
   const resolveGender = (p: any): EbayGender | undefined => {
+    // STRC (Strass Chronique) et MAKI (lunettes) : toujours en femme.
+    const sku = (p.sku || '').toUpperCase()
+    if (sku.startsWith('STRC') || sku.startsWith('MAK')) return 'women'
     if (p.gender === 'women' || p.gender === 'men') return p.gender
     const trigramme = (p.chineuse || p.trigramme || (p.sku ? p.sku.match(/^([A-Z]{2,4})/i)?.[1] : null) || '').toString().toUpperCase()
     const wearType = trigramme ? wearTypeByTri.get(trigramme) : undefined

@@ -244,7 +244,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   }
 
   const triLabels: { [key: string]: string } = {
-    'nouveautes': t('Nouveautés', 'New in', lang),
+    'nouveautes': t('Au hasard', 'Random', lang),
     'prix-asc': t('Prix croissant', 'Price: low to high', lang),
     'prix-desc': t('Prix décroissant', 'Price: high to low', lang),
   }
