@@ -12,9 +12,10 @@
   import { getMatieresForCategorie } from '@/lib/matieres'
   import PhotoEditor from '@/components/PhotoEditor'
 
-  // ⚠️ À REMPLACER par le vrai numéro (format international, sans +, ex: 33612345678)
-  // ou le lien du groupe (https://chat.whatsapp.com/XXXX). Lien wa.me = gratuit.
-  const WHATSAPP_PORTANT_URL = 'https://wa.me/33600000000'
+  // Groupe WhatsApp interne « restock » (PAS la déposante) où les filles envoient
+  // la photo du portant finalisé. Lien d'invitation = gratuit ; ouvre le groupe
+  // (la photo est attachée à la main).
+  const WHATSAPP_PORTANT_URL = 'https://chat.whatsapp.com/KpRFydsDJpwB7DVZUIDIjc'
 
   // Compression d'une photo (camera) -> base64 JPEG, avant upload/détourage.
   async function compressImage(file: File): Promise<string> {
@@ -2180,7 +2181,7 @@
                 <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
                   <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Dernière étape 💙</h3>
                   <p className="text-sm text-gray-700 mb-5">
-                    Envoie une <strong>photo du portant finalisé</strong> de {restockFiniChineuse.nom} sur WhatsApp.
+                    Envoie une <strong>photo du portant finalisé</strong> de {restockFiniChineuse.nom} dans le groupe WhatsApp « restock ».
                   </p>
                   <a
                     href={WHATSAPP_PORTANT_URL}
@@ -2189,7 +2190,7 @@
                     onClick={fullClose}
                     className="block w-full mb-2 px-4 py-2.5 bg-[#25D366] text-white rounded-lg text-sm font-medium hover:opacity-90"
                   >
-                    Ouvrir WhatsApp
+                    Ouvrir le groupe « restock »
                   </a>
                   <button
                     onClick={fullClose}

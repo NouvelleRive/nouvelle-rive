@@ -589,9 +589,13 @@ exports.pingEbaySync = functions
     if (new Date().getUTCHours() === 8) {
       const t = Date.now()
       let warmMax, luxeMax
-      if (t >= Date.UTC(2026, 7, 13)) { warmMax = 3; luxeMax = 1 }        // 13 août+
-      else if (t >= Date.UTC(2026, 7, 8)) { warmMax = 4; luxeMax = 0 }    // 8-12 août
-      else { warmMax = 3; luxeMax = 0 }                                    // chauffe
+      // LUXE COUPÉ : compte neuf (0 éval) flaggé en contrefaçon sur tout le luxe
+      // (20 annonces LV/Chanel/Dior retirées, restriction 3 j août 2026).
+      // Tant que le compte n'a pas d'historique, on ne poste QUE du non-luxe.
+      // Ré-autoriser le luxe plus tard (idéalement via Authenticity Guarantee).
+      luxeMax = 0
+      if (t >= Date.UTC(2026, 7, 8)) { warmMax = 4 }                       // 8 août+ : montée
+      else { warmMax = 3 }                                                 // chauffe
 
       // Non-luxe (chauffe STRC/MAKI)
       try {
@@ -616,6 +620,31 @@ exports.pingEbaySync = functions
           console.error('pingEbayLuxe failed:', err)
         }
       }
+    }
+
+    // 4. Post Instagram « next fav » hebdo (mutualisé sur ce cron 60 min).
+    //    Mardi 10h Paris → prépare 4/5 candidats à valider en admin.
+    //    Mercredi 11h Paris → publie en feed la pièce validée.
+    //    Gate sur jour+heure de Paris (DST-safe via Intl) → 1 ping/semaine chacun.
+    try {
+      const parisFmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', hour12: false,
+      }).formatToParts(new Date())
+      const parisDay = parisFmt.find((p) => p.type === 'weekday')?.value // 'Tue', 'Wed'…
+      const parisHour = parseInt(parisFmt.find((p) => p.type === 'hour')?.value || '-1', 10)
+      let igStep = null
+      if (parisDay === 'Tue' && parisHour === 10) igStep = 'candidates'
+      else if (parisDay === 'Wed' && parisHour === 11) igStep = 'publish'
+      if (igStep) {
+        const igRes = await fetch(
+          `https://www.nouvellerive.eu/api/cron/instagram-weekly?step=${igStep}`,
+          { headers: secret ? { Authorization: `Bearer ${secret}` } : {} }
+        )
+        const igBody = await igRes.text()
+        console.log(`pingIgWeekly[${igStep}] ${igRes.status}: ${igBody.slice(0, 300)}`)
+      }
+    } catch (err) {
+      console.error('pingIgWeekly failed:', err)
     }
     return null
   })

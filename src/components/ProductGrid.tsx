@@ -82,6 +82,13 @@ function toMs(v: any): number {
   return 0
 }
 
+// Hash déterministe d'un id → clé de tri "aléatoire" mais stable entre les rendus.
+function hashId(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
+  return h
+}
+
 type Produit = {
   id: string
   nom: string
@@ -217,7 +224,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     modele: [] as string[],
     motif: [] as string[],
   })
-  const [tri, setTri] = useState('nouveautes')
+  const [tri, setTri] = useState('hasard')
 
   // Sauvegarde à chaque changement — mais jamais avant la restauration, sinon
   // l'état par défaut du premier rendu écraserait ce qu'on vient de relire.
@@ -244,7 +251,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   }
 
   const triLabels: { [key: string]: string } = {
-    'nouveautes': t('Au hasard', 'Random', lang),
+    'hasard': t('Au hasard', 'Random', lang),
+    'nouveautes': t('Par nouveauté', 'New in', lang),
     'prix-asc': t('Prix croissant', 'Price: low to high', lang),
     'prix-desc': t('Prix décroissant', 'Price: high to low', lang),
   }
@@ -487,6 +495,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
         const dateB = toMs(b.createdAt)
         return dateB - dateA
       })
+    } else if (tri === 'hasard') {
+      // Ordre "aléatoire" mais STABLE (seed = id) : ne saute pas à chaque rendu.
+      filteredProduits.sort((a, b) => hashId(a.id) - hashId(b.id))
     }
   }
 

@@ -43,6 +43,7 @@
       { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
       { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', adminOnly: true },
       { key: 'perf', label: 'Perf', href: '/admin/performance' },
+      { key: 'instagram', label: '📸 Insta', href: '/admin/instagram', adminOnly: true },
       {
         key: 'site',
         label: 'Site',
