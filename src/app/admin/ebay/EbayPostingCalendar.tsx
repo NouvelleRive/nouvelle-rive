@@ -39,16 +39,21 @@ type Candidat = {
   prix: number | null
   sku: string
   image: string | null
+  groupe: 'STRC' | 'MAKI'
 }
 
 export default function EbayPostingCalendar({
   nonLuxeDispo,
   luxeDispo,
   candidats = [],
+  strcCount = 0,
+  makiCount = 0,
 }: {
   nonLuxeDispo: number
   luxeDispo: number
   candidats?: Candidat[]
+  strcCount?: number
+  makiCount?: number
 }) {
   const today = new Date()
 
@@ -121,11 +126,15 @@ export default function EbayPostingCalendar({
       {candidats.length > 0 && (
         <div className="mt-4 border-t pt-3">
           <p className="text-xs font-semibold text-gray-700 mb-2">
-            Pièces prévues pour la chauffe <span className="font-normal text-gray-400">— sacs STRC en priorité, puis les moins chères</span>
+            Pièces prévues pour la chauffe{' '}
+            <span className="font-normal text-gray-400">
+              — {strcCount} Strass Chronique puis {makiCount} lunettes MAKI · 3/jour ({Math.ceil((strcCount + makiCount) / 3)} jours)
+            </span>
           </p>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {candidats.map((c, i) => {
-              const strc = c.sku.toUpperCase().startsWith('STRC')
+              const isStrc = c.groupe === 'STRC'
+              const marque = c.marque || (isStrc ? 'Strass Chronique' : 'MAKI')
               return (
                 <div key={c.id} className="border rounded-md overflow-hidden bg-white">
                   <div className="relative aspect-square bg-gray-100">
@@ -136,14 +145,14 @@ export default function EbayPostingCalendar({
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">—</div>
                     )}
                     <span className="absolute top-1 left-1 text-[9px] bg-black/60 text-white px-1 rounded">J{Math.floor(i / 3) + 1}</span>
-                    {strc && (
-                      <span className="absolute top-1 right-1 text-[9px] bg-pink-500 text-white px-1 rounded">STRC</span>
-                    )}
+                    <span className={`absolute top-1 right-1 text-[9px] text-white px-1 rounded ${isStrc ? 'bg-pink-500' : 'bg-indigo-500'}`}>
+                      {c.groupe}
+                    </span>
                   </div>
                   <div className="p-1.5">
                     <p className="text-[10px] font-medium truncate">{c.nom}</p>
                     <p className="text-[10px] text-gray-500 flex justify-between">
-                      <span className="truncate">{c.marque || (strc ? 'Strass Chronique' : '—')}</span>
+                      <span className="truncate">{marque}</span>
                       <b className="text-gray-700">{c.prix != null ? `${c.prix}€` : '—'}</b>
                     </p>
                   </div>

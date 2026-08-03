@@ -181,23 +181,34 @@ useEffect(() => {
 
   // Pièces prévues pour la phase de chauffe : non publiées, non-luxe.
   // Priorité aux sacs STRC (chineuse "strass chronique") — pas chers, pas de taille, canons.
+  // Vague 1 = Strass Chronique (SKU STRC…), Vague 2 = lunettes MAKI (SKU MAK…)
+  const strcDispo = useMemo(() =>
+    produitsActifs.filter(p =>
+      (p.sku || '').toUpperCase().startsWith('STRC') && !p.ebayListingId && getMainImage(p)
+    ),
+  [produitsActifs])
+
+  const makiDispo = useMemo(() =>
+    produitsActifs.filter(p =>
+      (p.sku || '').toUpperCase().startsWith('MAK') && !p.ebayListingId && getMainImage(p)
+    ),
+  [produitsActifs])
+
   const candidatsChauffe = useMemo(() => {
-    return produitsActifs
-      .filter(p => {
-        const tri = p.sku?.match(/^[A-Z]+/)?.[0]?.toUpperCase() || ''
-        return tri === 'STRC' && !p.ebayListingId && getMainImage(p)
-      })
-      .sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0))
-      .slice(0, 15)
-      .map(p => ({
-        id: p.id,
-        nom: p.nom || '—',
-        marque: p.marque || '',
-        prix: p.prix ?? null,
-        sku: p.sku || '',
-        image: getMainImage(p),
-      }))
-  }, [produitsActifs])
+    const toCand = (p: any, groupe: 'STRC' | 'MAKI') => ({
+      id: p.id,
+      nom: p.nom || '—',
+      marque: p.marque || '',
+      prix: p.prix ?? null,
+      sku: p.sku || '',
+      image: getMainImage(p),
+      groupe,
+    })
+    return [
+      ...[...strcDispo].sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0)).map(p => toCand(p, 'STRC')),
+      ...[...makiDispo].sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0)).map(p => toCand(p, 'MAKI')),
+    ]
+  }, [strcDispo, makiDispo])
 
   if (loading) {
     return (
@@ -210,7 +221,13 @@ useEffect(() => {
   return (
     <div className="space-y-4">
       {/* Calendrier de re-publication (compte en déblocage) */}
-      <EbayPostingCalendar nonLuxeDispo={nonLuxeDispo} luxeDispo={luxeDispo} candidats={candidatsChauffe} />
+      <EbayPostingCalendar
+        nonLuxeDispo={nonLuxeDispo}
+        luxeDispo={luxeDispo}
+        candidats={candidatsChauffe}
+        strcCount={strcDispo.length}
+        makiCount={makiDispo.length}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
