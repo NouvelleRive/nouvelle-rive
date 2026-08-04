@@ -1610,9 +1610,11 @@
             }
           }
 
-          // Pièces reçues cette session avec photo → à checker (étape PHOTOS)
+          // TOUTES les pièces reçues cette session → étape PHOTOS (même sans photo,
+          // pour pouvoir la prendre / la refaire). L'étape s'affiche donc toujours
+          // après le destock dès qu'au moins une pièce a été réceptionnée.
           const photosACheck = pieces
-            .filter(p => sessionReceivedIds.has(p.id) && (p.photos?.face || p.imageUrls?.[0] || p.imageUrl))
+            .filter(p => sessionReceivedIds.has(p.id))
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
           // Toutes les pièces de la chineuse avec photo → grille des préférées (étape POST)
           const piecesFav = pieces
@@ -2022,11 +2024,18 @@
                     <X size={22} />
                   </button>
                 </div>
-                <img
-                  src={currentFace}
-                  alt={current.nom}
-                  className="w-full aspect-square object-contain bg-gray-50 rounded-lg mb-3"
-                />
+                {currentFace ? (
+                  <img
+                    src={currentFace}
+                    alt={current.nom}
+                    className="w-full aspect-square object-contain bg-gray-50 rounded-lg mb-3"
+                  />
+                ) : (
+                  <div className="w-full aspect-square bg-gray-100 rounded-lg mb-3 flex flex-col items-center justify-center text-gray-400 gap-2">
+                    <ImageIcon size={40} />
+                    <span className="text-xs">Pas encore de photo — utilise « Reprendre la photo »</span>
+                  </div>
+                )}
                 <p className="text-sm text-gray-700 mb-2 truncate">{(current.nom || '').replace(`${current.sku || ''} - `, '')}</p>
 
                 <div className="mb-2">
