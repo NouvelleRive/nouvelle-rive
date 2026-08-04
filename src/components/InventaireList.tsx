@@ -207,6 +207,8 @@
     const [restockShowGrid, setRestockShowGrid] = useState(false)
     // Phase A (pièces à gérer / déstock).
     const [restockShowPhaseA, setRestockShowPhaseA] = useState(false)
+    // Étape 7 : publication story des préférées (obligatoire, après la sélection).
+    const [restockShowInsta, setRestockShowInsta] = useState(false)
     // Dernière étape : rappel d'envoyer la photo du portant finalisé sur WhatsApp.
     const [restockShowWhatsapp, setRestockShowWhatsapp] = useState(false)
     // Étape 4 : mise à jour du cache en cours (bloquant, incontournable).
@@ -1621,6 +1623,7 @@
           const fullClose = () => {
             setRestockShowGrid(false)
             setRestockShowPhaseA(false)
+            setRestockShowInsta(false)
             setRestockShowWhatsapp(false)
             setRestockFiniChineuse(null)
             setRestockPhotoIndex(0)
@@ -1658,13 +1661,15 @@
           //   + POST (préférées IG/FB) puis WHATSAPP (photo du portant)
           // Destock/baisses pilotés par le travail restant : tant qu'il reste une
           // pièce, l'étape reste affichée (incontournable) ; vide → on passe.
-          let step: 'destock' | 'baisses' | 'photos' | 'post' | 'whatsapp'
+          let step: 'destock' | 'baisses' | 'photos' | 'prefs' | 'insta' | 'whatsapp'
           if (restockShowWhatsapp) step = 'whatsapp'
-          else if (restockShowGrid) step = 'post'
+          else if (restockShowInsta) step = 'insta'
+          else if (restockShowGrid) step = 'prefs'
           else if (destockItems.length > 0) step = 'destock'
           else if (baisseAppNow.length > 0 || baisseEtiquette.length > 0) step = 'baisses'
           else step = 'photos'
-          if (step === 'post' && piecesFav.length === 0) step = 'whatsapp'
+          // Aucune pièce à proposer → on saute la sélection vers la publication.
+          if (step === 'prefs' && piecesFav.length === 0) step = 'insta'
 
           // ÉTAPE 5 — MISE À JOUR DU CACHE : écran bloquant pendant le refresh,
           // impossible d'en sortir tant que ce n'est pas fini.
@@ -1879,26 +1884,9 @@
             )
           }
 
-          // Étape POST — grille des pièces préférées → publication IG/FB
-          if (step === 'post') {
-            if (piecesFav.length === 0) {
-              return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-white rounded-xl max-w-md w-full p-6">
-                    <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Tout est OK 💙</h3>
-                    <p className="text-sm text-gray-700 mb-5">
-                      Restock de <strong>{restockFiniChineuse.nom}</strong> terminé.
-                    </p>
-                    <button
-                      onClick={goToPhaseAOrClose}
-                      className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
-                    >
-                      {aGerer.length > 0 ? 'Continuer' : 'Fermer'}
-                    </button>
-                  </div>
-                </div>
-              )
-            }
+          // ÉTAPE 6 — PRÉFÉRÉES : sélection parmi TOUTES les pièces. Obligatoire,
+          // au moins une, car elles sont publiées en story à l'étape suivante.
+          if (step === 'prefs') {
             const toggleFav = async (p: Produit) => {
               if (favTogglingId) return
               setFavTogglingId(p.id)
@@ -1916,68 +1904,16 @@
                 setFavTogglingId(null)
               }
             }
-            // Fin de l'étape POST → étape WhatsApp (photo du portant finalisé)
-            const closeAll = () => setRestockShowWhatsapp(true)
-            const favoriteProducts = piecesFav.filter(p => (p as any).favoriEquipe === true)
-            const publishAllFavorites = async () => {
-              if (igPublishingId || favoriteProducts.length === 0) return
-              const igOk: string[] = []
-              const fbOk: string[] = []
-              const failures: string[] = []
-              for (const p of favoriteProducts) {
-                setIgPublishingId(p.id)
-                try {
-                  const igRes = await fetch('/api/instagram/publish-story', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ productId: p.id }),
-                  })
-                  const igData = await igRes.json()
-                  if (igData.success) igOk.push(p.sku || p.id)
-                  else {
-                    const metaMsg = igData.details?.error?.message || igData.details?.error?.error_user_msg
-                    failures.push(`${p.sku}: IG ${igData.error || 'erreur'}${metaMsg ? ` — ${metaMsg}` : ''}`)
-                  }
-
-                  const fbRes = await fetch('/api/facebook/publish-post', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ productId: p.id }),
-                  })
-                  const fbData = await fbRes.json()
-                  if (fbData.success) fbOk.push(p.sku || p.id)
-                  else {
-                    const metaMsg = fbData.details?.error?.message || fbData.details?.error?.error_user_msg
-                    failures.push(`${p.sku}: FB ${fbData.error || 'erreur'}${metaMsg ? ` — ${metaMsg}` : ''}`)
-                  }
-                } catch (err: any) {
-                  failures.push(`${p.sku}: ${err?.message || 'erreur réseau'}`)
-                }
-              }
-              setIgPublishingId(null)
-              onProductUpdate?.()
-              const lines = [
-                `${igOk.length}/${favoriteProducts.length} stories IG publiées ${igOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
-                `${fbOk.length}/${favoriteProducts.length} posts FB publiés ${fbOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
-                failures.length > 0 && `\nErreurs :\n${failures.join('\n')}`,
-              ].filter(Boolean).join('\n')
-              alert(lines)
-              closeAll()
-            }
+            const favCount = piecesFav.filter(p => (p as any).favoriEquipe === true).length
             return (
               <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl max-w-2xl w-full p-5 max-h-[95vh] overflow-y-auto flex flex-col">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="text-base font-semibold text-[#22209C]">
-                        Tes pièces préférées de {restockFiniChineuse.nom} 💙
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        Tape sur celles que tu adores — elles iront dans « Nos pièces préférées ».
-                      </p>
-                    </div>
-                    {/* Étape obligatoire : pas de croix, on sort par « Terminer ». */}
-                  </div>
+                  <h3 className="text-base font-semibold text-[#22209C]">
+                    Tes pièces préférées de {restockFiniChineuse.nom} 💙
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Sélectionne tes coups de cœur — elles seront publiées en story juste après.
+                  </p>
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {piecesFav.map((p) => {
                       const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
@@ -2011,24 +1947,118 @@
                       )
                     })}
                   </div>
-                  {favoriteProducts.length > 0 && (
-                    <button
-                      onClick={publishAllFavorites}
-                      disabled={!!igPublishingId}
-                      className="w-full mb-2 px-4 py-2.5 bg-gradient-to-r from-[#E1306C] to-[#833AB4] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-60"
-                    >
-                      {igPublishingId
-                        ? `Publication en cours…`
-                        : `Publier ${favoriteProducts.length} pièce${favoriteProducts.length > 1 ? 's' : ''} sur IG story + FB`}
-                    </button>
-                  )}
                   <button
-                    onClick={closeAll}
-                    disabled={!!igPublishingId}
-                    className="w-full px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+                    onClick={() => setRestockShowInsta(true)}
+                    disabled={favCount === 0}
+                    className="w-full px-4 py-2.5 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] disabled:opacity-40"
                   >
-                    Terminer sans publier
+                    {favCount === 0 ? 'Sélectionne au moins 1 pièce' : `Continuer (${favCount}) →`}
                   </button>
+                </div>
+              </div>
+            )
+          }
+
+          // ÉTAPE 7 — INSTA : publication story des préférées. OBLIGATOIRE : le seul
+          // bouton lance la publication (pas de « passer »).
+          if (step === 'insta') {
+            const favoriteProducts = piecesFav.filter(p => (p as any).favoriEquipe === true)
+            const goWhatsapp = () => setRestockShowWhatsapp(true)
+            const publishAllFavorites = async () => {
+              if (igPublishingId || favoriteProducts.length === 0) return
+              const igOk: string[] = []
+              const fbOk: string[] = []
+              const failures: string[] = []
+              let storyBrut = 0
+              const storyReasons = new Set<string>()
+              for (const p of favoriteProducts) {
+                setIgPublishingId(p.id)
+                try {
+                  const igRes = await fetch('/api/instagram/publish-story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: p.id }),
+                  })
+                  const igData = await igRes.json()
+                  if (igData.success) {
+                    igOk.push(p.sku || p.id)
+                    if (!igData.composed) { storyBrut++; if (igData.storyReason) storyReasons.add(igData.storyReason) }
+                  }
+                  else {
+                    const metaMsg = igData.details?.error?.message || igData.details?.error?.error_user_msg
+                    failures.push(`${p.sku}: IG ${igData.error || 'erreur'}${metaMsg ? ` — ${metaMsg}` : ''}`)
+                  }
+
+                  const fbRes = await fetch('/api/facebook/publish-post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: p.id }),
+                  })
+                  const fbData = await fbRes.json()
+                  if (fbData.success) fbOk.push(p.sku || p.id)
+                  else {
+                    const metaMsg = fbData.details?.error?.message || fbData.details?.error?.error_user_msg
+                    failures.push(`${p.sku}: FB ${fbData.error || 'erreur'}${metaMsg ? ` — ${metaMsg}` : ''}`)
+                  }
+                } catch (err: any) {
+                  failures.push(`${p.sku}: ${err?.message || 'erreur réseau'}`)
+                }
+              }
+              setIgPublishingId(null)
+              onProductUpdate?.()
+              const lines = [
+                `${igOk.length}/${favoriteProducts.length} stories IG publiées ${igOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
+                `${fbOk.length}/${favoriteProducts.length} posts FB publiés ${fbOk.length === favoriteProducts.length ? '✅' : '⚠️'}`,
+                storyBrut > 0 && `\n⚠️ ${storyBrut} story(s) publiée(s) SANS le format "NEW IN FAV" (photo brute).${storyReasons.size ? ` Raison : ${[...storyReasons].join(' ; ')}` : ''}`,
+                failures.length > 0 && `\nErreurs :\n${failures.join('\n')}`,
+              ].filter(Boolean).join('\n')
+              alert(lines)
+              goWhatsapp()
+            }
+            return (
+              <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-lg w-full p-5 max-h-[95vh] overflow-y-auto flex flex-col">
+                  <h3 className="text-base font-semibold text-[#22209C] mb-1">Publier en story · {restockFiniChineuse.nom}</h3>
+                  {favoriteProducts.length === 0 ? (
+                    <>
+                      <p className="text-sm text-gray-700 mb-4">Aucune préférée sélectionnée.</p>
+                      <button
+                        onClick={goWhatsapp}
+                        className="w-full px-4 py-2.5 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878]"
+                      >
+                        Continuer
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500 mb-3">
+                        {favoriteProducts.length} préférée{favoriteProducts.length > 1 ? 's' : ''} → story IG + post FB.
+                      </p>
+                      <div className="grid grid-cols-4 gap-2 mb-4">
+                        {favoriteProducts.map((p) => {
+                          const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+                          return (
+                            <div key={p.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+                              {face ? (
+                                <img src={face} alt={p.nom} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300"><ImageIcon size={18} /></div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <button
+                        onClick={publishAllFavorites}
+                        disabled={!!igPublishingId}
+                        className="w-full px-4 py-2.5 bg-gradient-to-r from-[#E1306C] to-[#833AB4] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                      >
+                        {igPublishingId
+                          ? `Publication en cours…`
+                          : `Publier ${favoriteProducts.length} pièce${favoriteProducts.length > 1 ? 's' : ''} en story IG + FB`}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )

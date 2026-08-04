@@ -9,10 +9,10 @@ const API_VERSION = 'v25.0'
 // Compose une story 1080×1920 : photo carrée en haut, fond blanc dessous,
 // « NEW IN FAV » + infos boutique. Upload sur Bunny → renvoie l'URL publique
 // (l'API STORIES exige une image_url 9:16 accessible publiquement). Gratuit.
-async function buildStoryImage(imageUrl: string): Promise<string | null> {
+async function buildStoryImage(imageUrl: string): Promise<{ url: string | null; reason?: string }> {
   try {
     const res = await fetch(imageUrl)
-    if (!res.ok) return null
+    if (!res.ok) return { url: null, reason: `fetch photo ${res.status}` }
     const srcBuf = Buffer.from(await res.arrayBuffer())
 
     // Photo carrée collée en haut (fond blanc si non carrée)
@@ -46,17 +46,17 @@ async function buildStoryImage(imageUrl: string): Promise<string | null> {
     const storageZone = process.env.BUNNY_STORAGE_ZONE
     const apiKey = process.env.BUNNY_API_KEY
     const cdnUrl = process.env.NEXT_PUBLIC_BUNNY_CDN_URL
-    if (!storageZone || !apiKey || !cdnUrl) return null
+    if (!storageZone || !apiKey || !cdnUrl) return { url: null, reason: 'Bunny env manquant' }
     const path = `stories/fav_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.jpg`
     const up = await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
       method: 'PUT',
       headers: { AccessKey: apiKey, 'Content-Type': 'image/jpeg' },
       body: composed,
     })
-    if (!up.ok) return null
-    return `${cdnUrl}/${path}`
-  } catch {
-    return null
+    if (!up.ok) return { url: null, reason: `upload Bunny ${up.status}` }
+    return { url: `${cdnUrl}/${path}` }
+  } catch (err: any) {
+    return { url: null, reason: `compo: ${err?.message || 'erreur'}` }
   }
 }
 
@@ -86,7 +86,9 @@ export async function POST(req: NextRequest) {
 
     // 0) Composer l'image story 9:16 (photo + « NEW IN FAV » + infos boutique).
     // Si la compo échoue, on retombe sur la photo brute (mieux que rien).
-    const storyUrl = (await buildStoryImage(imageUrl)) || imageUrl
+    const built = await buildStoryImage(imageUrl)
+    const storyUrl = built.url || imageUrl
+    const composed = !!built.url
 
     // 1) Créer le container media STORIES
     const containerRes = await fetch(
@@ -144,7 +146,7 @@ export async function POST(req: NextRequest) {
       igStoryMediaId: publishData.id,
     })
 
-    return NextResponse.json({ success: true, mediaId: publishData.id })
+    return NextResponse.json({ success: true, mediaId: publishData.id, composed, storyReason: built.reason })
   } catch (err: any) {
     console.error('[ig/publish-story] erreur:', err)
     return NextResponse.json(
