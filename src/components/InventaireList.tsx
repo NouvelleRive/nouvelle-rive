@@ -211,6 +211,8 @@
     const [restockShowWhatsapp, setRestockShowWhatsapp] = useState(false)
     // Étape 4 : mise à jour du cache en cours (bloquant, incontournable).
     const [restockCacheUpdating, setRestockCacheUpdating] = useState(false)
+    // Étape BAISSES — étiquettes déjà validées dans la session (compense onSnapshot).
+    const [etiquetteSession, setEtiquetteSession] = useState<Set<string>>(new Set())
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const [igPublishingId, setIgPublishingId] = useState<string | null>(null)
@@ -238,6 +240,7 @@
       if (!restockFiniChineuse) {
         setPhaseASession(new Set())
         setPricesInput({})
+        setEtiquetteSession(new Set())
       }
     }, [restockFiniChineuse])
 
@@ -1576,7 +1579,9 @@
             const dr = (p as any).dateReception?.toDate?.()
             return dr instanceof Date && dr < threeMonthsAgo
           })
-          // Orange (prix à baisser) : réception entre 2 et 3 mois, jamais baissé,
+          // Bascule « à baisser » dans ≤ 7 jours (2 mois - 7 j de réception).
+          const dueInWeek = new Date(now); dueInWeek.setMonth(dueInWeek.getMonth() - 2); dueInWeek.setDate(dueInWeek.getDate() + 7)
+          // Orange (prix à baisser MAINTENANT) : réception 2-3 mois, jamais baissé,
           // aucune demande de sortie (au-delà de 3 mois → passe en rouge)
           const prixABaisser = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return false
@@ -1587,15 +1592,30 @@
             if (!(dr instanceof Date)) return false
             return dr < twoMonthsAgo && dr >= threeMonthsAgo
           })
+          // À anticiper : pas encore à 2 mois mais y sera dans ≤ 7 jours.
+          const prixABaisserBientot = pieces.filter(p => {
+            if (p.statutRecuperation === 'aRecuperer') return false
+            if ((p as any).statutDestock === 'enAttente') return false
+            const baisse = (p as any).prixBaisseLe?.toDate?.()
+            if (baisse instanceof Date) return false
+            const dr = (p as any).dateReception?.toDate?.()
+            if (!(dr instanceof Date)) return false
+            return dr >= twoMonthsAgo && dr <= dueInWeek
+          })
           const aGerer = [
             ...aRecuperer.map(p => ({ p, kind: 'red' as const })),
             ...prixABaisser.map(p => ({ p, kind: 'orange' as const })),
           ].filter(({ p }) => !phaseASession.has(p.id))
-          // Deux étapes DISTINCTES et incontournables :
-          //   - DESTOCK : pièces à récupérer (rouge)
-          //   - BAISSES : pièces dont le prix doit baisser (orange)
+          // Étape 2 DESTOCK : pièces à récupérer (rouge)
           const destockItems = aRecuperer.filter(p => !phaseASession.has(p.id))
-          const baisseItems = prixABaisser.filter(p => !phaseASession.has(p.id))
+          // Étape 3 BAISSES — sous-liste APP « à baisser maintenant » (bloquant)
+          const baisseAppNow = prixABaisser.filter(p => !phaseASession.has(p.id))
+          // Sous-liste APP « à anticiper (≤7 j) » : informatif, NON bloquant
+          const baisseAppSoon = prixABaisserBientot.filter(p => !phaseASession.has(p.id))
+          // Sous-liste ÉTIQUETTES : prix déjà baissé mais étiquette pas validée (bloquant)
+          const baisseEtiquette = pieces
+            .filter(p => !!(p as any).prixBaisseLe && !(p as any).etiquetteMaj && !etiquetteSession.has(p.id))
+            .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
 
           // Fin complète du parcours restock
           const fullClose = () => {
@@ -1606,6 +1626,7 @@
             setRestockPhotoIndex(0)
             setPhaseASession(new Set())
             setPricesInput({})
+            setEtiquetteSession(new Set())
           }
           // Après les photos + les pièces préférées : les pièces à gérer, sinon on ferme
           const goToPhaseAOrClose = () => {
@@ -1623,9 +1644,9 @@
           const photosACheck = pieces
             .filter(p => sessionReceivedIds.has(p.id))
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
-          // Toutes les pièces de la chineuse avec photo → grille des préférées (étape POST)
-          const piecesFav = pieces
-            .filter(p => p.photos?.face || p.imageUrls?.[0] || p.imageUrl)
+          // TOUTES les pièces actives de la chineuse → grille des préférées (étape
+          // POST, obligatoire). On les propose toutes, même sans photo.
+          const piecesFav = [...pieces]
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
 
           // Enchaînement automatique des étapes :
@@ -1641,7 +1662,7 @@
           if (restockShowWhatsapp) step = 'whatsapp'
           else if (restockShowGrid) step = 'post'
           else if (destockItems.length > 0) step = 'destock'
-          else if (baisseItems.length > 0) step = 'baisses'
+          else if (baisseAppNow.length > 0 || baisseEtiquette.length > 0) step = 'baisses'
           else step = 'photos'
           if (step === 'post' && piecesFav.length === 0) step = 'whatsapp'
 
@@ -1704,6 +1725,18 @@
               setPhaseAProcessingId(null)
             }
           }
+          // Étiquette physique mise à jour → même process que côté vendeuse
+          // (etiquetteMaj:true) ; session locale pour retirer la ligne aussitôt.
+          const majEtiquette = async (p: Produit) => {
+            setEtiquetteSession(prev => new Set(prev).add(p.id))
+            try {
+              await updateDoc(doc(db, 'produits', p.id), { etiquetteMaj: true })
+              onProductUpdate?.()
+            } catch (err: any) {
+              setEtiquetteSession(prev => { const n = new Set(prev); n.delete(p.id); return n })
+              alert('Erreur : ' + (err?.message || 'inconnue'))
+            }
+          }
 
           // ÉTAPE 2 — DESTOCK : pièces à récupérer. Incontournable : reste affichée
           // tant qu'il reste une pièce à traiter, aucune sortie possible.
@@ -1750,49 +1783,90 @@
             )
           }
 
-          // ÉTAPE 3 — BAISSES DE PRIX. Incontournable : reste affichée tant qu'il
-          // reste une pièce dont le prix doit baisser.
+          // ÉTAPE 3 — BAISSES DE PRIX, 2 sous-listes, incontournable. On ne passe
+          // à la suite que quand « à baisser sur l'app (maintenant) » ET « à baisser
+          // sur les étiquettes » sont vides. Les « à anticiper » sont informatifs.
           if (step === 'baisses') {
+            const priceRow = (p: Produit, soon: boolean) => {
+              const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+              const busy = phaseAProcessingId === p.id
+              const inputVal = pricesInput[p.id] || ''
+              return (
+                <div key={p.id} className="flex items-start gap-2 p-2 border border-gray-100 rounded-lg">
+                  <img src={face} alt="" className="w-14 h-14 object-cover rounded flex-shrink-0 bg-gray-100" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${soon ? 'bg-gray-300' : 'bg-orange-400'}`} />
+                      <span className="font-mono text-xs text-gray-500">{p.sku}</span>
+                      {soon && <span className="text-[10px] text-gray-400">à anticiper</span>}
+                      <span className="text-xs text-gray-600 ml-auto">{p.prix ? `${p.prix}€` : ''}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 truncate mt-0.5">{(p.nom || '').replace(`${p.sku || ''} - `, '')}</p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        placeholder="Nouveau prix"
+                        value={inputVal}
+                        onChange={(e) => setPricesInput(prev => ({ ...prev, [p.id]: e.target.value }))}
+                        disabled={busy}
+                        className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 disabled:opacity-50"
+                      />
+                      <button
+                        onClick={() => baisserPrix(p)}
+                        disabled={busy || !inputVal}
+                        className="px-2.5 py-1 bg-[#22209C] text-white rounded text-xs font-medium disabled:opacity-40"
+                      >
+                        {busy ? '…' : 'Baisser'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
             return (
               <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
-                  <h3 className="text-lg font-semibold mb-1 text-[#22209C]">
-                    {baisseItems.length} baisse{baisseItems.length > 1 ? 's' : ''} de prix chez {restockFiniChineuse.nom}
-                  </h3>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Entre le nouveau prix de chaque pièce pour continuer.
-                  </p>
+                  <h3 className="text-lg font-semibold mb-1 text-[#22209C]">Prix à baisser · {restockFiniChineuse.nom}</h3>
+                  <p className="text-xs text-gray-500 mb-4">Passe tous les prix (app + étiquettes) pour continuer.</p>
+
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">Prix à baisser sur l'app</h4>
+                  <div className="space-y-2.5 mb-5">
+                    {baisseAppNow.length === 0 && baisseAppSoon.length === 0 && (
+                      <p className="text-xs text-gray-400">Rien à baisser côté app.</p>
+                    )}
+                    {baisseAppNow.map(p => priceRow(p, false))}
+                    {baisseAppSoon.map(p => priceRow(p, true))}
+                  </div>
+
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">Prix à baisser sur les étiquettes</h4>
                   <div className="space-y-2.5">
-                    {baisseItems.map((p) => {
+                    {baisseEtiquette.length === 0 && (
+                      <p className="text-xs text-gray-400">Aucune étiquette à mettre à jour.</p>
+                    )}
+                    {baisseEtiquette.map((p) => {
                       const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
                       const busy = phaseAProcessingId === p.id
-                      const inputVal = pricesInput[p.id] || ''
                       return (
                         <div key={p.id} className="flex items-start gap-2 p-2 border border-gray-100 rounded-lg">
                           <img src={face} alt="" className="w-14 h-14 object-cover rounded flex-shrink-0 bg-gray-100" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="inline-block w-2 h-2 rounded-full flex-shrink-0 bg-orange-400" />
+                              <span className="inline-block w-2 h-2 rounded-full flex-shrink-0 bg-[#22209C]" />
                               <span className="font-mono text-xs text-gray-500">{p.sku}</span>
-                              <span className="text-xs text-gray-600 ml-auto">{p.prix ? `${p.prix}€` : ''}</span>
+                              <span className="text-xs text-gray-600 ml-auto">
+                                {(p as any).ancienPrix ? <span className="line-through text-gray-400 mr-1">{(p as any).ancienPrix}€</span> : null}
+                                {p.prix ? `${p.prix}€` : ''}
+                              </span>
                             </div>
                             <p className="text-xs text-gray-600 truncate mt-0.5">{(p.nom || '').replace(`${p.sku || ''} - `, '')}</p>
                             <div className="flex items-center gap-1.5 mt-1.5">
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                placeholder="Nouveau prix"
-                                value={inputVal}
-                                onChange={(e) => setPricesInput(prev => ({ ...prev, [p.id]: e.target.value }))}
-                                disabled={busy}
-                                className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 disabled:opacity-50"
-                              />
                               <button
-                                onClick={() => baisserPrix(p)}
-                                disabled={busy || !inputVal}
-                                className="px-2.5 py-1 bg-[#22209C] text-white rounded text-xs font-medium disabled:opacity-40"
+                                onClick={() => majEtiquette(p)}
+                                disabled={busy}
+                                className="px-2.5 py-1 bg-[#22209C] text-white rounded text-xs font-medium disabled:opacity-50"
                               >
-                                {busy ? '…' : 'Baisser'}
+                                Étiquette mise à jour
                               </button>
                             </div>
                           </div>
@@ -1902,9 +1976,7 @@
                         Tape sur celles que tu adores — elles iront dans « Nos pièces préférées ».
                       </p>
                     </div>
-                    <button onClick={closeAll} className="text-gray-400 hover:text-gray-600" aria-label="Fermer">
-                      <X size={22} />
-                    </button>
+                    {/* Étape obligatoire : pas de croix, on sort par « Terminer ». */}
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {piecesFav.map((p) => {
@@ -1920,7 +1992,13 @@
                             isFav ? 'border-[#22209C] ring-2 ring-[#22209C]/30' : 'border-gray-200 hover:border-gray-300'
                           } ${busy ? 'opacity-60' : ''}`}
                         >
-                          <img src={face} alt={p.nom} className="w-full h-full object-cover" />
+                          {face ? (
+                            <img src={face} alt={p.nom} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-300">
+                              <ImageIcon size={22} />
+                            </div>
+                          )}
                           {isFav && (
                             <span className="absolute top-1 right-1 bg-[#22209C] text-white text-xs w-6 h-6 rounded-full flex items-center justify-center shadow">
                               <Check size={14} />
