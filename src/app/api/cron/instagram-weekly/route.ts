@@ -32,9 +32,11 @@ export async function GET(req: NextRequest) {
 
   try {
     if (step === 'candidates') {
+      const force = req.nextUrl.searchParams.get('force') === '1'
       const existing = await getWeekly(weekId)
-      // Ne pas écraser une validation déjà faite (ni un post déjà publié).
-      if (existing && existing.status !== 'pending') {
+      // Ne pas écraser une validation déjà faite (ni un post déjà publié),
+      // sauf reset explicite (?force=1) tant que ce n'est pas déjà publié.
+      if (existing && existing.status !== 'pending' && !(force && existing.status !== 'published')) {
         return NextResponse.json({ success: true, weekId, skipped: `déjà ${existing.status}` })
       }
       const candidates = await buildCandidates()
@@ -46,6 +48,11 @@ export async function GET(req: NextRequest) {
           weekOf: weekId,
           status: 'pending',
           candidates,
+          // Reset : on repart d'une feuille blanche (au cas où c'était déjà validé).
+          chosenProductId: null,
+          caption: null,
+          bioLine: null,
+          error: null,
           createdAt: new Date(),
         },
         { merge: true }
