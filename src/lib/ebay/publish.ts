@@ -5,6 +5,7 @@
  */
 
 import { ebayApiCall, calculateEbayPrice, isEbayConfigured } from './clients'
+import { ensureEbayVideo } from './video'
 import { EbayProduct, EbayListingResponse } from './types'
 import { translateMaterial, translateColor, translateTitle } from '../dico'
 
@@ -598,6 +599,13 @@ export function buildProductAspects(produit: EbayProduct, categoryType: string, 
  */
 async function createOrUpdateInventoryItem(produit: EbayProduct, categoryType: string, gender: EbayGender): Promise<void> {
 
+  // Vidéo produit → upload Media API, non-bloquant (annonce part quand même si KO).
+  let videoIds: string[] | undefined
+  if (produit.videoUrl) {
+    const videoId = await ensureEbayVideo(produit.videoUrl)
+    if (videoId) videoIds = [videoId]
+  }
+
   const inventoryItem = {
     availability: {
       shipToLocationAvailability: {
@@ -610,6 +618,7 @@ conditionDescription: 'Excellent vintage condition. Carefully inspected and cura
       title: formatEbayTitle(produit, gender),
       description: formatEbayDescription(produit.description, produit),
       imageUrls: produit.imageUrls.slice(0, 12),
+      ...(videoIds ? { videoIds } : {}),
       aspects: buildProductAspects(produit, categoryType, gender),
     },
   }
@@ -923,6 +932,7 @@ conditionDescription: 'Excellent vintage condition. Carefully inspected and cura
     sousCat: sousCat || '',
     gender: finalGender,
     imageUrls,
+    videoUrl: firebaseProduct.videos?.[0] || firebaseProduct.videoUrl || '',
     brand: firebaseProduct.marque,
     material,
     color,

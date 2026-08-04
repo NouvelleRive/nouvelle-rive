@@ -153,6 +153,14 @@ export async function ebayApiCall<T = any>(
 }
 
 /**
+ * Base URL de l'API eBay selon l'environnement (pour les appels hors ebayApiCall,
+ * ex. Media API qui renvoie l'id dans un header et upload du binaire).
+ */
+export function getEbayApiBase(): string {
+  return EBAY_API_URLS[getEbayConfig().environment].api
+}
+
+/**
  * Vérifie si l'intégration eBay est configurée
  */
 export function isEbayConfigured(): boolean {

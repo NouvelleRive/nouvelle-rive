@@ -45,6 +45,7 @@ export interface EbayProduct {
   
   // Images (URLs Cloudinary)
   imageUrls: string[]
+  videoUrl?: string  // Vidéo produit (Cloudinary) → uploadée sur eBay Media API
   
   // Attributs optionnels
   brand?: string
