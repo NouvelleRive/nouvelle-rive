@@ -205,6 +205,10 @@
     const [sessionReceivedIds, setSessionReceivedIds] = useState<Set<string>>(new Set())
     const [restockPhotoIndex, setRestockPhotoIndex] = useState(0)
     const [restockShowGrid, setRestockShowGrid] = useState(false)
+    // Relance manuelle du parcours fin de restock (photos une par une, matières,
+    // favoris, post) pour une chineuse déjà reçue — quand la session a été perdue
+    // (rechargement / sortie). Fait basculer photosACheck sur TOUTES ses pièces.
+    const [restockRelaunch, setRestockRelaunch] = useState(false)
     // Phase A (pièces à gérer / déstock).
     const [restockShowPhaseA, setRestockShowPhaseA] = useState(false)
     // Étape 7 : publication story des préférées (obligatoire, après la sélection).
@@ -1106,6 +1110,26 @@
           <p className="text-sm text-gray-500 mt-1">
             Connectée en tant que <span className="font-medium">{vendeusePrenom}</span>
           </p>
+          {mode === 'reception' && (
+            <button
+              onClick={() => {
+                const t = (window.prompt('Trigramme de la chineuse à revalider (ex : FRU)') || '')
+                  .trim()
+                  .toUpperCase()
+                if (!t) return
+                setRestockRelaunch(true)
+                setRestockShowGrid(false)
+                setRestockShowInsta(false)
+                setRestockShowWhatsapp(false)
+                setRestockShowPhaseA(false)
+                setRestockPhotoIndex(0)
+                setRestockFiniChineuse({ trigramme: t, nom: getNomFromTri(t) })
+              }}
+              className="mt-2 text-sm px-3 py-2 rounded-lg border border-[#22209C] text-[#22209C] font-medium hover:bg-[#22209C]/5"
+            >
+              🔁 Revalider les photos d'une chineuse
+            </button>
+          )}
         </div>
 
         {/* Stats avec sommes en € */}
@@ -1627,6 +1651,7 @@
             setRestockShowWhatsapp(false)
             setRestockFiniChineuse(null)
             setRestockPhotoIndex(0)
+            setRestockRelaunch(false)
             setPhaseASession(new Set())
             setPricesInput({})
             setEtiquetteSession(new Set())
@@ -1645,7 +1670,7 @@
           // pour pouvoir la prendre / la refaire). L'étape s'affiche donc toujours
           // après le destock dès qu'au moins une pièce a été réceptionnée.
           const photosACheck = pieces
-            .filter(p => sessionReceivedIds.has(p.id))
+            .filter(p => restockRelaunch || sessionReceivedIds.has(p.id))
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
           // TOUTES les pièces actives de la chineuse → grille des préférées (étape
           // POST, obligatoire). On les propose toutes, même sans photo.
