@@ -72,7 +72,7 @@
     chineurUid?: string
     vendu?: boolean
     createdAt?: Timestamp
-    statut?: 'retour' | 'supprime' | 'vendu'
+    statut?: 'retour' | 'supprime' | 'vendu' | 'outOfStock'
     recu?: boolean
     dateReception?: Timestamp
     recuPar?: string
@@ -318,6 +318,7 @@
           const isRestock = (p as any).statutRestock === 'enAttente'
           if (!isRestock && p.recu !== false) return false
         } else if (mode === 'destock') {
+          if (p.vendu === true || p.statut === 'vendu' || p.statut === 'outOfStock' || p.statut === 'retour') return false
           if (p.statutRecuperation !== 'aRecuperer' && (p as any).statutDestock !== 'enAttente') return false
         }
 
@@ -1560,7 +1561,7 @@
           const threeMonthsAgo = new Date(now); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
           const pieces = produits.filter(p =>
             getTri(p) === tri &&
-            p.statut !== 'supprime' && p.statut !== 'vendu' && p.statut !== 'retour' &&
+            p.statut !== 'supprime' && p.statut !== 'vendu' && p.statut !== 'retour' && p.statut !== 'outOfStock' &&
             p.vendu !== true
           )
           // Rouge (à récupérer) : demande de récupération, demande de destock,

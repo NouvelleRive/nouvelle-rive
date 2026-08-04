@@ -73,7 +73,7 @@
       createdAt?: Timestamp
       dateVente?: Timestamp
       prixVenteReel?: number
-      statut?: 'retour' | 'supprime' | 'vendu'
+      statut?: 'retour' | 'supprime' | 'vendu' | 'outOfStock'
       dateRetour?: Timestamp | string
       photosReady?: boolean
       catalogObjectId?: string
@@ -487,7 +487,7 @@
       const produitsARecuperer = useMemo(() => {
         const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
         return produits.filter((p) => {
-          if (p.statut === 'supprime' || p.statut === 'retour' || p.statut === 'vendu') return false
+          if (p.statut === 'supprime' || p.statut === 'retour' || p.statut === 'vendu' || p.statut === 'outOfStock') return false
           if (p.vendu === true) return false
           if (p.statutRecuperation === 'aRecuperer') return true
           return p.prixBaisseLe instanceof Timestamp && p.prixBaisseLe.toDate() < oneMonthAgo
