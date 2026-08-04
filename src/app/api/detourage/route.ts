@@ -328,22 +328,42 @@
         .resize(1000, 1000, { fit: 'inside' })
         .toBuffer()
 
-      const meta = await sharp(resized).metadata()
+      const objBuffer = await sharp(resized).ensureAlpha().png().toBuffer()
+      const meta = await sharp(objBuffer).metadata()
       const w = meta.width || 1140
       const h = meta.height || 1140
 
-      const finalBuffer = await sharp(resized)
-        .extend({
-          top: Math.floor((1200 - h) / 2),
-          bottom: Math.ceil((1200 - h) / 2),
-          left: Math.floor((1200 - w) / 2),
-          right: Math.ceil((1200 - w) / 2),
-          background: { r: 255, g: 255, b: 255 }
-        })
+      // Ombre de contact douce au sol (comme un rendu studio Gemini) :
+      // fabriquée gratuitement à partir de la silhouette détourée, aucune IA.
+      // On prend l'alpha de la pièce -> gris foncé -> opacité réduite -> flou -> décalée vers le bas.
+      const shadowAlpha = await sharp(objBuffer)
+        .extractChannel('alpha')
+        .linear(0.30, 0)   // opacité ~30 %
+        .blur(22)          // douceur de l'ombre
+        .toBuffer()
+      const shadowRGB = await sharp({
+        create: { width: w, height: h, channels: 3, background: { r: 55, g: 55, b: 55 } }
+      }).png().toBuffer()
+      const shadowLayer = await sharp(shadowRGB).joinChannel(shadowAlpha).png().toBuffer()
+
+      const left = Math.floor((1200 - w) / 2)
+      const top = Math.floor((1200 - h) / 2)
+      const shadowOffset = 18 // l'ombre "tombe" légèrement sous la pièce = contact au sol
+
+      const finalBuffer = await sharp({
+        create: { width: 1200, height: 1200, channels: 3, background: { r: 255, g: 255, b: 255 } }
+      })
+        .composite([
+          { input: shadowLayer, left, top: Math.min(top + shadowOffset, 1200 - h) },
+          { input: objBuffer, left, top },
+        ])
         .flatten({ background: { r: 255, g: 255, b: 255 } })
-        .modulate({ brightness: 1.08, saturation: 1.20 })
-        .gamma(1.05)
-        .sharpen({ sigma: 1.5 })
+        // Rendu "studio doux" : peu de contraste, highlights non cramés, ombres non bouchées,
+        // couleur juste (pas sur-saturée), texture tactile. Blanc préservé pur à 255.
+        .linear(0.92, 255 * 0.08) // baisse le contraste + relève les ombres, 255 -> 255
+        .gamma(1.06)              // protège le détail dans les ombres
+        .modulate({ saturation: 1.12 }) // profondeur couleur naturelle
+        .sharpen({ sigma: 0.9 })  // texture douce, pas de sur-piqué
         .png({ quality: 90 })
         .toBuffer()
 
