@@ -209,6 +209,8 @@
     const [restockShowPhaseA, setRestockShowPhaseA] = useState(false)
     // Dernière étape : rappel d'envoyer la photo du portant finalisé sur WhatsApp.
     const [restockShowWhatsapp, setRestockShowWhatsapp] = useState(false)
+    // Étape 4 : mise à jour du cache en cours (bloquant, incontournable).
+    const [restockCacheUpdating, setRestockCacheUpdating] = useState(false)
     const [favTogglingId, setFavTogglingId] = useState<string | null>(null)
     const [generatingPorteId, setGeneratingPorteId] = useState<string | null>(null)
     const [igPublishingId, setIgPublishingId] = useState<string | null>(null)
@@ -1589,6 +1591,11 @@
             ...aRecuperer.map(p => ({ p, kind: 'red' as const })),
             ...prixABaisser.map(p => ({ p, kind: 'orange' as const })),
           ].filter(({ p }) => !phaseASession.has(p.id))
+          // Deux étapes DISTINCTES et incontournables :
+          //   - DESTOCK : pièces à récupérer (rouge)
+          //   - BAISSES : pièces dont le prix doit baisser (orange)
+          const destockItems = aRecuperer.filter(p => !phaseASession.has(p.id))
+          const baisseItems = prixABaisser.filter(p => !phaseASession.has(p.id))
 
           // Fin complète du parcours restock
           const fullClose = () => {
@@ -1622,99 +1629,141 @@
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
 
           // Enchaînement automatique des étapes :
-          //   1) RESTOCK (réception, déjà faite dans la liste)
-          //   2) DESTOCK  — pièces à gérer (sauté s'il n'y en a pas)
-          //   3) PHOTOS   — vérification photos des pièces reçues — OBLIGATOIRE,
-          //      JAMAIS sautée : aucun process ne va live sans passer par là.
-          //   4) POST     — pièces préférées → publication IG/FB
-          //   5) WHATSAPP — rappel d'envoyer la photo du portant finalisé
-          // Seul le destock est sauté quand il est vide ; les photos, jamais.
-          let step: 'destock' | 'photos' | 'post' | 'whatsapp' =
-            restockShowWhatsapp ? 'whatsapp'
-            : restockShowGrid ? 'post'
-            : restockShowPhaseA ? 'photos'
-            : 'destock'
-          if (step === 'destock' && aGerer.length === 0) step = 'photos'
-          // PAS de saut de l'étape photos : elle est obligatoire.
+          //   1) RESTOCK  — réception (déjà faite dans la liste)
+          //   2) DESTOCK  — pièces à récupérer (sauté s'il n'y en a pas)
+          //   3) BAISSES  — baisses de prix (sauté s'il n'y en a pas)
+          //   4) PHOTOS   — vérification photos — OBLIGATOIRE, JAMAIS sautée
+          //   5) CACHE    — mise à jour du cache (bloquante, dans « OK → » final)
+          //   + POST (préférées IG/FB) puis WHATSAPP (photo du portant)
+          // Destock/baisses pilotés par le travail restant : tant qu'il reste une
+          // pièce, l'étape reste affichée (incontournable) ; vide → on passe.
+          let step: 'destock' | 'baisses' | 'photos' | 'post' | 'whatsapp'
+          if (restockShowWhatsapp) step = 'whatsapp'
+          else if (restockShowGrid) step = 'post'
+          else if (destockItems.length > 0) step = 'destock'
+          else if (baisseItems.length > 0) step = 'baisses'
+          else step = 'photos'
           if (step === 'post' && piecesFav.length === 0) step = 'whatsapp'
 
-          // Étape DESTOCK — pièces à gérer (2e étape, après réception)
-          if (step === 'destock') {
-            if (aGerer.length === 0) {
-              return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-white rounded-xl max-w-md w-full p-6">
-                    <h3 className="text-lg font-semibold mb-2 text-[#22209C]">Tout est OK 💙</h3>
-                    <p className="text-sm text-gray-700 mb-5">
-                      Restock de <strong>{restockFiniChineuse.nom}</strong> terminé.
-                    </p>
-                    <button
-                      onClick={fullClose}
-                      className="w-full px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm hover:bg-[#1a1878]"
-                    >
-                      Fermer
-                    </button>
-                  </div>
+          // ÉTAPE 5 — MISE À JOUR DU CACHE : écran bloquant pendant le refresh,
+          // impossible d'en sortir tant que ce n'est pas fini.
+          if (restockCacheUpdating) {
+            return (
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-sm w-full p-8 text-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#22209C] mx-auto mb-4" />
+                  <h3 className="text-base font-semibold text-[#22209C]">Mise à jour du cache…</h3>
+                  <p className="text-xs text-gray-500 mt-1">Les pièces passent en ligne, ne ferme pas.</p>
                 </div>
-              )
-            }
-            const baisserPrix = async (p: Produit) => {
-              const raw = pricesInput[p.id]
-              const nouveau = parseFloat((raw || '').replace(',', '.'))
-              const actuel = typeof p.prix === 'number' ? p.prix : 0
-              if (!nouveau || nouveau <= 0) { alert('Prix invalide'); return }
-              if (nouveau >= actuel) { alert(`Le nouveau prix doit être inférieur à ${actuel}€`); return }
-              setPhaseAProcessingId(p.id)
-              try {
-                // Process normal baisse de prix : { ancienPrix, prix, prixBaisseLe }
-                // → tag "💰 Prix baissé le … · MÀJ étiquette" apparaît côté vendeuse
-                await updateDoc(doc(db, 'produits', p.id), {
-                  ancienPrix: actuel,
-                  prix: nouveau,
-                  prixBaisseLe: Timestamp.now(),
-                })
-                setPhaseASession(prev => new Set(prev).add(p.id))
-                setPricesInput(prev => { const n = { ...prev }; delete n[p.id]; return n })
-                onProductUpdate?.()
-              } catch (err: any) {
-                alert('Erreur : ' + (err?.message || 'inconnue'))
-              } finally {
-                setPhaseAProcessingId(null)
-              }
-            }
-            const marquerRecuperer = async (p: Produit) => {
-              setPhaseAProcessingId(p.id)
-              try {
-                // Process normal : reason=valider_destock → statut='retour', retrait multi-canal
-                // → la pièce sort du stock actif et passe dans "produits récupérés"
-                const res = await fetch('/api/delete-produits', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ productId: p.id, reason: 'valider_destock' }),
-                })
-                const data = await res.json()
-                if (!data.success) throw new Error(data.error || 'récupération échouée')
-                setPhaseASession(prev => new Set(prev).add(p.id))
-                onProductUpdate?.()
-              } catch (err: any) {
-                alert('Erreur : ' + (err?.message || 'inconnue'))
-              } finally {
-                setPhaseAProcessingId(null)
-              }
-            }
+              </div>
+            )
+          }
 
-            // Phase A — actions inline par ligne, aucun exit
+          // Handlers partagés DESTOCK / BAISSES
+          const baisserPrix = async (p: Produit) => {
+            const raw = pricesInput[p.id]
+            const nouveau = parseFloat((raw || '').replace(',', '.'))
+            const actuel = typeof p.prix === 'number' ? p.prix : 0
+            if (!nouveau || nouveau <= 0) { alert('Prix invalide'); return }
+            if (nouveau >= actuel) { alert(`Le nouveau prix doit être inférieur à ${actuel}€`); return }
+            setPhaseAProcessingId(p.id)
+            try {
+              // Process normal baisse de prix : { ancienPrix, prix, prixBaisseLe }
+              // → tag "💰 Prix baissé le … · MÀJ étiquette" apparaît côté vendeuse
+              await updateDoc(doc(db, 'produits', p.id), {
+                ancienPrix: actuel,
+                prix: nouveau,
+                prixBaisseLe: Timestamp.now(),
+              })
+              setPhaseASession(prev => new Set(prev).add(p.id))
+              setPricesInput(prev => { const n = { ...prev }; delete n[p.id]; return n })
+              onProductUpdate?.()
+            } catch (err: any) {
+              alert('Erreur : ' + (err?.message || 'inconnue'))
+            } finally {
+              setPhaseAProcessingId(null)
+            }
+          }
+          const marquerRecuperer = async (p: Produit) => {
+            setPhaseAProcessingId(p.id)
+            try {
+              // Process normal : reason=valider_destock → statut='retour', retrait multi-canal
+              // → la pièce sort du stock actif et passe dans "produits récupérés"
+              const res = await fetch('/api/delete-produits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId: p.id, reason: 'valider_destock' }),
+              })
+              const data = await res.json()
+              if (!data.success) throw new Error(data.error || 'récupération échouée')
+              setPhaseASession(prev => new Set(prev).add(p.id))
+              onProductUpdate?.()
+            } catch (err: any) {
+              alert('Erreur : ' + (err?.message || 'inconnue'))
+            } finally {
+              setPhaseAProcessingId(null)
+            }
+          }
+
+          // ÉTAPE 2 — DESTOCK : pièces à récupérer. Incontournable : reste affichée
+          // tant qu'il reste une pièce à traiter, aucune sortie possible.
+          if (step === 'destock') {
             return (
               <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
                   <h3 className="text-lg font-semibold mb-1 text-[#22209C]">
-                    {aGerer.length} pièce{aGerer.length > 1 ? 's' : ''} à gérer chez {restockFiniChineuse.nom}
+                    {destockItems.length} pièce{destockItems.length > 1 ? 's' : ''} à récupérer chez {restockFiniChineuse.nom}
                   </h3>
                   <p className="text-xs text-gray-500 mb-4">
-                    Baisse le prix ou marque la pièce « Récupérée » pour continuer.
+                    Marque chaque pièce « Récupérée » pour continuer.
                   </p>
                   <div className="space-y-2.5">
-                    {aGerer.map(({ p, kind }) => {
+                    {destockItems.map((p) => {
+                      const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
+                      const busy = phaseAProcessingId === p.id
+                      return (
+                        <div key={p.id} className="flex items-start gap-2 p-2 border border-gray-100 rounded-lg">
+                          <img src={face} alt="" className="w-14 h-14 object-cover rounded flex-shrink-0 bg-gray-100" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-block w-2 h-2 rounded-full flex-shrink-0 bg-red-500" />
+                              <span className="font-mono text-xs text-gray-500">{p.sku}</span>
+                              <span className="text-xs text-gray-600 ml-auto">{p.prix ? `${p.prix}€` : ''}</span>
+                            </div>
+                            <p className="text-xs text-gray-600 truncate mt-0.5">{(p.nom || '').replace(`${p.sku || ''} - `, '')}</p>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <button
+                                onClick={() => marquerRecuperer(p)}
+                                disabled={busy}
+                                className="px-2.5 py-1 border border-red-200 text-red-600 rounded text-xs font-medium hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {busy ? '…' : 'Récupérée'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          // ÉTAPE 3 — BAISSES DE PRIX. Incontournable : reste affichée tant qu'il
+          // reste une pièce dont le prix doit baisser.
+          if (step === 'baisses') {
+            return (
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
+                  <h3 className="text-lg font-semibold mb-1 text-[#22209C]">
+                    {baisseItems.length} baisse{baisseItems.length > 1 ? 's' : ''} de prix chez {restockFiniChineuse.nom}
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Entre le nouveau prix de chaque pièce pour continuer.
+                  </p>
+                  <div className="space-y-2.5">
+                    {baisseItems.map((p) => {
                       const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
                       const busy = phaseAProcessingId === p.id
                       const inputVal = pricesInput[p.id] || ''
@@ -1723,7 +1772,7 @@
                           <img src={face} alt="" className="w-14 h-14 object-cover rounded flex-shrink-0 bg-gray-100" />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${kind === 'red' ? 'bg-red-500' : 'bg-orange-400'}`} />
+                              <span className="inline-block w-2 h-2 rounded-full flex-shrink-0 bg-orange-400" />
                               <span className="font-mono text-xs text-gray-500">{p.sku}</span>
                               <span className="text-xs text-gray-600 ml-auto">{p.prix ? `${p.prix}€` : ''}</span>
                             </div>
@@ -1743,14 +1792,7 @@
                                 disabled={busy || !inputVal}
                                 className="px-2.5 py-1 bg-[#22209C] text-white rounded text-xs font-medium disabled:opacity-40"
                               >
-                                Baisser
-                              </button>
-                              <button
-                                onClick={() => marquerRecuperer(p)}
-                                disabled={busy}
-                                className="px-2.5 py-1 border border-red-200 text-red-600 rounded text-xs font-medium hover:bg-red-50 disabled:opacity-50"
-                              >
-                                Récupérée
+                                {busy ? '…' : 'Baisser'}
                               </button>
                             </div>
                           </div>
@@ -1956,12 +1998,19 @@
               // photos refaites/validées → on rafraîchit le cache pour que les
               // pièces soient live sur le site + l'app (donc les fav postables),
               // sans attendre le TTL edge ni un redéploiement. Fire-and-forget.
+              // ÉTAPE 4 — MISE À JOUR DU CACHE, systématique et bloquante :
+              // on attend le refresh avant de continuer, pour que les pièces
+              // soient live sur le site + l'app. Impossible de sauter cette étape.
               const chineuseId = deposants.find(d => (d.trigramme || '').toUpperCase() === tri)?.id || ''
-              fetch('/api/cache/refresh-produits', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ productIds: photosACheck.map(p => p.id), chineuseId }),
-              }).catch(() => {})
+              setRestockCacheUpdating(true)
+              try {
+                await fetch('/api/cache/refresh-produits', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ productIds: photosACheck.map(p => p.id), chineuseId }),
+                })
+              } catch {}
+              setRestockCacheUpdating(false)
               // Passe à la grille "pièces préférées"
               setRestockShowGrid(true)
               setRestockPhotoIndex(0)
@@ -2017,13 +2066,8 @@
                       {idx + 1} / {photosACheck.length} · <span className="font-mono">{current.sku}</span>
                     </p>
                   </div>
-                  <button
-                    onClick={() => { setRestockFiniChineuse(null); setRestockPhotoIndex(0) }}
-                    className="text-gray-400 hover:text-gray-600"
-                    aria-label="Fermer"
-                  >
-                    <X size={22} />
-                  </button>
+                  {/* Aucune sortie possible : l'étape photos est obligatoire, on ne
+                      peut avancer qu'avec « OK → » (validation + refresh cache). */}
                 </div>
                 {currentFace ? (
                   <img
