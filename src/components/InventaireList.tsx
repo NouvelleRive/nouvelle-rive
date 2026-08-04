@@ -1624,17 +1624,18 @@
           // Enchaînement automatique des étapes :
           //   1) RESTOCK (réception, déjà faite dans la liste)
           //   2) DESTOCK  — pièces à gérer (sauté s'il n'y en a pas)
-          //   3) PHOTOS   — check/détourage des photos reçues (sauté si aucune)
+          //   3) PHOTOS   — vérification photos des pièces reçues — OBLIGATOIRE,
+          //      JAMAIS sautée : aucun process ne va live sans passer par là.
           //   4) POST     — pièces préférées → publication IG/FB
           //   5) WHATSAPP — rappel d'envoyer la photo du portant finalisé
-          // Chaque étape vide est sautée automatiquement (fall-through).
+          // Seul le destock est sauté quand il est vide ; les photos, jamais.
           let step: 'destock' | 'photos' | 'post' | 'whatsapp' =
             restockShowWhatsapp ? 'whatsapp'
             : restockShowGrid ? 'post'
             : restockShowPhaseA ? 'photos'
             : 'destock'
           if (step === 'destock' && aGerer.length === 0) step = 'photos'
-          if (step === 'photos' && photosACheck.length === 0) step = 'post'
+          // PAS de saut de l'étape photos : elle est obligatoire.
           if (step === 'post' && piecesFav.length === 0) step = 'whatsapp'
 
           // Étape DESTOCK — pièces à gérer (2e étape, après réception)
@@ -1914,7 +1915,7 @@
           }
 
           // Étape PHOTOS — check / détourage des photos reçues
-          if (step === 'photos') {
+          if (step === 'photos' && photosACheck.length > 0) {
           const idx = Math.min(restockPhotoIndex, photosACheck.length - 1)
           const current = photosACheck[idx]
           const currentFace = current.photos?.face || current.imageUrls?.[0] || current.imageUrl || ''
