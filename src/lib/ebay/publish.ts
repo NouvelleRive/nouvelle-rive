@@ -786,12 +786,14 @@ export async function publishToEbay(produit: EbayProduct): Promise<EbayListingRe
       return { success: false, error: 'Données incomplètes (sku, title, priceEUR requis)' }
     }
 
-    // Minimum 5 photos : moins que ça, l'algo eBay ne peut pas vérifier
-    // l'authenticité et retire l'annonce pour « contrefaçon ». Garde-fou commun
-    // à tous les canaux (robot chauffe, cron luxe, publication manuelle).
-    const MIN_PHOTOS = 5
-    if (!produit.imageUrls || produit.imageUrls.length < MIN_PHOTOS) {
-      return { success: false, error: `Moins de ${MIN_PHOTOS} photos (${produit.imageUrls?.length || 0}) — non publié pour éviter le flag contrefaçon` }
+    const nbPhotos = produit.imageUrls?.length || 0
+    if (nbPhotos === 0) {
+      return { success: false, error: 'Au moins une image requise' }
+    }
+    // Pièces > 300 € : minimum 5 photos. En-dessous de 5, l'algo eBay ne peut pas
+    // vérifier l'authenticité et retire pour « contrefaçon ». Les pièces ≤ 300 € gardent 1.
+    if (produit.priceEUR > 300 && nbPhotos < 5) {
+      return { success: false, error: `${produit.priceEUR}€ avec ${nbPhotos} photo(s) (min 5 au-dessus de 300€) — non publié pour éviter le flag contrefaçon` }
     }
 
     // Vérifier que le genre est spécifié
