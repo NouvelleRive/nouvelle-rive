@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* iOS zoome automatiquement au focus dès qu'un champ a une police < 16px.
+   On force 16px sur TOUS les champs en mobile → plus jamais de zoom au focus,
+   partout (recherche, prix, etc.). La taille visuelle desktop n'est pas touchée. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
