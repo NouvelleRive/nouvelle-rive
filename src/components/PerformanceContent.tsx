@@ -638,6 +638,28 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     return data.map(d => ({ ...d, pct: total > 0 ? Math.round(d.ca / total * 100) : 0 }))
   }, [ventesCurrentMonth, deposants, isAdmin])
 
+  // Répartition Vintage vs Upcycling (admin only)
+  // Upcycling = maisons de création NR : Maison Mascarello (IP… non → voir codes),
+  // codes SKU : IP (Ines Pineau), TDO (Tête d'Orange), STRC (Strass Chro),
+  // UPZ (Upznshit), AGE (Âge Paris), DISI (Digger Sister). Tout le reste = vintage.
+  const vintageVsUpcycling = useMemo(() => {
+    if (!isAdmin) return []
+    const UPCYCLING_CODES = ['STRC', 'DISI', 'TDO', 'UPZ', 'AGE', 'IP']
+    let vintageCA = 0, vintageCount = 0, upCA = 0, upCount = 0
+    ventesCurrentMonth.forEach(v => {
+      const prix = v.prixVenteReel || v.prix || 0
+      const sku = (v.sku || '').toUpperCase()
+      const tri = ((v as any).trigramme || '').toUpperCase()
+      const isUp = UPCYCLING_CODES.some(c => tri === c || sku.startsWith(c))
+      if (isUp) { upCA += prix; upCount++ } else { vintageCA += prix; vintageCount++ }
+    })
+    const total = vintageCA + upCA
+    return [
+      { name: 'Vintage', ca: vintageCA, count: vintageCount, color: '#22209C', pct: total > 0 ? Math.round(vintageCA / total * 100) : 0 },
+      { name: 'Upcycling', ca: upCA, count: upCount, color: '#10b981', pct: total > 0 ? Math.round(upCA / total * 100) : 0 },
+    ].filter(d => d.ca > 0)
+  }, [ventesCurrentMonth, isAdmin])
+
   const topMarques = useMemo(() => {
     const map = new Map<string, { ca: number; count: number; displayName: string }>()
     ventesCurrentMonth.forEach(v => {
@@ -1195,6 +1217,49 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           )}
         </div>
       </div>)}
+
+      {/* Répartition Vintage vs Upcycling (admin only) */}
+      {isAdmin && (
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Vintage vs Upcycling</h2>
+        {vintageVsUpcycling.length === 0 ? (
+          <p className="text-gray-400 text-center py-4 text-xs">Aucune vente ce mois</p>
+        ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+          <div className="flex justify-center">
+            <div className="w-[360px] h-[360px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={vintageVsUpcycling} dataKey="ca" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={110} strokeWidth={1} startAngle={90} endAngle={-270} label={({ name, pct, value, cx, cy, midAngle, outerRadius }) => { const RADIAN = Math.PI / 180; const radius = outerRadius + 26; const x = cx + radius * Math.cos(-midAngle * RADIAN); const y = cy + radius * Math.sin(-midAngle * RADIAN); const anchor = x > cx ? 'start' : 'end'; return (<g><text x={x} y={y - 7} textAnchor={anchor} fontSize={12} fontWeight="700" fill="#111827">{name}</text><text x={x} y={y + 7} textAnchor={anchor} fontSize={10} fill="#6b7280">{pct}% · {formatPrix(value)} €</text></g>); }} labelLine={{ stroke: '#9ca3af', strokeWidth: 0.5 }}>
+                    {vintageVsUpcycling.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    <Label value={`${formatPrix(totalCA)} €`} position="center" fontSize={16} fontWeight="700" fill="#111827" />
+                  </Pie>
+                  <Tooltip formatter={(v: number) => `${formatPrix(v)} €`} contentStyle={{ fontSize: '11px', borderRadius: '6px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {vintageVsUpcycling.map(d => (
+              <div key={d.name} className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-semibold text-gray-900">{d.name}</span>
+                    <span className="text-sm font-bold" style={{ color: d.color }}>{d.pct}%</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>{d.count} vente{d.count > 1 ? 's' : ''}</span>
+                    <span>{formatPrix(d.ca)} €</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        )}
+      </div>
+      )}
 
       {/* ============================== */}
       {/* ANALYTICS PRODUIT              */}
