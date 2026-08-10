@@ -276,6 +276,26 @@
       const [generatingTryonId, setGeneratingTryonId] = useState<string | null>(null)
       const [savingProduct, setSavingProduct] = useState(false)
       const [saveMessage, setSaveMessage] = useState<string | null>(null)
+      const [forcingBlob, setForcingBlob] = useState(false)
+
+      const handleForceBlob = async () => {
+        if (!confirm('Forcer le rafraîchissement du cache produits ?\n(rescan complet Firestore — à utiliser ponctuellement)')) return
+        setForcingBlob(true)
+        try {
+          const res = await fetch('/api/cache/refresh-produits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force: true }),
+          })
+          const data = await res.json()
+          if (data?.success) alert(`✅ Cache régénéré (${data.count} produits)`)
+          else alert('❌ Échec du rafraîchissement')
+        } catch {
+          alert('❌ Échec du rafraîchissement')
+        } finally {
+          setForcingBlob(false)
+        }
+      }
       const [localHidden, setLocalHidden] = useState<Record<string, boolean>>({})
       const [localEtiquetteMaj, setLocalEtiquetteMaj] = useState<Record<string, boolean>>({})
       const needsEtiquetteMaj = (p: Produit) => !!p.prixBaisseLe && !(localEtiquetteMaj[p.id] ?? p.etiquetteMaj)
@@ -1135,6 +1155,15 @@
                     </button>
                   </div>
                 </div>
+                {isAdmin && (
+                  <button
+                    onClick={handleForceBlob}
+                    disabled={forcingBlob}
+                    className="flex items-center justify-center gap-2 px-3 py-1.5 border border-[#22209C] text-[#22209C] rounded-lg text-sm hover:bg-[#22209C] hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {forcingBlob ? 'Rafraîchissement…' : '🔄 Forcer le cache'}
+                  </button>
+                )}
                 {isAdmin && (() => {
                   // Règles d'affichage :
                   // - smallBatch → rien
