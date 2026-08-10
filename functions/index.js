@@ -35,6 +35,30 @@ exports.onProductReceived = functions
       const itemId = `#item_${after.sku}`;
       const variationId = `#variation_${after.sku}`;
 
+      // Catégorie de rapport Square = nom de la chineuse (ex: INES PINEAU).
+      // Elle est stockée sur la fiche chineuse dans "Catégorie de rapport"[0].idsquare.
+      // Fallback sur after.categorie.reportingCategoryId si jamais on ne trouve pas la chineuse.
+      let reportingCatId = (typeof after.categorie === 'object' && after.categorie && after.categorie.reportingCategoryId) || undefined;
+      try {
+        let chineuse = null;
+        if (after.chineurUid) {
+          const s = await db.collection('chineuse').doc(after.chineurUid).get();
+          if (s.exists) chineuse = s.data();
+        }
+        if (!chineuse && after.chineur) {
+          const q = await db.collection('chineuse').where('email', '==', after.chineur).limit(1).get();
+          if (!q.empty) chineuse = q.docs[0].data();
+        }
+        if (!chineuse && after.trigramme) {
+          const q = await db.collection('chineuse').where('trigramme', '==', after.trigramme).limit(1).get();
+          if (!q.empty) chineuse = q.docs[0].data();
+        }
+        const catRapport = chineuse && chineuse['Catégorie de rapport'] && chineuse['Catégorie de rapport'][0];
+        if (catRapport && catRapport.idsquare) reportingCatId = catRapport.idsquare;
+      } catch (e) {
+        console.warn('⚠️ Catégorie de rapport non résolue:', e && e.message);
+      }
+
       const itemData = {
         type: 'ITEM',
         id: itemId,
@@ -42,7 +66,7 @@ exports.onProductReceived = functions
           name: after.nom,
           description: after.description || '',
           categoryId: typeof after.categorie === 'object' ? after.categorie?.idsquare : undefined,
-          reportingCategory: (typeof after.categorie === 'object' && after.categorie?.reportingCategoryId) ? { id: after.categorie.reportingCategoryId } : undefined,
+          reportingCategory: reportingCatId ? { id: reportingCatId } : undefined,
           variations: [
             {
               type: 'ITEM_VARIATION',
