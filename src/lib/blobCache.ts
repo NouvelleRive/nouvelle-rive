@@ -108,6 +108,37 @@ export async function getBlobCached<T>(
 }
 
 /**
+ * Force la régénération complète du blob L2 : rescan Firestore + ré-upload,
+ * en ignorant le TTL. Réservé à une action manuelle (bouton admin) — c'est
+ * l'opération coûteuse (scan de toute la collection) qu'on évite normalement.
+ *
+ * Reset aussi le cache mémoire L1 pour que le worker courant reparte du frais.
+ */
+export async function forceRebuildBlobCache<T>(
+  key: string,
+  ttlMs: number,
+  memory: { current: CachedInMemory<T> | null },
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  const fresh = await fetcher()
+  memory.current = { data: fresh, at: Date.now() }
+  if (BUCKET_NAME) {
+    try {
+      const file = adminStorage.bucket().file(`_cache/${key}.json.gz`)
+      const buf = gzipSync(Buffer.from(JSON.stringify(fresh), 'utf8'))
+      await file.save(buf, {
+        contentType: 'application/json',
+        metadata: { contentEncoding: 'gzip', cacheControl: `public, max-age=${Math.floor(ttlMs / 1000)}` },
+        resumable: false,
+      })
+    } catch {
+      /* le blob reste périmé, le prochain accès le régénèrera via le TTL */
+    }
+  }
+  return fresh
+}
+
+/**
  * Patche le blob L2 en place, sans rescanner Firestore.
  *
  * Sert après la modification d'UNE fiche : on télécharge le blob, on remplace

@@ -12,6 +12,26 @@ export default function NosProduits() {
   const [produits, setProduits] = useState<Produit[]>([])
   const [deposants, setDeposants] = useState<Deposant[]>([])
   const [loading, setLoading] = useState(true)
+  const [forcingBlob, setForcingBlob] = useState(false)
+
+  const handleForceBlob = async () => {
+    if (!confirm('Forcer le rafraîchissement du cache produits ?\n(rescan complet Firestore — à utiliser ponctuellement)')) return
+    setForcingBlob(true)
+    try {
+      const res = await fetch('/api/cache/refresh-produits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      })
+      const data = await res.json()
+      if (data?.success) alert(`✅ Cache régénéré (${data.count} produits)`)
+      else alert('❌ Échec du rafraîchissement')
+    } catch {
+      alert('❌ Échec du rafraîchissement')
+    } finally {
+      setForcingBlob(false)
+    }
+  }
 
   // Callback pour mise à jour immédiate après modification
   const handleProductUpdated = useCallback((productId: string, updatedData: Partial<Produit>) => {
@@ -87,14 +107,25 @@ export default function NosProduits() {
     : undefined
 
   return (
-    <ProductList
-      titre={titre}
-      produits={produitsFiltres}
-      deposants={deposants}
-      isAdmin={true}
-      loading={loading}
-      onProductUpdated={handleProductUpdated}
-      targetChineuse={targetChineuse}
-    />
+    <div>
+      <div className="flex justify-end mb-3">
+        <button
+          onClick={handleForceBlob}
+          disabled={forcingBlob}
+          className="text-sm px-4 py-2 rounded-lg border border-[#22209C] text-[#22209C] hover:bg-[#22209C] hover:text-white transition disabled:opacity-50"
+        >
+          {forcingBlob ? 'Rafraîchissement…' : '🔄 Forcer le cache produits'}
+        </button>
+      </div>
+      <ProductList
+        titre={titre}
+        produits={produitsFiltres}
+        deposants={deposants}
+        isAdmin={true}
+        loading={loading}
+        onProductUpdated={handleProductUpdated}
+        targetChineuse={targetChineuse}
+      />
+    </div>
   )
 }

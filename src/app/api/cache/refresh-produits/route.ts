@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { patchBlobCache } from '@/lib/blobCache'
+import { forceRefreshProduitsBlob } from '@/lib/getAllProduitsCached'
 
 type Item = { id: string; raw: any }
 
@@ -46,6 +47,17 @@ export async function POST(req: NextRequest) {
       ? body.productIds.filter(Boolean).slice(0, MAX_IDS)
       : []
     const chineuseId: string = String(body?.chineuseId || '').trim()
+    const force = body?.force === true
+
+    // 0. Mode « forçage » (bouton admin) : rescan complet Firestore + ré-upload
+    //    du blob, puis purge edge. Coûteux mais explicitement déclenché.
+    if (force) {
+      const count = await forceRefreshProduitsBlob()
+      for (const p of STATIC_PATHS) {
+        try { revalidatePath(p) } catch { /* best effort */ }
+      }
+      return NextResponse.json({ success: true, forced: true, count, revalidated: STATIC_PATHS.length })
+    }
 
     // 1. Patch du blob avec l'état frais des pièces reçues (upsert par id).
     //    Ne rescanne pas la collection : 1 read par pièce + 1 download/upload blob.

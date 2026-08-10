@@ -1,6 +1,6 @@
 import { adminDb } from '@/lib/firebaseAdmin'
 import { logFirestoreScan } from '@/lib/logFirestoreScan'
-import { getBlobCached } from '@/lib/blobCache'
+import { getBlobCached, forceRebuildBlobCache } from '@/lib/blobCache'
 
 // Cache 2-niveaux : mémoire worker + blob Firebase Storage partagé entre workers.
 // Objectif : que la collection produits (5000+ docs) soit scannée AU PLUS 4×/jour
@@ -24,4 +24,11 @@ async function fetchFresh(): Promise<Item[]> {
 
 export async function getAllProduitsCached(): Promise<Item[]> {
   return getBlobCached<Item[]>('produits-all', TTL_MS, memory, inflight, fetchFresh, MEM_TTL_MS)
+}
+
+// Régénération forcée du blob produits (rescan complet Firestore). Coûteux :
+// réservé au bouton admin « Forcer le rafraîchissement ».
+export async function forceRefreshProduitsBlob(): Promise<number> {
+  const fresh = await forceRebuildBlobCache<Item[]>('produits-all', TTL_MS, memory, fetchFresh)
+  return fresh.length
 }
