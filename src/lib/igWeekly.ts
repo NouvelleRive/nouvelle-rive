@@ -11,6 +11,7 @@
 
 import { adminDb } from '@/lib/firebaseAdmin'
 import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
+import { buildProduitPath } from '@/lib/produitSlug'
 
 const IG_BUSINESS_ID = process.env.IG_BUSINESS_ACCOUNT_ID
 const IG_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN
@@ -23,11 +24,12 @@ const NB_CANDIDATS = 5
 
 export type IgCandidate = {
   productId: string
+  sku: string
   nom: string
   marque: string
   prix: number
   imageUrl: string       // fond blanc (photos.face)
-  boutiqueUrl: string
+  boutiqueUrl: string    // URL produit canonique (slug), pas la redirection /boutique/{id}
 }
 
 export type IgWeeklyDoc = {
@@ -98,13 +100,24 @@ function isEligible(raw: any): boolean {
 }
 
 function toCandidate(id: string, raw: any): IgCandidate {
+  // Lien produit canonique (slug hiérarchique) — pas /boutique/{id} qui n'est
+  // qu'une redirection coûtant une lecture Firestore à chaque clic.
+  const path = buildProduitPath({
+    id,
+    nom: raw.nom,
+    marque: raw.marque,
+    color: raw.color,
+    taille: raw.taille,
+    categorie: raw.categorie,
+  })
   return {
     productId: id,
+    sku: raw.sku || '',
     nom: stripSku(raw.nom, raw.sku),
     marque: raw.marque || '',
     prix: typeof raw.prix === 'number' ? raw.prix : 0,
     imageUrl: raw.photos.face,
-    boutiqueUrl: `https://${SITE}/boutique/${id}`,
+    boutiqueUrl: `https://${SITE}/${path}`,
   }
 }
 
@@ -128,8 +141,8 @@ export function defaultCaption(c: IgCandidate): string {
     titre,
     c.prix ? `${c.prix}€` : '',
     '',
-    '🔗 next fav en bio pour l\'acheter',
-    c.boutiqueUrl,
+    c.sku ? `réf ${c.sku}` : '',
+    '🔗 week fav en bio pour l\'acheter',
     '',
     '#nouvellerive #secondemain #vintage #upcycling #modecirculaire #paris',
   ]
@@ -139,7 +152,7 @@ export function defaultCaption(c: IgCandidate): string {
 
 export function defaultBioLine(c: IgCandidate): string {
   const label = [c.marque, c.nom].filter(Boolean).join(' ') || 'la pièce de la semaine'
-  return `next fav : ${label}`
+  return `week fav : ${label}`
 }
 
 // --- Publication feed Instagram (Graph API) --------------------------------

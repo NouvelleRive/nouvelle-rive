@@ -14,6 +14,7 @@ import { formatPrixEuro } from '@/lib/formatPrix'
 
 type Candidate = {
   productId: string
+  sku?: string
   nom: string
   marque: string
   prix: number
@@ -69,10 +70,10 @@ export default function IgWeeklyPopup() {
     if (!c) return
     const titre = [c.marque, c.nom].filter(Boolean).join(' · ')
     setCaption(
-      [titre, c.prix ? `${c.prix}€` : '', '', "🔗 next fav en bio pour l'acheter", c.boutiqueUrl, '', '#nouvellerive #secondemain #vintage #upcycling #modecirculaire #paris'].join('\n')
+      [titre, c.prix ? `${c.prix}€` : '', '', c.sku ? `réf ${c.sku}` : '', "🔗 week fav en bio pour l'acheter", '', '#nouvellerive #secondemain #vintage #upcycling #modecirculaire #paris'].join('\n')
     )
     const label = [c.marque, c.nom].filter(Boolean).join(' ') || 'la pièce de la semaine'
-    setBioLine(`next fav : ${label}`)
+    setBioLine(`week fav : ${label}`)
   }, [selected, doc])
 
   const dismiss = () => {
