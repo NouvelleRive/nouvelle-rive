@@ -180,13 +180,13 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         </span>
       </div>
 
-      <div>
-        <label className={label}>Thème</label>
-        <input className={input} value={p.theme} onChange={(e) => set('theme', e.target.value)} placeholder="Thème du jour" />
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-gray-600 w-20 shrink-0">Thème</label>
+        <input className={`${input} flex-1`} value={p.theme} onChange={(e) => set('theme', e.target.value)} placeholder="Thème du jour" />
       </div>
-      <div>
-        <label className={label}>Objectif</label>
-        <input className={input} value={p.objectif} onChange={(e) => set('objectif', e.target.value)} placeholder="Ce qu'on veut obtenir" />
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-gray-600 w-20 shrink-0">Objectif</label>
+        <input className={`${input} flex-1`} value={p.objectif} onChange={(e) => set('objectif', e.target.value)} placeholder="Ce qu'on veut obtenir" />
       </div>
 
       {/* Vidéo */}
