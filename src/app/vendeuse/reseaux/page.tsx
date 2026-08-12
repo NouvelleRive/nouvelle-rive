@@ -322,7 +322,7 @@ function StructureModal({ chronique, onClose }: { chronique: Chronique; onClose:
       <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
           <div>
-            <div className="font-semibold text-gray-900">{chronique.titre}</div>
+            <div className="text-sm font-semibold text-gray-900">{chronique.titre}</div>
             <div className="text-xs text-gray-500">Structure</div>
           </div>
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
@@ -470,7 +470,7 @@ function ProductionModal({
       <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
           <div>
-            <div className="font-semibold text-gray-900">{chronique.titre}</div>
+            <div className="text-sm font-semibold text-gray-900">{chronique.titre}</div>
             <div className="text-xs text-gray-500 capitalize">post du {frDate(prod.date)}</div>
           </div>
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
