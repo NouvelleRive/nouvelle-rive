@@ -1920,6 +1920,9 @@
                 await updateDoc(doc(db, 'produits', p.id), {
                   favoriEquipe: !wasFav,
                   likesCount: increment(wasFav ? -1 : 1),
+                  // Horodate la pose du fav → permet le regroupement par semaine
+                  // dans l'admin week fav (mémoire des semaines précédentes).
+                  ...(wasFav ? {} : { favoriEquipeAt: new Date() }),
                 })
                 onProductUpdate?.()
               } catch (err: any) {

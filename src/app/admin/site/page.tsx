@@ -10,6 +10,7 @@ import { Eye, EyeOff, GripVertical, ArrowUp, ArrowDown, Heart } from 'lucide-rea
 import ProductList, { Produit } from '@/components/ProductList'
 import IconiquesManager from '@/components/admin/IconiquesManager'
 import NavManager from '@/components/admin/NavManager'
+import WeekFavManager from '@/components/admin/WeekFavManager'
 import { getConfigurablePages } from '@/lib/site-pages'
 import type { NavPage } from '@/lib/nav-config'
 
@@ -324,6 +325,8 @@ const getImageUrl = (p: ProduitPreview) => {
   return (
     <div className="space-y-6">
       <NavManager onPagesChange={setNavPages} />
+
+      <WeekFavManager />
 
       <h1 className="text-xl font-bold text-[#22209C]">Configuration des pages</h1>
 
