@@ -59,6 +59,9 @@ const FALLBACK_PAGES = getConfigurablePages().map(p => ({
 }))
 
 const ICONIQUE_PAGE_IDS = ['iconiques-vintage', 'iconiques-upcy'] as const
+// Entrée virtuelle (pas une vraie page nav) : gérée par WeekFavManager, sélectionnable
+// dans le dropdown comme les autres pages.
+const WEEK_FAV_ID = 'week-fav'
 
 const CATEGORIES = [
   'Ensemble', 'Haut', 'Pantalon', 'Robe', 'Jupe / Short', 'Veste / Manteau',
@@ -90,9 +93,12 @@ export default function AdminSitePage() {
   // celles marquées `configurable`), pour que ce qui est édité en haut soit sélectionnable
   // en bas. Les pages non-configurables (statiques comme /nos-creatrices) sont sélectionnables
   // mais le formulaire de règles affichera un message qu'elles n'ont pas de matching.
-  const configurablePages = (navPages.length > 0
-    ? navPages.map(p => ({ id: p.id, label: p.labelFr, inNav: !p.hidden, configurable: p.configurable }))
-    : FALLBACK_PAGES.map(p => ({ ...p, configurable: true })))
+  const configurablePages = [
+    ...(navPages.length > 0
+      ? navPages.map(p => ({ id: p.id, label: p.labelFr, inNav: !p.hidden, configurable: p.configurable }))
+      : FALLBACK_PAGES.map(p => ({ ...p, configurable: true }))),
+    { id: WEEK_FAV_ID, label: '💙 Week fav (coups de cœur)', inNav: false, configurable: true },
+  ]
   const selectedPageMeta = configurablePages.find(p => p.id === selectedPage)
   const isPageConfigurable = selectedPageMeta?.configurable !== false
   const [config, setConfig] = useState<PageConfig>(DEFAULT_CONFIG)
@@ -103,7 +109,8 @@ export default function AdminSitePage() {
   const [produitsFiltrés, setProduitsFiltrés] = useState<ProduitPreview[]>([])
   const [loadingProduits, setLoadingProduits] = useState(false)
   const isIconiquesMode = ICONIQUE_PAGE_IDS.includes(selectedPage as any)
-  const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage, { skip: isIconiquesMode })
+  const isWeekFavMode = selectedPage === WEEK_FAV_ID
+  const { produits: produitsFromHook, loading: loadingProduitsHook } = useFilteredProducts(selectedPage, { skip: isIconiquesMode || isWeekFavMode })
   const [localProduits, setLocalProduits] = useState<Produit[]>([])
 
   // Sync local products with hook.
@@ -326,8 +333,6 @@ const getImageUrl = (p: ProduitPreview) => {
     <div className="space-y-6">
       <NavManager onPagesChange={setNavPages} />
 
-      <WeekFavManager />
-
       <h1 className="text-xl font-bold text-[#22209C]">Configuration des pages</h1>
 
       <div>
@@ -349,7 +354,9 @@ const getImageUrl = (p: ProduitPreview) => {
         </select>
       </div>
 
-      {ICONIQUE_PAGE_IDS.includes(selectedPage as any) ? (
+      {isWeekFavMode ? (
+        <WeekFavManager />
+      ) : ICONIQUE_PAGE_IDS.includes(selectedPage as any) ? (
         <IconiquesManager typeFilter={selectedPage === 'iconiques-vintage' ? 'vintage' : 'upcy'} />
       ) : !isPageConfigurable ? (
         <div className="bg-white border rounded-lg p-6 text-sm text-gray-600">
@@ -534,6 +541,7 @@ const getImageUrl = (p: ProduitPreview) => {
           </button>
         </div>
       )}
+      {!isWeekFavMode && (
       <div className="border-t pt-6 mt-6">
   <div className="flex items-center justify-between mb-4">
     <h3 className="text-sm font-semibold text-gray-700">
@@ -563,6 +571,7 @@ const getImageUrl = (p: ProduitPreview) => {
     />
   )}
 </div>
+      )}
       </div>
   )
 }
