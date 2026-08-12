@@ -11,6 +11,7 @@ const API_VERSION = 'v25.0'
 type IgMedia = {
   id: string
   media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM'
+  media_product_type?: 'FEED' | 'REELS' | 'STORY' | 'AD'
   media_url?: string
   thumbnail_url?: string
   permalink: string
@@ -23,8 +24,8 @@ export async function GET() {
   }
 
   try {
-    const fields = 'id,media_type,media_url,thumbnail_url,permalink,timestamp'
-    const url = `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media?fields=${fields}&limit=30&access_token=${IG_TOKEN}`
+    const fields = 'id,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp'
+    const url = `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media?fields=${fields}&limit=40&access_token=${IG_TOKEN}`
     const res = await fetch(url, { next: { revalidate: 1800 } })
     const data = await res.json()
 
@@ -35,13 +36,17 @@ export async function GET() {
       )
     }
 
-    const posts = (data.data as IgMedia[]).map((m) => ({
-      id: m.id,
-      imageUrl: m.media_type === 'VIDEO' ? m.thumbnail_url : m.media_url,
-      permalink: m.permalink,
-      isVideo: m.media_type === 'VIDEO',
-      isAlbum: m.media_type === 'CAROUSEL_ALBUM',
-    }))
+    const posts = (data.data as IgMedia[])
+      // Grille « posts » (9 carrés) uniquement : on exclut les reels.
+      .filter((m) => m.media_product_type !== 'REELS')
+      .slice(0, 30)
+      .map((m) => ({
+        id: m.id,
+        imageUrl: m.media_type === 'VIDEO' ? m.thumbnail_url : m.media_url,
+        permalink: m.permalink,
+        isVideo: m.media_type === 'VIDEO',
+        isAlbum: m.media_type === 'CAROUSEL_ALBUM',
+      }))
 
     return NextResponse.json(
       { success: true, posts },
