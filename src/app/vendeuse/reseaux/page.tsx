@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { PlusSquare, LayoutGrid, Play, Copy, Pencil, Eye, EyeOff } from 'lucide-react'
+import { PlusSquare, LayoutGrid, Play, Copy, Pencil } from 'lucide-react'
 
 type Tab = 'contenu' | 'feed'
 type Reseau = 'ig' | 'tiktok'
@@ -503,22 +503,7 @@ export default function ReseauxPage() {
   const [structureFor, setStructureFor] = useState<Chronique | null>(null)
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [showHidden, setShowHidden] = useState(false)
   const todayDow = new Date().getDay()
-
-  const toggleHidden = (id: string) => {
-    const isHidden = hidden.has(id)
-    setHidden((prev) => {
-      const next = new Set(prev)
-      isHidden ? next.delete(id) : next.add(id)
-      return next
-    })
-    fetch('/api/reseaux/feed-hidden', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, hidden: !isHidden }),
-    }).catch(() => {})
-  }
 
   const refreshCounts = useCallback(() => {
     fetch('/api/reseaux/counts')
@@ -640,14 +625,8 @@ export default function ReseauxPage() {
 
         {activeTab === 'feed' && (
           <section>
-            {/* Barre : voir masqués (gauche) + toggle IG/TikTok petit (droite) */}
-            <div className="flex items-center justify-between mb-3">
-              <button
-                onClick={() => setShowHidden((v) => !v)}
-                className="text-[11px] text-gray-400 hover:text-gray-600"
-              >
-                {showHidden ? 'Masquer les cachés' : 'Voir les cachés'}
-              </button>
+            {/* Toggle IG/TikTok petit, à droite */}
+            <div className="flex items-center justify-end mb-3">
               <div className="inline-flex bg-gray-100 rounded-full p-0.5 text-[11px] font-medium">
                 <button
                   onClick={() => setReseau('ig')}
@@ -680,32 +659,24 @@ export default function ReseauxPage() {
             ) : (
               <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen max-w-[600px] sm:mx-auto sm:left-0 sm:right-0">
               <div className="grid grid-cols-3 gap-[2px] bg-white">
-                {posts
-                  .filter((p) => showHidden || !hidden.has(p.id))
-                  .map((p) => {
-                    const isHidden = hidden.has(p.id)
-                    return (
-                      <div key={p.id} className={`relative bg-gray-100 overflow-hidden ${reseau === 'ig' ? 'aspect-[4/5]' : 'aspect-[9/16]'}`}>
-                        <a href={p.permalink} target="_blank" rel="noreferrer" className="block w-full h-full">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.imageUrl} alt="" className={`w-full h-full object-cover ${isHidden ? 'opacity-30' : ''}`} loading="lazy" />
-                        </a>
-                        {(p.isReel || p.isVideo) && (
-                          <Play size={16} className="absolute top-1.5 right-1.5 text-white drop-shadow pointer-events-none" fill="white" />
-                        )}
-                        {p.isAlbum && (
-                          <Copy size={15} className="absolute top-1.5 right-1.5 text-white drop-shadow pointer-events-none" />
-                        )}
-                        <button
-                          onClick={() => toggleHidden(p.id)}
-                          className="absolute bottom-1.5 left-1.5 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center"
-                          title={isHidden ? 'Réafficher' : 'Masquer de la grille'}
-                        >
-                          {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
-                        </button>
-                      </div>
-                    )
-                  })}
+                {posts.filter((p) => !hidden.has(p.id)).map((p) => (
+                  <a
+                    key={p.id}
+                    href={p.permalink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`relative block bg-gray-100 overflow-hidden ${reseau === 'ig' ? 'aspect-[4/5]' : 'aspect-[9/16]'}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    {(p.isReel || p.isVideo) && (
+                      <Play size={16} className="absolute top-1.5 right-1.5 text-white drop-shadow" fill="white" />
+                    )}
+                    {p.isAlbum && (
+                      <Copy size={15} className="absolute top-1.5 right-1.5 text-white drop-shadow" />
+                    )}
+                  </a>
+                ))}
               </div>
               </div>
             )}
