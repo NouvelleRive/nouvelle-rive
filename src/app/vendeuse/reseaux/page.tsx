@@ -169,7 +169,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
   }
 
   const input = 'w-full font-sans border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#22209C]'
-  const label = 'block text-xs font-medium text-gray-500 mb-1'
+  const label = 'block text-sm font-medium text-gray-600 mb-1'
 
   return (
     <div className="pt-4 first:pt-0 space-y-3">
@@ -189,17 +189,31 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         <input className={`${input} flex-1`} value={p.objectif} onChange={(e) => set('objectif', e.target.value)} placeholder="Ce qu'on veut obtenir" />
       </div>
 
-      {/* Vidéo */}
+      {/* Vidéo + vignette côte à côte */}
       <div>
-        <label className={label}>Vidéo (postée avec le son)</label>
-        {p.videoUrl ? (
-          <video ref={setVideoEl} src={p.videoUrl} controls className="w-full max-h-72 rounded-lg bg-black" />
-        ) : (
-          <div className="text-sm text-gray-400 py-6 text-center border border-dashed border-gray-300 rounded-lg">Aucune vidéo</div>
-        )}
-        <div className="flex gap-2 mt-2">
+        <label className={label}>Vidéo (postée avec le son) & vignette</label>
+        <div className="flex gap-3 items-start">
+          {/* Vidéo à son format naturel (16/9 ou portrait), sans bandes */}
+          <div className="flex-1 min-w-0">
+            {p.videoUrl ? (
+              <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-64 max-w-full rounded-lg" />
+            ) : (
+              <div className="text-sm text-gray-400 py-8 text-center border border-dashed border-gray-300 rounded-lg">Aucune vidéo</div>
+            )}
+          </div>
+          {/* Vignette à côté */}
+          <div className="shrink-0">
+            {p.vignetteUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={p.vignetteUrl} alt="" className="w-20 h-20 object-cover rounded-lg border" />
+            ) : (
+              <div className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400">vignette</div>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
           <label className="text-xs font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5 cursor-pointer">
-            {busy === 'video' ? 'Envoi…' : p.videoUrl ? 'Remplacer' : 'Ajouter la vidéo'}
+            {busy === 'video' ? 'Envoi…' : p.videoUrl ? 'Remplacer la vidéo' : 'Ajouter la vidéo'}
             <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
           </label>
           {p.videoUrl && (
@@ -207,25 +221,11 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
               {busy === 'vignette' ? '…' : 'Vignette = image actuelle'}
             </button>
           )}
-        </div>
-      </div>
-
-      {/* Vignette */}
-      <div>
-        <label className={label}>Vignette</label>
-        <div className="flex items-center gap-3">
-          {p.vignetteUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.vignetteUrl} alt="" className="w-20 h-20 object-cover rounded-lg border" />
-          ) : (
-            <div className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400">aucune</div>
-          )}
-          <label className="text-xs font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5 cursor-pointer">
-            {busy === 'vignette' ? 'Envoi…' : 'Importer'}
+          <label className="text-xs font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5 cursor-pointer">
+            {busy === 'vignette' ? 'Envoi…' : 'Importer une vignette'}
             <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
           </label>
         </div>
-        <p className="text-[11px] text-gray-400 mt-1">Sélectionne une image de la vidéo (bouton ci-dessus) ou importe-la.</p>
       </div>
 
       <div>
