@@ -55,6 +55,20 @@ type Production = {
   pret: boolean
 }
 
+type CollabOption = { nom: string; handle: string }
+
+// Ajoute/retire un handle dans une liste séparée par des virgules (dédupliquée).
+function toggleHandle(current: string, handle: string): string {
+  const tokens = current.split(',').map((t) => t.trim().replace(/^@/, '')).filter(Boolean)
+  const exists = tokens.includes(handle)
+  const next = exists ? tokens.filter((t) => t !== handle) : [...tokens, handle]
+  return next.map((t) => `@${t}`).join(', ')
+}
+
+function hasHandle(current: string, handle: string): boolean {
+  return current.split(',').map((t) => t.trim().replace(/^@/, '')).includes(handle)
+}
+
 function frDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -87,7 +101,7 @@ function captureFrame(video: HTMLVideoElement): Promise<File> {
   })
 }
 
-function ProductionCard({ chronique, prod, onSaved }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void }) {
+function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void; collabOptions: CollabOption[] }) {
   const [p, setP] = useState<Production>(prod)
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
@@ -139,11 +153,11 @@ function ProductionCard({ chronique, prod, onSaved }: { chronique: Chronique; pr
     finally { setBusy(null) }
   }
 
-  const input = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#22209C]'
+  const input = 'w-full font-sans border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#22209C]'
   const label = 'block text-xs font-medium text-gray-500 mb-1'
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+    <div className="pt-4 first:pt-0 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-900 capitalize">{frDate(p.date)}</span>
         <span className={`text-xs font-medium rounded-full px-3 py-1 ${p.videoUrl ? 'text-green-700 bg-green-50' : 'text-amber-600 bg-amber-50'}`}>
@@ -219,13 +233,33 @@ function ProductionCard({ chronique, prod, onSaved }: { chronique: Chronique; pr
       </div>
       <div>
         <label className={label}>Inviter à collaborer</label>
+        {collabOptions.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {collabOptions.map((o) => {
+              const on = hasHandle(p.collab, o.handle)
+              return (
+                <button
+                  key={o.handle}
+                  type="button"
+                  onClick={() => set('collab', toggleHandle(p.collab, o.handle))}
+                  className={`text-xs rounded-full px-3 py-1 border transition-colors ${
+                    on ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-600 border-gray-300'
+                  }`}
+                  title={`@${o.handle}`}
+                >
+                  {o.nom}
+                </button>
+              )
+            })}
+          </div>
+        )}
         <input
           className={input}
           value={p.collab}
           onChange={(e) => set('collab', e.target.value)}
           placeholder="@compte1, @compte2"
         />
-        <p className="text-[11px] text-gray-400 mt-1">Comptes invités en collab sur le post (séparés par une virgule).</p>
+        <p className="text-[11px] text-gray-400 mt-1">Clique une chineuse ci-dessus, ou tape n'importe quel @compte (séparés par une virgule).</p>
       </div>
 
       <button
@@ -239,7 +273,7 @@ function ProductionCard({ chronique, prod, onSaved }: { chronique: Chronique; pr
   )
 }
 
-function ChroniqueBody({ chronique }: { chronique: Chronique }) {
+function ChroniqueBody({ chronique, collabOptions }: { chronique: Chronique; collabOptions: CollabOption[] }) {
   const [productions, setProductions] = useState<Production[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -274,15 +308,17 @@ function ChroniqueBody({ chronique }: { chronique: Chronique }) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className={`text-xs font-medium rounded-lg px-3 py-2 ${enAvance ? 'text-green-700 bg-green-50' : 'text-amber-700 bg-amber-50'}`}>
+    <div>
+      <div className={`text-xs font-medium mb-1 ${enAvance ? 'text-green-700' : 'text-amber-700'}`}>
         {enAvance
           ? `✓ ${nbPrets} semaines prêtes d'avance`
           : `⚠︎ ${nbPrets}/2 semaines prêtes — il en faut au moins 2 d'avance`}
       </div>
-      {productions.map((prod) => (
-        <ProductionCard key={prod.date} chronique={chronique} prod={prod} onSaved={updateProd} />
-      ))}
+      <div className="divide-y divide-gray-200">
+        {productions.map((prod) => (
+          <ProductionCard key={prod.date} chronique={chronique} prod={prod} onSaved={updateProd} collabOptions={collabOptions} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -302,7 +338,17 @@ export default function ReseauxPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
+  const [collabOptions, setCollabOptions] = useState<CollabOption[]>([])
   const todayDow = new Date().getDay()
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/reseaux/collab-options')
+      .then((r) => r.json())
+      .then((d) => { if (alive && d.success) setCollabOptions(d.options) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -381,8 +427,8 @@ export default function ReseauxPage() {
                     <span className={`shrink-0 text-gray-400 text-xl transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
                   </button>
                   {open && (
-                    <div className="border-t border-gray-100 p-3 bg-gray-50">
-                      <ChroniqueBody chronique={c} />
+                    <div className="border-t border-gray-100 px-4 pb-4 bg-white">
+                      <ChroniqueBody chronique={c} collabOptions={collabOptions} />
                     </div>
                   )}
                 </div>
