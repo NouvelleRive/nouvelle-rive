@@ -74,6 +74,14 @@ function frDate(iso: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+// Date « à tourner avant » = 2 semaines avant la date de post.
+function deadlineISO(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() - 14)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+}
+
 // Réutilise l'endpoint Bunny partagé (/api/upload-bunny), branche multipart, dossier reseaux/.
 async function uploadMedia(file: File, kind: 'video' | 'vignette'): Promise<string> {
   const fd = new FormData()
@@ -368,6 +376,8 @@ function ChroniqueBody({ chronique, collabOptions }: { chronique: Chronique; col
     return () => { alive = false }
   }, [chronique.key])
 
+  const [openDate, setOpenDate] = useState<string | null>(null)
+
   const nbPrets = productions.filter((p) => p.pret).length
   const enAvance = nbPrets >= 2
 
@@ -382,17 +392,74 @@ function ChroniqueBody({ chronique, collabOptions }: { chronique: Chronique; col
     )
   }
 
+  const openProd = productions.find((p) => p.date === openDate) || null
+
   return (
     <div>
-      <div className={`text-xs font-medium mb-1 ${enAvance ? 'text-green-700' : 'text-amber-700'}`}>
+      <div className={`text-xs font-medium mb-3 ${enAvance ? 'text-green-700' : 'text-amber-700'}`}>
         {enAvance
           ? `✓ ${nbPrets} semaines prêtes d'avance`
           : `⚠︎ ${nbPrets}/2 semaines prêtes — il en faut au moins 2 d'avance`}
       </div>
-      <div className="divide-y divide-gray-200">
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {productions.map((prod) => (
-          <ProductionCard key={prod.date} chronique={chronique} prod={prod} onSaved={updateProd} collabOptions={collabOptions} />
+          <button key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left">
+            <div
+              className={`aspect-square rounded-xl overflow-hidden flex items-center justify-center ${
+                prod.pret ? 'border border-gray-200 bg-gray-100' : 'border-2 border-dashed border-gray-300 bg-gray-50'
+              }`}
+            >
+              {prod.vignetteUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={prod.vignetteUrl} alt="" className="w-full h-full object-cover" />
+              ) : prod.pret ? (
+                <Play size={26} className="text-gray-400" fill="currentColor" />
+              ) : (
+                <span className="text-4xl text-gray-300 leading-none">+</span>
+              )}
+            </div>
+            <div className="mt-1.5 text-[12px] leading-tight">
+              <div className="font-medium text-gray-700 capitalize">post du {frDate(prod.date)}</div>
+              {!prod.pret && (
+                <div className="text-amber-600 capitalize">à tourner avant le {frDate(deadlineISO(prod.date))}</div>
+              )}
+            </div>
+          </button>
         ))}
+      </div>
+
+      {openProd && (
+        <ProductionModal
+          chronique={chronique}
+          prod={openProd}
+          collabOptions={collabOptions}
+          onClose={() => setOpenDate(null)}
+          onSaved={(p) => { updateProd(p); setOpenDate(null) }}
+        />
+      )}
+    </div>
+  )
+}
+
+function ProductionModal({
+  chronique, prod, collabOptions, onClose, onSaved,
+}: {
+  chronique: Chronique; prod: Production; collabOptions: CollabOption[]; onClose: () => void; onSaved: (p: Production) => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
+          <div>
+            <div className="font-semibold text-gray-900">{chronique.titre}</div>
+            <div className="text-xs text-gray-500 capitalize">post du {frDate(prod.date)}</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
+        </div>
+        <div className="px-4 pb-4">
+          <ProductionCard chronique={chronique} prod={prod} onSaved={onSaved} collabOptions={collabOptions} />
+        </div>
       </div>
     </div>
   )
