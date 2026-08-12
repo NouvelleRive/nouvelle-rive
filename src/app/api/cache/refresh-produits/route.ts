@@ -33,6 +33,7 @@ const STATIC_PATHS = [
   '/api/creatrice-page',
   '/boutique',
   '/coups-de-coeur',
+  '/week-fav',
   '/new-in',
   '/femme',
   '/homme',
