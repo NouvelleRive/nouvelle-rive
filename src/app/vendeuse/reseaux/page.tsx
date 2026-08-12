@@ -196,7 +196,16 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
           {/* Vidéo à son format naturel (16/9 ou portrait), sans bandes */}
           <div className="flex-1 min-w-0">
             {p.videoUrl ? (
-              <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-64 max-w-full rounded-lg" />
+              <div className="relative inline-block">
+                <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-64 max-w-full rounded-lg" />
+                <button
+                  onClick={() => set('videoUrl', '')}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center"
+                  title="Supprimer la vidéo"
+                >
+                  ×
+                </button>
+              </div>
             ) : (
               <div className="text-sm text-gray-400 py-8 text-center border border-dashed border-gray-300 rounded-lg">Aucune vidéo</div>
             )}
@@ -204,8 +213,17 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
           {/* Vignette à côté */}
           <div className="shrink-0">
             {p.vignetteUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.vignetteUrl} alt="" className="w-20 h-20 object-cover rounded-lg border" />
+              <div className="relative w-20 h-20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.vignetteUrl} alt="" className="w-20 h-20 object-cover rounded-lg border" />
+                <button
+                  onClick={() => set('vignetteUrl', '')}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs leading-none flex items-center justify-center"
+                  title="Supprimer la vignette"
+                >
+                  ×
+                </button>
+              </div>
             ) : (
               <div className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400">vignette</div>
             )}
