@@ -796,13 +796,15 @@ export async function publishToEbay(produit: EbayProduct): Promise<EbayListingRe
     }
 
     const nbPhotos = produit.imageUrls?.length || 0
-    if (nbPhotos === 0) {
-      return { success: false, error: 'Au moins une image requise' }
+    const hasVideo = !!produit.videoUrl
+    // Règle : au moins 4 photos, OU une vidéo. Sinon l'algo eBay ne peut pas
+    // vérifier l'authenticité et retire l'annonce pour « contrefaçon ».
+    if (!hasVideo && nbPhotos < 4) {
+      return { success: false, error: `${nbPhotos} photo(s) sans vidéo (min 4 photos ou 1 vidéo) — non publié pour éviter le flag contrefaçon` }
     }
-    // Pièces > 300 € : minimum 5 photos. En-dessous de 5, l'algo eBay ne peut pas
-    // vérifier l'authenticité et retire pour « contrefaçon ». Les pièces ≤ 300 € gardent 1.
-    if (produit.priceEUR > 300 && nbPhotos < 5) {
-      return { success: false, error: `${produit.priceEUR}€ avec ${nbPhotos} photo(s) (min 5 au-dessus de 300€) — non publié pour éviter le flag contrefaçon` }
+    // Pièces > 300 € : minimum 5 photos (sauf si une vidéo est présente).
+    if (!hasVideo && produit.priceEUR > 300 && nbPhotos < 5) {
+      return { success: false, error: `${produit.priceEUR}€ avec ${nbPhotos} photo(s) (min 5 au-dessus de 300€ sans vidéo) — non publié pour éviter le flag contrefaçon` }
     }
 
     // Vérifier que le genre est spécifié

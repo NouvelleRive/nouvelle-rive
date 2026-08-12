@@ -149,6 +149,11 @@ export async function GET(req: NextRequest) {
     if (done[key] >= quotas[key]) continue
     if (done.STRC >= quotas.STRC && done.MAK >= quotas.MAK) break
     const sku = p.sku || p.id
+    // Garde-fou survente : une vente enregistrée (caisse Square / site) même si le
+    // flag `vendu` du produit n'a pas été mis à jour → on ne publie JAMAIS. Point-check
+    // indexé (1 lecture par candidat réellement tenté), pas de scan de collection.
+    const venteSnap = await adminDb.collection('ventes').where('sku', '==', sku).limit(1).get()
+    if (!venteSnap.empty) { published.push({ sku, error: 'deja-vendu' }); continue }
     // Sans genre eBay refuse (GENDER_REQUIRED) : on écarte sans consommer le quota.
     if (!resolveGender(p)) { sansGenre.push(sku); continue }
     try {
