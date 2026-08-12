@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { PlusSquare, LayoutGrid, Play, Copy, Pencil } from 'lucide-react'
 
 type Tab = 'contenu' | 'feed'
@@ -357,7 +357,7 @@ function StructureModal({ chronique, onClose }: { chronique: Chronique; onClose:
   )
 }
 
-function ChroniqueBody({ chronique, collabOptions }: { chronique: Chronique; collabOptions: CollabOption[] }) {
+function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique: Chronique; collabOptions: CollabOption[]; onCountsChange: () => void }) {
   const [productions, setProductions] = useState<Production[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -453,7 +453,7 @@ function ChroniqueBody({ chronique, collabOptions }: { chronique: Chronique; col
           prod={openProd}
           collabOptions={collabOptions}
           onClose={() => setOpenDate(null)}
-          onSaved={(p) => { updateProd(p); setOpenDate(null) }}
+          onSaved={(p) => { updateProd(p); onCountsChange(); setOpenDate(null) }}
         />
       )}
     </div>
@@ -500,7 +500,15 @@ export default function ReseauxPage() {
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [collabOptions, setCollabOptions] = useState<CollabOption[]>([])
   const [structureFor, setStructureFor] = useState<Chronique | null>(null)
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const todayDow = new Date().getDay()
+
+  const refreshCounts = useCallback(() => {
+    fetch('/api/reseaux/counts')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setCounts(d.counts) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -508,8 +516,9 @@ export default function ReseauxPage() {
       .then((r) => r.json())
       .then((d) => { if (alive && d.success) setCollabOptions(d.options) })
       .catch(() => {})
+    refreshCounts()
     return () => { alive = false }
-  }, [])
+  }, [refreshCounts])
 
   useEffect(() => {
     let alive = true
@@ -581,16 +590,26 @@ export default function ReseauxPage() {
                         {isToday && <span className="ml-2 text-xs font-medium text-[#22209C]">· Aujourd'hui</span>}
                       </div>
                     </button>
-                    <button
-                      onClick={() => setStructureFor(c)}
-                      className="shrink-0 text-xs font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5"
-                    >
-                      Structure
-                    </button>
+                    <div className="shrink-0 flex flex-col items-center gap-1">
+                      <span
+                        className={`w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center ${
+                          (counts[c.key] ?? 0) < 2 ? 'bg-red-500' : 'bg-[#22209C]'
+                        }`}
+                        title={`${counts[c.key] ?? 0} contenu(s) d'avance`}
+                      >
+                        {counts[c.key] ?? 0}
+                      </span>
+                      <button
+                        onClick={() => setStructureFor(c)}
+                        className="text-[11px] text-gray-400 hover:text-gray-600"
+                      >
+                        Structure
+                      </button>
+                    </div>
                   </div>
                   {open && (
                     <div className="border-t border-gray-100 px-4 pb-4 bg-white">
-                      <ChroniqueBody chronique={c} collabOptions={collabOptions} />
+                      <ChroniqueBody chronique={c} collabOptions={collabOptions} onCountsChange={refreshCounts} />
                     </div>
                   )}
                 </div>
