@@ -218,8 +218,21 @@ export async function getCoupsDeCoeurServer(limit: number = 50): Promise<Produit
   }
 }
 
+// Lundi 00h (heure de Paris) de la semaine en cours, en millis.
+function startOfThisWeekMs(): number {
+  const now = new Date()
+  const paris = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }))
+  const day = (paris.getDay() + 6) % 7 // 0 = lundi
+  paris.setHours(0, 0, 0, 0)
+  paris.setDate(paris.getDate() - day)
+  // Décalage Paris↔serveur appliqué pour retomber sur un vrai instant.
+  const offset = now.getTime() - new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getTime()
+  return paris.getTime() + offset
+}
+
 // Week fav = sélection de l'équipe (champ favoriEquipe posé au restock + amendé
 // dans /admin/site → Week fav). Alimente la page publique /week-fav.
+// N'affiche QUE la semaine en cours : une fav plus vieille qu'une semaine disparaît.
 export async function getWeekFavServer(limit: number = 50): Promise<ProduitInitial[]> {
   try {
     const snap = await adminDb
@@ -228,9 +241,15 @@ export async function getWeekFavServer(limit: number = 50): Promise<ProduitIniti
       .limit(limit * 4)
       .get()
 
+    const weekStart = startOfThisWeekMs()
+    const ms = (raw: any) =>
+      raw.favoriEquipeAt?.toMillis?.() ??
+      (typeof raw.favoriEquipeAt?._seconds === 'number' ? raw.favoriEquipeAt._seconds * 1000 : 0)
+
     const filtered = snap.docs
       .map(d => ({ id: d.id, raw: d.data() as any }))
       .filter(({ raw }) =>
+        ms(raw) >= weekStart &&              // semaine en cours uniquement
         raw.statut !== 'supprime' &&
         raw.statut !== 'retour' &&
         !raw.statutRecuperation &&
@@ -242,11 +261,6 @@ export async function getWeekFavServer(limit: number = 50): Promise<ProduitIniti
         (raw.imageUrls?.[0] || raw.imageUrl || raw.photos?.face)
       )
 
-    // Plus récemment ajoutées en premier (favoriEquipeAt). Favs legacy sans
-    // horodatage → fin de liste (ms = 0).
-    const ms = (raw: any) =>
-      raw.favoriEquipeAt?.toMillis?.() ??
-      (typeof raw.favoriEquipeAt?._seconds === 'number' ? raw.favoriEquipeAt._seconds * 1000 : 0)
     filtered.sort((a, b) => ms(b.raw) - ms(a.raw))
 
     return filtered

@@ -63,10 +63,49 @@ function toDate(v: any): Date | null {
   return null
 }
 
-function weekLabel(d: Date | null): string {
-  if (!d) return 'Semaine indéterminée'
-  const lundi = mondayOf(d)
-  return `Semaine du ${lundi.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+// Un bloc de favs (titre + grille de tuiles avec bouton retirer).
+function FavSection({
+  title, items, onRemove, busyId, emptyLabel,
+}: {
+  title: string
+  items: Fav[]
+  onRemove: (f: Fav) => void
+  busyId: string | null
+  emptyLabel?: string
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline gap-2 mb-2">
+        <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
+        <span className="text-xs text-gray-400">{items.length} pièce{items.length > 1 ? 's' : ''}</span>
+      </div>
+      {items.length === 0 ? (
+        <div className="py-6 text-center text-gray-400 text-xs border border-dashed rounded">{emptyLabel || 'Aucune pièce.'}</div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          {items.map(f => (
+            <div key={f.id} className="relative rounded-lg overflow-hidden border border-gray-200 bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={favImage(f)} alt={f.nom || ''} className="w-full aspect-square object-cover bg-white" />
+              <button
+                onClick={() => onRemove(f)}
+                disabled={busyId === f.id}
+                title="Retirer de la week fav"
+                className="absolute top-1 right-1 bg-white/90 hover:bg-white p-1 rounded-full shadow disabled:opacity-50"
+              >
+                <X size={14} />
+              </button>
+              <div className="p-1.5">
+                <div className="text-[10px] font-semibold text-gray-800 truncate">{f.marque || '—'}</div>
+                <div className="text-[10px] text-gray-500 truncate">{f.sku || ''}</div>
+                <div className="text-[10px] text-[#22209C]">{formatPrixEuro(f.prix || 0)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function WeekFavManager() {
@@ -149,18 +188,18 @@ export default function WeekFavManager() {
     }
   }
 
-  // Regroupement par semaine (favoriEquipeAt), plus récent en premier.
-  const groups = (() => {
-    const map = new Map<string, { ts: number; label: string; items: Fav[] }>()
-    for (const f of favs) {
-      const d = toDate(f.favoriEquipeAt)
-      const key = d ? mondayOf(d).toISOString().slice(0, 10) : 'z-inconnue'
-      const ts = d ? mondayOf(d).getTime() : -1
-      if (!map.has(key)) map.set(key, { ts, label: weekLabel(d), items: [] })
-      map.get(key)!.items.push(f)
-    }
-    return Array.from(map.values()).sort((a, b) => b.ts - a.ts)
-  })()
+  // Deux blocs : la semaine en cours, et tout le reste (précédentes).
+  const startOfWeek = mondayOf(new Date()).getTime()
+  const favMs = (f: Fav) => {
+    const d = toDate(f.favoriEquipeAt)
+    return d ? d.getTime() : 0
+  }
+  const isThisWeek = (f: Fav) => {
+    const d = toDate(f.favoriEquipeAt)
+    return !!d && mondayOf(d).getTime() === startOfWeek
+  }
+  const thisWeek = favs.filter(isThisWeek).sort((a, b) => favMs(b) - favMs(a))
+  const previous = favs.filter(f => !isThisWeek(f)).sort((a, b) => favMs(b) - favMs(a))
 
   return (
     <div className="bg-white border rounded-lg p-6 space-y-5">
@@ -197,36 +236,11 @@ export default function WeekFavManager() {
           Aucune week fav pour l'instant.
         </div>
       ) : (
-        <div className="space-y-6">
-          {groups.map(g => (
-            <div key={g.label}>
-              <div className="flex items-baseline gap-2 mb-2">
-                <h3 className="text-sm font-semibold text-gray-700 capitalize">{g.label}</h3>
-                <span className="text-xs text-gray-400">{g.items.length} pièce{g.items.length > 1 ? 's' : ''}</span>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {g.items.map(f => (
-                  <div key={f.id} className="relative rounded-lg overflow-hidden border border-gray-200 bg-white">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={favImage(f)} alt={f.nom || ''} className="w-full aspect-square object-cover bg-white" />
-                    <button
-                      onClick={() => removeFav(f)}
-                      disabled={busyId === f.id}
-                      title="Retirer de la week fav"
-                      className="absolute top-1 right-1 bg-white/90 hover:bg-white p-1 rounded-full shadow disabled:opacity-50"
-                    >
-                      <X size={14} />
-                    </button>
-                    <div className="p-1.5">
-                      <div className="text-[10px] font-semibold text-gray-800 truncate">{f.marque || '—'}</div>
-                      <div className="text-[10px] text-gray-500 truncate">{f.sku || ''}</div>
-                      <div className="text-[10px] text-[#22209C]">{formatPrixEuro(f.prix || 0)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="space-y-8">
+          <FavSection title="This week fav" items={thisWeek} onRemove={removeFav} busyId={busyId} emptyLabel="Aucune fav cette semaine." />
+          {previous.length > 0 && (
+            <FavSection title="Previous week fav" items={previous} onRemove={removeFav} busyId={busyId} />
+          )}
         </div>
       )}
     </div>
