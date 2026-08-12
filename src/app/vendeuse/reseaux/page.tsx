@@ -9,13 +9,34 @@ type Reseau = 'ig' | 'tiktok'
 // Les 7 chroniques de la semaine (une par jour, une par fille).
 // day = getDay() : 0 = dimanche … 6 = samedi.
 const CHRONIQUES = [
-  { key: 'infinite-slider', day: 0, jour: 'Dimanche', titre: 'INFINITE SLIDER', responsable: 'Salomé' },
-  { key: 'compo-de-lo', day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah' },
-  { key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga' },
-  { key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda' },
-  { key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina' },
-  { key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé' },
-  { key: 'energies-sarah', day: 6, jour: 'Samedi', titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah' },
+  {
+    key: 'infinite-slider', day: 0, jour: 'Dimanche', titre: 'INFINITE SLIDER', responsable: 'Salomé',
+    captionDefaut: "Les nouveautés de la semaine défilent 🌊\n\nLaquelle repart avec toi ? 🦋",
+  },
+  {
+    key: 'compo-de-lo', day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah',
+    captionDefaut: "Les compo de Lo 🎨 Loah t'assemble une pièce forte en un look complet\n\nTu valides ? 🦋",
+  },
+  {
+    key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga',
+    captionDefaut: "Le book d'Olga 📖 sa sélection coup de cœur de la semaine\n\nDis-nous ta préférée 🦋",
+  },
+  {
+    key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda',
+    captionDefaut: "Que portent nos stars du vintage ? C'est la mission d'Amanda de le découvrir 🕵️‍♀️🔎🌊\n\nSpoiler ce sera local et de saison 🦋",
+  },
+  {
+    key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina',
+    captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
+  },
+  {
+    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé',
+    captionDefaut: "Shabbat Shalom 🌊 la quote de la semaine pour bien commencer le week-end 🦋",
+  },
+  {
+    key: 'energies-sarah', day: 6, jour: 'Samedi', titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah',
+    captionDefaut: "Les énergies de Sarah ✨ sa pièce vibe du moment\n\nElle est pour toi ? 🦋",
+  },
 ] as const
 
 type Chronique = (typeof CHRONIQUES)[number]
@@ -216,7 +237,13 @@ function ChroniqueBody({ chronique }: { chronique: Chronique }) {
     setLoading(true)
     fetch(`/api/reseaux/contenu?chronique=${chronique.key}`)
       .then((r) => r.json())
-      .then((d) => { if (alive && d.success) setProductions(d.productions) })
+      .then((d) => {
+        if (!alive || !d.success) return
+        // Pré-remplit la caption avec le défaut de la chronique tant qu'elle est vide.
+        setProductions(
+          d.productions.map((p: Production) => ({ ...p, caption: p.caption || chronique.captionDefaut }))
+        )
+      })
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
   }, [chronique.key])
