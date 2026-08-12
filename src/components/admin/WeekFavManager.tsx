@@ -166,7 +166,7 @@ export default function WeekFavManager() {
     <div className="bg-white border rounded-lg p-6 space-y-5">
       <div className="flex items-center gap-2">
         <Heart size={18} className="text-[#22209C]" fill="#22209C" />
-        <h2 className="text-base font-bold text-[#22209C]">Week fav (coups de cœur équipe)</h2>
+        <h2 className="text-base font-bold text-[#22209C]">Week fav</h2>
       </div>
       <p className="text-xs text-gray-500 -mt-2">
         Les chineuses sélectionnent leurs favs au restock. Tu peux en ajouter ou en retirer ici.

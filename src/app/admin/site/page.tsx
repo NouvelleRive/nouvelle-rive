@@ -97,7 +97,7 @@ export default function AdminSitePage() {
     ...(navPages.length > 0
       ? navPages.map(p => ({ id: p.id, label: p.labelFr, inNav: !p.hidden, configurable: p.configurable }))
       : FALLBACK_PAGES.map(p => ({ ...p, configurable: true }))),
-    { id: WEEK_FAV_ID, label: '💙 Week fav (coups de cœur)', inNav: false, configurable: true },
+    { id: WEEK_FAV_ID, label: '💙 Week fav', inNav: false, configurable: true },
   ]
   const selectedPageMeta = configurablePages.find(p => p.id === selectedPage)
   const isPageConfigurable = selectedPageMeta?.configurable !== false
