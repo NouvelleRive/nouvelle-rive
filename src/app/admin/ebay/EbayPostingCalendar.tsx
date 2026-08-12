@@ -1,6 +1,8 @@
 // app/admin/ebay/EbayPostingCalendar.tsx
 'use client'
 
+import { useState, useEffect } from 'react'
+
 /**
  * Calendrier de re-publication eBay.
  * Compte fraîchement débloqué → montée en charge progressive pour ne PAS
@@ -59,6 +61,17 @@ export default function EbayPostingCalendar({
   onPublish?: (ids: string[]) => void
   publishing?: boolean
 }) {
+  // Titre éditable (sauvegardé dans le navigateur)
+  const [titre, setTitre] = useState('Pièces prévues')
+  useEffect(() => {
+    const saved = localStorage.getItem('ebayCalendarTitre')
+    if (saved != null) setTitre(saved)
+  }, [])
+  const onTitreChange = (v: string) => {
+    setTitre(v)
+    localStorage.setItem('ebayCalendarTitre', v)
+  }
+
   const today = new Date()
 
   const jours = Array.from({ length: 14 }, (_, i) => {
@@ -130,12 +143,12 @@ export default function EbayPostingCalendar({
       {candidats.length > 0 && (
         <div className="mt-4 border-t pt-3">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-            <p className="text-xs font-semibold text-gray-700">
-              Pièces prévues pour la chauffe{' '}
-              <span className="font-normal text-gray-400">
-                — {strcCount} Strass Chronique puis {makiCount} lunettes MAKI · 3/jour ({Math.ceil((strcCount + makiCount) / 3)} jours)
-              </span>
-            </p>
+            <input
+              value={titre}
+              onChange={(e) => onTitreChange(e.target.value)}
+              className="text-xs font-semibold text-gray-700 bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 rounded px-1 py-0.5 focus:outline-none min-w-[140px]"
+              title="Cliquer pour modifier"
+            />
             {onPublish && candidats.length > 0 && (
               <button
                 onClick={() => onPublish(candidats.slice(0, 3).map(c => c.id))}
