@@ -6,6 +6,18 @@ import { PlusSquare, LayoutGrid, Play, Copy } from 'lucide-react'
 type Tab = 'contenu' | 'feed'
 type Reseau = 'ig' | 'tiktok'
 
+// Les 7 chroniques de la semaine (une par jour, une par fille).
+// day = getDay() : 0 = dimanche … 6 = samedi.
+const CHRONIQUES = [
+  { day: 0, jour: 'Dimanche', titre: 'INFINITE SLIDER', responsable: 'Salomé' },
+  { day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah' },
+  { day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga' },
+  { day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda' },
+  { day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina' },
+  { day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé' },
+  { day: 6, jour: 'Samedi', titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah' },
+] as const
+
 type Post = {
   id: string
   imageUrl?: string
@@ -15,11 +27,12 @@ type Post = {
 }
 
 export default function ReseauxPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('feed')
+  const [activeTab, setActiveTab] = useState<Tab>('contenu')
   const [reseau, setReseau] = useState<Reseau>('ig')
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const todayDow = new Date().getDay()
 
   useEffect(() => {
     let alive = true
@@ -70,8 +83,39 @@ export default function ReseauxPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-6">
         {activeTab === 'contenu' && (
-          <section>
-            <p className="text-center text-gray-400 py-12">New contenu — à venir.</p>
+          <section className="space-y-3">
+            <p className="text-sm text-gray-500 mb-4">
+              Chaque jour sa chronique. Prépare ton contenu à l'avance : l'app te rappellera, le stockera et le postera le bon jour.
+            </p>
+            {CHRONIQUES.map((c) => {
+              const isToday = c.day === todayDow
+              return (
+                <div
+                  key={c.day}
+                  className={`flex items-center justify-between rounded-xl border p-4 transition-colors ${
+                    isToday ? 'border-[#22209C] bg-[#22209C]/5' : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium ${isToday ? 'text-[#22209C]' : 'text-gray-400'}`}>
+                        {c.jour}
+                      </span>
+                      {isToday && (
+                        <span className="text-[10px] font-bold text-white bg-[#22209C] rounded-full px-2 py-0.5">
+                          Aujourd'hui
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-semibold text-gray-900 truncate">{c.titre}</div>
+                    <div className="text-sm text-gray-500">{c.responsable}</div>
+                  </div>
+                  <span className="shrink-0 text-xs font-medium text-amber-600 bg-amber-50 rounded-full px-3 py-1">
+                    À faire
+                  </span>
+                </div>
+              )
+            })}
           </section>
         )}
 
