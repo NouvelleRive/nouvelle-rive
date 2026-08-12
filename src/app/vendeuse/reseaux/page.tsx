@@ -38,13 +38,14 @@ function frDate(iso: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+// Réutilise l'endpoint Bunny partagé (/api/upload-bunny), branche multipart, dossier reseaux/.
 async function uploadMedia(file: File, kind: 'video' | 'vignette'): Promise<string> {
   const fd = new FormData()
   fd.append('file', file)
-  fd.append('kind', kind)
-  const res = await fetch('/api/reseaux/upload', { method: 'POST', body: fd })
+  fd.append('folder', `reseaux/${kind}/`)
+  const res = await fetch('/api/upload-bunny', { method: 'POST', body: fd })
   const data = await res.json()
-  if (!data.success) throw new Error(data.error || 'upload échoué')
+  if (!res.ok || data.error) throw new Error(data.error || 'upload échoué')
   return data.url as string
 }
 
