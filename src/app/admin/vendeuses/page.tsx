@@ -20,6 +20,8 @@
     prenom: string
     couleur: string
     actif: boolean
+    email?: string
+    mailingActif?: boolean
     createdAt?: Timestamp
     joursFixes?: Record<string, string> // ex: { "1": "12-20", "0": "11-17" } (0=dimanche, 1=lundi...)
   }
@@ -218,6 +220,24 @@
       setNewPrenom('')
       setNewCouleur(COULEURS_PRESET[0])
       setShowAdd(false)
+      fetchVendeuses()
+    }
+
+    // =====================
+    // SAUVEGARDER EMAIL (pour les rappels contenu par mail)
+    // =====================
+    const saveEmail = async (v: Vendeuse, email: string) => {
+      const val = email.trim()
+      if (val === (v.email || '')) return
+      await updateDoc(doc(db, 'vendeuses', v.id), { email: val })
+      fetchVendeuses()
+    }
+
+    // =====================
+    // TOGGLE MAILING (rappels contenu par mail — comme les chineuses)
+    // =====================
+    const toggleMailing = async (v: Vendeuse) => {
+      await updateDoc(doc(db, 'vendeuses', v.id), { mailingActif: v.mailingActif === false })
       fetchVendeuses()
     }
 
@@ -622,8 +642,24 @@
                   />
                 <span className="font-semibold text-sm">{v.prenom.toUpperCase()}</span>
                   <span className="text-xs text-gray-400">{heuresSupposees(v)}h prévues</span>
+                  <input
+                    type="email"
+                    defaultValue={v.email || ''}
+                    onBlur={e => saveEmail(v, e.target.value)}
+                    placeholder="email (rappels)"
+                    className="text-xs border border-gray-200 rounded px-2 py-1 w-48 focus:outline-none focus:ring-1 focus:ring-[#22209C]"
+                  />
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleMailing(v)}
+                    className={`text-xs px-2 py-1 rounded border ${
+                      v.mailingActif === false ? 'text-gray-400 border-gray-200' : 'text-green-600 border-green-300'
+                    }`}
+                    title="Mailing rappels contenu"
+                  >
+                    {v.mailingActif === false ? '⏸️ Mail' : '✅ Mail'}
+                  </button>
                   <button
                     onClick={() => {
                       setEditJoursFixesFor(v)

@@ -150,6 +150,16 @@ export async function GET(req: NextRequest) {
   const monthKey = dateStr.slice(0, 7)
   const actions: string[] = []
 
+  // Traçage des mails envoyés pour le récap (owner exclu du récap et des copies).
+  const OWNER_EMAIL = 'nouvelleriveparis@gmail.com'
+  const sentMails: { to: string; subject: string }[] = []
+  const sendMail = async (opts: any) => {
+    const res = await resend.emails.send(opts)
+    const toStr = Array.isArray(opts.to) ? opts.to.join(', ') : String(opts.to || '')
+    if (!toStr.includes(OWNER_EMAIL)) sentMails.push({ to: toStr, subject: opts.subject })
+    return res
+  }
+
   // Rappels pointage arrivée — déclenchés 10 min après le début de chaque créneau
   // 11h10 pour slot 11-17, 12h10 pour slot 12-20.
   for (const slot of [{ name: '11-17', trigH: 11, trigM: 10 }, { name: '12-20', trigH: 12, trigM: 10 }]) {
@@ -378,10 +388,9 @@ export async function GET(req: NextRequest) {
         : ''
 
       try {
-        await resend.emails.send({
+        await sendMail({
           from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
           to: dep.email,
-          cc: 'nouvelleriveparis@gmail.com',
           subject: `Rappel — votre dépôt demain à ${creneau} 💙`,
           html: `
             <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
@@ -463,7 +472,7 @@ export async function GET(req: NextRequest) {
       const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
       if (emails.length > 0) {
         try {
-          await resend.emails.send({
+          await sendMail({
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: emails,
             subject: `Rappel — ton restock demain à ${creneau} 💙`,
@@ -678,10 +687,9 @@ export async function GET(req: NextRequest) {
       // Mail chineuse
       if (emails.length > 0) {
         try {
-          await resend.emails.send({
+          await sendMail({
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: emails,
-            cc: 'nouvelleriveparis@gmail.com',
             subject,
             html,
           })
@@ -711,7 +719,7 @@ export async function GET(req: NextRequest) {
           tag: `admin-${kind}-jour-j-${chinId}-${dateStr}`,
         })
         try {
-          await resend.emails.send({
+          await sendMail({
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: 'nouvelleriveparis@gmail.com',
             subject: `${pieces.length} ${kind === 'orange' ? 'prix' : 'pièces'} ${nomCourt} ${verb}`,
@@ -895,10 +903,9 @@ export async function GET(req: NextRequest) {
 
           if (emails.length > 0) {
             try {
-              await resend.emails.send({
+              await sendMail({
                 from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
                 to: emails,
-                cc: 'nouvelleriveparis@gmail.com',
                 subject: ventesCount > 0
                   ? `WOUAOU t'as vendu ${ventesCount} pièce${ventesCount > 1 ? 's' : ''}, time to restock 🌊`
                   : `Viens nous amener tes pépites ma vie 🌊`,
@@ -937,7 +944,7 @@ export async function GET(req: NextRequest) {
             tag: `admin-stock-bas-${chinDoc.id}-${dateStr}`,
           })
           try {
-            await resend.emails.send({
+            await sendMail({
               from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
               to: 'nouvelleriveparis@gmail.com',
               subject: `Stock ${nomCourt} bas : ${stockActif}/${cible} (-${pct}%)`,
@@ -972,12 +979,20 @@ export async function GET(req: NextRequest) {
   if (inWindow(h, m, 11, 0)) {
     const [ty, tm, td] = dateStr.split('-').map(Number)
     const tomorrowDow = (new Date(ty, tm - 1, td, 12).getDay() + 1) % 7
-    for (const c of CHRONIQUES_RESEAUX.filter((x) => x.day === tomorrowDow)) {
-      if (!c.email) continue
+    const chroniquesDemain = CHRONIQUES_RESEAUX.filter((x) => x.day === tomorrowDow)
+    // Email + toggle mailing depuis /admin/vendeuses (par prénom), fallback config.
+    const vendSnapMail = await adminDb.collection('vendeuses').get()
+    const vendByPrenom = new Map<string, any>()
+    vendSnapMail.docs.forEach((d) => vendByPrenom.set(normPrenom((d.data() as any).prenom || ''), d.data()))
+    for (const c of chroniquesDemain) {
+      const v = vendByPrenom.get(normPrenom(c.responsable))
+      if (v && v.mailingActif === false) continue // mailing désactivé pour cette fille
+      const email = ((v?.email || c.email) || '').trim()
+      if (!email) continue
       try {
-        await resend.emails.send({
+        await sendMail({
           from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
-          to: c.email,
+          to: email,
           subject: `Demain c'est « ${c.titre} » 🌊`,
           html: `
             <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000; line-height:1.5;">
@@ -1023,6 +1038,26 @@ export async function GET(req: NextRequest) {
           actions.push(`rappel-contenu-${c.key}`)
         }
       }
+    }
+  }
+
+  // Récap : un seul mail à l'owner listant les mails partis dans ce run (gratuit).
+  if (sentMails.length > 0) {
+    try {
+      await resend.emails.send({
+        from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+        to: OWNER_EMAIL,
+        subject: `📬 Récap — ${sentMails.length} mail${sentMails.length > 1 ? 's' : ''} envoyé${sentMails.length > 1 ? 's' : ''}`,
+        html: `
+          <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+            <p>Mails partis à ${h}:${String(m).padStart(2, '0')} :</p>
+            <ul>
+              ${sentMails.map(s => `<li><strong>${s.to}</strong> — ${s.subject}</li>`).join('')}
+            </ul>
+          </div>`,
+      })
+    } catch (err) {
+      console.error('récap mail failed:', err)
     }
   }
 
