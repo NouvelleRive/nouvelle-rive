@@ -253,7 +253,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className={label}>Heure de post</label>
-          <input type="time" className={`${input} min-w-0`} value={p.heurePost} onChange={(e) => set('heurePost', e.target.value)} />
+          <input type="time" className="font-sans border border-gray-300 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-1 focus:ring-[#22209C]" value={p.heurePost} onChange={(e) => set('heurePost', e.target.value)} />
         </div>
         <div>
           <label className={label}>CTA</label>
