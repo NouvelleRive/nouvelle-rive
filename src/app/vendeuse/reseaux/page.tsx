@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { PlusSquare, LayoutGrid, Play, Copy } from 'lucide-react'
+import { PlusSquare, LayoutGrid, Play, Copy, Pencil } from 'lucide-react'
 
 type Tab = 'contenu' | 'feed'
 type Reseau = 'ig' | 'tiktok'
@@ -72,6 +72,13 @@ function hasHandle(current: string, handle: string): boolean {
 function frDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+// Une production est complète si tous les champs utiles sont remplis
+// (le lieu a un défaut, le collab est optionnel donc non requis).
+function isComplete(p: Production): boolean {
+  return [p.theme, p.objectif, p.videoUrl, p.vignetteUrl, p.caption, p.heurePost, p.cta, p.lieu]
+    .every((v) => !!(v && v.trim()))
 }
 
 // Date « à tourner avant » = 2 semaines avant la date de post.
@@ -242,24 +249,18 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       <div>
         <label className={label}>Inviter à collaborer</label>
         {collabOptions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {collabOptions.map((o) => {
-              const on = hasHandle(p.collab, o.handle)
-              return (
-                <button
-                  key={o.handle}
-                  type="button"
-                  onClick={() => set('collab', toggleHandle(p.collab, o.handle))}
-                  className={`text-xs rounded-full px-3 py-1 border transition-colors ${
-                    on ? 'bg-[#22209C] text-white border-[#22209C]' : 'bg-white text-gray-600 border-gray-300'
-                  }`}
-                  title={`@${o.handle}`}
-                >
-                  {o.nom}
-                </button>
-              )
-            })}
-          </div>
+          <select
+            className={`${input} mb-2`}
+            value=""
+            onChange={(e) => { if (e.target.value) set('collab', toggleHandle(p.collab, e.target.value)) }}
+          >
+            <option value="">Ajouter une chineuse…</option>
+            {collabOptions.map((o) => (
+              <option key={o.handle} value={o.handle}>
+                {hasHandle(p.collab, o.handle) ? '✓ ' : ''}{o.nom} (@{o.handle})
+              </option>
+            ))}
+          </select>
         )}
         <input
           className={input}
@@ -267,7 +268,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
           onChange={(e) => set('collab', e.target.value)}
           placeholder="@compte1, @compte2"
         />
-        <p className="text-[11px] text-gray-400 mt-1">Clique une chineuse ci-dessus, ou tape n'importe quel @compte (séparés par une virgule).</p>
+        <p className="text-[11px] text-gray-400 mt-1">Choisis une chineuse dans la liste, ou tape n'importe quel @compte (séparés par une virgule).</p>
       </div>
 
       <button
@@ -403,30 +404,47 @@ function ChroniqueBody({ chronique, collabOptions }: { chronique: Chronique; col
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {productions.map((prod) => (
-          <button key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left">
-            <div
-              className={`aspect-square rounded-xl overflow-hidden flex items-center justify-center ${
-                prod.pret ? 'border border-gray-200 bg-gray-100' : 'border-2 border-dashed border-gray-300 bg-gray-50'
-              }`}
-            >
-              {prod.vignetteUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={prod.vignetteUrl} alt="" className="w-full h-full object-cover" />
-              ) : prod.pret ? (
-                <Play size={26} className="text-gray-400" fill="currentColor" />
-              ) : (
-                <span className="text-4xl text-gray-300 leading-none">+</span>
-              )}
-            </div>
-            <div className="mt-1.5 text-[12px] leading-tight">
-              <div className="font-medium text-gray-700 capitalize">post du {frDate(prod.date)}</div>
-              {!prod.pret && (
-                <div className="text-amber-600 capitalize">à tourner avant le {frDate(deadlineISO(prod.date))}</div>
-              )}
-            </div>
-          </button>
-        ))}
+        {productions.map((prod) => {
+          const incomplet = !isComplete(prod)
+          return (
+            <button key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left">
+              <div
+                className={`relative aspect-square rounded-xl overflow-hidden flex items-center justify-center ${
+                  prod.pret ? 'border border-gray-200 bg-gray-100' : 'border-2 border-dashed border-gray-300 bg-gray-50'
+                }`}
+              >
+                {prod.vignetteUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={prod.vignetteUrl} alt="" className="w-full h-full object-cover" />
+                ) : prod.pret ? (
+                  <Play size={26} className="text-gray-400" fill="currentColor" />
+                ) : (
+                  <span className="text-4xl text-gray-300 leading-none">+</span>
+                )}
+                {prod.pret && (
+                  <>
+                    {incomplet && (
+                      <span className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center shadow">!</span>
+                    )}
+                    <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow">
+                      <Pencil size={13} className="text-gray-600" />
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="mt-1.5 text-[12px] leading-tight">
+                {prod.pret ? (
+                  <div className="text-gray-600 line-clamp-2">{prod.caption || <span className="text-gray-400">Sans caption</span>}</div>
+                ) : (
+                  <>
+                    <div className="font-medium text-gray-700 capitalize">post du {frDate(prod.date)}</div>
+                    <div className="text-amber-600 capitalize">à tourner avant le {frDate(deadlineISO(prod.date))}</div>
+                  </>
+                )}
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {openProd && (
