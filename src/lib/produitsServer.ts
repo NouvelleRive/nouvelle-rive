@@ -170,11 +170,13 @@ function matchCritere(raw: any, c: Critere, chineuses: Map<string, { trigramme?:
 
 export async function getCoupsDeCoeurServer(limit: number = 50): Promise<ProduitInitial[]> {
   try {
+    // « Nos pièces préférées » = la sélection de l'ÉQUIPE (champ favoriEquipe
+    // posé par les chineuses au restock + amendé dans l'admin week fav), et non
+    // les likes visiteurs. Pilotée depuis /admin/site → « Week fav ».
     const snap = await adminDb
       .collection('produits')
-      .where('likesCount', '>', 0)
-      .orderBy('likesCount', 'desc')
-      .limit(limit * 2)
+      .where('favoriEquipe', '==', true)
+      .limit(limit * 4)
       .get()
 
     const filtered = snap.docs
@@ -191,25 +193,14 @@ export async function getCoupsDeCoeurServer(limit: number = 50): Promise<Produit
         (raw.imageUrls?.[0] || raw.imageUrl || raw.photos?.face)
       )
 
-    // À nombre de likes identique, on mélange au hasard (Fisher-Yates) plutôt que de garder
-    // l'ordre Firestore (createdAt-derived) — la page paraît trop figée sinon.
-    const byLikes = new Map<number, Array<{ id: string; raw: any }>>()
-    for (const p of filtered) {
-      const lc = p.raw.likesCount || 0
-      if (!byLikes.has(lc)) byLikes.set(lc, [])
-      byLikes.get(lc)!.push(p)
-    }
-    const shuffled: Array<{ id: string; raw: any }> = []
-    for (const lc of [...byLikes.keys()].sort((a, b) => b - a)) {
-      const group = byLikes.get(lc)!
-      for (let i = group.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        ;[group[i], group[j]] = [group[j], group[i]]
-      }
-      shuffled.push(...group)
-    }
+    // Plus récemment ajoutés en premier (favoriEquipeAt). Les favs legacy sans
+    // horodatage retombent en fin de liste (ms = 0).
+    const ms = (raw: any) =>
+      raw.favoriEquipeAt?.toMillis?.() ??
+      (typeof raw.favoriEquipeAt?._seconds === 'number' ? raw.favoriEquipeAt._seconds * 1000 : 0)
+    filtered.sort((a, b) => ms(b.raw) - ms(a.raw))
 
-    return shuffled
+    return filtered
       .slice(0, limit)
       .map(({ id, raw }) => serialize(id, raw))
   } catch (err) {

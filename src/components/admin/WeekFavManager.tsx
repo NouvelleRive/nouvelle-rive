@@ -32,6 +32,18 @@ function favImage(f: Fav): string {
   return f.imageUrl || ''
 }
 
+// Purge le cache (blob + edge) pour que la page publique « Nos pièces préférées »
+// (/coups-de-coeur, source = favoriEquipe) reflète l'ajout/retrait tout de suite.
+async function refreshCache(productId: string) {
+  try {
+    await fetch('/api/cache/refresh-produits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productIds: [productId] }),
+    })
+  } catch { /* best effort — l'ISR 1h finira le job */ }
+}
+
 // Lundi (00h) de la semaine d'une date donnée → clé de regroupement stable.
 function mondayOf(d: Date): Date {
   const x = new Date(d)
@@ -108,6 +120,7 @@ export default function WeekFavManager() {
         favoriEquipeAt: new Date(),
         likesCount: increment(1),
       })
+      await refreshCache(found.id)
       setSkuInput('')
       await load()
     } catch (err: any) {
@@ -126,6 +139,7 @@ export default function WeekFavManager() {
         favoriEquipe: false,
         likesCount: increment(-1),
       })
+      await refreshCache(f.id)
       setFavs(prev => prev.filter(x => x.id !== f.id))
     } catch (err: any) {
       console.error('removeFav error:', err)
