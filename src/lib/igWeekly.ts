@@ -158,6 +158,39 @@ export function defaultBioLine(c: IgCandidate): string {
 // --- Publication feed Instagram (Graph API) --------------------------------
 
 /**
+ * Tunnel de publication commun (image, reel) : attend que le container soit
+ * FINISHED puis appelle media_publish. Renvoie le mediaId.
+ * Publier trop tôt → « Media ID is not available », d'où l'attente.
+ */
+async function finalizePublish(creationId: string, attempts = 12, delayMs = 2000): Promise<string> {
+  let statusCode = ''
+  for (let i = 0; i < attempts; i++) {
+    const statusRes = await fetch(
+      `https://graph.facebook.com/${API_VERSION}/${creationId}?fields=status_code&access_token=${IG_TOKEN}`
+    )
+    const statusData = await statusRes.json()
+    statusCode = statusData.status_code || ''
+    if (statusCode === 'FINISHED') break
+    if (statusCode === 'ERROR') {
+      throw new Error(`traitement média échoué: ${JSON.stringify(statusData)}`)
+    }
+    await new Promise((r) => setTimeout(r, delayMs))
+  }
+  if (statusCode !== 'FINISHED') {
+    throw new Error(`container pas prêt (timeout), status=${statusCode}`)
+  }
+  const publishRes = await fetch(
+    `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media_publish?creation_id=${creationId}&access_token=${IG_TOKEN}`,
+    { method: 'POST' }
+  )
+  const publishData = await publishRes.json()
+  if (!publishData.id) {
+    throw new Error(`publication échouée: ${JSON.stringify(publishData)}`)
+  }
+  return publishData.id as string
+}
+
+/**
  * Publie une IMAGE en feed IG avec légende. Même flux que publish-story
  * (container → attente FINISHED → media_publish), sans media_type=STORIES et
  * avec le paramètre caption. Renvoie le mediaId.
@@ -166,8 +199,6 @@ export async function publishFeed(imageUrl: string, caption: string): Promise<st
   if (!IG_BUSINESS_ID || !IG_TOKEN) {
     throw new Error('Instagram non configuré (env vars manquantes)')
   }
-
-  // 1) Container media (IMAGE par défaut) + légende
   const containerRes = await fetch(
     `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`,
     {
@@ -180,35 +211,7 @@ export async function publishFeed(imageUrl: string, caption: string): Promise<st
   if (!container.id) {
     throw new Error(`création container échouée: ${JSON.stringify(container)}`)
   }
-
-  // 1bis) Attendre FINISHED (publier trop tôt → « Media ID is not available »)
-  let statusCode = ''
-  for (let i = 0; i < 12; i++) {
-    const statusRes = await fetch(
-      `https://graph.facebook.com/${API_VERSION}/${container.id}?fields=status_code&access_token=${IG_TOKEN}`
-    )
-    const statusData = await statusRes.json()
-    statusCode = statusData.status_code || ''
-    if (statusCode === 'FINISHED') break
-    if (statusCode === 'ERROR') {
-      throw new Error(`traitement image échoué: ${JSON.stringify(statusData)}`)
-    }
-    await new Promise((r) => setTimeout(r, 2000))
-  }
-  if (statusCode !== 'FINISHED') {
-    throw new Error(`container pas prêt (timeout), status=${statusCode}`)
-  }
-
-  // 2) Publier
-  const publishRes = await fetch(
-    `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media_publish?creation_id=${container.id}&access_token=${IG_TOKEN}`,
-    { method: 'POST' }
-  )
-  const publishData = await publishRes.json()
-  if (!publishData.id) {
-    throw new Error(`publication échouée: ${JSON.stringify(publishData)}`)
-  }
-  return publishData.id as string
+  return finalizePublish(container.id)
 }
 
 /**
@@ -245,35 +248,8 @@ export async function publishReel(
   if (!container.id) {
     throw new Error(`création container reel échouée: ${JSON.stringify(container)}`)
   }
-
-  // 1bis) Attendre FINISHED (le traitement vidéo est plus long que l'image)
-  let statusCode = ''
-  for (let i = 0; i < 20; i++) {
-    const statusRes = await fetch(
-      `https://graph.facebook.com/${API_VERSION}/${container.id}?fields=status_code&access_token=${IG_TOKEN}`,
-    )
-    const statusData = await statusRes.json()
-    statusCode = statusData.status_code || ''
-    if (statusCode === 'FINISHED') break
-    if (statusCode === 'ERROR') {
-      throw new Error(`traitement vidéo échoué: ${JSON.stringify(statusData)}`)
-    }
-    await new Promise((r) => setTimeout(r, 2500))
-  }
-  if (statusCode !== 'FINISHED') {
-    throw new Error(`reel pas prêt (timeout), status=${statusCode}`)
-  }
-
-  // 2) Publier
-  const publishRes = await fetch(
-    `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media_publish?creation_id=${container.id}&access_token=${IG_TOKEN}`,
-    { method: 'POST' },
-  )
-  const publishData = await publishRes.json()
-  if (!publishData.id) {
-    throw new Error(`publication reel échouée: ${JSON.stringify(publishData)}`)
-  }
-  return publishData.id as string
+  // Même tunnel que l'image, mais plus d'essais (traitement vidéo plus long).
+  return finalizePublish(container.id, 20, 2500)
 }
 
 // --- Accès au doc hebdo -----------------------------------------------------

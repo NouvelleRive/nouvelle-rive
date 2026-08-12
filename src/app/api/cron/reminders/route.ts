@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendPushToOwner } from '@/lib/webpush'
+import { publishDueReseaux } from '@/lib/reseauxPublish'
 import { Resend } from 'resend'
 
 const CRON_SECRET = process.env.CRON_SECRET
@@ -40,6 +41,37 @@ function inWindow(h: number, m: number, targetH: number, targetM: number): boole
   const cur = h * 60 + m
   const t = targetH * 60 + targetM
   return Math.abs(cur - t) <= 4
+}
+
+// --- Chroniques réseaux : rappel contenu aux vendeuses ----------------------
+// Aligné avec /vendeuse/reseaux. key/jour(getDay)/titre/responsable(prénom).
+const CHRONIQUES_RESEAUX = [
+  { key: 'infinite-slider', day: 0, titre: 'INFINITE SLIDER', responsable: 'Salomé' },
+  { key: 'compo-de-lo', day: 1, titre: 'LES COMPO DE LO', responsable: 'Loah' },
+  { key: 'book-olga', day: 2, titre: "LE BOOK D'OLGA", responsable: 'Olga' },
+  { key: 'le-rideau', day: 3, titre: 'LE RIDEAU', responsable: 'Amanda' },
+  { key: 'microboutique-hina', day: 4, titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina' },
+  { key: 'shabbat-quote', day: 5, titre: 'SHABBAT QUOTE', responsable: 'Salomé' },
+  { key: 'energies-sarah', day: 6, titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah' },
+]
+const NB_OCCURRENCES_RESEAUX = 6
+
+const normPrenom = (s: string) =>
+  (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
+// Nombre de contenus prêts d'avance (vidéo présente) pour une chronique.
+async function nbContenusPrets(key: string, weekday: number): Promise<number> {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const delta = (weekday - today.getDay() + 7) % 7
+  const first = new Date(today); first.setDate(today.getDate() + delta)
+  const refs = []
+  for (let i = 0; i < NB_OCCURRENCES_RESEAUX; i++) {
+    const d = new Date(first); d.setDate(first.getDate() + i * 7)
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    refs.push(adminDb.collection('reseauxContenu').doc(`${key}_${iso}`))
+  }
+  const snaps = await adminDb.getAll(...refs)
+  return snaps.filter((s) => s.exists && (s.data() as any).videoUrl).length
 }
 
 type PieceInfo = { sku: string; nom: string; imageUrl: string; categorie: string; prix?: number; ancienPrix?: number }
@@ -921,6 +953,50 @@ export async function GET(req: NextRequest) {
 
       if (Object.keys(updates).length > 0) {
         await adminDb.collection('rappelsChineuse').doc(chinDoc.id).set(updates, { merge: true })
+      }
+    }
+  }
+
+  // Publication auto du contenu réseaux — 1×/heure pile (minute 0-4), gratuit.
+  // Réutilise le même "posteur" (lib/reseauxPublish → igWeekly), aucun cron dédié.
+  if (m <= 4) {
+    try {
+      const r = await publishDueReseaux()
+      if (r?.published) actions.push(`reseaux-publie-${r.chronique}`)
+    } catch (err) {
+      console.error('publishDueReseaux (from reminders) failed:', err)
+    }
+  }
+
+  // 14h00 — rappel contenu réseaux aux vendeuses présentes en retard (< 2 d'avance)
+  // Push sur le tel boutique. Réutilise planning + vendeuses + sendPushToOwner.
+  if (inWindow(h, m, 14, 0)) {
+    const planningSnap = await adminDb.collection('planning').doc(monthKey).get()
+    const slots = planningSnap.exists ? (planningSnap.data()?.slots || {}) : {}
+    const presentes = new Set<string>()
+    for (const s of ['11-17', '12-20']) {
+      const vid = slots[`${dateStr}_${s}`]
+      if (vid) presentes.add(vid)
+    }
+    if (presentes.size > 0) {
+      const vendSnap = await adminDb.collection('vendeuses').get()
+      const prenomById = new Map<string, string>()
+      vendSnap.docs.forEach((d) => prenomById.set(d.id, (d.data() as any).prenom || ''))
+
+      for (const vid of presentes) {
+        const prenom = prenomById.get(vid) || ''
+        const chroniques = CHRONIQUES_RESEAUX.filter((c) => normPrenom(c.responsable) === normPrenom(prenom))
+        for (const c of chroniques) {
+          const prets = await nbContenusPrets(c.key, c.day)
+          if (prets >= 2) continue
+          await sendPushToOwner('boutique', {
+            title: `🌊 Ton contenu « ${c.titre} »`,
+            body: `${prenom}, profite d'être là pour préparer tes vidéos : plus que ${prets} d'avance. Onglet Réseaux 💙`,
+            url: '/vendeuse/reseaux',
+            tag: `contenu-${c.key}-${dateStr}`,
+          })
+          actions.push(`rappel-contenu-${c.key}`)
+        }
       }
     }
   }
