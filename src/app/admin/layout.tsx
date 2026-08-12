@@ -11,7 +11,6 @@
   import LogoutButton from '@/components/LogoutButton'
   import ResetNotifsButton from '@/components/ResetNotifsButton'
   import EnableNotifsButton from '@/components/EnableNotifsButton'
-  import IgWeeklyPopup from '@/components/IgWeeklyPopup'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -324,7 +323,6 @@
     return (
       <div className="min-h-screen bg-gray-50">
         <NotifsAutoSubscribe ownerId="boutique" />
-        <IgWeeklyPopup />
         <AdminNavbar />
         <div className="max-w-7xl mx-auto px-4 lg:px-6 pt-3">
           <EnableNotifsButton ownerId="boutique" label="Activer les notifications" />
