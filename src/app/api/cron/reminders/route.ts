@@ -46,13 +46,13 @@ function inWindow(h: number, m: number, targetH: number, targetM: number): boole
 // --- Chroniques réseaux : rappel contenu aux vendeuses ----------------------
 // Aligné avec /vendeuse/reseaux. key/jour(getDay)/titre/responsable(prénom).
 const CHRONIQUES_RESEAUX = [
-  { key: 'infinite-slider', day: 0, titre: 'INFINITE SLIDER', responsable: 'Salomé' },
-  { key: 'compo-de-lo', day: 1, titre: 'LES COMPO DE LO', responsable: 'Loah' },
-  { key: 'book-olga', day: 2, titre: "LE BOOK D'OLGA", responsable: 'Olga' },
-  { key: 'le-rideau', day: 3, titre: 'LE RIDEAU', responsable: 'Amanda' },
-  { key: 'microboutique-hina', day: 4, titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina' },
-  { key: 'shabbat-quote', day: 5, titre: 'SHABBAT QUOTE', responsable: 'Salomé' },
-  { key: 'energies-sarah', day: 6, titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah' },
+  { key: 'infinite-slider', day: 0, titre: 'INFINITE SLIDER', responsable: 'Salomé', email: 'nouvelleriveparis@gmail.com' },
+  { key: 'compo-de-lo', day: 1, titre: 'LES COMPO DE LO', responsable: 'Loah', email: '' },
+  { key: 'book-olga', day: 2, titre: "LE BOOK D'OLGA", responsable: 'Olga', email: '' },
+  { key: 'le-rideau', day: 3, titre: 'LE RIDEAU', responsable: 'Amanda', email: '' },
+  { key: 'microboutique-hina', day: 4, titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina', email: '' },
+  { key: 'shabbat-quote', day: 5, titre: 'SHABBAT QUOTE', responsable: 'Salomé', email: 'nouvelleriveparis@gmail.com' },
+  { key: 'energies-sarah', day: 6, titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah', email: '' },
 ]
 const NB_OCCURRENCES_RESEAUX = 6
 
@@ -466,7 +466,6 @@ export async function GET(req: NextRequest) {
           await resend.emails.send({
             from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
             to: emails,
-            cc: 'nouvelleriveparis@gmail.com',
             subject: `Rappel — ton restock demain à ${creneau} 💙`,
             html: `
               <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
@@ -965,6 +964,32 @@ export async function GET(req: NextRequest) {
       if (r?.published) actions.push(`reseaux-publie-${r.chronique}`)
     } catch (err) {
       console.error('publishDueReseaux (from reminders) failed:', err)
+    }
+  }
+
+  // 11h00 — rappel-veille par mail : la fille dont la chronique tombe DEMAIN.
+  // Mail individuel (Resend), gratuit, direct dans sa boîte perso.
+  if (inWindow(h, m, 11, 0)) {
+    const [ty, tm, td] = dateStr.split('-').map(Number)
+    const tomorrowDow = (new Date(ty, tm - 1, td, 12).getDay() + 1) % 7
+    for (const c of CHRONIQUES_RESEAUX.filter((x) => x.day === tomorrowDow)) {
+      if (!c.email) continue
+      try {
+        await resend.emails.send({
+          from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+          to: c.email,
+          subject: `Demain c'est « ${c.titre} » 🌊`,
+          html: `
+            <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000; line-height:1.5;">
+              <p>Coucou ${c.responsable} 💙</p>
+              <p>Demain on doit tourner <strong>${c.titre}</strong> !! Je te le rappelle au cas où tu voudrais préparer quelque chose 🎬</p>
+              <p>Blue goddess 🌊💙</p>
+            </div>`,
+        })
+        actions.push(`veille-mail-${c.key}`)
+      } catch (err) {
+        console.error(`veille-mail ${c.key} failed:`, err)
+      }
     }
   }
 
