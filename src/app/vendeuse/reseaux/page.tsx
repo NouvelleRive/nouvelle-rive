@@ -273,6 +273,81 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
   )
 }
 
+function StructureModal({ chronique, onClose }: { chronique: Chronique; onClose: () => void }) {
+  const [s, setS] = useState({ accroche: '', plan1: '', plan2: '', plan3: '', plan4: '' })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    fetch(`/api/reseaux/structure?chronique=${chronique.key}`)
+      .then((r) => r.json())
+      .then((d) => { if (alive && d.success) setS(d.structure) })
+      .finally(() => alive && setLoading(false))
+    return () => { alive = false }
+  }, [chronique.key])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/reseaux/structure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chronique: chronique.key, ...s }),
+      })
+      const d = await res.json()
+      if (!d.success) throw new Error(d.error)
+      onClose()
+    } catch (e: any) {
+      alert(e?.message || 'Erreur')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const field = 'w-full font-sans border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#22209C]'
+  const set = (k: keyof typeof s, v: string) => setS((x) => ({ ...x, [k]: v }))
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div>
+            <div className="font-semibold text-gray-900">{chronique.titre}</div>
+            <div className="text-xs text-gray-500">Structure</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
+        </div>
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#22209C]" />
+          </div>
+        ) : (
+          <div className="p-4 space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Accroche</label>
+              <textarea className={`${field} min-h-[60px]`} value={s.accroche} onChange={(e) => set('accroche', e.target.value)} />
+            </div>
+            {([1, 2, 3, 4] as const).map((n) => (
+              <div key={n}>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Plan {n}</label>
+                <textarea
+                  className={`${field} min-h-[50px]`}
+                  value={s[`plan${n}` as keyof typeof s]}
+                  onChange={(e) => set(`plan${n}` as keyof typeof s, e.target.value)}
+                />
+              </div>
+            ))}
+            <button onClick={save} disabled={saving} className="w-full bg-[#22209C] text-white text-sm font-medium rounded-lg py-2.5 disabled:opacity-50">
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ChroniqueBody({ chronique, collabOptions }: { chronique: Chronique; collabOptions: CollabOption[] }) {
   const [productions, setProductions] = useState<Production[]>([])
   const [loading, setLoading] = useState(true)
@@ -339,6 +414,7 @@ export default function ReseauxPage() {
   const [error, setError] = useState<string | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [collabOptions, setCollabOptions] = useState<CollabOption[]>([])
+  const [structureFor, setStructureFor] = useState<Chronique | null>(null)
   const todayDow = new Date().getDay()
 
   useEffect(() => {
@@ -408,24 +484,25 @@ export default function ReseauxPage() {
               const open = openKey === c.key
               return (
                 <div key={c.key} className={`rounded-xl border overflow-hidden ${open ? 'border-[#22209C]' : isToday ? 'border-[#22209C]/50' : 'border-gray-200'}`}>
-                  <button
-                    onClick={() => setOpenKey(open ? null : c.key)}
-                    className={`w-full text-left flex items-center justify-between p-4 transition-colors ${
-                      open ? 'bg-[#22209C]/5' : isToday ? 'bg-[#22209C]/5' : 'bg-white hover:bg-gray-50'
+                  <div
+                    className={`flex items-center justify-between gap-3 p-4 ${
+                      open ? 'bg-[#22209C]/5' : isToday ? 'bg-[#22209C]/5' : 'bg-white'
                     }`}
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium ${isToday ? 'text-[#22209C]' : 'text-gray-400'}`}>{c.jour}</span>
-                        {isToday && (
-                          <span className="text-[10px] font-bold text-white bg-[#22209C] rounded-full px-2 py-0.5">Aujourd'hui</span>
-                        )}
-                      </div>
+                    <button onClick={() => setOpenKey(open ? null : c.key)} className="flex-1 min-w-0 text-left">
                       <div className="font-semibold text-gray-900 truncate">{c.titre}</div>
-                      <div className="text-sm text-gray-500">{c.responsable}</div>
-                    </div>
-                    <span className={`shrink-0 text-gray-400 text-xl transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
-                  </button>
+                      <div className="text-sm text-gray-500">
+                        {c.jour} - {c.responsable}
+                        {isToday && <span className="ml-2 text-xs font-medium text-[#22209C]">· Aujourd'hui</span>}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setStructureFor(c)}
+                      className="shrink-0 text-xs font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5"
+                    >
+                      Structure
+                    </button>
+                  </div>
                   {open && (
                     <div className="border-t border-gray-100 px-4 pb-4 bg-white">
                       <ChroniqueBody chronique={c} collabOptions={collabOptions} />
@@ -499,6 +576,8 @@ export default function ReseauxPage() {
           </section>
         )}
       </div>
+
+      {structureFor && <StructureModal chronique={structureFor} onClose={() => setStructureFor(null)} />}
     </div>
   )
 }
