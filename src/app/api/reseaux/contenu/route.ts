@@ -65,7 +65,8 @@ export async function GET(req: NextRequest) {
         caption: data.caption || '',
         heurePost: data.heurePost || '',
         cta: data.cta || '',
-        lieu: data.lieu || 'Rue des Écouffes, Le Marais',
+        lieu: data.lieu || 'Rue des Écouffes - le Marais',
+        collab: data.collab || '',
         pret: !!data.videoUrl,
       }
     })
@@ -94,7 +95,8 @@ export async function POST(req: NextRequest) {
       caption: body.caption ?? '',
       heurePost: body.heurePost ?? '',
       cta: body.cta ?? '',
-      lieu: body.lieu ?? 'Rue des Écouffes, Le Marais',
+      lieu: body.lieu ?? 'Rue des Écouffes - le Marais',
+      collab: body.collab ?? '',
       updatedAt: Date.now(),
     }
 

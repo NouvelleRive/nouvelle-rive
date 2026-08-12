@@ -51,6 +51,7 @@ type Production = {
   heurePost: string
   cta: string
   lieu: string
+  collab: string
   pret: boolean
 }
 
@@ -215,6 +216,16 @@ function ProductionCard({ chronique, prod, onSaved }: { chronique: Chronique; pr
       <div>
         <label className={label}>Lieu</label>
         <input className={input} value={p.lieu} onChange={(e) => set('lieu', e.target.value)} />
+      </div>
+      <div>
+        <label className={label}>Inviter à collaborer</label>
+        <input
+          className={input}
+          value={p.collab}
+          onChange={(e) => set('collab', e.target.value)}
+          placeholder="@compte1, @compte2"
+        />
+        <p className="text-[11px] text-gray-400 mt-1">Comptes invités en collab sur le post (séparés par une virgule).</p>
       </div>
 
       <button
