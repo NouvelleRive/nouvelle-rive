@@ -37,14 +37,16 @@ export async function GET() {
     }
 
     const posts = (data.data as IgMedia[])
-      // Grille « posts » (9 carrés) uniquement : on exclut les reels.
-      .filter((m) => m.media_product_type !== 'REELS')
-      .slice(0, 30)
+      // Stories exclues ; reels gardés (l'API n'indique pas ceux masqués de la
+      // grille → masquage manuel côté app via /api/reseaux/feed-hidden).
+      .filter((m) => m.media_product_type !== 'STORY')
+      .slice(0, 40)
       .map((m) => ({
         id: m.id,
         imageUrl: m.media_type === 'VIDEO' ? m.thumbnail_url : m.media_url,
         permalink: m.permalink,
         isVideo: m.media_type === 'VIDEO',
+        isReel: m.media_product_type === 'REELS',
         isAlbum: m.media_type === 'CAROUSEL_ALBUM',
       }))
 
