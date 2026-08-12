@@ -7,7 +7,7 @@ import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
 import Link from 'next/link'
-import { ClipboardList, Package, ShoppingBag, Shirt, Calendar, Inbox } from 'lucide-react'
+import { ClipboardList, Package, ShoppingBag, Shirt, Calendar, Inbox, Share2 } from 'lucide-react'
 import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
 import LogoutButton from '@/components/LogoutButton'
 
@@ -87,6 +87,7 @@ function VendeuseNavbar() {
     { href: '/vendeuse/calendrier', label: 'Calendrier', icon: Calendar, badge: 0 },
     { href: '/vendeuse/restock', label: 'RE/DEstock', icon: Package, badge: 0 },
     { href: '/vendeuse/demandes-depot', label: 'Dépôt', icon: Inbox, badge: depotCount },
+    { href: '/vendeuse/reseaux', label: 'Réseaux', icon: Share2, badge: 0 },
   ], [commandesCount, depotCount, produitsCount])
 
   const isActive = (href: string) => pathname === href
@@ -141,7 +142,7 @@ function VendeuseNavbar() {
             </Link>
             <LogoutButton />
           </div>
-          <div className="flex justify-around">
+          <div className="grid grid-cols-3 gap-y-2">
             {links.map((link) => {
               const Icon = link.icon
               return (

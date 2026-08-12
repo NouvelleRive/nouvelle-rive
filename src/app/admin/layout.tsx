@@ -57,6 +57,7 @@
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
       { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
       { key: 'paiements', label: 'Paiements', href: '/admin/paiements', adminOnly: true },
+      { key: 'reseaux', label: 'Réseaux', href: '/vendeuse/reseaux', adminOnly: true },
       ]
 
     // Filtrer les tabs admin-only si chineuse sélectionnée
