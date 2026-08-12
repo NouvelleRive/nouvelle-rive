@@ -232,14 +232,14 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         <label className={label}>Caption</label>
         <textarea className={`${input} min-h-[80px]`} value={p.caption} onChange={(e) => set('caption', e.target.value)} placeholder="Légende du post" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className={label}>Heure de post</label>
-          <input type="time" className={input} value={p.heurePost} onChange={(e) => set('heurePost', e.target.value)} />
+          <input type="time" className={`${input} min-w-0`} value={p.heurePost} onChange={(e) => set('heurePost', e.target.value)} />
         </div>
         <div>
           <label className={label}>CTA</label>
-          <input className={input} value={p.cta} onChange={(e) => set('cta', e.target.value)} placeholder="Appel à l'action" />
+          <input className={`${input} min-w-0`} value={p.cta} onChange={(e) => set('cta', e.target.value)} placeholder="Appel à l'action" />
         </div>
       </div>
       <div>
