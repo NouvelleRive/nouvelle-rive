@@ -248,7 +248,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
 
       <div>
         <label className={label}>Caption</label>
-        <textarea className={`${input} min-h-[80px]`} value={p.caption} onChange={(e) => set('caption', e.target.value)} placeholder="Légende du post" />
+        <textarea className={`${input} min-h-[260px]`} value={p.caption} onChange={(e) => set('caption', e.target.value)} placeholder="Légende du post" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
