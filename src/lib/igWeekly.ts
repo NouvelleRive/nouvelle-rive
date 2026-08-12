@@ -211,6 +211,71 @@ export async function publishFeed(imageUrl: string, caption: string): Promise<st
   return publishData.id as string
 }
 
+/**
+ * Publie une VIDÉO en reel IG (partagée au feed, avec le son), légende,
+ * vignette (cover) et invités en collaboration. Renvoie le mediaId.
+ * La vidéo doit être accessible publiquement (URL Bunny CDN).
+ */
+export async function publishReel(
+  videoUrl: string,
+  caption: string,
+  opts: { coverUrl?: string; collaborators?: string[] } = {},
+): Promise<string> {
+  if (!IG_BUSINESS_ID || !IG_TOKEN) {
+    throw new Error('Instagram non configuré (env vars manquantes)')
+  }
+
+  // 1) Container REELS (partagé au feed) + légende + cover + collaborateurs
+  const body: Record<string, any> = {
+    media_type: 'REELS',
+    video_url: videoUrl,
+    caption,
+    share_to_feed: true,
+    access_token: IG_TOKEN,
+  }
+  if (opts.coverUrl) body.cover_url = opts.coverUrl
+  const collabs = (opts.collaborators || []).map((c) => c.trim().replace(/^@/, '')).filter(Boolean).slice(0, 3)
+  if (collabs.length) body.collaborators = collabs
+
+  const containerRes = await fetch(
+    `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+  )
+  const container = await containerRes.json()
+  if (!container.id) {
+    throw new Error(`création container reel échouée: ${JSON.stringify(container)}`)
+  }
+
+  // 1bis) Attendre FINISHED (le traitement vidéo est plus long que l'image)
+  let statusCode = ''
+  for (let i = 0; i < 20; i++) {
+    const statusRes = await fetch(
+      `https://graph.facebook.com/${API_VERSION}/${container.id}?fields=status_code&access_token=${IG_TOKEN}`,
+    )
+    const statusData = await statusRes.json()
+    statusCode = statusData.status_code || ''
+    if (statusCode === 'FINISHED') break
+    if (statusCode === 'ERROR') {
+      throw new Error(`traitement vidéo échoué: ${JSON.stringify(statusData)}`)
+    }
+    await new Promise((r) => setTimeout(r, 2500))
+  }
+  if (statusCode !== 'FINISHED') {
+    throw new Error(`reel pas prêt (timeout), status=${statusCode}`)
+  }
+
+  // 2) Publier
+  const publishRes = await fetch(
+    `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media_publish?creation_id=${container.id}&access_token=${IG_TOKEN}`,
+    { method: 'POST' },
+  )
+  const publishData = await publishRes.json()
+  if (!publishData.id) {
+    throw new Error(`publication reel échouée: ${JSON.stringify(publishData)}`)
+  }
+  return publishData.id as string
+}
+
 // --- Accès au doc hebdo -----------------------------------------------------
 
 export function weeklyRef(weekId: string) {

@@ -565,6 +565,18 @@ exports.pingReminders = functions
     } catch (err) {
       console.error('pollGmailAchats (from pingReminders) failed:', err)
     }
+    // 3. Publication auto du contenu réseaux du jour à l'heure prévue.
+    //    Greffé ici (pas de 4e Cloud Scheduler, les 3 gratuits sont pris).
+    //    Idempotent + ultra léger (lit 1 seul doc), isolé pour ne rien casser.
+    try {
+      const res = await fetch('https://www.nouvellerive.eu/api/cron/reseaux-publish', {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      })
+      const body = await res.text()
+      console.log(`reseaux-publish ${res.status}: ${body.slice(0, 200)}`)
+    } catch (err) {
+      console.error('reseaux-publish (from pingReminders) failed:', err)
+    }
     return null
   })
 
