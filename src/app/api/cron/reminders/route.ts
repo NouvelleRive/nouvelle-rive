@@ -152,11 +152,11 @@ export async function GET(req: NextRequest) {
 
   // Traçage des mails envoyés pour le récap (owner exclu du récap et des copies).
   const OWNER_EMAIL = 'nouvelleriveparis@gmail.com'
-  const sentMails: { to: string; subject: string }[] = []
-  const sendMail = async (opts: any) => {
+  const sentMails: { to: string; subject: string; pieces: PieceInfo[] }[] = []
+  const sendMail = async (opts: any, pieces: PieceInfo[] = []) => {
     const res = await resend.emails.send(opts)
     const toStr = Array.isArray(opts.to) ? opts.to.join(', ') : String(opts.to || '')
-    if (!toStr.includes(OWNER_EMAIL)) sentMails.push({ to: toStr, subject: opts.subject })
+    if (!toStr.includes(OWNER_EMAIL)) sentMails.push({ to: toStr, subject: opts.subject, pieces })
     return res
   }
 
@@ -497,7 +497,7 @@ export async function GET(req: NextRequest) {
                 <p style="font-size:12px;color:#888;margin-top:32px;">À demain 🌊</p>
               </div>
             `,
-          })
+          }, [...aRecuperer, ...prixABaisser])
         } catch (e: any) {
           console.error(`[cron/reminders] rappel chineuse mail échoué ${chinKey}:`, e?.message)
         }
@@ -692,7 +692,7 @@ export async function GET(req: NextRequest) {
             to: emails,
             subject,
             html,
-          })
+          }, pieces)
         } catch (e: any) {
           console.error(`[cron/reminders] ${kind}-${stage} mail échoué ${chinId}:`, e?.message)
         }
@@ -1045,9 +1045,14 @@ export async function GET(req: NextRequest) {
         html: `
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <p>Mails partis à ${h}:${String(m).padStart(2, '0')} :</p>
-            <ul>
-              ${sentMails.map(s => `<li><strong>${s.to}</strong> — ${s.subject}</li>`).join('')}
-            </ul>
+            ${sentMails.map(s => `
+              <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #eee;">
+                <div><strong>${s.subject}</strong></div>
+                <div style="font-size:12px;color:#888;">→ ${s.to}</div>
+                ${s.pieces.length > 0 ? `<ul style="margin:6px 0 0;padding-left:18px;font-size:13px;color:#444;">
+                  ${s.pieces.map(p => `<li>${p.sku} — ${p.nom}${typeof p.prix === 'number' ? ` — ${p.prix}€` : ''}</li>`).join('')}
+                </ul>` : ''}
+              </div>`).join('')}
           </div>`,
       })
     } catch (err) {
