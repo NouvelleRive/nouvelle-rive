@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { PlusSquare, LayoutGrid, Play, Copy, Pencil } from 'lucide-react'
+import { storage } from '@/lib/firebaseConfig'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 type Tab = 'contenu' | 'feed'
 type Reseau = 'ig' | 'tiktok'
@@ -81,15 +83,14 @@ function isComplete(p: Production): boolean {
     .every((v) => !!(v && v.trim()))
 }
 
-// Réutilise l'endpoint Bunny partagé (/api/upload-bunny), branche multipart, dossier reseaux/.
+// Upload direct vers Firebase Storage (pas de limite de taille Vercel, gratuit,
+// aucune clé exposée). L'URL de download est publique → utilisable par l'API IG.
 async function uploadMedia(file: File, kind: 'video' | 'vignette'): Promise<string> {
-  const fd = new FormData()
-  fd.append('file', file)
-  fd.append('folder', `reseaux/${kind}/`)
-  const res = await fetch('/api/upload-bunny', { method: 'POST', body: fd })
-  const data = await res.json()
-  if (!res.ok || data.error) throw new Error(data.error || 'upload échoué')
-  return data.url as string
+  const ext = (file.name.split('.').pop() || (kind === 'video' ? 'mp4' : 'jpg')).toLowerCase()
+  const path = `reseaux/${kind}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const fileRef = storageRef(storage, path)
+  await uploadBytes(fileRef, file, { contentType: file.type || undefined })
+  return await getDownloadURL(fileRef)
 }
 
 // Capture l'image courante d'une <video> → File JPEG (vignette gratuite, côté client).
@@ -199,7 +200,10 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
                 </button>
               </div>
             ) : (
-              <div className="text-sm text-gray-400 py-8 text-center border border-dashed border-gray-300 rounded-lg">Aucune vidéo</div>
+              <label className="flex items-center justify-center py-10 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
+                {busy === 'video' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-5xl leading-none">+</span>}
+                <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
+              </label>
             )}
           </div>
           {/* Vignette à côté */}
@@ -217,25 +221,20 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
                 </button>
               </div>
             ) : (
-              <div className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400">vignette</div>
+              <label className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
+                {busy === 'vignette' ? <span className="text-[10px] text-gray-400">Envoi…</span> : <span className="text-3xl leading-none">+</span>}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
+              </label>
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 mt-2">
-          <label className="text-xs font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5 cursor-pointer">
-            {busy === 'video' ? 'Envoi…' : p.videoUrl ? 'Remplacer la vidéo' : 'Ajouter la vidéo'}
-            <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
-          </label>
-          {p.videoUrl && (
+        {p.videoUrl && (
+          <div className="mt-2">
             <button onClick={grabFrame} disabled={busy === 'vignette'} className="text-xs font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
-              {busy === 'vignette' ? '…' : 'Vignette = image actuelle'}
+              {busy === 'vignette' ? '…' : 'Vignette = image actuelle de la vidéo'}
             </button>
-          )}
-          <label className="text-xs font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5 cursor-pointer">
-            {busy === 'vignette' ? 'Envoi…' : 'Importer une vignette'}
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
-          </label>
-        </div>
+          </div>
+        )}
       </div>
 
       <div>
