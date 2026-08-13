@@ -54,6 +54,7 @@ type Production = {
   cta: string
   lieu: string
   collab: string
+  status: string
   pret: boolean
 }
 
@@ -407,20 +408,23 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
     <div>
       <div className="grid grid-cols-3 gap-x-[2px] gap-y-3">
         {productions.map((prod) => {
-          const incomplet = !isComplete(prod)
+          const published = prod.status === 'published'
+          const incomplet = !published && !isComplete(prod)
           return (
             <button key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left">
               <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 flex items-center justify-center">
                 {prod.vignetteUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={prod.vignetteUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={prod.vignetteUrl} alt="" className={`w-full h-full object-cover ${published ? 'opacity-70' : ''}`} />
                 ) : prod.videoUrl ? (
                   // Pas de vignette → 1ʳᵉ image de la vidéo
                   <video src={`${prod.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-4xl text-gray-300 leading-none">+</span>
                 )}
-                {prod.pret && (
+                {published ? (
+                  <span className="absolute top-1.5 left-1.5 rounded-full bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 shadow">Publié</span>
+                ) : prod.pret && (
                   <>
                     {incomplet && (
                       <span className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center shadow">!</span>

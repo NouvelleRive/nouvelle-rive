@@ -1,5 +1,27 @@
-import { adminDb } from '@/lib/firebaseAdmin'
+import { adminDb, adminStorage } from '@/lib/firebaseAdmin'
 import { publishReel } from '@/lib/igWeekly'
+
+// Supprime le fichier vidéo une fois publié sur IG (il y vit désormais).
+// Gère Firebase Storage et Bunny. Non bloquant : un échec n'annule pas la publi.
+async function deletePublishedVideo(url: string): Promise<void> {
+  try {
+    const fb = url.match(/\/b\/([^/]+)\/o\/([^?]+)/) // …/v0/b/{bucket}/o/{path}?…
+    if (fb) {
+      await adminStorage.bucket(fb[1]).file(decodeURIComponent(fb[2])).delete({ ignoreNotFound: true } as any)
+      return
+    }
+    if (url.includes('.b-cdn.net/')) {
+      const zone = process.env.BUNNY_STORAGE_ZONE
+      const key = process.env.BUNNY_API_KEY
+      const path = url.split('.b-cdn.net/')[1]?.split('?')[0]
+      if (zone && key && path) {
+        await fetch(`https://storage.bunnycdn.com/${zone}/${path}`, { method: 'DELETE', headers: { AccessKey: key } })
+      }
+    }
+  } catch (e) {
+    console.error('deletePublishedVideo failed:', e)
+  }
+}
 
 // Publie le contenu réseaux dû (chronique du jour, heure atteinte).
 // Réutilisé par /api/cron/reseaux-publish (test/manuel) et par le cron
@@ -57,7 +79,9 @@ export async function publishDueReseaux(dryRun = false): Promise<any> {
   await ref.set({ publishedAt: Date.now(), status: 'publishing' }, { merge: true })
   try {
     const mediaId = await publishReel(p.videoUrl, caption, { coverUrl: p.vignetteUrl || undefined, collaborators })
-    await ref.set({ status: 'published', igMediaId: mediaId, publishError: '' }, { merge: true })
+    // Purge la vidéo (grosse) une fois publiée ; on garde la vignette pour l'aperçu.
+    await deletePublishedVideo(p.videoUrl)
+    await ref.set({ status: 'published', igMediaId: mediaId, publishError: '', videoUrl: '' }, { merge: true })
     return { published: true, chronique, mediaId }
   } catch (e: any) {
     await ref.set({ publishedAt: null, status: 'error', publishError: e?.message || 'erreur' }, { merge: true })

@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
         cta: data.cta || '',
         lieu: data.lieu || 'Rue des Écouffes - le Marais',
         collab: data.collab || '',
+        status: data.status || '',
         pret: !!data.videoUrl,
       }
     })
