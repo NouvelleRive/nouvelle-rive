@@ -493,6 +493,7 @@ export default function ReseauxPage() {
   const [activeTab, setActiveTab] = useState<Tab>('contenu')
   const [reseau, setReseau] = useState<Reseau>('ig')
   const [posts, setPosts] = useState<Post[]>([])
+  const [planned, setPlanned] = useState<{ date: string; chronique: string; vignetteUrl: string; videoUrl: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
@@ -525,12 +526,14 @@ export default function ReseauxPage() {
     Promise.all([
       fetch('/api/reseaux/ig-feed').then((r) => r.json()),
       fetch('/api/reseaux/feed-hidden').then((r) => r.json()).catch(() => ({ ids: [] })),
+      fetch('/api/reseaux/planned').then((r) => r.json()).catch(() => ({ planned: [] })),
     ])
-      .then(([feed, h]) => {
+      .then(([feed, h, pl]) => {
         if (!alive) return
         if (feed.success) setPosts(feed.posts.filter((p: Post) => p.imageUrl))
         else setError(feed.error || 'Erreur')
         if (h?.ids) setHidden(new Set(h.ids))
+        if (pl?.planned) setPlanned(pl.planned)
       })
       .catch((e) => alive && setError(e?.message || 'Erreur'))
       .finally(() => alive && setLoading(false))
@@ -651,11 +654,30 @@ export default function ReseauxPage() {
               </div>
             ) : error ? (
               <p className="text-center text-red-500 py-12">{error}</p>
-            ) : posts.length === 0 ? (
+            ) : posts.length === 0 && planned.length === 0 ? (
               <p className="text-center text-gray-400 py-12">Aucun post.</p>
             ) : (
               <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen max-w-[600px] sm:mx-auto sm:left-0 sm:right-0">
               <div className="grid grid-cols-3 gap-[2px] bg-white">
+                {/* Contenu programmé (au-dessus des vrais posts, ordre de publication) */}
+                {planned.map((p) => (
+                  <div
+                    key={`plan-${p.chronique}-${p.date}`}
+                    className={`relative bg-gray-100 overflow-hidden ring-2 ring-inset ring-[#22209C]/40 ${reseau === 'ig' ? 'aspect-[4/5]' : 'aspect-[9/16]'}`}
+                  >
+                    {p.vignetteUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.vignetteUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    ) : p.videoUrl ? (
+                      <video src={`${p.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">+</div>
+                    )}
+                    <span className="absolute bottom-1 left-1 rounded bg-[#22209C] text-white text-[9px] font-medium px-1.5 py-0.5 capitalize">
+                      {frDate(p.date)}
+                    </span>
+                  </div>
+                ))}
                 {posts.filter((p) => !hidden.has(p.id)).map((p) => (
                   <a
                     key={p.id}
