@@ -200,8 +200,9 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
                 </button>
               </div>
             ) : (
-              <label className="flex items-center justify-center py-10 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
+              <label className="flex flex-col items-center justify-center gap-1 py-8 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
                 {busy === 'video' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-5xl leading-none">+</span>}
+                <span className="text-xs text-gray-400">Vidéo</span>
                 <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
               </label>
             )}
@@ -221,8 +222,9 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
                 </button>
               </div>
             ) : (
-              <label className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
+              <label className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-0.5 text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
                 {busy === 'vignette' ? <span className="text-[10px] text-gray-400">Envoi…</span> : <span className="text-3xl leading-none">+</span>}
+                <span className="text-[10px] text-gray-400">Vignette</span>
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
               </label>
             )}
