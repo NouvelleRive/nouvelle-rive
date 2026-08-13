@@ -44,7 +44,7 @@ function BordereauContent() {
 
       <div className="border-t border-b py-4 mb-6">
         <p className="font-semibold">{client.prenom} {client.nom}</p>
-        <p>{adresse.rue}</p>
+        <p>{adresse.rue || adresse.adresse}</p>
         {adresse.complementAdresse && <p>{adresse.complementAdresse}</p>}
         <p>{adresse.codePostal} {adresse.ville}</p>
         <p>{adresse.pays}</p>

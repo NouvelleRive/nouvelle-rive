@@ -28,7 +28,8 @@ interface Commande {
   }
   modeLivraison: 'livraison' | 'retrait'
   adresse?: {
-    rue: string
+    rue?: string
+    adresse?: string // alias site : la rue est stockée sous cette clé au checkout
     complementAdresse?: string
     codePostal: string
     ville: string
@@ -394,7 +395,7 @@ export default function CommandesPanel({
           {livraison ? (
             adresse ? (
               <p className="text-gray-700">
-                {adresse.rue}<br />
+                {adresse.rue || adresse.adresse}<br />
                 {adresse.complementAdresse && <>{adresse.complementAdresse}<br /></>}
                 {adresse.codePostal} {adresse.ville}<br />
                 {adresse.pays}
@@ -577,7 +578,7 @@ export default function CommandesPanel({
                 <p className="text-xs font-semibold text-blue-900 mb-1">📍 Destination</p>
                 <p className="text-sm text-blue-800">
                   {commandePourExpedition.client.prenom} {commandePourExpedition.client.nom}<br />
-                  {commandePourExpedition.adresse.rue}<br />
+                  {commandePourExpedition.adresse.rue || commandePourExpedition.adresse.adresse}<br />
                   {commandePourExpedition.adresse.codePostal} {commandePourExpedition.adresse.ville}<br />
                   <span className="font-medium">{commandePourExpedition.adresse.pays}</span>
                 </p>

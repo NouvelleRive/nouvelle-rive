@@ -21,7 +21,8 @@ interface Commande {
   }
   modeLivraison: 'livraison' | 'retrait'
   adresse?: {
-    rue: string
+    rue?: string
+    adresse?: string // alias site : la rue est stockée sous cette clé au checkout
     complementAdresse?: string
     codePostal: string
     ville: string
@@ -130,7 +131,7 @@ export default function BordereauPage() {
               <p className="text-lg font-bold">{client.prenom} {client.nom}</p>
               {adresse && (
                 <div className="mt-2 text-gray-700">
-                  <p>{adresse.rue}</p>
+                  <p>{adresse.rue || adresse.adresse}</p>
                   {adresse.complementAdresse && <p>{adresse.complementAdresse}</p>}
                   <p className="font-semibold mt-1">{adresse.codePostal} {adresse.ville}</p>
                   <p>{adresse.pays}</p>
