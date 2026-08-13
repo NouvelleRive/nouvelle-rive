@@ -976,7 +976,8 @@ export async function GET(req: NextRequest) {
 
   // 11h00 — rappel-veille par mail : la fille dont la chronique tombe DEMAIN.
   // Mail individuel (Resend), gratuit, direct dans sa boîte perso.
-  if (inWindow(h, m, 11, 0)) {
+  // Fenêtre serrée (11:00–11:04) : inWindow(±4) attrapait 2 ticks du cron → doublon.
+  if (h === 11 && m <= 4) {
     const [ty, tm, td] = dateStr.split('-').map(Number)
     const tomorrowDow = (new Date(ty, tm - 1, td, 12).getDay() + 1) % 7
     const chroniquesDemain = CHRONIQUES_RESEAUX.filter((x) => x.day === tomorrowDow)
