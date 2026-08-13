@@ -718,14 +718,7 @@ export async function GET(req: NextRequest) {
           url: '/admin/nos-produits',
           tag: `admin-${kind}-jour-j-${chinId}-${dateStr}`,
         })
-        try {
-          await sendMail({
-            from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
-            to: 'nouvelleriveparis@gmail.com',
-            subject: `${pieces.length} ${kind === 'orange' ? 'prix' : 'pièces'} ${nomCourt} ${verb}`,
-            html: `<p>${intro} à ${nomCourt}. Pièces concernées :</p>${piecesHtmlOf(pieces)}`,
-          })
-        } catch {}
+        // Plus de mail admin direct : l'owner voit tout dans le mail récap.
       }
 
       actions.push(`chineuse-${kind}-${stage}-${chinId}`)
