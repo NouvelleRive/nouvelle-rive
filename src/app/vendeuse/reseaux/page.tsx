@@ -110,6 +110,14 @@ function captureFrame(video: HTMLVideoElement): Promise<File> {
   })
 }
 
+// Bande centrée 4:5 (format grille IG) : montre ce qui reste visible dans la
+// grille — le haut/bas hors des pointillés est coupé.
+function CropGuide() {
+  return (
+    <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 w-full aspect-[4/5] max-h-full border-y-2 border-dashed border-white/80 pointer-events-none" />
+  )
+}
+
 function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void; collabOptions: CollabOption[] }) {
   const [p, setP] = useState<Production>(prod)
   const [saving, setSaving] = useState(false)
@@ -185,59 +193,61 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         <input className={`${input} flex-1`} value={p.objectif} onChange={(e) => set('objectif', e.target.value)} placeholder="Ce qu'on veut obtenir" />
       </div>
 
-      {/* Vidéo + vignette côte à côte */}
-      <div>
-        <label className={label}>Vidéo (postée avec le son) & vignette</label>
-        <div className="flex gap-3 items-start">
-          {/* Vidéo à son format naturel (16/9 ou portrait), sans bandes */}
-          <div className="flex-1 min-w-0">
-            {p.videoUrl ? (
-              <div className="relative inline-block">
-                <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-64 max-w-full rounded-lg" />
-                <button
-                  onClick={() => set('videoUrl', '')}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center"
-                  title="Supprimer la vidéo"
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center gap-1 py-8 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
-                {busy === 'video' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-5xl leading-none">+</span>}
-                <span className="text-xs text-gray-400">Vidéo</span>
-                <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
-              </label>
-            )}
-          </div>
-          {/* Vignette à côté */}
-          <div className="shrink-0">
-            {p.vignetteUrl ? (
-              <div className="relative w-20 h-20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.vignetteUrl} alt="" className="w-20 h-20 object-cover rounded-lg border" />
-                <button
-                  onClick={() => set('vignetteUrl', '')}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs leading-none flex items-center justify-center"
-                  title="Supprimer la vignette"
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <label className="w-20 h-20 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-0.5 text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
-                {busy === 'vignette' ? <span className="text-[10px] text-gray-400">Envoi…</span> : <span className="text-3xl leading-none">+</span>}
-                <span className="text-[10px] text-gray-400">Vignette</span>
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
-              </label>
-            )}
-          </div>
+      {/* Vidéo + vignette (en grand, avec pointillés de zone visible dans la grille 4:5) */}
+      <div className="space-y-3">
+        {/* Vidéo */}
+        <div>
+          <div className={label}>Vidéo (postée avec le son)</div>
+          {p.videoUrl ? (
+            <div className="relative inline-block">
+              <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-72 max-w-full rounded-lg" />
+              <CropGuide />
+              <button onClick={() => set('videoUrl', '')} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center z-10" title="Supprimer la vidéo">×</button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center gap-1 py-10 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
+              {busy === 'video' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-5xl leading-none">+</span>}
+              <span className="text-xs text-gray-400">Vidéo</span>
+              <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
+            </label>
+          )}
         </div>
+
+        {/* Vignette (en grand). Par défaut = 1ʳᵉ image de la vidéo tant qu'aucune n'est choisie. */}
+        <div>
+          <div className={label}>Vignette</div>
+          {p.vignetteUrl ? (
+            <div className="relative inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.vignetteUrl} alt="" className="max-h-72 max-w-full rounded-lg" />
+              <CropGuide />
+              <button onClick={() => set('vignetteUrl', '')} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center z-10" title="Supprimer la vignette">×</button>
+            </div>
+          ) : p.videoUrl ? (
+            <div className="relative inline-block">
+              <video src={`${p.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="max-h-72 max-w-full rounded-lg opacity-90" />
+              <CropGuide />
+              <span className="absolute bottom-1 left-1 rounded bg-black/60 text-white text-[10px] px-1.5 py-0.5 z-10">vignette auto (1ʳᵉ image)</span>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center gap-1 py-10 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
+              {busy === 'vignette' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-5xl leading-none">+</span>}
+              <span className="text-xs text-gray-400">Vignette</span>
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
+            </label>
+          )}
+          <p className="text-[11px] text-gray-400 mt-1">Les pointillés = ce qui reste visible dans la grille (le haut/bas est coupé).</p>
+        </div>
+
         {p.videoUrl && (
-          <div className="mt-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={grabFrame} disabled={busy === 'vignette'} className="text-xs font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
               {busy === 'vignette' ? '…' : 'Vignette = image actuelle de la vidéo'}
             </button>
+            <label className="text-xs font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5 cursor-pointer">
+              {busy === 'vignette' ? 'Envoi…' : 'Importer une vignette'}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
+            </label>
           </div>
         )}
       </div>
