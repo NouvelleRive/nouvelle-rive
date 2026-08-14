@@ -32,7 +32,7 @@ const CHRONIQUES = [
     captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
   },
   {
-    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: '',
+    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: 'Partage DM',
     captionDefaut: "Shabbat Shalom 🌊 la quote de la semaine pour bien commencer le week-end 🦋",
   },
   {
