@@ -17,7 +17,7 @@ const CHRONIQUES = [
   },
   {
     key: 'compo-de-lo', day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah', heureDefaut: '14:00', objectifDefaut: 'Vendre',
-    captionDefaut: "Avec quoi on porte un (sublime) XX ? On en appelle à l'oeil de Lo. Ci-dessus nos plus belles compo.\nToutes ces pépites sont disponibles chez 🌊NOUVELLE RIVE, sur le site et en boutique.\n\nWhat do you wear a (stunning) XX with? We call on Lo's eye. Above, our most beautiful combos.\nAll these gems are available at 🌊NOUVELLE RIVE, online and in store.\n\n🌊www.nouvellerive.eu\n🌊8 rue des Ecouffes Paris le Marais",
+    captionDefaut: "Avec quoi on porte un (sublime) XX ? On en appelle à l'oeil de Lo. Ci-dessus nos plus belles compo.\nToutes ces pépites sont disponibles chez 🌊NOUVELLE RIVE, sur le site et en boutique.\nDemandez-nous les réfs des pièces en commentaire 🌊\n\nWhat do you wear a (stunning) XX with? We call on Lo's eye. Above, our most beautiful combos.\nAll these gems are available at 🌊NOUVELLE RIVE, online and in store.\nAsk us for the product refs in the comments 🌊\n\n🌊www.nouvellerive.eu\n🌊8 rue des Ecouffes Paris le Marais",
   },
   {
     key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga', heureDefaut: '11:00', objectifDefaut: '',
