@@ -252,6 +252,60 @@ export async function publishReel(
   return finalizePublish(container.id, 20, 2500)
 }
 
+/**
+ * Publie un CARROUSEL (post « publi ») : plusieurs images/vidéos + légende.
+ * Chaque média → container enfant (is_carousel_item), puis container parent
+ * CAROUSEL avec children, puis media_publish. Réutilise finalizePublish.
+ */
+export async function publishCarousel(
+  medias: { url: string; type: 'image' | 'video' }[],
+  caption: string,
+  opts: { collaborators?: string[] } = {},
+): Promise<string> {
+  if (!IG_BUSINESS_ID || !IG_TOKEN) throw new Error('Instagram non configuré (env vars manquantes)')
+  if (!medias.length) throw new Error('Aucun média')
+
+  // 1) Container enfant par média
+  const childIds: string[] = []
+  for (const m of medias) {
+    const body: Record<string, any> = { is_carousel_item: true, access_token: IG_TOKEN }
+    if (m.type === 'video') { body.media_type = 'VIDEO'; body.video_url = m.url }
+    else { body.image_url = m.url }
+    const res = await fetch(`https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    const data = await res.json()
+    if (!data.id) throw new Error(`container enfant échoué: ${JSON.stringify(data)}`)
+    // Attendre FINISHED pour les vidéos (les images sont prêtes vite)
+    if (m.type === 'video') {
+      for (let i = 0; i < 20; i++) {
+        const st = await fetch(`https://graph.facebook.com/${API_VERSION}/${data.id}?fields=status_code&access_token=${IG_TOKEN}`).then((r) => r.json())
+        if (st.status_code === 'FINISHED') break
+        if (st.status_code === 'ERROR') throw new Error(`traitement média échoué: ${JSON.stringify(st)}`)
+        await new Promise((r) => setTimeout(r, 2500))
+      }
+    }
+    childIds.push(data.id)
+  }
+
+  // 2) Container parent CAROUSEL
+  const parentBody: Record<string, any> = {
+    media_type: 'CAROUSEL',
+    children: childIds.join(','),
+    caption,
+    access_token: IG_TOKEN,
+  }
+  const collabs = (opts.collaborators || []).map((c) => c.trim().replace(/^@/, '')).filter(Boolean).slice(0, 3)
+  if (collabs.length) parentBody.collaborators = collabs
+  const parentRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parentBody),
+  })
+  const parent = await parentRes.json()
+  if (!parent.id) throw new Error(`container carrousel échoué: ${JSON.stringify(parent)}`)
+
+  return finalizePublish(parent.id, 20, 2500)
+}
+
 // --- Accès au doc hebdo -----------------------------------------------------
 
 export function weeklyRef(weekId: string) {

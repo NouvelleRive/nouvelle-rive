@@ -12,43 +12,47 @@ type Reseau = 'ig' | 'tiktok'
 // day = getDay() : 0 = dimanche … 6 = samedi.
 const CHRONIQUES = [
   {
-    key: 'infinite-slider', day: 0, jour: 'Dimanche', titre: 'INFINITE SLIDER', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: '',
+    key: 'infinite-slider', day: 0, jour: 'Dimanche', titre: 'INFINITE SLIDER', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
     captionDefaut: "Les nouveautés de la semaine défilent 🌊\n\nLaquelle repart avec toi ? 🦋",
   },
   {
-    key: 'compo-de-lo', day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah', heureDefaut: '14:00', objectifDefaut: 'Vendre',
+    key: 'compo-de-lo', day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah', heureDefaut: '14:00', objectifDefaut: 'Vendre', formatDefaut: 'reel',
     captionDefaut: "Avec quoi on porte un (sublime) XX ? On en appelle à l'oeil de Lo. Ci-dessus nos plus belles compo.\nToutes ces pépites sont disponibles chez 🌊NOUVELLE RIVE, sur le site et en boutique.\n💙 Commente ta pièce préférée pour recevoir sa réf\n\nWhat do you wear a (stunning) XX with? Lo has the eye for it. Above, our favourite pairings.\nAll these gems are available at 🌊NOUVELLE RIVE, online and in store.\n💙 Comment your fav piece to get the ref\n\n🦋www.nouvellerive.eu\n🧿8 rue des Ecouffes Paris le Marais",
   },
   {
-    key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga', heureDefaut: '11:00', objectifDefaut: '',
+    key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
     captionDefaut: "Le book d'Olga 📖 sa sélection coup de cœur de la semaine\n\nDis-nous ta préférée 🦋",
   },
   {
-    key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda', heureDefaut: '11:00', objectifDefaut: '',
+    key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
     captionDefaut: "Que portent nos stars du vintage ? C'est la mission d'Amanda de le découvrir 🕵️‍♀️🔎🌊\n\nSpoiler ce sera local et de saison 🦋",
   },
   {
-    key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina', heureDefaut: '12:00', objectifDefaut: '',
+    key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina', heureDefaut: '12:00', objectifDefaut: '', formatDefaut: 'reel',
     captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
   },
   {
-    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: 'Partage DM',
+    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: 'Partage DM', formatDefaut: 'publi',
     captionDefaut: "Shabbat Shalom 🌊 la quote de la semaine pour bien commencer le week-end 🦋",
   },
   {
-    key: 'energies-sarah', day: 6, jour: 'Samedi', titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah', heureDefaut: '11:00', objectifDefaut: '',
+    key: 'energies-sarah', day: 6, jour: 'Samedi', titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
     captionDefaut: "Les énergies de Sarah ✨ sa pièce vibe du moment\n\nElle est pour toi ? 🦋",
   },
 ] as const
 
 type Chronique = (typeof CHRONIQUES)[number]
 
+type Media = { url: string; type: 'image' | 'video' }
+
 type Production = {
   date: string
   theme: string
   objectif: string
+  format: 'reel' | 'publi'
   videoUrl: string
   vignetteUrl: string
+  medias: Media[]
   caption: string
   heurePost: string
   cta: string
@@ -80,8 +84,18 @@ function frDate(iso: string): string {
 // Une production est complète si tous les champs utiles sont remplis
 // (le lieu a un défaut, le collab est optionnel donc non requis).
 function isComplete(p: Production): boolean {
-  return [p.theme, p.objectif, p.videoUrl, p.vignetteUrl, p.caption, p.heurePost, p.cta, p.lieu]
-    .every((v) => !!(v && v.trim()))
+  const base = [p.theme, p.objectif, p.caption, p.heurePost, p.cta, p.lieu].every((v) => !!(v && v.trim()))
+  const media = p.format === 'publi' ? (p.medias?.length || 0) > 0 : !!(p.videoUrl && p.vignetteUrl)
+  return base && media
+}
+
+// Aperçu (tuile/feed) : vignette, sinon 1er média, sinon 1re image vidéo.
+function previewUrl(p: { vignetteUrl?: string; videoUrl?: string; medias?: Media[] }): { url: string; isVideo: boolean } | null {
+  if (p.vignetteUrl) return { url: p.vignetteUrl, isVideo: false }
+  const m = p.medias?.[0]
+  if (m) return { url: m.url, isVideo: m.type === 'video' }
+  if (p.videoUrl) return { url: p.videoUrl, isVideo: true }
+  return null
 }
 
 // Upload direct vers Firebase Storage (pas de limite de taille Vercel, gratuit,
@@ -127,8 +141,25 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
   const [posting, setPosting] = useState(false)
 
   useEffect(() => setP(prod), [prod])
-  const set = (k: keyof Production, v: string) => setP((x) => ({ ...x, [k]: v }))
+  const set = (k: keyof Production, v: any) => setP((x) => ({ ...x, [k]: v }))
   const collabHandles = p.collab.split(',').map((t) => t.trim().replace(/^@/, '')).filter(Boolean)
+
+  // Mode « Publi » : plusieurs images/vidéos (carrousel).
+  const addMedias = async (files: FileList) => {
+    setBusy('medias')
+    try {
+      const added: Media[] = []
+      for (const f of Array.from(files)) {
+        const kind = f.type.startsWith('video') ? 'video' : 'image'
+        const url = await uploadMedia(f, kind === 'video' ? 'video' : 'vignette')
+        added.push({ url, type: kind })
+      }
+      setP((x) => ({ ...x, medias: [...(x.medias || []), ...added].slice(0, 10) }))
+    } catch (e: any) { alert(e?.message) }
+    finally { setBusy(null) }
+  }
+  const removeMedia = (i: number) => setP((x) => ({ ...x, medias: x.medias.filter((_, j) => j !== i) }))
+  const hasMedia = p.format === 'publi' ? (p.medias?.length || 0) > 0 : !!p.videoUrl
 
   const save = async () => {
     setSaving(true)
@@ -140,7 +171,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error)
-      const updated = { ...p, pret: !!p.videoUrl }
+      const updated = { ...p, pret: hasMedia }
       onSaved(updated)
     } catch (e: any) {
       alert(e?.message || 'Erreur sauvegarde')
@@ -165,7 +196,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
 
   // Publie immédiatement cette prod sur IG (réutilise le posteur partagé).
   const postNow = async () => {
-    if (!p.videoUrl) return
+    if (!hasMedia) return
     if (!confirm('Poster ce contenu sur Instagram maintenant ?')) return
     setPosting(true)
     try {
@@ -176,7 +207,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'échec')
-      onSaved({ ...p, status: 'published', videoUrl: '', pret: true })
+      onSaved({ ...p, status: 'published', videoUrl: '', medias: [], pret: true })
     } catch (e: any) {
       alert(e?.message || 'Erreur publication')
     } finally {
@@ -201,8 +232,8 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
     <div className="pt-4 first:pt-0 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-900 capitalize">{frDate(p.date)}</span>
-        <span className={`text-xs font-medium rounded-full px-3 py-1 ${p.videoUrl ? 'text-green-700 bg-green-50' : 'text-amber-600 bg-amber-50'}`}>
-          {p.videoUrl ? 'Prêt' : 'À faire'}
+        <span className={`text-xs font-medium rounded-full px-3 py-1 ${hasMedia ? 'text-green-700 bg-green-50' : 'text-amber-600 bg-amber-50'}`}>
+          {hasMedia ? 'Prêt' : 'À faire'}
         </span>
       </div>
 
@@ -215,7 +246,17 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         <input className={`${input} flex-1`} value={p.objectif} onChange={(e) => set('objectif', e.target.value)} placeholder="Ce qu'on veut obtenir" />
       </div>
 
-      {/* Vidéo + vignette (en grand, avec pointillés de zone visible dans la grille 4:5) */}
+      {/* Toggle Reel / Publi (carrousel) */}
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-gray-600 w-20 shrink-0">Format</label>
+        <div className="inline-flex bg-gray-100 rounded-lg p-0.5 text-sm">
+          <button type="button" onClick={() => set('format', 'reel')} className={`px-4 py-1 rounded-md ${p.format === 'reel' ? 'bg-white text-[#22209C] shadow-sm font-medium' : 'text-gray-500'}`}>Reel</button>
+          <button type="button" onClick={() => set('format', 'publi')} className={`px-4 py-1 rounded-md ${p.format === 'publi' ? 'bg-white text-[#22209C] shadow-sm font-medium' : 'text-gray-500'}`}>Publi</button>
+        </div>
+      </div>
+
+      {p.format === 'reel' ? (
+      /* Vidéo + vignette (en grand, avec pointillés de zone visible dans la grille 4:5) */
       <div className="space-y-3">
         {/* Vidéo */}
         <div>
@@ -273,6 +314,31 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
           </div>
         )}
       </div>
+      ) : (
+      /* Mode Publi : carrousel de plusieurs images / vidéos */
+      <div>
+        <div className={label}>Contenu (images / vidéos)</div>
+        <div className="flex flex-wrap gap-2">
+          {p.medias?.map((m, i) => (
+            <div key={i} className="relative w-24 h-28 rounded-lg overflow-hidden bg-gray-100">
+              {m.type === 'video'
+                ? <video src={`${m.url}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                // eslint-disable-next-line @next/next/no-img-element
+                : <img src={m.url} alt="" className="w-full h-full object-cover" />}
+              {m.type === 'video' && <Play size={13} className="absolute bottom-1 left-1 text-white drop-shadow" fill="white" />}
+              <button onClick={() => removeMedia(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs leading-none flex items-center justify-center">×</button>
+            </div>
+          ))}
+          {(p.medias?.length || 0) < 10 && (
+            <label className="w-24 h-28 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
+              {busy === 'medias' ? <span className="text-[11px] text-gray-400">Envoi…</span> : <span className="text-3xl leading-none">+</span>}
+              <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => e.target.files?.length && addMedias(e.target.files)} />
+            </label>
+          )}
+        </div>
+        <p className="text-[11px] text-gray-400 mt-1">Jusqu'à 10 médias, dans l'ordre du carrousel.</p>
+      </div>
+      )}
 
       <div>
         <label className={label}>Caption</label>
@@ -347,7 +413,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         {saving ? 'Enregistrement…' : 'Enregistrer'}
       </button>
 
-      {p.videoUrl && p.status !== 'published' && (
+      {hasMedia && p.status !== 'published' && (
         <button
           onClick={postNow}
           disabled={posting}
@@ -453,6 +519,8 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
             caption: p.caption || chronique.captionDefaut,
             heurePost: p.heurePost || chronique.heureDefaut,
             objectif: p.objectif || chronique.objectifDefaut,
+            format: p.format || chronique.formatDefaut,
+            medias: p.medias || [],
           }))
         )
       })
@@ -481,15 +549,15 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
         {productions.map((prod) => {
           const published = prod.status === 'published'
           const incomplet = !published && !isComplete(prod)
+          const prev = previewUrl(prod)
           return (
             <button key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left">
               <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 flex items-center justify-center">
-                {prod.vignetteUrl ? (
+                {prev && !prev.isVideo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={prod.vignetteUrl} alt="" className={`w-full h-full object-cover ${published ? 'opacity-70' : ''}`} />
-                ) : prod.videoUrl ? (
-                  // Pas de vignette → 1ʳᵉ image de la vidéo
-                  <video src={`${prod.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                  <img src={prev.url} alt="" className={`w-full h-full object-cover ${published ? 'opacity-70' : ''}`} />
+                ) : prev && prev.isVideo ? (
+                  <video src={`${prev.url}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-4xl text-gray-300 leading-none">+</span>
                 )}

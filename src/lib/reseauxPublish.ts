@@ -1,5 +1,5 @@
 import { adminDb, adminStorage } from '@/lib/firebaseAdmin'
-import { publishReel } from '@/lib/igWeekly'
+import { publishReel, publishCarousel } from '@/lib/igWeekly'
 
 // Supprime le fichier vidéo une fois publié sur IG (il y vit désormais).
 // Gère Firebase Storage et Bunny. Non bloquant : un échec n'annule pas la publi.
@@ -66,13 +66,14 @@ export async function publishDueReseaux(dryRun = false): Promise<any> {
 
   const p = snap.data() as any
   if (p.publishedAt) return { skipped: 'already published', chronique }
-  if (!p.videoUrl) return { skipped: 'no video', chronique }
+  const hasMedia = p.format === 'publi' ? (Array.isArray(p.medias) && p.medias.length > 0) : !!p.videoUrl
+  if (!hasMedia) return { skipped: 'no media', chronique }
   const heure = p.heurePost || '00:00'
   if (hhmm < heure) return { skipped: 'too early', chronique, heure, now: hhmm }
 
   const collaborators = String(p.collab || '').split(',').map((s: string) => s.trim()).filter(Boolean)
 
-  if (dryRun) return { dryRun: true, chronique, iso, heure, videoUrl: p.videoUrl, collaborators }
+  if (dryRun) return { dryRun: true, chronique, iso, heure, format: p.format || 'reel', collaborators }
 
   return doPublish(ref, p, chronique)
 }
@@ -84,10 +85,17 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
   // Verrou anti-double publication : on pose publishedAt AVANT.
   await ref.set({ publishedAt: Date.now(), status: 'publishing' }, { merge: true })
   try {
-    const mediaId = await publishReel(p.videoUrl, caption, { coverUrl: p.vignetteUrl || undefined, collaborators })
-    // Purge la vidéo (grosse) une fois publiée ; on garde la vignette pour l'aperçu.
-    await deletePublishedVideo(p.videoUrl)
-    await ref.set({ status: 'published', igMediaId: mediaId, publishError: '', videoUrl: '' }, { merge: true })
+    let mediaId: string
+    if (p.format === 'publi') {
+      mediaId = await publishCarousel(p.medias || [], caption, { collaborators })
+      // Purge les médias (gros) une fois publiés.
+      await Promise.all((p.medias || []).map((m: any) => deletePublishedVideo(m.url)))
+      await ref.set({ status: 'published', igMediaId: mediaId, publishError: '', medias: [] }, { merge: true })
+    } else {
+      mediaId = await publishReel(p.videoUrl, caption, { coverUrl: p.vignetteUrl || undefined, collaborators })
+      await deletePublishedVideo(p.videoUrl) // on garde la vignette pour l'aperçu
+      await ref.set({ status: 'published', igMediaId: mediaId, publishError: '', videoUrl: '' }, { merge: true })
+    }
     return { published: true, chronique, mediaId }
   } catch (e: any) {
     await ref.set({ publishedAt: null, status: 'error', publishError: e?.message || 'erreur' }, { merge: true })
@@ -103,6 +111,7 @@ export async function publishProduction(chronique: string, date: string): Promis
   if (!snap.exists) return { skipped: 'introuvable' }
   const p = snap.data() as any
   if (p.publishedAt) return { skipped: 'already published' }
-  if (!p.videoUrl) throw new Error('Pas de vidéo à publier')
+  const hasMedia = p.format === 'publi' ? (Array.isArray(p.medias) && p.medias.length > 0) : !!p.videoUrl
+  if (!hasMedia) throw new Error('Rien à publier')
   return doPublish(ref, p, chronique)
 }

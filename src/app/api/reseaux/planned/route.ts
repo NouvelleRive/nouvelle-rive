@@ -46,11 +46,18 @@ export async function GET() {
       .filter((s) => {
         if (!s.exists) return false
         const d = s.data() as any
-        return (d.vignetteUrl || d.videoUrl) && d.status !== 'published'
+        const firstMedia = Array.isArray(d.medias) && d.medias[0] ? d.medias[0].url : ''
+        return (d.vignetteUrl || d.videoUrl || firstMedia) && d.status !== 'published'
       })
       .map((s) => {
         const d = s.data() as any
-        return { date: d.date, chronique: d.chronique, vignetteUrl: d.vignetteUrl || '', videoUrl: d.videoUrl || '' }
+        const firstMedia = Array.isArray(d.medias) && d.medias[0] ? d.medias[0] : null
+        return {
+          date: d.date,
+          chronique: d.chronique,
+          vignetteUrl: d.vignetteUrl || (firstMedia && firstMedia.type === 'image' ? firstMedia.url : ''),
+          videoUrl: d.videoUrl || (firstMedia && firstMedia.type === 'video' ? firstMedia.url : ''),
+        }
       })
       // Ordre de publication : le plus lointain en premier (haut de grille façon IG)
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))

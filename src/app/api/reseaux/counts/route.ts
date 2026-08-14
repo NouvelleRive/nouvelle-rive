@@ -51,7 +51,8 @@ export async function GET() {
       let n = 0
       for (let i = 0; i < NB_OCCURRENCES; i++) {
         const s = snaps[idx++]
-        if (s.exists && (s.data() as any).videoUrl) n++
+        const d = s.exists ? (s.data() as any) : null
+        if (d && (d.videoUrl || (Array.isArray(d.medias) && d.medias.length > 0))) n++
       }
       counts[k] = n
     })
