@@ -21,4 +21,12 @@
   .planning-calendar input {
     font-size: 9px !important;
   }
+
+  /* Formulaire Réseaux : on veut une taille uniforme (14px) partout pour matcher
+     les labels. Le 16px anti-zoom rendait les champs "gros" et hétérogènes. */
+  .reseaux-form input,
+  .reseaux-form select,
+  .reseaux-form textarea {
+    font-size: 14px !important;
+  }
 }

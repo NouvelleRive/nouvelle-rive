@@ -113,7 +113,10 @@ async function actionsChineuse(
     }
     const baisseDate = p.prixBaisseLe?.toDate?.()
     if (baisseDate instanceof Date) {
-      if (baisseDate < oneMonthAgo) { aRecuperer.push(toInfo(p)); continue }
+      // Garde-fou : jamais "à récupérer" avant 3 mois de présence, même si baissé
+      // (protège des baisses prématurées posées par un simple réajustement de prix).
+      const recuAvant3Mois = receptionDate instanceof Date && receptionDate < threeMonthsAgo
+      if (baisseDate < oneMonthAgo && recuAvant3Mois) { aRecuperer.push(toInfo(p)); continue }
       if (p.recu === true) stockActif++
       continue
     }
@@ -534,6 +537,7 @@ export async function GET(req: NextRequest) {
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const twoMonthsAgo = new Date(today); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
     const oneMonthAgo = new Date(today); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+    const threeMonthsAgo = new Date(today); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
     const daysBetween = (a: Date, b: Date) => Math.ceil((a.getTime() - b.getTime()) / (1000 * 60 * 60 * 24))
 
     // Index des RDV futurs (≤ 11 jours) par trigramme
@@ -776,7 +780,10 @@ export async function GET(req: NextRequest) {
           const bd = p.prixBaisseLe?.toDate?.()
           if (!(bd instanceof Date)) continue
           if (!dateMinBaisse || bd < dateMinBaisse) dateMinBaisse = bd
-          if (bd < oneMonthAgo) piecesRouges.push(toInfo(p))
+          // Garde-fou : jamais "à récupérer" avant 3 mois de présence, même si baissé.
+          const recep = p.dateReception?.toDate?.()
+          const recuAvant3Mois = recep instanceof Date && recep < threeMonthsAgo
+          if (bd < oneMonthAgo && recuAvant3Mois) piecesRouges.push(toInfo(p))
         } else {
           // Cycle orange basé sur la date de réception en boutique (pas createdAt)
           const recep = p.dateReception?.toDate?.()

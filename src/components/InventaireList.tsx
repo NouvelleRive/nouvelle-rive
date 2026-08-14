@@ -1721,10 +1721,14 @@
             try {
               // Process normal baisse de prix : { ancienPrix, prix, prixBaisseLe }
               // → tag "💰 Prix baissé le … · MÀJ étiquette" apparaît côté vendeuse
+              // On n'arme le chrono "à récupérer" (prixBaisseLe) QUE si la pièce est
+              // en boutique depuis ≥ 2 mois. Avant, c'est un simple réajustement.
+              const twoMonthsAgo = new Date(); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+              const eligibleBaisse = p.dateReception instanceof Timestamp && p.dateReception.toDate() < twoMonthsAgo
               await updateDoc(doc(db, 'produits', p.id), {
                 ancienPrix: actuel,
                 prix: nouveau,
-                prixBaisseLe: Timestamp.now(),
+                ...(eligibleBaisse ? { prixBaisseLe: Timestamp.now() } : {}),
               })
               setPhaseASession(prev => new Set(prev).add(p.id))
               setPricesInput(prev => { const n = { ...prev }; delete n[p.id]; return n })

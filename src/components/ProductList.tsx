@@ -174,7 +174,11 @@
     if (p.prixBaisseLe) {
       const oneMonthAgo = new Date()
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-      if (p.prixBaisseLe.toDate() < oneMonthAgo) return 'red'
+      // Garde-fou : jamais "à récupérer" (rouge) avant 3 mois de présence en boutique.
+      const threeMonthsAgo = new Date()
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+      const recuAvant3Mois = p.dateReception instanceof Timestamp && p.dateReception.toDate() < threeMonthsAgo
+      if (p.prixBaisseLe.toDate() < oneMonthAgo && recuAvant3Mois) return 'red'
       return 'blue'
     }
     // Orange = en boutique depuis +2 mois (basé sur dateReception, pas createdAt)
@@ -506,11 +510,14 @@
       // Produits à récupérer (même règle que le badge rouge)
       const produitsARecuperer = useMemo(() => {
         const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+        const threeMonthsAgo = new Date(); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
         return produits.filter((p) => {
           if (p.statut === 'supprime' || p.statut === 'retour' || p.statut === 'vendu' || p.statut === 'outOfStock') return false
           if (p.vendu === true) return false
           if (p.statutRecuperation === 'aRecuperer') return true
+          // Garde-fou : jamais "à récupérer" avant 3 mois de présence en boutique.
           return p.prixBaisseLe instanceof Timestamp && p.prixBaisseLe.toDate() < oneMonthAgo
+            && p.dateReception instanceof Timestamp && p.dateReception.toDate() < threeMonthsAgo
         })
       }, [produits])
 
@@ -824,11 +831,15 @@
             closureType: (data as any).closureType?.trim() || null,
             shoeType: (data as any).shoeType?.trim() || null,
             updatedAt: Timestamp.now(),
-            // Si le prix baisse, on enregistre la date et l'ancien prix
+            // Si le prix baisse, on enregistre la date et l'ancien prix — MAIS
+            // uniquement si la pièce est en boutique depuis ≥ 2 mois (cycle de
+            // rotation). Un simple réajustement de prix avant 2 mois n'est PAS une
+            // baisse officielle et ne doit pas armer le chrono "à récupérer".
 ...((() => {
   const newPrix = parseFloat(data.prix) || 0
   const oldPrix = editingProduct.prix ?? 0
-  if (newPrix < oldPrix && newPrix > 0) {
+  const eligibleBaisse = isOlderThan2Months(editingProduct.dateReception)
+  if (newPrix < oldPrix && newPrix > 0 && eligibleBaisse) {
     return { prixBaisseLe: Timestamp.now(), ancienPrix: oldPrix }
   }
   return {}

@@ -39,8 +39,8 @@ async function getAccessToken(): Promise<string> {
   return data.access_token
 }
 
-// Dépose une vidéo en brouillon dans le TikTok connecté. Renvoie le publish_id.
-export async function publishTikTokDraft(videoUrl: string): Promise<string> {
+// Dépose une vidéo en brouillon dans le TikTok connecté. Renvoie publish_id + statut.
+export async function publishTikTokDraft(videoUrl: string): Promise<{ publishId: string; status: string }> {
   const token = await getAccessToken()
 
   // 1) Récupère les octets de la vidéo (Firebase/Bunny)
@@ -74,5 +74,17 @@ export async function publishTikTokDraft(videoUrl: string): Promise<string> {
   })
   if (!up.ok) throw new Error(`TikTok upload échoué (${up.status}): ${await up.text().catch(() => '')}`)
 
-  return publishId
+  // Statut (pour savoir si TikTok l'a bien mise dans l'inbox de la créatrice)
+  let status = ''
+  try {
+    await new Promise((r) => setTimeout(r, 3000))
+    const st = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify({ publish_id: publishId }),
+    }).then((r) => r.json())
+    status = st?.data?.status || JSON.stringify(st?.error || st)
+  } catch { /* non bloquant */ }
+
+  return { publishId, status }
 }

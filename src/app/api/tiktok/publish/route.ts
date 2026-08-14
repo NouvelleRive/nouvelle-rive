@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
     }
     if (!url) return NextResponse.json({ success: false, error: 'aucune vidéo' }, { status: 400 })
 
-    const publishId = await publishTikTokDraft(url)
-    return NextResponse.json({ success: true, publishId })
+    const { publishId, status } = await publishTikTokDraft(url)
+    return NextResponse.json({ success: true, publishId, status })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'Erreur' }, { status: 500 })
   }

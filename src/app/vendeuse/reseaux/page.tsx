@@ -221,6 +221,9 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
     const url = p.videoUrl || p.medias?.find((m) => m.type === 'video')?.url || ''
     if (!url) { alert('Pas de vidéo à envoyer sur TikTok'); return }
     if (!confirm('Envoyer cette vidéo en brouillon sur TikTok ?')) return
+    // Copie la caption pour que tu la colles dans l'éditeur TikTok (le brouillon
+    // ne permet pas de la préremplir via l'API ; auto après audit Direct Post).
+    try { await navigator.clipboard?.writeText(p.caption || '') } catch {}
     setTiktokPosting(true)
     try {
       const res = await fetch('/api/tiktok/publish', {
@@ -252,10 +255,10 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
   const label = 'block text-sm font-medium text-gray-600 mb-1'
 
   return (
-    <div className="pt-4 first:pt-0 space-y-3">
+    <div className="reseaux-form pt-4 first:pt-0 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-900 capitalize">{frDate(p.date)}</span>
-        <span className={`text-xs font-medium rounded-full px-3 py-1 ${hasMedia ? 'text-green-700 bg-green-50' : 'text-amber-600 bg-amber-50'}`}>
+        <span className={`text-sm font-medium rounded-full px-3 py-1 ${hasMedia ? 'text-green-700 bg-green-50' : 'text-amber-600 bg-amber-50'}`}>
           {hasMedia ? 'Prêt' : 'À faire'}
         </span>
       </div>
@@ -293,7 +296,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
           ) : (
             <label className="flex flex-col items-center justify-center gap-1 py-10 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
               {busy === 'video' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-5xl leading-none">+</span>}
-              <span className="text-xs text-gray-400">Vidéo</span>
+              <span className="text-sm text-gray-400">Vidéo</span>
               <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
             </label>
           )}
@@ -313,24 +316,24 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
             <div className="relative inline-block">
               <video src={`${p.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="max-h-72 max-w-full rounded-lg opacity-90" />
               <CropGuide />
-              <span className="absolute bottom-1 left-1 rounded bg-black/60 text-white text-[10px] px-1.5 py-0.5 z-10">vignette auto (1ʳᵉ image)</span>
+              <span className="absolute bottom-1 left-1 rounded bg-black/60 text-white text-sm px-1.5 py-0.5 z-10">vignette auto (1ʳᵉ image)</span>
             </div>
           ) : (
             <label className="flex flex-col items-center justify-center gap-1 py-10 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
               {busy === 'vignette' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-5xl leading-none">+</span>}
-              <span className="text-xs text-gray-400">Vignette</span>
+              <span className="text-sm text-gray-400">Vignette</span>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
             </label>
           )}
-          <p className="text-[11px] text-gray-400 mt-1">Les pointillés = ce qui reste visible dans la grille (le haut/bas est coupé).</p>
+          <p className="text-sm text-gray-400 mt-1">Les pointillés = ce qui reste visible dans la grille (le haut/bas est coupé).</p>
         </div>
 
         {p.videoUrl && (
           <div className="flex flex-wrap gap-2">
-            <button onClick={grabFrame} disabled={busy === 'vignette'} className="text-xs font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
+            <button onClick={grabFrame} disabled={busy === 'vignette'} className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
               {busy === 'vignette' ? '…' : 'Vignette = image actuelle de la vidéo'}
             </button>
-            <label className="text-xs font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5 cursor-pointer">
+            <label className="text-sm font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5 cursor-pointer">
               {busy === 'vignette' ? 'Envoi…' : 'Importer une vignette'}
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
             </label>
@@ -349,17 +352,17 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
                 // eslint-disable-next-line @next/next/no-img-element
                 : <img src={m.url} alt="" className="w-full h-full object-cover" />}
               {m.type === 'video' && <Play size={13} className="absolute bottom-1 left-1 text-white drop-shadow" fill="white" />}
-              <button onClick={() => removeMedia(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs leading-none flex items-center justify-center">×</button>
+              <button onClick={() => removeMedia(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center">×</button>
             </div>
           ))}
           {(p.medias?.length || 0) < 10 && (
             <label className="w-24 h-28 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
-              {busy === 'medias' ? <span className="text-[11px] text-gray-400">Envoi…</span> : <span className="text-3xl leading-none">+</span>}
+              {busy === 'medias' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-3xl leading-none">+</span>}
               <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => e.target.files?.length && addMedias(e.target.files)} />
             </label>
           )}
         </div>
-        <p className="text-[11px] text-gray-400 mt-1">Jusqu'à 10 médias, dans l'ordre du carrousel.</p>
+        <p className="text-sm text-gray-400 mt-1">Jusqu'à 10 médias, dans l'ordre du carrousel.</p>
       </div>
       )}
 
@@ -405,7 +408,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         {collabHandles.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {collabHandles.map((h) => (
-              <span key={h} className="inline-flex items-center gap-1 bg-[#22209C]/10 text-[#22209C] text-xs rounded-full pl-2.5 pr-1 py-1">
+              <span key={h} className="inline-flex items-center gap-1 bg-[#22209C]/10 text-[#22209C] text-sm rounded-full pl-2.5 pr-1 py-1">
                 @{h}
                 <button onClick={() => set('collab', toggleHandle(p.collab, h))} className="w-4 h-4 rounded-full bg-[#22209C]/20 flex items-center justify-center leading-none" title="Retirer">×</button>
               </span>
@@ -452,7 +455,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
           disabled={tiktokPosting}
           className="w-full border border-gray-800 text-gray-800 text-sm font-medium rounded-lg py-2.5 disabled:opacity-50"
         >
-          {tiktokPosting ? 'Envoi TikTok…' : 'Envoyer sur TikTok (brouillon)'}
+          {tiktokPosting ? 'Envoi TikTok…' : 'Poster maintenant sur TikTok (brouillon)'}
         </button>
       )}
     </div>
