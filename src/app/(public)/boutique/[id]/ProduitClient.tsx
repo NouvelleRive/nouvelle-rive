@@ -7,6 +7,7 @@ import { TEXTES_ECO_CIRCULAIRE, TexteEcoKey } from '@/lib/textesEcoCirculaire'
 import { useCart } from '@/lib/cart'
 import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import TryOnLunettes from './TryOnLunettes'
 import { useLang, t, translateCategory, translateMaterial, translateColor } from '@/lib/i18n'
 import { getTypeSlug } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
@@ -312,6 +313,9 @@ export default function ProduitClient({
                 >
                   {t('VOIR LE PANIER', 'VIEW CART', lang)}
                 </button>
+              )}
+              {(produit.sku || '').toUpperCase().startsWith('MAK') && allImages[0] && (
+                <TryOnLunettes image={allImages[0]} nom={produit.nom} lang={lang} />
               )}
             </div>
 

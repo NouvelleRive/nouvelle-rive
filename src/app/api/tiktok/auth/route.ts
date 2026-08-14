@@ -8,7 +8,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY
 const REDIRECT_URI = 'https://www.nouvellerive.eu/api/tiktok/callback'
-const DEFAULT_SCOPES = 'user.info.basic,video.upload,video.publish'
+// video.publish (Direct Post) est refusé tant que l'app n'est pas auditée →
+// on ne demande que ce qui marche maintenant. On le rajoutera après l'audit.
+const DEFAULT_SCOPES = 'user.info.basic,video.upload'
 
 export async function GET(req: NextRequest) {
   if (!CLIENT_KEY) {

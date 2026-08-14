@@ -7,12 +7,14 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { sendConfirmationEnvoi, sendRetraitPret, type ArticleCommande } from '@/lib/emails/commandes'
+import { sendConfirmationEnvoi, sendRetraitPret, sendRetraitConfirme, type ArticleCommande } from '@/lib/emails/commandes'
+
+type NotifType = 'envoi' | 'retrait' | 'recupere'
 
 export async function POST(req: NextRequest) {
   try {
-    const { commandeId, type } = await req.json() as { commandeId?: string; type?: 'envoi' | 'retrait' }
-    if (!commandeId || (type !== 'envoi' && type !== 'retrait')) {
+    const { commandeId, type } = await req.json() as { commandeId?: string; type?: NotifType }
+    if (!commandeId || (type !== 'envoi' && type !== 'retrait' && type !== 'recupere')) {
       return NextResponse.json({ success: false, error: 'params invalides' }, { status: 400 })
     }
 
@@ -28,7 +30,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'email client manquant' }, { status: 400 })
     }
 
-    const flag = type === 'envoi' ? 'confirmEnvoiSentAt' : 'retraitPretSentAt'
+    const flag = type === 'envoi' ? 'confirmEnvoiSentAt'
+      : type === 'retrait' ? 'retraitPretSentAt'
+      : 'retraitConfirmeSentAt'
     if (c[flag]) {
       return NextResponse.json({ success: true, skipped: 'déjà envoyé' })
     }
@@ -48,8 +52,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'numéro de suivi manquant' }, { status: 400 })
       }
       res = await sendConfirmationEnvoi({ email, prenom, articles, numeroSuivi: c.numeroSuivi, transporteur: c.transporteur })
-    } else {
+    } else if (type === 'retrait') {
       res = await sendRetraitPret({ email, prenom, articles })
+    } else {
+      res = await sendRetraitConfirme({ email, prenom, articles })
     }
 
     if (!res.success) {

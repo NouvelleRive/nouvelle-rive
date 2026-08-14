@@ -279,6 +279,20 @@ export default function CommandesPanel({
         catchupPending: true,
         updatedAt: Timestamp.now()
       })
+
+      // Commande site : email "retrait confirmé" au client venu chercher sa commande.
+      if (commande.source !== 'ebay') {
+        try {
+          await fetch('/api/commandes/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commandeId: commande.id, type: 'recupere' })
+          })
+        } catch (err) {
+          console.warn('Erreur email retrait confirmé client:', err)
+        }
+      }
+
       await chargerCommandes(true)
     } catch (error) {
       console.error('Erreur:', error)

@@ -21,7 +21,8 @@ const css = `*{margin:0;box-sizing:border-box;font-family:Helvetica,'Helvetica N
   .track{display:flex;width:max-content;height:100%}
   .r1{animation:mL ${PERIOD}s linear infinite}.r2{animation:mR ${PERIOD}s linear infinite}
   @keyframes mL{to{transform:translateX(-50%)}}@keyframes mR{from{transform:translateX(-50%)}to{transform:translateX(0)}}
-  .cell{height:100%;flex:0 0 auto;padding:0 5px;background:#fff}.cell img{height:100%;width:auto;display:block}
+  .cell{height:100%;width:${H / 2}px;flex:0 0 auto;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .cell img{max-width:100%;max-height:100%;width:auto;height:auto;display:block}
   .logo{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
   .t{color:${BLUE};font-weight:600;font-size:40px;letter-spacing:.30em;text-transform:uppercase;padding-left:.30em}.t2{margin-top:18px}`
 const track = (arr, cls) => `<div class="track ${cls}">${[...arr, ...arr].map(u => `<div class="cell"><img src="${u}"></div>`).join('')}</div>`

@@ -76,6 +76,7 @@ export async function sendConfirmationCommande(params: {
     await resend.emails.send({
       from: FROM,
       to: email,
+      bcc: OWNER, // Nouvelle Rive en copie cachée pour suivre (à retirer plus tard si besoin)
       subject: 'Votre commande Nouvelle Rive est confirmée',
       html: layout('VOTRE COMMANDE EST CONFIRMÉE', contenu),
     })
@@ -109,6 +110,7 @@ export async function sendConfirmationEnvoi(params: {
     await resend.emails.send({
       from: FROM,
       to: email,
+      bcc: OWNER, // Nouvelle Rive en copie cachée pour suivre (à retirer plus tard si besoin)
       subject: 'Votre commande Nouvelle Rive a été expédiée',
       html: layout('VOTRE COMMANDE EST EN ROUTE', contenu),
     })
@@ -139,12 +141,42 @@ export async function sendRetraitPret(params: {
     await resend.emails.send({
       from: FROM,
       to: email,
+      bcc: OWNER, // Nouvelle Rive en copie cachée pour suivre (à retirer plus tard si besoin)
       subject: 'Votre commande Nouvelle Rive est prête',
       html: layout('VOTRE COMMANDE VOUS ATTEND', contenu),
     })
     return { success: true }
   } catch (error) {
     console.error('[EMAIL] retrait prêt KO:', error)
+    return { success: false, error }
+  }
+}
+
+// 3b) Retrait confirmé (déclenché au clic "Récupérée" — le client est venu chercher)
+export async function sendRetraitConfirme(params: {
+  email: string
+  prenom: string
+  articles: ArticleCommande[]
+}) {
+  const { email, prenom, articles } = params
+  const contenu = `
+    <p style="margin:24px 0;">Bonjour ${prenom || ''},<br><br>
+      Merci d'être passé·e ! Nous confirmons le retrait de votre commande en boutique.
+    </p>
+    <div style="margin:24px 0;">${articlesHtml(articles)}</div>
+    <p style="margin:24px 0;">On espère que votre pièce vous plaît.</p>
+  `
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: email,
+      bcc: OWNER,
+      subject: 'Votre retrait en boutique est confirmé',
+      html: layout('RETRAIT CONFIRMÉ', contenu),
+    })
+    return { success: true }
+  } catch (error) {
+    console.error('[EMAIL] retrait confirmé KO:', error)
     return { success: false, error }
   }
 }
@@ -166,6 +198,7 @@ export async function sendCatchupCommande(params: {
     await resend.emails.send({
       from: FROM,
       to: email,
+      bcc: OWNER, // Nouvelle Rive en copie cachée pour suivre (à retirer plus tard si besoin)
       subject: 'Une pièce en tête ? On chine pour vous',
       html: layout('ON CHINE POUR VOUS', contenu),
     })
