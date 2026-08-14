@@ -10,6 +10,7 @@ import { removeFromAllChannels } from '@/lib/syncRemoveFromAllChannels'
 import { sendPushToOwner } from '@/lib/webpush'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 import { sendCapiPurchase } from '@/lib/metaCapi'
+import { sendConfirmationCommande } from '@/lib/emails/commandes'
 
 if (!getApps().length) {
   initializeApp({
@@ -194,7 +195,8 @@ async function traiterProduit(opts: {
   const commandeDocId = `${orderId}_${lineItem?.uid || productId}`
   const commandeRef = adminDb.collection('commandes').doc(commandeDocId)
   const commandeSnapBefore = await commandeRef.get()
-  if (!commandeSnapBefore.exists) {
+  const commandeCreated = !commandeSnapBefore.exists
+  if (commandeCreated) {
     await commandeRef.set(nouvelleCommande)
     console.log('✅ Commande créée:', commandeDocId)
   } else {
@@ -267,6 +269,7 @@ async function traiterProduit(opts: {
     produitData,
     nouvelleQuantite,
     isNewVente,
+    commandeCreated,
     contentId: produitData.sku || productId,
   }
 }
@@ -540,7 +543,7 @@ export async function POST(request: Request) {
     }
     const marketing = Object.keys(marketingRaw).length > 0 ? marketingRaw : null
 
-    const traitements: { commandeId: string; produitData: any; nouvelleQuantite: number; isNewVente: boolean; contentId: string }[] = []
+    const traitements: { commandeId: string; produitData: any; nouvelleQuantite: number; isNewVente: boolean; commandeCreated: boolean; contentId: string }[] = []
     for (let i = 0; i < productIds.length; i++) {
       const productId = productIds[i]
       const lineItem = lineItems[i] || null
@@ -604,6 +607,27 @@ export async function POST(request: Request) {
       }
       await batch.commit()
       console.log('✅ Commandes du panier liées entre elles')
+    }
+
+    // Confirmation de commande AU CLIENT (une seule fois — dédup anti-retry webhook
+    // via commandeCreated, comme la CAPI s'appuie sur isNewVente).
+    if (clientInfo.email && traitements.some(t => t.commandeCreated)) {
+      const totalArticlesPrix = traitements.reduce((s, t) => s + (Number(t.produitData.prix) || 0), 0)
+      const fraisLivraisonClient = Number(metadata.fraisLivraison || 0)
+      await sendConfirmationCommande({
+        email: clientInfo.email,
+        prenom: clientInfo.prenom,
+        articles: traitements.map(t => ({
+          nom: t.produitData.nom,
+          sku: t.produitData.sku,
+          marque: t.produitData.marque,
+          prix: t.produitData.prix,
+          image: t.produitData.images?.[0] || t.produitData.imageUrl || t.produitData.photos?.face || t.produitData.imageUrls?.[0] || null,
+        })),
+        modeLivraison,
+        adresse,
+        total: totalArticlesPrix + fraisLivraisonClient,
+      }).catch(e => console.error('❌ Email confirmation client KO:', e?.message))
     }
 
     // Email récap unique pour tout le panier

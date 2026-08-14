@@ -247,6 +247,21 @@ export default function CommandesPanel({
         datePreparation: Timestamp.now(),
         updatedAt: Timestamp.now()
       })
+
+      // Commande site en retrait boutique : email "votre commande est prête" au client.
+      // (En livraison, l'email client part au moment de l'expédition, pas ici.)
+      if (commande.source !== 'ebay' && commande.modeLivraison === 'retrait') {
+        try {
+          await fetch('/api/commandes/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commandeId: commande.id, type: 'retrait' })
+          })
+        } catch (err) {
+          console.warn('Erreur email retrait client:', err)
+        }
+      }
+
       await chargerCommandes(true)
     } catch (error) {
       console.error('Erreur:', error)
@@ -260,6 +275,8 @@ export default function CommandesPanel({
       await updateDoc(doc(db, 'commandes', commande.id), {
         statut: 'retiree',
         dateRetrait: Timestamp.now(),
+        // Arme le catch-up (relance 10j après le retrait, balayé par le cron depot-expiry).
+        catchupPending: true,
         updatedAt: Timestamp.now()
       })
       await chargerCommandes(true)
@@ -278,6 +295,10 @@ export default function CommandesPanel({
 
   const marquerExpediee = async () => {
     if (!commandePourExpedition) return
+    if (!numeroSuivi.trim()) {
+      alert('Le numéro de suivi est obligatoire pour valider l\'envoi.')
+      return
+    }
     try {
       const collectionName = commandePourExpedition.source === 'ebay' ? 'ebayOrders' : 'commandes'
 
@@ -290,6 +311,8 @@ export default function CommandesPanel({
         trackingNumber: numeroSuivi || null,
         transporteur: transporteur || null,
         shippingCarrier: transporteur || null,
+        // Arme le catch-up (relance 10j après, balayé par le cron depot-expiry).
+        ...(commandePourExpedition.source !== 'ebay' ? { catchupPending: true } : {}),
         updatedAt: Timestamp.now()
       })
 
@@ -307,6 +330,19 @@ export default function CommandesPanel({
           })
         } catch (err) {
           console.warn('Erreur mise à jour tracking eBay:', err)
+        }
+      }
+
+      // Commande site : email d'expédition au client (avec suivi). eBay gère sa propre messagerie.
+      if (commandePourExpedition.source !== 'ebay') {
+        try {
+          await fetch('/api/commandes/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commandeId: commandePourExpedition.id, type: 'envoi' })
+          })
+        } catch (err) {
+          console.warn('Erreur email expédition client:', err)
         }
       }
 
@@ -607,10 +643,11 @@ export default function CommandesPanel({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Numéro de suivi {mode !== 'vendeuse' && commandePourExpedition.source === 'ebay' && <span className="text-yellow-600">(requis pour eBay)</span>}
+                  Numéro de suivi <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="text"
+                  required
                   value={numeroSuivi}
                   onChange={(e) => setNumeroSuivi(e.target.value)}
                   placeholder="Ex: 1A23456789012"
@@ -631,7 +668,8 @@ export default function CommandesPanel({
               </button>
               <button
                 onClick={marquerExpediee}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                disabled={!numeroSuivi.trim()}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Confirmer
               </button>

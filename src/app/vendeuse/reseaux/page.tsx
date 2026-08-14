@@ -233,7 +233,9 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'échec')
-      alert('Envoyé sur TikTok ✅ — ouvre l\'app TikTok, la vidéo est en brouillon, tape « Publier ».')
+      alert('Envoyé sur TikTok ✅ — caption copiée. J\'ouvre TikTok : va dans tes notifs, colle la caption et publie.')
+      // Ouvre l'app TikTok (deep link). Si pas installée, ne fait rien (on reste sur la page).
+      window.location.href = 'tiktok://'
     } catch (e: any) {
       alert(e?.message || 'Erreur TikTok')
     } finally {

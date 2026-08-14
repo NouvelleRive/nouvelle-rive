@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { sendCatchupCommande } from '@/lib/emails/commandes'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -66,6 +67,45 @@ function buildEmailHtml(prenom: string, items: Produit[]) {
       <p style="font-size:12px;color:#888;margin-top:32px;">Une question ? nouvelleriveparis@gmail.com</p>
     </div>
   `
+}
+
+const J_CATCHUP = 10 // jours après expédition/retrait pour la relance "on chine pour vous"
+
+// Relance douce 10 jours après que la commande soit partie (expédiée) ou récupérée.
+// Ne lit QUE les commandes armées (catchupPending == true) → requête bornée, zéro coût.
+async function sweepCatchup(dryRun: boolean) {
+  const cutoffMs = Date.now() - J_CATCHUP * MS_PER_DAY
+  const snap = await adminDb.collection('commandes').where('catchupPending', '==', true).get()
+
+  const envoyes: { commandeId: string; email: string }[] = []
+  const erreurs: { commandeId: string; error: string }[] = []
+
+  for (const d of snap.docs) {
+    const c = d.data() as any
+    const dateRef: Timestamp | undefined = c.dateExpedition || c.dateRetrait
+    if (!dateRef) continue
+    if (dateRef.toMillis() > cutoffMs) continue // pas encore 10 jours
+
+    const email = c.client?.email
+    if (!email) {
+      // Pas d'email → on désarme pour ne pas le rescanner chaque jour
+      if (!dryRun) await d.ref.update({ catchupPending: false })
+      continue
+    }
+
+    try {
+      if (!dryRun) {
+        const res = await sendCatchupCommande({ email, prenom: c.client?.prenom || '' })
+        if (!res.success) throw new Error('resend KO')
+        await d.ref.update({ catchupPending: false, catchupSentAt: Timestamp.now() })
+      }
+      envoyes.push({ commandeId: d.id, email })
+    } catch (e: any) {
+      erreurs.push({ commandeId: d.id, error: e?.message || 'erreur inconnue' })
+    }
+  }
+
+  return { envoyes, erreurs, nbArmees: snap.size }
 }
 
 export async function GET(req: NextRequest) {
@@ -161,6 +201,9 @@ export async function GET(req: NextRequest) {
     baissesAppliquees.push({ id: p.id, sku: p.sku, prixAvant, prixApres })
   }
 
+  // Relance catch-up commandes (10 j après expédition/retrait)
+  const catchup = await sweepCatchup(dryRun)
+
   return NextResponse.json({
     success: true,
     dryRun,
@@ -169,5 +212,6 @@ export async function GET(req: NextRequest) {
     emailsEnvoyes,
     emailsErreurs,
     baissesAppliquees,
+    catchup,
   })
 }

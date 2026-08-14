@@ -186,8 +186,10 @@ export async function POST(request: Request) {
 
     console.log('✅ Ordre créé:', orderId)
 
+    // On NE pré-remplit PAS buyerEmail : sans email côté Square, Square n'envoie pas
+    // son reçu automatique. C'est Nouvelle Rive qui envoie ses propres emails
+    // (confirmation, expédition…). On garde nom/adresse pour la logistique.
     const prePopulatedData: any = {
-      buyerEmail: clientInfo.email,
       buyerAddress: {
         firstName: clientInfo.prenom,
         lastName: clientInfo.nom,

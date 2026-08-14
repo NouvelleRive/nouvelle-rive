@@ -1,0 +1,134 @@
+[
+  {
+    "id": "CAS1",
+    "sku": "CAS1",
+    "prixBaisseLe": "2026-07-13T14:01:41.446Z",
+    "ancienPrix": 350
+  },
+  {
+    "id": "CAS10",
+    "sku": "CAS10",
+    "prixBaisseLe": "2026-07-13T13:56:01.180Z",
+    "ancienPrix": 550
+  },
+  {
+    "id": "CAS11",
+    "sku": "CAS11",
+    "prixBaisseLe": "2026-07-13T13:33:42.977Z",
+    "ancienPrix": 350
+  },
+  {
+    "id": "CAS12",
+    "sku": "CAS12",
+    "prixBaisseLe": "2026-07-13T13:54:58.118Z",
+    "ancienPrix": 450
+  },
+  {
+    "id": "CAS13",
+    "sku": "CAS13",
+    "prixBaisseLe": "2026-07-13T14:03:19.876Z",
+    "ancienPrix": 600
+  },
+  {
+    "id": "CAS16",
+    "sku": "CAS16",
+    "prixBaisseLe": "2026-07-13T13:51:49.272Z",
+    "ancienPrix": 350
+  },
+  {
+    "id": "CAS18",
+    "sku": "CAS18",
+    "prixBaisseLe": "2026-07-13T13:50:18.815Z",
+    "ancienPrix": 950
+  },
+  {
+    "id": "CAS19",
+    "sku": "CAS19",
+    "prixBaisseLe": "2026-07-13T13:48:42.067Z",
+    "ancienPrix": 400
+  },
+  {
+    "id": "CAS2",
+    "sku": "CAS2",
+    "prixBaisseLe": "2026-07-13T14:01:17.759Z",
+    "ancienPrix": 500
+  },
+  {
+    "id": "CAS20",
+    "sku": "CAS20",
+    "prixBaisseLe": "2026-07-13T13:47:34.960Z",
+    "ancienPrix": 500
+  },
+  {
+    "id": "CAS21",
+    "sku": "CAS21",
+    "prixBaisseLe": "2026-07-13T14:07:25.198Z",
+    "ancienPrix": 1000
+  },
+  {
+    "id": "CAS22",
+    "sku": "CAS22",
+    "prixBaisseLe": "2026-07-13T13:40:40.261Z",
+    "ancienPrix": 650
+  },
+  {
+    "id": "CAS23",
+    "sku": "CAS23",
+    "prixBaisseLe": "2026-07-13T13:40:03.028Z",
+    "ancienPrix": 150
+  },
+  {
+    "id": "CAS24",
+    "sku": "CAS24",
+    "prixBaisseLe": "2026-07-13T13:39:31.867Z",
+    "ancienPrix": 300
+  },
+  {
+    "id": "CAS3",
+    "sku": "CAS3",
+    "prixBaisseLe": "2026-07-13T14:00:36.226Z",
+    "ancienPrix": 500
+  },
+  {
+    "id": "CAS31",
+    "sku": "CAS31",
+    "prixBaisseLe": "2026-07-13T14:29:10.067Z",
+    "ancienPrix": 340
+  },
+  {
+    "id": "CAS32",
+    "sku": "CAS32",
+    "prixBaisseLe": "2026-07-13T14:05:25.110Z",
+    "ancienPrix": 490
+  },
+  {
+    "id": "CAS4",
+    "sku": "CAS4",
+    "prixBaisseLe": "2026-07-13T14:06:34.724Z",
+    "ancienPrix": 640
+  },
+  {
+    "id": "CAS6",
+    "sku": "CAS6",
+    "prixBaisseLe": "2026-07-13T14:04:52.779Z",
+    "ancienPrix": 495
+  },
+  {
+    "id": "CAS7",
+    "sku": "CAS7",
+    "prixBaisseLe": "2026-07-13T13:58:02.481Z",
+    "ancienPrix": 300
+  },
+  {
+    "id": "CAS8",
+    "sku": "CAS8",
+    "prixBaisseLe": "2026-07-13T14:04:46.149Z",
+    "ancienPrix": 495
+  },
+  {
+    "id": "CAS9",
+    "sku": "CAS9",
+    "prixBaisseLe": "2026-07-13T14:04:40.623Z",
+    "ancienPrix": 495
+  }
+]
