@@ -12,31 +12,31 @@ type Reseau = 'ig' | 'tiktok'
 // day = getDay() : 0 = dimanche … 6 = samedi.
 const CHRONIQUES = [
   {
-    key: 'infinite-slider', day: 0, jour: 'Dimanche', titre: 'INFINITE SLIDER', responsable: 'Salomé',
+    key: 'infinite-slider', day: 0, jour: 'Dimanche', titre: 'INFINITE SLIDER', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: '',
     captionDefaut: "Les nouveautés de la semaine défilent 🌊\n\nLaquelle repart avec toi ? 🦋",
   },
   {
-    key: 'compo-de-lo', day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah',
+    key: 'compo-de-lo', day: 1, jour: 'Lundi', titre: 'LES COMPO DE LO', responsable: 'Loah', heureDefaut: '14:00', objectifDefaut: 'Vendre',
     captionDefaut: "Avec quoi on porte un (sublime) XX ? On en appelle à l'oeil de Lo. Ci-dessus nos plus belles compo.\nToutes ces pépites sont disponibles chez 🌊NOUVELLE RIVE, sur le site et en boutique.\n\nWhat do you wear a (stunning) XX with? We call on Lo's eye. Above, our most beautiful combos.\nAll these gems are available at 🌊NOUVELLE RIVE, online and in store.\n\n🌊www.nouvellerive.eu\n🌊8 rue des Ecouffes Paris le Marais",
   },
   {
-    key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga',
+    key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga', heureDefaut: '11:00', objectifDefaut: '',
     captionDefaut: "Le book d'Olga 📖 sa sélection coup de cœur de la semaine\n\nDis-nous ta préférée 🦋",
   },
   {
-    key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda',
+    key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda', heureDefaut: '11:00', objectifDefaut: '',
     captionDefaut: "Que portent nos stars du vintage ? C'est la mission d'Amanda de le découvrir 🕵️‍♀️🔎🌊\n\nSpoiler ce sera local et de saison 🦋",
   },
   {
-    key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina',
+    key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina', heureDefaut: '12:00', objectifDefaut: '',
     captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
   },
   {
-    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé',
+    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: '',
     captionDefaut: "Shabbat Shalom 🌊 la quote de la semaine pour bien commencer le week-end 🦋",
   },
   {
-    key: 'energies-sarah', day: 6, jour: 'Samedi', titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah',
+    key: 'energies-sarah', day: 6, jour: 'Samedi', titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah', heureDefaut: '11:00', objectifDefaut: '',
     captionDefaut: "Les énergies de Sarah ✨ sa pièce vibe du moment\n\nElle est pour toi ? 🦋",
   },
 ] as const
@@ -115,9 +115,11 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null)
+  const [collabInput, setCollabInput] = useState('')
 
   useEffect(() => setP(prod), [prod])
   const set = (k: keyof Production, v: string) => setP((x) => ({ ...x, [k]: v }))
+  const collabHandles = p.collab.split(',').map((t) => t.trim().replace(/^@/, '')).filter(Boolean)
 
   const save = async () => {
     setSaving(true)
@@ -242,21 +244,25 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
 
       <div>
         <label className={label}>Caption</label>
-        <textarea className={`${input} min-h-[260px]`} value={p.caption} onChange={(e) => set('caption', e.target.value)} placeholder="Légende du post" />
+        <textarea
+          ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }}
+          className={`${input} resize-none overflow-hidden`}
+          value={p.caption}
+          onChange={(e) => { set('caption', e.target.value); e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px` }}
+          placeholder="Légende du post"
+        />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className={label}>Heure de post</label>
-          <input type="time" className="font-sans border border-gray-300 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-1 focus:ring-[#22209C]" value={p.heurePost} onChange={(e) => set('heurePost', e.target.value)} />
-        </div>
-        <div>
-          <label className={label}>CTA</label>
-          <input className={`${input} min-w-0`} value={p.cta} onChange={(e) => set('cta', e.target.value)} placeholder="Appel à l'action" />
-        </div>
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-gray-600 w-24 shrink-0">Heure de post</label>
+        <input type="time" className="font-sans border border-gray-300 rounded-lg px-3 py-2 text-sm w-32 focus:outline-none focus:ring-1 focus:ring-[#22209C]" value={p.heurePost} onChange={(e) => set('heurePost', e.target.value)} />
       </div>
-      <div>
-        <label className={label}>Lieu</label>
-        <input className={input} value={p.lieu} onChange={(e) => set('lieu', e.target.value)} />
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-gray-600 w-24 shrink-0">CTA</label>
+        <input className={`${input} flex-1`} value={p.cta} onChange={(e) => set('cta', e.target.value)} placeholder="Appel à l'action" />
+      </div>
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium text-gray-600 w-24 shrink-0">Lieu</label>
+        <input className={`${input} flex-1`} value={p.lieu} onChange={(e) => set('lieu', e.target.value)} />
       </div>
       <div>
         <label className={label}>Inviter à collaborer</label>
@@ -269,18 +275,36 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
             <option value="">Ajouter une chineuse…</option>
             {collabOptions.map((o) => (
               <option key={o.handle} value={o.handle}>
-                {hasHandle(p.collab, o.handle) ? '✓ ' : ''}{o.nom} (@{o.handle})
+                {hasHandle(p.collab, o.handle) ? '✓ ' : ''}@{o.handle}
               </option>
             ))}
           </select>
         )}
+        {/* Puces des comptes sélectionnés, avec × pour retirer */}
+        {collabHandles.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {collabHandles.map((h) => (
+              <span key={h} className="inline-flex items-center gap-1 bg-[#22209C]/10 text-[#22209C] text-xs rounded-full pl-2.5 pr-1 py-1">
+                @{h}
+                <button onClick={() => set('collab', toggleHandle(p.collab, h))} className="w-4 h-4 rounded-full bg-[#22209C]/20 flex items-center justify-center leading-none" title="Retirer">×</button>
+              </span>
+            ))}
+          </div>
+        )}
         <input
           className={input}
-          value={p.collab}
-          onChange={(e) => set('collab', e.target.value)}
-          placeholder="@compte1, @compte2"
+          value={collabInput}
+          onChange={(e) => setCollabInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && collabInput.trim()) {
+              e.preventDefault()
+              set('collab', toggleHandle(p.collab, collabInput.trim()))
+              setCollabInput('')
+            }
+          }}
+          onBlur={() => { if (collabInput.trim()) { set('collab', toggleHandle(p.collab, collabInput.trim())); setCollabInput('') } }}
+          placeholder="ou tape un @compte puis Entrée"
         />
-        <p className="text-[11px] text-gray-400 mt-1">Choisis une chineuse dans la liste, ou tape n'importe quel @compte (séparés par une virgule).</p>
       </div>
 
       <button
@@ -382,7 +406,12 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
         if (!alive || !d.success) return
         // Pré-remplit la caption avec le défaut de la chronique tant qu'elle est vide.
         setProductions(
-          d.productions.map((p: Production) => ({ ...p, caption: p.caption || chronique.captionDefaut }))
+          d.productions.map((p: Production) => ({
+            ...p,
+            caption: p.caption || chronique.captionDefaut,
+            heurePost: p.heurePost || chronique.heureDefaut,
+            objectif: p.objectif || chronique.objectifDefaut,
+          }))
         )
       })
       .finally(() => alive && setLoading(false))
@@ -589,7 +618,7 @@ export default function ReseauxPage() {
                     }`}
                   >
                     <button onClick={() => setOpenKey(open ? null : c.key)} className="flex-1 min-w-0 text-left">
-                      <div className="font-semibold text-gray-900 truncate">{c.titre}</div>
+                      <div className="text-sm font-semibold text-gray-900 truncate">{c.titre}</div>
                       <div className="text-sm text-gray-500">
                         {c.jour} - {c.responsable}
                         {isToday && <span className="ml-2 text-xs font-medium text-[#22209C]">· Aujourd'hui</span>}

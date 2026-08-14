@@ -20,7 +20,9 @@ export async function GET() {
         const x = d.data() as any
         const handle = cleanHandle(x.instagram || '')
         const nom = [x.prenom, x.nom].filter(Boolean).join(' ') || x.nom || handle
-        return handle ? { nom, handle } : null
+        // Un vrai handle IG : lettres/chiffres/._ uniquement (jette les emails).
+        const valid = handle && /^[a-zA-Z0-9._]+$/.test(handle)
+        return valid ? { nom, handle } : null
       })
       .filter(Boolean)
       // dédoublonne par handle
