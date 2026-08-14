@@ -764,8 +764,14 @@ export default function ReseauxPage() {
 
         {activeTab === 'feed' && (
           <section>
-            {/* Toggle IG/TikTok petit, à droite */}
-            <div className="flex items-center justify-end mb-3">
+            {/* Toggle IG/TikTok petit, à droite + connexion TikTok */}
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => { window.location.href = '/api/tiktok/auth' }}
+                className="text-[11px] text-gray-400 hover:text-[#22209C]"
+              >
+                Connecter TikTok
+              </button>
               <div className="inline-flex bg-gray-100 rounded-full p-0.5 text-[11px] font-medium">
                 <button
                   onClick={() => setReseau('ig')}
