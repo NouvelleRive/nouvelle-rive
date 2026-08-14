@@ -71,10 +71,16 @@ export async function publishDueReseaux(dryRun = false): Promise<any> {
   if (hhmm < heure) return { skipped: 'too early', chronique, heure, now: hhmm }
 
   const collaborators = String(p.collab || '').split(',').map((s: string) => s.trim()).filter(Boolean)
-  const caption = p.caption || ''
 
   if (dryRun) return { dryRun: true, chronique, iso, heure, videoUrl: p.videoUrl, collaborators }
 
+  return doPublish(ref, p, chronique)
+}
+
+// Publication effective d'une prod (container→publish, purge vidéo). Partagé.
+async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chronique: string): Promise<any> {
+  const collaborators = String(p.collab || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+  const caption = p.caption || ''
   // Verrou anti-double publication : on pose publishedAt AVANT.
   await ref.set({ publishedAt: Date.now(), status: 'publishing' }, { merge: true })
   try {
@@ -87,4 +93,16 @@ export async function publishDueReseaux(dryRun = false): Promise<any> {
     await ref.set({ publishedAt: null, status: 'error', publishError: e?.message || 'erreur' }, { merge: true })
     throw e
   }
+}
+
+// Publication immédiate d'une prod précise (bouton « Poster maintenant »),
+// sans regarder le jour ni l'heure.
+export async function publishProduction(chronique: string, date: string): Promise<any> {
+  const ref = adminDb.collection(COLL).doc(`${chronique}_${date}`)
+  const snap = await ref.get()
+  if (!snap.exists) return { skipped: 'introuvable' }
+  const p = snap.data() as any
+  if (p.publishedAt) return { skipped: 'already published' }
+  if (!p.videoUrl) throw new Error('Pas de vidéo à publier')
+  return doPublish(ref, p, chronique)
 }

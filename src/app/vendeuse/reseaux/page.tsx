@@ -124,6 +124,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
   const [busy, setBusy] = useState<string | null>(null)
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null)
   const [collabInput, setCollabInput] = useState('')
+  const [posting, setPosting] = useState(false)
 
   useEffect(() => setP(prod), [prod])
   const set = (k: keyof Production, v: string) => setP((x) => ({ ...x, [k]: v }))
@@ -160,6 +161,27 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
     try { set('vignetteUrl', await uploadMedia(file, 'vignette')) }
     catch (e: any) { alert(e?.message) }
     finally { setBusy(null) }
+  }
+
+  // Publie immédiatement cette prod sur IG (réutilise le posteur partagé).
+  const postNow = async () => {
+    if (!p.videoUrl) return
+    if (!confirm('Poster ce contenu sur Instagram maintenant ?')) return
+    setPosting(true)
+    try {
+      const res = await fetch('/api/reseaux/publish-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chronique: chronique.key, date: p.date }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'échec')
+      onSaved({ ...p, status: 'published', videoUrl: '', pret: true })
+    } catch (e: any) {
+      alert(e?.message || 'Erreur publication')
+    } finally {
+      setPosting(false)
+    }
   }
 
   const grabFrame = async () => {
@@ -324,6 +346,16 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       >
         {saving ? 'Enregistrement…' : 'Enregistrer'}
       </button>
+
+      {p.videoUrl && p.status !== 'published' && (
+        <button
+          onClick={postNow}
+          disabled={posting}
+          className="w-full border border-[#22209C] text-[#22209C] text-sm font-medium rounded-lg py-2.5 disabled:opacity-50"
+        >
+          {posting ? 'Publication en cours…' : 'Poster maintenant sur Instagram'}
+        </button>
+      )}
     </div>
   )
 }
