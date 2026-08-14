@@ -139,6 +139,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null)
   const [collabInput, setCollabInput] = useState('')
   const [posting, setPosting] = useState(false)
+  const [tiktokPosting, setTiktokPosting] = useState(false)
 
   useEffect(() => setP(prod), [prod])
   const set = (k: keyof Production, v: any) => setP((x) => ({ ...x, [k]: v }))
@@ -212,6 +213,28 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       alert(e?.message || 'Erreur publication')
     } finally {
       setPosting(false)
+    }
+  }
+
+  // Dépose la vidéo en brouillon sur TikTok (elle arrive dans l'app TikTok).
+  const postTikTok = async () => {
+    const url = p.videoUrl || p.medias?.find((m) => m.type === 'video')?.url || ''
+    if (!url) { alert('Pas de vidéo à envoyer sur TikTok'); return }
+    if (!confirm('Envoyer cette vidéo en brouillon sur TikTok ?')) return
+    setTiktokPosting(true)
+    try {
+      const res = await fetch('/api/tiktok/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chronique: chronique.key, date: p.date, videoUrl: url }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'échec')
+      alert('Envoyé sur TikTok ✅ — ouvre l\'app TikTok, la vidéo est en brouillon, tape « Publier ».')
+    } catch (e: any) {
+      alert(e?.message || 'Erreur TikTok')
+    } finally {
+      setTiktokPosting(false)
     }
   }
 
@@ -420,6 +443,16 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
           className="w-full border border-[#22209C] text-[#22209C] text-sm font-medium rounded-lg py-2.5 disabled:opacity-50"
         >
           {posting ? 'Publication en cours…' : 'Poster maintenant sur Instagram'}
+        </button>
+      )}
+
+      {(p.videoUrl || p.medias?.some((m) => m.type === 'video')) && p.status !== 'published' && (
+        <button
+          onClick={postTikTok}
+          disabled={tiktokPosting}
+          className="w-full border border-gray-800 text-gray-800 text-sm font-medium rounded-lg py-2.5 disabled:opacity-50"
+        >
+          {tiktokPosting ? 'Envoi TikTok…' : 'Envoyer sur TikTok (brouillon)'}
         </button>
       )}
     </div>
