@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
 
-// Suggestions de comptes à inviter en collab : chineuses validées ayant un IG.
+// Suggestions de comptes à inviter en collab : les chineuses/créatrices ayant un IG.
 // Server-side (adminDb), mis en cache 1h — gratuit.
 
 function cleanHandle(ig: string): string {
-  return ig.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/.*$/, '').trim()
+  return ig.trim()
+    .replace(/^@/, '')
+    .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+    .replace(/[?#/].*$/, '') // retire ?igsh=…, #… ou /… en fin
+    .trim()
 }
 
 export async function GET() {
   try {
-    const snap = await adminDb.collection('deposante').where('validee', '==', true).get()
+    const snap = await adminDb.collection('chineuse').get()
     const options = snap.docs
       .map((d) => {
         const x = d.data() as any
