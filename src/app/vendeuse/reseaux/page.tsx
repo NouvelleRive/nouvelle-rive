@@ -840,10 +840,8 @@ export default function ReseauxPage() {
               </div>
             ) : error ? (
               <p className="text-center text-red-500 py-12">{error}</p>
-            ) : (reseau === 'ig' ? posts : tiktokPosts).length === 0 && planned.length === 0 ? (
-              <p className="text-center text-gray-400 py-12">
-                {reseau === 'tiktok' ? 'Feed TikTok indisponible (connexion / scope video.list requis).' : 'Aucun post.'}
-              </p>
+            ) : (reseau === 'ig' ? posts : (tiktokPosts.length ? tiktokPosts : posts)).length === 0 && planned.length === 0 ? (
+              <p className="text-center text-gray-400 py-12">Aucun post.</p>
             ) : (
               <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen max-w-[600px] sm:mx-auto sm:left-0 sm:right-0">
               <div className="grid grid-cols-3 gap-[2px] bg-white">
@@ -866,7 +864,7 @@ export default function ReseauxPage() {
                     </span>
                   </div>
                 ))}
-                {(reseau === 'ig' ? posts : tiktokPosts).filter((p) => !hidden.has(p.id)).map((p) => (
+                {(reseau === 'ig' ? posts : (tiktokPosts.length ? tiktokPosts : posts)).filter((p) => !hidden.has(p.id)).map((p) => (
                   <a
                     key={p.id}
                     href={p.permalink}
