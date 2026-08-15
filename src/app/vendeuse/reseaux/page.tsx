@@ -670,6 +670,7 @@ export default function ReseauxPage() {
   const [activeTab, setActiveTab] = useState<Tab>('contenu')
   const [reseau, setReseau] = useState<Reseau>('ig')
   const [posts, setPosts] = useState<Post[]>([])
+  const [tiktokPosts, setTiktokPosts] = useState<Post[]>([])
   const [planned, setPlanned] = useState<{ date: string; chronique: string; vignetteUrl: string; videoUrl: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -704,13 +705,15 @@ export default function ReseauxPage() {
       fetch('/api/reseaux/ig-feed').then((r) => r.json()),
       fetch('/api/reseaux/feed-hidden').then((r) => r.json()).catch(() => ({ ids: [] })),
       fetch('/api/reseaux/planned').then((r) => r.json()).catch(() => ({ planned: [] })),
+      fetch('/api/reseaux/tiktok-feed').then((r) => r.json()).catch(() => ({ posts: [] })),
     ])
-      .then(([feed, h, pl]) => {
+      .then(([feed, h, pl, tk]) => {
         if (!alive) return
         if (feed.success) setPosts(feed.posts.filter((p: Post) => p.imageUrl))
         else setError(feed.error || 'Erreur')
         if (h?.ids) setHidden(new Set(h.ids))
         if (pl?.planned) setPlanned(pl.planned)
+        if (tk?.success && tk.posts) setTiktokPosts(tk.posts.filter((p: Post) => p.imageUrl))
       })
       .catch((e) => alive && setError(e?.message || 'Erreur'))
       .finally(() => alive && setLoading(false))
@@ -837,8 +840,10 @@ export default function ReseauxPage() {
               </div>
             ) : error ? (
               <p className="text-center text-red-500 py-12">{error}</p>
-            ) : posts.length === 0 && planned.length === 0 ? (
-              <p className="text-center text-gray-400 py-12">Aucun post.</p>
+            ) : (reseau === 'ig' ? posts : tiktokPosts).length === 0 && planned.length === 0 ? (
+              <p className="text-center text-gray-400 py-12">
+                {reseau === 'tiktok' ? 'Feed TikTok indisponible (connexion / scope video.list requis).' : 'Aucun post.'}
+              </p>
             ) : (
               <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen max-w-[600px] sm:mx-auto sm:left-0 sm:right-0">
               <div className="grid grid-cols-3 gap-[2px] bg-white">
@@ -861,7 +866,7 @@ export default function ReseauxPage() {
                     </span>
                   </div>
                 ))}
-                {posts.filter((p) => !hidden.has(p.id)).map((p) => (
+                {(reseau === 'ig' ? posts : tiktokPosts).filter((p) => !hidden.has(p.id)).map((p) => (
                   <a
                     key={p.id}
                     href={p.permalink}

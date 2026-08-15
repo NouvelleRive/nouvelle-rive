@@ -10,6 +10,9 @@ const CLIENT_SECRET = process.env.TIKTOK_CLIENT_SECRET
 const DOC = () => adminDb.collection('reseauxConfig').doc('tiktok')
 
 // Renvoie un access token valide (rafraîchit si expiré).
+export async function getTikTokToken(): Promise<string> {
+  return getAccessToken()
+}
 async function getAccessToken(): Promise<string> {
   const snap = await DOC().get()
   if (!snap.exists) throw new Error('TikTok non connecté (aucun token). Clique « Connecter TikTok ».')
