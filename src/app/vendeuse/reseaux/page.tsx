@@ -165,14 +165,25 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
   const save = async () => {
     setSaving(true)
     try {
+      // Reel sans vignette → on capture la 1ʳᵉ image et on l'enregistre comme
+      // vignette (pour que le feed l'affiche partout, iOS inclus).
+      let toSave = p
+      if (p.format === 'reel' && p.videoUrl && !p.vignetteUrl && videoEl) {
+        try {
+          const frame = await captureFrame(videoEl)
+          const url = await uploadMedia(frame, 'vignette')
+          toSave = { ...p, vignetteUrl: url }
+          setP(toSave)
+        } catch { /* pas bloquant */ }
+      }
       const res = await fetch('/api/reseaux/contenu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chronique: chronique.key, ...p }),
+        body: JSON.stringify({ chronique: chronique.key, ...toSave }),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error)
-      const updated = { ...p, pret: hasMedia }
+      const updated = { ...toSave, pret: hasMedia }
       onSaved(updated)
     } catch (e: any) {
       alert(e?.message || 'Erreur sauvegarde')
