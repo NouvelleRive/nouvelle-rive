@@ -160,6 +160,19 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     finally { setBusy(null) }
   }
   const removeMedia = (i: number) => setP((x) => ({ ...x, medias: x.medias.filter((_, j) => j !== i) }))
+
+  // Importe les photos fond blanc des pièces « week fav » de la semaine.
+  const importWeekFav = async () => {
+    setBusy('medias')
+    try {
+      const d = await fetch('/api/reseaux/weekfav-photos', { cache: 'no-store' }).then((r) => r.json())
+      if (!d.success) throw new Error(d.error)
+      const imgs: Media[] = (d.items || []).map((it: any) => ({ url: it.photo, type: 'image' as const })).filter((m: Media) => m.url)
+      if (!imgs.length) { alert('Aucune pièce en week fav cette semaine'); return }
+      setP((x) => ({ ...x, medias: [...(x.medias || []), ...imgs].slice(0, 10) }))
+    } catch (e: any) { alert(e?.message || 'Erreur import week fav') }
+    finally { setBusy(null) }
+  }
   const hasMedia = p.format === 'publi' ? (p.medias?.length || 0) > 0 : !!p.videoUrl
 
   const save = async () => {
@@ -391,6 +404,11 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
               <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => e.target.files?.length && addMedias(e.target.files)} />
             </label>
           )}
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <button onClick={importWeekFav} disabled={busy === 'medias'} className="text-sm font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5">
+            {busy === 'medias' ? '…' : 'Importer depuis Week fav (fond blanc)'}
+          </button>
         </div>
         <p className="text-sm text-gray-400 mt-1">Jusqu'à 10 médias, dans l'ordre du carrousel.</p>
       </div>
@@ -640,9 +658,9 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
   return (
     <div>
       <div className="grid grid-cols-3 gap-x-[2px] gap-y-3">
-        {productions.map((prod) => {
-          const published = prod.status === 'published'
-          const incomplet = !published && !isComplete(prod)
+        {productions.filter((prod) => prod.status !== 'published').map((prod) => {
+          const published = false
+          const incomplet = !isComplete(prod)
           const prev = previewUrl(prod)
           return (
             <div key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left cursor-pointer">
