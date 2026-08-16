@@ -267,23 +267,6 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     }
   }
 
-  // Déplace cette publi vers une autre date (échange le contenu des 2 créneaux).
-  const swapTo = async (targetDate: string) => {
-    if (!targetDate) return
-    try {
-      const res = await fetch('/api/reseaux/swap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chronique: chronique.key, dateA: p.date, dateB: targetDate }),
-      })
-      const d = await res.json()
-      if (!d.success) throw new Error(d.error)
-      onSwapped?.()
-    } catch (e: any) {
-      alert(e?.message || 'Erreur déplacement')
-    }
-  }
-
   const grabFrame = async () => {
     if (!videoEl) return
     setBusy('vignette')
@@ -478,18 +461,6 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
           placeholder="ou tape un @compte puis Entrée"
         />
       </div>
-
-      {dates.filter((d) => d !== p.date).length > 0 && p.status !== 'published' && (
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-gray-600 w-24 shrink-0">Déplacer vers</label>
-          <select className={`${input} flex-1`} value="" onChange={(e) => e.target.value && swapTo(e.target.value)}>
-            <option value="">Échanger avec une autre date…</option>
-            {dates.filter((d) => d !== p.date).map((d) => (
-              <option key={d} value={d} className="capitalize">{frDate(d)}</option>
-            ))}
-          </select>
-        </div>
-      )}
 
       <button
         onClick={save}
@@ -720,18 +691,47 @@ function ProductionModal({
 }: {
   chronique: Chronique; prod: Production; collabOptions: CollabOption[]; dates: string[]; onClose: () => void; onSaved: (p: Production) => void; onSwapped: () => void
 }) {
+  const swapTo = async (targetDate: string) => {
+    if (!targetDate || targetDate === prod.date) return
+    try {
+      const res = await fetch('/api/reseaux/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chronique: chronique.key, dateA: prod.date, dateB: targetDate }),
+      })
+      const d = await res.json()
+      if (!d.success) throw new Error(d.error)
+      onSwapped()
+    } catch (e: any) {
+      alert(e?.message || 'Erreur déplacement')
+    }
+  }
+  const others = dates.filter((d) => d !== prod.date)
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88dvh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
           <div>
             <div className="text-sm font-semibold text-gray-900">{chronique.titre}</div>
-            <div className="text-xs text-gray-500 capitalize">post du {frDate(prod.date)}</div>
+            {/* Cliquer la date = déplacer/échanger vers un autre créneau */}
+            {others.length > 0 && prod.status !== 'published' ? (
+              <select
+                value={prod.date}
+                onChange={(e) => swapTo(e.target.value)}
+                className="text-xs text-gray-500 bg-transparent capitalize -ml-0.5 focus:outline-none"
+                title="Déplacer vers une autre date"
+              >
+                <option value={prod.date}>post du {frDate(prod.date)}</option>
+                {others.map((d) => <option key={d} value={d}>→ déplacer au {frDate(d)}</option>)}
+              </select>
+            ) : (
+              <div className="text-xs text-gray-500 capitalize">post du {frDate(prod.date)}</div>
+            )}
           </div>
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
         </div>
         <div className="px-4 pb-4">
-          <ProductionCard chronique={chronique} prod={prod} onSaved={onSaved} collabOptions={collabOptions} dates={dates} onSwapped={onSwapped} />
+          <ProductionCard chronique={chronique} prod={prod} onSaved={onSaved} collabOptions={collabOptions} />
         </div>
       </div>
     </div>
