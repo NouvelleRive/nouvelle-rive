@@ -646,7 +646,7 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
                 )}
                 {published ? (
                   <span className="absolute top-1.5 left-1.5 rounded-full bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 shadow">Publié</span>
-                ) : prod.pret && (
+                ) : prev && (
                   <>
                     {incomplet && (
                       <span className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center shadow">!</span>
