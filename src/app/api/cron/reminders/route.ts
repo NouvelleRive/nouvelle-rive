@@ -55,7 +55,7 @@ const CHRONIQUES_RESEAUX = [
   { key: 'shabbat-quote', day: 5, titre: 'SHABBAT QUOTE', responsable: 'Salomé', email: 'nouvelleriveparis@gmail.com' },
   { key: 'energies-sarah', day: 6, titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah', email: '' },
 ]
-const NB_OCCURRENCES_RESEAUX = 6
+const NB_OCCURRENCES_RESEAUX = 12
 
 const normPrenom = (s: string) =>
   (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()

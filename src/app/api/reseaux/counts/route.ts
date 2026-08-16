@@ -18,7 +18,7 @@ const CHRONIQUE_DAY: Record<string, number> = {
   'energies-sarah': 6,
 }
 
-const NB_OCCURRENCES = 6
+const NB_OCCURRENCES = 12 // ~3 mois affichés
 
 function toISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
