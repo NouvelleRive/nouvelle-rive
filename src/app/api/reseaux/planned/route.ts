@@ -59,6 +59,7 @@ export async function GET() {
           chronique: d.chronique,
           vignetteUrl: d.vignetteUrl || (firstMedia && firstMedia.type === 'image' ? firstMedia.url : ''),
           videoUrl: d.videoUrl || (firstMedia && firstMedia.type === 'video' ? firstMedia.url : ''),
+          offsetY: typeof d.vignetteOffsetY === 'number' ? d.vignetteOffsetY : 50,
         }
       })
       // Ordre de publication : le plus lointain en premier (haut de grille façon IG)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { PlusSquare, LayoutGrid, Play, Copy, Pencil } from 'lucide-react'
 import { storage } from '@/lib/firebaseConfig'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
@@ -56,6 +56,8 @@ type Production = {
   format: 'reel' | 'publi'
   videoUrl: string
   vignetteUrl: string
+  vignetteOptions: string[]
+  vignetteOffsetY: number // position verticale du crop 4:5 (0-100, 50 = centré)
   medias: Media[]
   caption: string
   heurePost: string
@@ -216,12 +218,65 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     finally { setBusy(null) }
   }
 
+  const addVignette = (url: string) =>
+    setP((x) => ({ ...x, vignetteOptions: [...new Set([...(x.vignetteOptions || []), url])], vignetteUrl: url }))
+  const removeVignetteOption = (url: string) =>
+    setP((x) => {
+      const opts = (x.vignetteOptions || []).filter((u) => u !== url)
+      return { ...x, vignetteOptions: opts, vignetteUrl: x.vignetteUrl === url ? (opts[0] || '') : x.vignetteUrl }
+    })
+
   const onVignetteFile = async (file: File) => {
     setBusy('vignette')
-    try { set('vignetteUrl', await uploadMedia(file, 'vignette')) }
+    try { addVignette(await uploadMedia(file, 'vignette')) }
     catch (e: any) { alert(e?.message) }
     finally { setBusy(null) }
   }
+
+  // Capture la frame à un instant t de la vidéo (via seek).
+  const captureFrameAt = (video: HTMLVideoElement, t: number): Promise<File> =>
+    new Promise((resolve, reject) => {
+      const onSeeked = () => { video.removeEventListener('seeked', onSeeked); captureFrame(video).then(resolve).catch(reject) }
+      video.addEventListener('seeked', onSeeked)
+      video.currentTime = t
+    })
+
+  // Propose plusieurs vignettes en capturant des images à différents instants.
+  const genVignetteOptions = async () => {
+    if (!videoEl) return
+    setBusy('vignette')
+    try {
+      const d = videoEl.duration || 0
+      const times = d > 1 ? [d * 0.1, d * 0.35, d * 0.6, d * 0.85] : [0.1]
+      const urls: string[] = []
+      for (const t of times) {
+        const frame = await captureFrameAt(videoEl, t)
+        urls.push(await uploadMedia(frame, 'vignette'))
+      }
+      setP((x) => ({
+        ...x,
+        vignetteOptions: [...new Set([...(x.vignetteOptions || []), ...urls])],
+        vignetteUrl: x.vignetteUrl || urls[0],
+      }))
+      try { videoEl.currentTime = 0 } catch {}
+    } catch (e: any) { alert(e?.message) }
+    finally { setBusy(null) }
+  }
+
+  // Drag vertical pour choisir la zone visible (objectPosition Y) du crop 4:5.
+  const dragRef = useRef<{ startY: number; startOffset: number; h: number } | null>(null)
+  const onCropDown = (e: React.PointerEvent) => {
+    dragRef.current = { startY: e.clientY, startOffset: p.vignetteOffsetY ?? 50, h: e.currentTarget.clientHeight || 1 }
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+  }
+  const onCropMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return
+    const { startY, startOffset, h } = dragRef.current
+    const deltaPct = ((e.clientY - startY) / h) * 100
+    const ny = Math.max(0, Math.min(100, startOffset - deltaPct))
+    set('vignetteOffsetY', ny)
+  }
+  const onCropUp = () => { dragRef.current = null }
 
   // Publie immédiatement cette prod sur IG (réutilise le posteur partagé).
   const postNow = async () => {
@@ -276,7 +331,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     setBusy('vignette')
     try {
       const frame = await captureFrame(videoEl)
-      set('vignetteUrl', await uploadMedia(frame, 'vignette'))
+      addVignette(await uploadMedia(frame, 'vignette'))
     } catch (e: any) { alert(e?.message) }
     finally { setBusy(null) }
   }
@@ -332,21 +387,21 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
           )}
         </div>
 
-        {/* Vignette (en grand). Par défaut = 1ʳᵉ image de la vidéo tant qu'aucune n'est choisie. */}
+        {/* Vignette : fenêtre 4:5 (ce qui s'affiche dans la grille) ; glisse pour cadrer */}
         <div>
-          <div className={label}>Vignette</div>
-          {p.vignetteUrl ? (
-            <div className="relative inline-block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p.vignetteUrl} alt="" className="max-h-72 max-w-full rounded-lg" />
-              <CropGuide />
-              <button onClick={() => set('vignetteUrl', '')} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center z-10" title="Supprimer la vignette">×</button>
-            </div>
-          ) : p.videoUrl ? (
-            <div className="relative inline-block">
-              <video src={`${p.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="max-h-72 max-w-full rounded-lg opacity-90" />
-              <CropGuide />
-              <span className="absolute bottom-1 left-1 rounded bg-black/60 text-white text-sm px-1.5 py-0.5 z-10">vignette auto (1ʳᵉ image)</span>
+          <div className={label}>Vignette (glisse l'image pour cadrer)</div>
+          {(p.vignetteUrl || p.videoUrl) ? (
+            <div
+              className="relative w-40 aspect-[4/5] rounded-lg overflow-hidden bg-gray-100 mx-auto touch-none select-none cursor-ns-resize"
+              onPointerDown={onCropDown} onPointerMove={onCropMove} onPointerUp={onCropUp} onPointerCancel={onCropUp}
+            >
+              {p.vignetteUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={p.vignetteUrl} alt="" className="w-full h-full object-cover pointer-events-none" style={{ objectPosition: `50% ${p.vignetteOffsetY ?? 50}%` }} />
+              ) : (
+                <video src={`${p.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover pointer-events-none" style={{ objectPosition: `50% ${p.vignetteOffsetY ?? 50}%` }} />
+              )}
+              {!p.vignetteUrl && <span className="absolute bottom-1 left-1 rounded bg-black/60 text-white text-[11px] px-1.5 py-0.5">auto</span>}
             </div>
           ) : (
             <label className="flex flex-col items-center justify-center gap-1 py-10 border border-dashed border-gray-300 rounded-lg cursor-pointer text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
@@ -355,20 +410,40 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
             </label>
           )}
-          <p className="text-sm text-gray-400 mt-1">Les pointillés = ce qui reste visible dans la grille (le haut/bas est coupé).</p>
-        </div>
 
-        {p.videoUrl && (
-          <div className="flex flex-wrap gap-2">
-            <button onClick={grabFrame} disabled={busy === 'vignette'} className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
-              {busy === 'vignette' ? '…' : 'Vignette = image actuelle de la vidéo'}
-            </button>
-            <label className="text-sm font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5 cursor-pointer">
-              {busy === 'vignette' ? 'Envoi…' : 'Importer une vignette'}
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
-            </label>
-          </div>
-        )}
+          {/* Options de vignettes : clique pour choisir */}
+          {(p.vignetteOptions?.length || 0) > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2 justify-center">
+              {p.vignetteOptions.map((url) => (
+                <div
+                  key={url}
+                  onClick={() => set('vignetteUrl', url)}
+                  className={`relative w-14 aspect-[4/5] rounded overflow-hidden cursor-pointer ${p.vignetteUrl === url ? 'ring-2 ring-[#22209C]' : 'ring-1 ring-gray-200'}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="w-full h-full object-cover" style={{ objectPosition: `50% ${p.vignetteOffsetY ?? 50}%` }} />
+                  <button onClick={(e) => { e.stopPropagation(); removeVignetteOption(url) }} className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white text-[10px] leading-none flex items-center justify-center">×</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {p.videoUrl && (
+            <div className="flex flex-wrap gap-2 mt-2 justify-center">
+              <button onClick={genVignetteOptions} disabled={busy === 'vignette'} className="text-sm font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5">
+                {busy === 'vignette' ? '…' : 'Proposer des vignettes'}
+              </button>
+              <button onClick={grabFrame} disabled={busy === 'vignette'} className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
+                Image actuelle
+              </button>
+              <label className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5 cursor-pointer">
+                Importer
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVignetteFile(e.target.files[0])} />
+              </label>
+            </div>
+          )}
+          <p className="text-sm text-gray-400 mt-1">Glisse l'image de haut en bas pour choisir la zone visible dans la grille.</p>
+        </div>
       </div>
       ) : (
       /* Mode Publi : carrousel de plusieurs images / vidéos */
@@ -642,9 +717,9 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
               <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 flex items-center justify-center">
                 {prev && !prev.isVideo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={prev.url} alt="" className={`w-full h-full object-cover ${published ? 'opacity-70' : ''}`} />
+                  <img src={prev.url} alt="" className={`w-full h-full object-cover ${published ? 'opacity-70' : ''}`} style={{ objectPosition: `50% ${prod.vignetteOffsetY ?? 50}%` }} />
                 ) : prev && prev.isVideo ? (
-                  <video src={`${prev.url}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                  <video src={`${prev.url}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" style={{ objectPosition: `50% ${prod.vignetteOffsetY ?? 50}%` }} />
                 ) : (
                   <span className="text-4xl text-gray-300 leading-none">+</span>
                 )}
@@ -756,7 +831,7 @@ export default function ReseauxPage() {
   const [reseau, setReseau] = useState<Reseau>('ig')
   const [posts, setPosts] = useState<Post[]>([])
   const [tiktokPosts, setTiktokPosts] = useState<Post[]>([])
-  const [planned, setPlanned] = useState<{ date: string; chronique: string; vignetteUrl: string; videoUrl: string }[]>([])
+  const [planned, setPlanned] = useState<{ date: string; chronique: string; vignetteUrl: string; videoUrl: string; offsetY?: number }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
@@ -948,9 +1023,9 @@ export default function ReseauxPage() {
                   >
                     {p.vignetteUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.vignetteUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={p.vignetteUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `50% ${p.offsetY ?? 50}%` }} loading="lazy" />
                     ) : p.videoUrl ? (
-                      <video src={`${p.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                      <video src={`${p.videoUrl}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" style={{ objectPosition: `50% ${p.offsetY ?? 50}%` }} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">+</div>
                     )}

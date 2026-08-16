@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
 
 const COLL = 'reseauxContenu'
-const FIELDS = ['theme', 'objectif', 'format', 'videoUrl', 'vignetteUrl', 'medias', 'caption', 'heurePost', 'cta', 'lieu', 'collab', 'status', 'igMediaId', 'publishedAt']
+const FIELDS = ['theme', 'objectif', 'format', 'videoUrl', 'vignetteUrl', 'vignetteOptions', 'vignetteOffsetY', 'medias', 'caption', 'heurePost', 'cta', 'lieu', 'collab', 'status', 'igMediaId', 'publishedAt']
 
 export async function POST(req: NextRequest) {
   try {
