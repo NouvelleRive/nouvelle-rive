@@ -51,6 +51,7 @@ const CHRONIQUES_RESEAUX = [
   { key: 'book-olga', day: 2, titre: "LE BOOK D'OLGA", responsable: 'Olga', email: '' },
   { key: 'le-rideau', day: 3, titre: 'LE RIDEAU', responsable: 'Amanda', email: '' },
   { key: 'microboutique-hina', day: 4, titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina', email: '' },
+  { key: 'fond-blanc', day: 4, titre: 'FOND BLANC', responsable: 'Équipe', email: '' },
   { key: 'shabbat-quote', day: 5, titre: 'SHABBAT QUOTE', responsable: 'Salomé', email: 'nouvelleriveparis@gmail.com' },
   { key: 'energies-sarah', day: 6, titre: 'LES ENERGIES DE SARAH', responsable: 'Sarah', email: '' },
 ]

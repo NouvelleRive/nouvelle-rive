@@ -32,6 +32,10 @@ const CHRONIQUES = [
     captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
   },
   {
+    key: 'fond-blanc', day: 4, jour: 'Jeudi', titre: 'FOND BLANC', responsable: 'Équipe', heureDefaut: '18:00', objectifDefaut: 'Vendre', formatDefaut: 'publi',
+    captionDefaut: "Les coups de cœur fond blanc de l'équipe cette semaine 🌊\nToutes dispo sur le site et en boutique.\n\nThis week's team picks 🌊\nAll available online and in store.\n\n🦋www.nouvellerive.eu\n🧿8 rue des Ecouffes Paris le Marais",
+  },
+  {
     key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: 'Partage DM', formatDefaut: 'publi',
     captionDefaut: "Shabbat Shalom 🌊 la quote de la semaine pour bien commencer le week-end 🦋",
   },

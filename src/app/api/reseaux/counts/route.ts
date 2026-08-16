@@ -13,6 +13,7 @@ const CHRONIQUE_DAY: Record<string, number> = {
   'book-olga': 2,
   'le-rideau': 3,
   'microboutique-hina': 4,
+  'fond-blanc': 4,
   'shabbat-quote': 5,
   'energies-sarah': 6,
 }
