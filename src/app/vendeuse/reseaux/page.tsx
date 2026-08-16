@@ -705,10 +705,17 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
 
   const openProd = productions.find((p) => p.date === openDate) || null
 
+  // On ne montre que les créneaux remplis (remontés en haut) + 1 tuile « + »
+  // pour le prochain créneau libre (pas de tuiles vides qui traînent).
+  const hasContent = (p: Production) =>
+    !!(p.videoUrl || (p.medias && p.medias.length) || p.vignetteUrl || (p.theme && p.theme.trim()))
+  const filled = productions.filter((p) => p.status !== 'published' && hasContent(p))
+  const firstEmpty = productions.find((p) => p.status !== 'published' && !hasContent(p))
+
   return (
     <div>
       <div className="grid grid-cols-3 gap-x-[2px] gap-y-3">
-        {productions.filter((prod) => prod.status !== 'published').map((prod) => {
+        {filled.map((prod) => {
           const published = false
           const incomplet = !isComplete(prod)
           const prev = previewUrl(prod)
@@ -748,6 +755,15 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
             </div>
           )
         })}
+        {/* Tuile d'ajout : prochain créneau libre */}
+        {firstEmpty && (
+          <div onClick={() => setOpenDate(firstEmpty.date)} className="text-left cursor-pointer">
+            <div className="aspect-[4/5] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-300 hover:border-[#22209C] hover:text-[#22209C]">
+              <span className="text-4xl leading-none">+</span>
+            </div>
+            <div className="mt-1.5 text-[12px] leading-tight text-gray-400 capitalize">post du {frDate(firstEmpty.date)}</div>
+          </div>
+        )}
       </div>
 
       {openProd && (
