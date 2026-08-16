@@ -132,7 +132,7 @@ function CropGuide() {
   )
 }
 
-function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void; collabOptions: CollabOption[] }) {
+function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], onSwapped }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void; collabOptions: CollabOption[]; dates?: string[]; onSwapped?: () => void }) {
   const [p, setP] = useState<Production>(prod)
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
@@ -240,6 +240,23 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
       alert(e?.message || 'Erreur TikTok')
     } finally {
       setTiktokPosting(false)
+    }
+  }
+
+  // Déplace cette publi vers une autre date (échange le contenu des 2 créneaux).
+  const swapTo = async (targetDate: string) => {
+    if (!targetDate) return
+    try {
+      const res = await fetch('/api/reseaux/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chronique: chronique.key, dateA: p.date, dateB: targetDate }),
+      })
+      const d = await res.json()
+      if (!d.success) throw new Error(d.error)
+      onSwapped?.()
+    } catch (e: any) {
+      alert(e?.message || 'Erreur déplacement')
     }
   }
 
@@ -433,6 +450,18 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions }: { chronique
         />
       </div>
 
+      {dates.filter((d) => d !== p.date).length > 0 && p.status !== 'published' && (
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-600 w-24 shrink-0">Déplacer vers</label>
+          <select className={`${input} flex-1`} value="" onChange={(e) => e.target.value && swapTo(e.target.value)}>
+            <option value="">Échanger avec une autre date…</option>
+            {dates.filter((d) => d !== p.date).map((d) => (
+              <option key={d} value={d} className="capitalize">{frDate(d)}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <button
         onClick={save}
         disabled={saving}
@@ -542,6 +571,7 @@ function StructureModal({ chronique, onClose }: { chronique: Chronique; onClose:
 function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique: Chronique; collabOptions: CollabOption[]; onCountsChange: () => void }) {
   const [productions, setProductions] = useState<Production[]>([])
   const [loading, setLoading] = useState(true)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -564,7 +594,7 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
       })
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
-  }, [chronique.key])
+  }, [chronique.key, reloadKey])
 
   const [openDate, setOpenDate] = useState<string | null>(null)
 
@@ -646,8 +676,10 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
           chronique={chronique}
           prod={openProd}
           collabOptions={collabOptions}
+          dates={productions.map((p) => p.date)}
           onClose={() => setOpenDate(null)}
           onSaved={(p) => { updateProd(p); onCountsChange(); setOpenDate(null) }}
+          onSwapped={() => { setReloadKey((k) => k + 1); onCountsChange(); setOpenDate(null) }}
         />
       )}
     </div>
@@ -655,9 +687,9 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
 }
 
 function ProductionModal({
-  chronique, prod, collabOptions, onClose, onSaved,
+  chronique, prod, collabOptions, dates, onClose, onSaved, onSwapped,
 }: {
-  chronique: Chronique; prod: Production; collabOptions: CollabOption[]; onClose: () => void; onSaved: (p: Production) => void
+  chronique: Chronique; prod: Production; collabOptions: CollabOption[]; dates: string[]; onClose: () => void; onSaved: (p: Production) => void; onSwapped: () => void
 }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
@@ -670,7 +702,7 @@ function ProductionModal({
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
         </div>
         <div className="px-4 pb-4">
-          <ProductionCard chronique={chronique} prod={prod} onSaved={onSaved} collabOptions={collabOptions} />
+          <ProductionCard chronique={chronique} prod={prod} onSaved={onSaved} collabOptions={collabOptions} dates={dates} onSwapped={onSwapped} />
         </div>
       </div>
     </div>
