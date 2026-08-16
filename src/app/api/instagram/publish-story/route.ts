@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import fs from 'fs'
+import path from 'path'
+import os from 'os'
 import { adminDb } from '@/lib/firebaseAdmin'
 import sharp from 'sharp'
 
@@ -6,11 +9,41 @@ const IG_BUSINESS_ID = process.env.IG_BUSINESS_ACCOUNT_ID
 const IG_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN
 const API_VERSION = 'v25.0'
 
+// Vercel/Lambda n'embarque aucune police système : sans ça, sharp (librsvg)
+// rend tout le texte SVG en carrés (tofu). On pointe fontconfig sur les polices
+// DejaVu embarquées (voir outputFileTracingIncludes dans next.config.ts).
+// À faire une seule fois, avant tout rendu sharp.
+let fontsReady = false
+function ensureFonts() {
+  if (fontsReady) return
+  fontsReady = true
+  try {
+    const fontDir = path.join(process.cwd(), 'src/assets/fonts')
+    if (!fs.existsSync(path.join(fontDir, 'DejaVuSans.ttf'))) return
+    const cacheDir = path.join(os.tmpdir(), 'nr-fc-cache')
+    fs.mkdirSync(cacheDir, { recursive: true })
+    const confPath = path.join(os.tmpdir(), 'nr-fonts.conf')
+    fs.writeFileSync(
+      confPath,
+      `<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>${fontDir}</dir>
+  <cachedir>${cacheDir}</cachedir>
+</fontconfig>`
+    )
+    process.env.FONTCONFIG_FILE = confPath
+  } catch {
+    /* en dernier recours on laisse sharp utiliser ce qu'il trouve */
+  }
+}
+
 // Compose une story 1080×1920 : photo carrée en haut, fond blanc dessous,
 // « NEW IN FAV » + infos boutique. Upload sur Bunny → renvoie l'URL publique
 // (l'API STORIES exige une image_url 9:16 accessible publiquement). Gratuit.
 async function buildStoryImage(imageUrl: string): Promise<{ url: string | null; reason?: string }> {
   try {
+    ensureFonts()
     const res = await fetch(imageUrl)
     if (!res.ok) return { url: null, reason: `fetch photo ${res.status}` }
     const srcBuf = Buffer.from(await res.arrayBuffer())
@@ -23,9 +56,9 @@ async function buildStoryImage(imageUrl: string): Promise<{ url: string | null; 
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
       <style>
-        .title { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 130px; letter-spacing: 6px; fill: #111; }
-        .sub   { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 44px; fill: #222; }
-        .addr  { font-family: Helvetica, Arial, sans-serif; font-weight: 400; font-size: 38px; fill: #666; letter-spacing: 1px; }
+        .title { font-family: 'DejaVu Sans'; font-weight: 700; font-size: 130px; letter-spacing: 6px; fill: #111; }
+        .sub   { font-family: 'DejaVu Sans'; font-weight: 400; font-size: 44px; fill: #222; }
+        .addr  { font-family: 'DejaVu Sans'; font-weight: 400; font-size: 38px; fill: #666; letter-spacing: 1px; }
       </style>
       <text x="540" y="1340" text-anchor="middle" class="title">NEW IN FAV</text>
       <text x="540" y="1470" text-anchor="middle" class="sub">available online and in store</text>

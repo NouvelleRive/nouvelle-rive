@@ -3,6 +3,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Embarque les polices DejaVu dans le bundle serverless de la route story
+  // (Vercel/Lambda n'a aucune police système → texte en carrés sans ça).
+  outputFileTracingIncludes: {
+    '/api/instagram/publish-story': ['./src/assets/fonts/**'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
