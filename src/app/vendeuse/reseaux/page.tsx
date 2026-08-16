@@ -571,6 +571,21 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
   const updateProd = (updated: Production) =>
     setProductions((list) => list.map((x) => (x.date === updated.date ? updated : x)))
 
+  const deleteProd = async (prod: Production) => {
+    if (!confirm('Supprimer cette publi ? (le créneau redevient vide)')) return
+    try {
+      await fetch('/api/reseaux/contenu', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chronique: chronique.key, date: prod.date }),
+      })
+      setProductions((list) => list.map((x) => x.date === prod.date ? {
+        ...x, theme: '', videoUrl: '', vignetteUrl: '', medias: [], status: '', pret: false,
+      } : x))
+      onCountsChange()
+    } catch { alert('Erreur suppression') }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-10">
@@ -589,7 +604,7 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
           const incomplet = !published && !isComplete(prod)
           const prev = previewUrl(prod)
           return (
-            <button key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left">
+            <div key={prod.date} onClick={() => setOpenDate(prod.date)} className="text-left cursor-pointer">
               <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 flex items-center justify-center">
                 {prev && !prev.isVideo ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -609,6 +624,11 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
                     <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow">
                       <Pencil size={13} className="text-gray-600" />
                     </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteProd(prod) }}
+                      className="absolute top-9 right-1.5 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center shadow text-red-500 text-sm leading-none"
+                      title="Supprimer"
+                    >×</button>
                   </>
                 )}
               </div>
@@ -616,7 +636,7 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
                 {prod.theme && <div className="font-medium text-gray-700 truncate">{prod.theme}</div>}
                 <div className="text-gray-400 capitalize">post du {frDate(prod.date)}</div>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>
