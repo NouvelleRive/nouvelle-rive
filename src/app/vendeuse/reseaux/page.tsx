@@ -911,7 +911,7 @@ export default function ReseauxPage() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">+</div>
                     )}
-                    <span className="absolute bottom-1 left-1 rounded bg-[#22209C] text-white text-[9px] font-medium px-1.5 py-0.5 capitalize">
+                    <span className="absolute bottom-1 left-1 text-white/80 text-[8px] font-normal capitalize drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
                       {frDate(p.date)}
                     </span>
                   </div>
