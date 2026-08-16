@@ -90,12 +90,12 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
       mediaId = await publishCarousel(p.medias || [], caption, { collaborators })
       // Purge les médias (gros) une fois publiés.
       await Promise.all((p.medias || []).map((m: any) => deletePublishedVideo(m.url)))
-      await ref.set({ status: 'published', igMediaId: mediaId, publishError: '', medias: [] }, { merge: true })
     } else {
       mediaId = await publishReel(p.videoUrl, caption, { coverUrl: p.vignetteUrl || undefined, collaborators })
-      await deletePublishedVideo(p.videoUrl) // on garde la vignette pour l'aperçu
-      await ref.set({ status: 'published', igMediaId: mediaId, publishError: '', videoUrl: '' }, { merge: true })
+      await deletePublishedVideo(p.videoUrl)
     }
+    // Publié sur IG → on SUPPRIME la prod de l'app (elle disparaît de New contenu & du feed).
+    await ref.delete()
     return { published: true, chronique, mediaId }
   } catch (e: any) {
     // On GARDE le verrou (publishedAt) : une erreur transient (« retry later »)

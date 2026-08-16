@@ -11,8 +11,8 @@ const OUTDIR = join(homedir(), 'Desktop', 'videos-ig-infinite')
 const OUT = join(OUTDIR, 'infinite-digger-sister-2rangs.mp4')
 
 let imgs = JSON.parse(readFileSync(join(S, 'ds-order.json'), 'utf8')).filter(Boolean)
-console.log(`→ ${imgs.length} tuiles Digger Sister`)
-imgs = await trimToLocal(imgs)
+console.log(`→ ${imgs.length} tuiles Digger Sister (photos brutes, aucun détourage)`)
+// PAS de trim : on garde chaque photo telle quelle (fond d'origine), juste posée en carré
 
 const half = Math.ceil(imgs.length / 2)
 const top = imgs.slice(0, half), bottom = imgs.slice(half)
