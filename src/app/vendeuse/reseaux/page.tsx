@@ -576,7 +576,7 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
   useEffect(() => {
     let alive = true
     setLoading(true)
-    fetch(`/api/reseaux/contenu?chronique=${chronique.key}`)
+    fetch(`/api/reseaux/contenu?chronique=${chronique.key}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (!alive || !d.success) return
@@ -756,7 +756,7 @@ export default function ReseauxPage() {
     Promise.all([
       fetch('/api/reseaux/ig-feed').then((r) => r.json()),
       fetch('/api/reseaux/feed-hidden').then((r) => r.json()).catch(() => ({ ids: [] })),
-      fetch('/api/reseaux/planned').then((r) => r.json()).catch(() => ({ planned: [] })),
+      fetch('/api/reseaux/planned', { cache: 'no-store' }).then((r) => r.json()).catch(() => ({ planned: [] })),
       fetch('/api/reseaux/tiktok-feed').then((r) => r.json()).catch(() => ({ posts: [] })),
     ])
       .then(([feed, h, pl, tk]) => {
@@ -771,6 +771,16 @@ export default function ReseauxPage() {
       .finally(() => alive && setLoading(false))
     return () => { alive = false }
   }, [])
+
+  // Rafraîchit le contenu programmé à chaque ouverture de l'onglet Feed
+  // (pour refléter suppressions/échanges faits dans New contenu).
+  useEffect(() => {
+    if (activeTab !== 'feed') return
+    fetch('/api/reseaux/planned', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => { if (d?.planned) setPlanned(d.planned) })
+      .catch(() => {})
+  }, [activeTab])
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
 import { adminDb } from '@/lib/firebaseAdmin'
 
 // Contenu programmé (non encore publié) sur les prochaines dates, toutes chroniques.
@@ -64,7 +65,7 @@ export async function GET() {
 
     return NextResponse.json(
       { success: true, planned },
-      { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
+      { headers: { 'Cache-Control': 'no-store' } },
     )
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'Erreur' }, { status: 500 })

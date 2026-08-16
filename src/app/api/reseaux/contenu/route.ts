@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
 import { adminDb } from '@/lib/firebaseAdmin'
 
 // Productions des chroniques réseaux.

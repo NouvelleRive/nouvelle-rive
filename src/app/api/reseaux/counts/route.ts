@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
 import { adminDb } from '@/lib/firebaseAdmin'
 
 // Nombre de contenus prêts d'avance par chronique (vidéo présente sur les
