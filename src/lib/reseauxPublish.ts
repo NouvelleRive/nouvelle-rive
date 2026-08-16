@@ -98,7 +98,10 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
     }
     return { published: true, chronique, mediaId }
   } catch (e: any) {
-    await ref.set({ publishedAt: null, status: 'error', publishError: e?.message || 'erreur' }, { merge: true })
+    // On GARDE le verrou (publishedAt) : une erreur transient (« retry later »)
+    // peut quand même avoir publié côté IG → ne PAS réessayer auto (sinon doublons).
+    // En cas de vrai échec, republication manuelle via « Poster maintenant ».
+    await ref.set({ status: 'error', publishError: e?.message || 'erreur' }, { merge: true })
     throw e
   }
 }
