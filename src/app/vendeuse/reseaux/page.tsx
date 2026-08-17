@@ -374,7 +374,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
           <div className={label}>Vidéo (postée avec le son)</div>
           {p.videoUrl ? (
             <div className="relative inline-block">
-              <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-72 max-w-full rounded-lg" />
+              <video ref={setVideoEl} src={p.videoUrl} crossOrigin="anonymous" controls className="max-h-72 max-w-full rounded-lg" />
               <CropGuide />
               <button onClick={() => set('videoUrl', '')} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center z-10" title="Supprimer la vidéo">×</button>
             </div>
