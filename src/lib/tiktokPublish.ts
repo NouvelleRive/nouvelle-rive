@@ -91,3 +91,39 @@ export async function publishTikTokDraft(videoUrl: string): Promise<{ publishId:
 
   return { publishId, status }
 }
+
+// Poste un carrousel PHOTO (diaporama) sur TikTok. Mode MEDIA_UPLOAD = brouillon
+// (la créatrice finalise dans l'app) ; DIRECT_POST auto viendra après l'audit.
+// Les images doivent être servies depuis le domaine vérifié → proxy nouvellerive.eu.
+export async function publishTikTokPhotos(imageUrls: string[], caption: string): Promise<{ publishId: string; status: string }> {
+  const token = await getAccessToken()
+  if (!imageUrls.length) throw new Error('Aucune image')
+  const proxied = imageUrls.map((u) => `https://www.nouvellerive.eu/api/reseaux/img?url=${encodeURIComponent(u)}`)
+
+  const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({
+      media_type: 'PHOTO',
+      post_mode: 'MEDIA_UPLOAD', // brouillon (inbox) tant que l'app n'est pas auditée
+      post_info: { title: (caption || '').slice(0, 90), description: caption || '' },
+      source_info: { source: 'PULL_FROM_URL', photo_cover_index: 0, photo_images: proxied },
+    }),
+  })
+  const initData = await initRes.json()
+  const publishId = initData?.data?.publish_id
+  if (!publishId) throw new Error(`TikTok photo init échoué: ${JSON.stringify(initData)}`)
+
+  let status = ''
+  try {
+    await new Promise((r) => setTimeout(r, 3000))
+    const st = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify({ publish_id: publishId }),
+    }).then((r) => r.json())
+    status = st?.data?.status || JSON.stringify(st?.error || st)
+  } catch { /* non bloquant */ }
+
+  return { publishId, status }
+}

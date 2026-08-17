@@ -306,20 +306,24 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     }
   }
 
-  // Dépose la vidéo en brouillon sur TikTok (elle arrive dans l'app TikTok).
+  // Dépose en brouillon sur TikTok (vidéo → reel, images → carrousel photo).
   const postTikTok = async () => {
-    const url = p.videoUrl || p.medias?.find((m) => m.type === 'video')?.url || ''
-    if (!url) { alert('Pas de vidéo à envoyer sur TikTok'); return }
-    if (!confirm('Envoyer cette vidéo en brouillon sur TikTok ?')) return
-    // Copie la caption pour que tu la colles dans l'éditeur TikTok (le brouillon
-    // ne permet pas de la préremplir via l'API ; auto après audit Direct Post).
+    const video = p.videoUrl || p.medias?.find((m) => m.type === 'video')?.url || ''
+    const images = (p.medias || []).filter((m) => m.type === 'image').map((m) => m.url)
+    const body: any = (p.format === 'publi' && images.length)
+      ? { imageUrls: images, caption: p.caption }
+      : video ? { videoUrl: video } : null
+    if (!body) { alert('Rien à envoyer sur TikTok') ; return }
+    if (!confirm('Envoyer en brouillon sur TikTok ?')) return
+    // Copie la caption pour la coller dans l'éditeur TikTok (le brouillon ne la
+    // préremplit pas via l'API ; auto après audit Direct Post).
     try { await navigator.clipboard?.writeText(p.caption || '') } catch {}
     setTiktokPosting(true)
     try {
       const res = await fetch('/api/tiktok/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chronique: chronique.key, date: p.date, videoUrl: url }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'échec')
@@ -566,7 +570,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
         </button>
       )}
 
-      {(p.videoUrl || p.medias?.some((m) => m.type === 'video')) && p.status !== 'published' && (
+      {hasMedia && p.status !== 'published' && (
         <button
           onClick={postTikTok}
           disabled={tiktokPosting}
