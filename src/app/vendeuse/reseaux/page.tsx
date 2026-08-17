@@ -170,6 +170,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
   const [collabInput, setCollabInput] = useState('')
   const [posting, setPosting] = useState(false)
   const [tiktokPosting, setTiktokPosting] = useState(false)
+  const [zoom, setZoom] = useState<Media | null>(null) // aperçu plein écran
 
   useEffect(() => setP(prod), [prod])
   const set = (k: keyof Production, v: any) => setP((x) => ({ ...x, [k]: v }))
@@ -485,10 +486,10 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
           {p.medias?.map((m, i) => (
             <div key={i} className="relative w-24 h-28 rounded-lg overflow-hidden bg-gray-100">
               {m.type === 'video'
-                ? <video src={`${m.url}#t=0.1`} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                ? <video src={`${m.url}#t=0.1`} muted playsInline preload="metadata" onClick={() => setZoom(m)} className="w-full h-full object-cover cursor-zoom-in" />
                 // eslint-disable-next-line @next/next/no-img-element
-                : <img src={m.url} alt="" className="w-full h-full object-cover" />}
-              {m.type === 'video' && <Play size={13} className="absolute bottom-1 left-1 text-white drop-shadow" fill="white" />}
+                : <img src={m.url} alt="" onClick={() => setZoom(m)} className="w-full h-full object-cover cursor-zoom-in" />}
+              {m.type === 'video' && <Play size={13} className="absolute bottom-1 left-1 text-white drop-shadow pointer-events-none" fill="white" />}
               <button onClick={() => removeMedia(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center">×</button>
             </div>
           ))}
@@ -599,6 +600,22 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
         >
           {tiktokPosting ? 'Envoi TikTok…' : 'Poster maintenant sur TikTok (brouillon)'}
         </button>
+      )}
+
+      {zoom && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
+          onClick={() => setZoom(null)}
+        >
+          {zoom.type === 'video'
+            ? <video src={zoom.url} controls autoPlay playsInline className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />
+            // eslint-disable-next-line @next/next/no-img-element
+            : <img src={zoom.url} alt="" className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />}
+          <button
+            onClick={() => setZoom(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 text-white text-2xl leading-none flex items-center justify-center"
+          >×</button>
+        </div>
       )}
     </div>
   )
