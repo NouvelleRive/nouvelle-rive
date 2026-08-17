@@ -51,8 +51,8 @@ const FAQ: FaqItem[] = [
       en: 'Are the pieces authentic?',
     },
     a: {
-      fr: "Oui. Chaque pièce est chinée, sélectionnée et vérifiée par nos créatrices et curateurices avant d'être mise en vente. Le vintage de luxe et les sacs de designer font l'objet d'un contrôle d'authenticité rigoureux. Vous achetez en toute confiance.",
-      en: 'Yes. Every piece is sourced, curated and checked by our designers and curators before going on sale. Luxury vintage and designer bags undergo a rigorous authentication check. You can buy with complete confidence.',
+      fr: "Oui. Chaque pièce est chinée, sélectionnée et vérifiée par nos créatrices et curateurices avant d'être mise en vente. Le vintage de luxe et les sacs de designer font l'objet d'un contrôle d'authenticité rigoureux. La plupart des pièces de luxe sont accompagnées d'un certificat, parfois d'un certificat d'origine, et peuvent venir avec leur dustbag ou leur boîte d'origine. Vous achetez en toute confiance.",
+      en: 'Yes. Every piece is sourced, curated and checked by our designers and curators before going on sale. Luxury vintage and designer bags undergo a rigorous authentication check. Most luxury pieces come with a certificate, sometimes a certificate of origin, and may include their original dustbag or box. You can buy with complete confidence.',
     },
   },
   {
