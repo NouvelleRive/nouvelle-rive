@@ -242,15 +242,23 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     })
 
   // Propose plusieurs vignettes en capturant des images à différents instants.
+  // Charge la vidéo via un blob (même-origine) → jamais de canvas "tainted".
   const genVignetteOptions = async () => {
-    if (!videoEl) return
+    if (!p.videoUrl) return
     setBusy('vignette')
+    let objUrl = ''
     try {
-      const d = videoEl.duration || 0
+      const resp = await fetch(p.videoUrl)
+      const blob = await resp.blob()
+      objUrl = URL.createObjectURL(blob)
+      const v = document.createElement('video')
+      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = objUrl
+      await new Promise<void>((res, rej) => { v.onloadeddata = () => res(); v.onerror = () => rej(new Error('vidéo illisible')) })
+      const d = v.duration || 0
       const times = d > 1 ? [d * 0.1, d * 0.35, d * 0.6, d * 0.85] : [0.1]
       const urls: string[] = []
       for (const t of times) {
-        const frame = await captureFrameAt(videoEl, t)
+        const frame = await captureFrameAt(v, t)
         urls.push(await uploadMedia(frame, 'vignette'))
       }
       setP((x) => ({
@@ -258,9 +266,8 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
         vignetteOptions: [...new Set([...(x.vignetteOptions || []), ...urls])],
         vignetteUrl: x.vignetteUrl || urls[0],
       }))
-      try { videoEl.currentTime = 0 } catch {}
-    } catch (e: any) { alert(e?.message) }
-    finally { setBusy(null) }
+    } catch (e: any) { alert(e?.message || 'Erreur') }
+    finally { if (objUrl) URL.revokeObjectURL(objUrl); setBusy(null) }
   }
 
   // Drag vertical pour choisir la zone visible (objectPosition Y) du crop 4:5.
