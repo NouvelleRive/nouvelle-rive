@@ -27,14 +27,14 @@ export async function POST(req: NextRequest) {
     const snap = await adminDb.collection('reseauxContenu').doc(`${chronique}_${date}`).get()
     const p = snap.exists ? (snap.data() as any) : null
     if (!p) return NextResponse.json({ success: false, error: 'introuvable' }, { status: 404 })
-    const caption = p.caption || ''
+    const docCaption = p.caption || ''
 
     if (p.format === 'publi') {
       // Carrousel : photos → diaporama TikTok ; sinon 1re vidéo → reel
       const images = (Array.isArray(p.medias) ? p.medias : []).filter((m: any) => m.type === 'image').map((m: any) => m.url)
       const firstVideo = (Array.isArray(p.medias) ? p.medias : []).find((m: any) => m.type === 'video')?.url
       if (images.length) {
-        const r = await publishTikTokPhotos(images, caption)
+        const r = await publishTikTokPhotos(images, docCaption)
         return NextResponse.json({ success: true, type: 'photo', ...r })
       }
       if (firstVideo) {
