@@ -146,8 +146,8 @@ const FAQ: FaqItem[] = [
       en: 'Can I reserve a piece and pick it up in store?',
     },
     a: {
-      fr: "Oui. Vous pouvez commander en ligne et choisir le retrait gratuit en boutique. Pour réserver une pièce vue en ligne ou sur nos réseaux, écrivez-nous sur Instagram @nouvellerive ou par email — attention, les pièces étant uniques, elles partent vite.",
-      en: 'Yes. You can order online and choose free in-store pickup. To hold a piece you saw online or on our social media, message us on Instagram @nouvellerive or by email — but note that pieces are unique and sell fast.',
+      fr: "Oui. Vous commandez et réglez en ligne, puis choisissez le retrait gratuit en boutique. Une pièce ne se réserve qu'en la payant : c'est le paiement qui la met de côté pour vous. Les pièces étant uniques, elles partent vite.",
+      en: 'Yes. You order and pay online, then choose free in-store pickup. A piece can only be reserved by paying for it: payment is what sets it aside for you. As pieces are unique, they sell fast.',
     },
   },
 ]
