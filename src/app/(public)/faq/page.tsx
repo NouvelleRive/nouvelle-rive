@@ -81,9 +81,10 @@ const FAQ: FaqItem[] = [
       en: 'How often do new pieces arrive?',
     },
     a: {
-      fr: "Très souvent : nous recevons 2 à 3 arrivages par jour, sauf le week-end. La sélection se renouvelle donc en permanence — le mieux est de revenir régulièrement en boutique, sur le site ou de nous suivre sur Instagram @nouvellerive pour ne rien manquer.",
-      en: 'Very often: we receive 2 to 3 deliveries a day, except on weekends. The selection is therefore constantly renewed — the best way not to miss anything is to come back regularly in store, on the site, or follow us on Instagram @nouvellerive.',
+      fr: "Très souvent : nous recevons 2 à 3 arrivages par jour, sauf le week-end. La sélection se renouvelle donc en permanence. Pour ne rien manquer, retrouvez les dernières pièces dans « New in », notre sélection « Week Fav », ou suivez-nous sur Instagram @nouvellerive.",
+      en: 'Very often: we receive 2 to 3 deliveries a day, except on weekends. The selection is therefore constantly renewed. To keep up, browse the latest pieces in "New in", our "Week Fav" selection, or follow us on Instagram @nouvellerive.',
     },
+    link: { href: '/new-in', fr: 'Voir les nouveautés →', en: 'See new arrivals →' },
   },
   {
     q: {
@@ -123,9 +124,10 @@ const FAQ: FaqItem[] = [
       en: 'Can I return or exchange an item?',
     },
     a: {
-      fr: "Oui, selon nos conditions de retour. Chaque pièce étant unique, l'échange dépend de la disponibilité. Retrouvez toutes les modalités sur notre page Retours, ou contactez-nous à nouvelleriveparis@gmail.com.",
-      en: 'Yes, according to our return conditions. As every piece is unique, exchanges depend on availability. Find all the details on our Returns page, or contact us at nouvelleriveparis@gmail.com.',
+      fr: "Cela dépend du lieu d'achat. En boutique, les achats ne sont ni échangeables ni remboursables. En ligne, vous bénéficiez d'un droit de retour : les articles sont échangeables ou remboursables selon nos conditions. Retrouvez toutes les modalités sur notre page Retours.",
+      en: "It depends on where you bought. In store, purchases are neither exchangeable nor refundable. Online, you have a right of return: items can be exchanged or refunded according to our conditions. Find all the details on our Returns page.",
     },
+    link: { href: '/legal/retours', fr: 'Voir nos conditions de retour →', en: 'See our return conditions →' },
   },
   {
     q: {
