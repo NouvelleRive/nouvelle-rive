@@ -31,8 +31,8 @@ const FAQ: FaqItem[] = [
       en: 'Where is the boutique and what are the opening hours?',
     },
     a: {
-      fr: "La boutique est au 8 rue des Écouffes, 75004 Paris, en plein Marais (métro Saint-Paul, ligne 1). Horaires : lundi 11h–20h, mardi au jeudi 12h–20h, vendredi au dimanche 11h–20h. Ouvert 7j/7.",
-      en: 'The boutique is at 8 rue des Écouffes, 75004 Paris, in Le Marais (Saint-Paul metro, line 1). Hours: Monday 11am–8pm, Tuesday to Thursday 12pm–8pm, Friday to Sunday 11am–8pm. Open 7 days a week.',
+      fr: "La boutique est au 8 rue des Écouffes, 75004 Paris, en plein Marais (métro Saint-Paul, ligne 1). Horaires : 11h–20h tous les jours, 7j/7.",
+      en: 'The boutique is at 8 rue des Écouffes, 75004 Paris, in Le Marais (Saint-Paul metro, line 1). Hours: 11am–8pm every day, 7 days a week.',
     },
   },
   {

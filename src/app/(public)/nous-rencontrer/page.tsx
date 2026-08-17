@@ -9,18 +9,18 @@ const bleuElectrique = '#0000FF'
 
 const HORAIRES_FR = [
   { jour: 'Lundi', heures: '11h – 20h' },
-  { jour: 'Mardi', heures: '12h – 20h' },
-  { jour: 'Mercredi', heures: '12h – 20h' },
-  { jour: 'Jeudi', heures: '12h – 20h' },
+  { jour: 'Mardi', heures: '11h – 20h' },
+  { jour: 'Mercredi', heures: '11h – 20h' },
+  { jour: 'Jeudi', heures: '11h – 20h' },
   { jour: 'Vendredi', heures: '11h – 20h' },
   { jour: 'Samedi', heures: '11h – 20h' },
   { jour: 'Dimanche', heures: '11h – 20h' },
 ]
 const HORAIRES_EN = [
   { jour: 'Monday', heures: '11am – 8pm' },
-  { jour: 'Tuesday', heures: '12pm – 8pm' },
-  { jour: 'Wednesday', heures: '12pm – 8pm' },
-  { jour: 'Thursday', heures: '12pm – 8pm' },
+  { jour: 'Tuesday', heures: '11am – 8pm' },
+  { jour: 'Wednesday', heures: '11am – 8pm' },
+  { jour: 'Thursday', heures: '11am – 8pm' },
   { jour: 'Friday', heures: '11am – 8pm' },
   { jour: 'Saturday', heures: '11am – 8pm' },
   { jour: 'Sunday', heures: '11am – 8pm' },
