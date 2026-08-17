@@ -15,7 +15,6 @@ const localBusinessJsonLd = {
   url: 'https://www.nouvellerive.eu',
   image: 'https://www.nouvellerive.eu/facade%20paysage.jpg',
   logo: 'https://www.nouvellerive.eu/icon-512.png',
-  email: 'nouvelleriveparis@gmail.com',
   priceRange: '€€',
   address: {
     '@type': 'PostalAddress',

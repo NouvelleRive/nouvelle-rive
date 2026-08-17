@@ -254,14 +254,10 @@ export default function FaqPage() {
         <div className="max-w-3xl mx-auto px-6 py-12">
           <p style={{ fontSize: '16px', lineHeight: 1.6 }}>
             {t(
-              'Une autre question ? Écrivez-nous à ',
-              'Another question? Email us at ',
+              'Une autre question ? Écrivez-nous sur Instagram ',
+              'Another question? Message us on Instagram ',
               lang
             )}
-            <a href="mailto:nouvelleriveparis@gmail.com" style={{ color: bleuElectrique, fontWeight: 600 }}>
-              nouvelleriveparis@gmail.com
-            </a>
-            {t(' ou sur Instagram ', ' or on Instagram ', lang)}
             <a
               href="https://www.instagram.com/nouvellerive"
               target="_blank"
