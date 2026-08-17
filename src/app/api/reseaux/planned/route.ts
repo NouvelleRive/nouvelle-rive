@@ -17,6 +17,18 @@ const CHRONIQUE_DAY: Record<string, number> = {
   'shabbat-quote': 5,
   'energies-sarah': 6,
 }
+// Heure de post par défaut (doit rester alignée avec la page réseaux).
+// Sert de repli pour trier le feed quand le doc n'a pas encore d'heurePost.
+const CHRONIQUE_HEURE: Record<string, string> = {
+  'infinite-slider': '11:00',
+  'compo-de-lo': '14:00',
+  'book-olga': '11:00',
+  'le-rideau': '11:00',
+  'microboutique-hina': '12:00',
+  'fond-blanc': '18:00',
+  'shabbat-quote': '11:00',
+  'energies-sarah': '11:00',
+}
 const NB_OCCURRENCES = 12 // ~3 mois affichés
 
 function toISO(d: Date): string {
@@ -57,13 +69,18 @@ export async function GET() {
         return {
           date: d.date,
           chronique: d.chronique,
+          heurePost: d.heurePost || CHRONIQUE_HEURE[d.chronique] || '',
           vignetteUrl: d.vignetteUrl || (firstMedia && firstMedia.type === 'image' ? firstMedia.url : ''),
           videoUrl: d.videoUrl || (firstMedia && firstMedia.type === 'video' ? firstMedia.url : ''),
           offsetY: typeof d.vignetteOffsetY === 'number' ? d.vignetteOffsetY : 50,
         }
       })
-      // Ordre de publication : le plus lointain en premier (haut de grille façon IG)
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+      // Ordre du feed = ordre de publication inversé (le plus récent en haut) :
+      // par date puis, à date égale, par heure de post (WEEK FAV 18h après Hina 12h).
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1
+        return (a.heurePost || '') < (b.heurePost || '') ? 1 : (a.heurePost || '') > (b.heurePost || '') ? -1 : 0
+      })
 
     return NextResponse.json(
       { success: true, planned },
