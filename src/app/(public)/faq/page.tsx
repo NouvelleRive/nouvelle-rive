@@ -61,8 +61,8 @@ const FAQ: FaqItem[] = [
       en: 'What condition are the pieces in?',
     },
     a: {
-      fr: "Ce sont des pièces de seconde main (vintage) ou upcyclées, sélectionnées pour leur qualité. L'état de chaque article est indiqué sur sa fiche produit, avec des photos réelles. Les pièces vintage peuvent présenter de légères marques d'usage, toujours signalées.",
-      en: 'They are second-hand (vintage) or upcycled pieces, selected for their quality. The condition of each item is shown on its product page with real photos. Vintage pieces may show slight signs of wear, which are always disclosed.',
+      fr: "Nous ne retenons que des pièces en bon voire très bon état. Il arrive que l'on fasse une exception pour un vrai coup de cœur : dans ce cas, le prix est ajusté en conséquence. L'état de chaque article est indiqué sur sa fiche produit, avec des photos réelles : pas de mauvaise surprise.",
+      en: 'We only select pieces in good to very good condition. We occasionally make an exception for a true favourite: in that case, the price is adjusted accordingly. The condition of each item is shown on its product page, with real photos — no bad surprises.',
     },
   },
   {
