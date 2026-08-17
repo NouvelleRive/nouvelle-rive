@@ -32,7 +32,7 @@ const CHRONIQUES = [
     captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
   },
   {
-    key: 'fond-blanc', day: 4, jour: 'Jeudi', titre: 'FOND BLANC', responsable: 'Équipe', heureDefaut: '18:00', objectifDefaut: 'Vendre', ctaDefaut: 'Link in bio', formatDefaut: 'publi',
+    key: 'fond-blanc', day: 4, jour: 'Jeudi', titre: 'WEEK FAV', responsable: 'Équipe', heureDefaut: '18:00', objectifDefaut: 'Vendre', ctaDefaut: 'Link in bio', formatDefaut: 'publi',
     captionDefaut: "Parmi nos favoris dans les arrivages de la semaine. Lien vers tous nos week fav en bio !\n\nA few of our favourites from this week's new arrivals. Link to all our week favs in bio!",
   },
   {
@@ -501,7 +501,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
         </div>
         <div className="flex items-center gap-3 mt-2">
           <button onClick={importWeekFav} disabled={busy === 'medias'} className="text-sm font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5">
-            {busy === 'medias' ? '…' : 'Importer depuis Week fav (fond blanc)'}
+            {busy === 'medias' ? '…' : 'Importer depuis Week fav'}
           </button>
         </div>
         <p className="text-sm text-gray-400 mt-1">Jusqu'à 10 médias, dans l'ordre du carrousel.</p>
