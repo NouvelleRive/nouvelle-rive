@@ -32,8 +32,8 @@ const CHRONIQUES = [
     captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
   },
   {
-    key: 'fond-blanc', day: 4, jour: 'Jeudi', titre: 'FOND BLANC', responsable: 'Équipe', heureDefaut: '18:00', objectifDefaut: 'Vendre', formatDefaut: 'publi',
-    captionDefaut: "Les coups de cœur fond blanc de l'équipe cette semaine 🌊\nToutes dispo sur le site et en boutique.\n\nThis week's team picks 🌊\nAll available online and in store.\n\n🦋www.nouvellerive.eu\n🧿8 rue des Ecouffes Paris le Marais",
+    key: 'fond-blanc', day: 4, jour: 'Jeudi', titre: 'FOND BLANC', responsable: 'Équipe', heureDefaut: '18:00', objectifDefaut: 'Vendre', ctaDefaut: 'Link in bio', formatDefaut: 'publi',
+    captionDefaut: "Parmi nos favoris dans les arrivages de la semaine. Lien vers tous nos week fav en bio !\n\nA few of our favourites from this week's new arrivals. Link to all our week favs in bio!",
   },
   {
     key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: 'Partage DM', formatDefaut: 'publi',
@@ -198,9 +198,14 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
       const d = await fetch('/api/reseaux/weekfav-photos', { cache: 'no-store' }).then((r) => r.json())
       if (!d.success) throw new Error(d.error)
       const imgs: Media[] = (d.items || []).map((it: any) => ({ url: it.photo, type: 'image' as const })).filter((m: Media) => m.url)
-      if (!imgs.length) { alert('Aucune pièce en week fav (cette semaine ni la précédente)'); return }
-      if (d.semaine === 'precedente') alert('Aucune fav cette semaine — j\'ai pris celles de la semaine dernière 🌊')
-      setP((x) => ({ ...x, medias: [...(x.medias || []), ...imgs].slice(0, 10) }))
+      if (!imgs.length) { alert('Aucune pièce en week fav (14 derniers jours)'); return }
+      // Co-poste automatiquement les chineuses des pièces importées.
+      const chineuses: string[] = d.chineuses || []
+      setP((x) => {
+        const existing = x.collab.split(',').map((t) => t.trim().replace(/^@/, '')).filter(Boolean)
+        const merged = [...new Set([...existing, ...chineuses])]
+        return { ...x, medias: [...(x.medias || []), ...imgs].slice(0, 10), collab: merged.join(', ') }
+      })
     } catch (e: any) { alert(e?.message || 'Erreur import week fav') }
     finally { setBusy(null) }
   }
