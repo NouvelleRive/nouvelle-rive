@@ -21,7 +21,7 @@ const FAQ: FaqItem[] = [
       en: 'What is Nouvelle Rive?',
     },
     a: {
-      fr: "Nouvelle Rive est un lieu de mode au cœur du Marais, au 8 rue des Écouffes (75004 Paris), qui accueille les créatrices et curateurices engagées parmi les plus talentueuses de Paris. Chacune y a son propre espace pour mettre en avant ses créations et ses trouvailles et rencontrer son public. Toutes les pièces sont uniques et vintage, upcyclées ou régénérées : cruelty free et sans impact néfaste sur la planète. On achète sur place comme en ligne, dans un esprit responsable et anti fast-fashion.",
+      fr: "Nouvelle Rive est un lieu de mode au cœur du Marais, au 8 rue des Écouffes (75004 Paris), qui accueille les créatrices et curateurices engagées parmi les plus talentueuses de Paris. Chacune y a son propre espace pour mettre en avant ses créations et ses trouvailles et rencontrer son public. Toutes les pièces sont uniques et vintage, upcyclées ou régénérées : cruelty free et sans impact néfaste sur la planète. Vous achetez sur place comme en ligne, dans un esprit responsable et anti fast-fashion.",
       en: 'Nouvelle Rive is a fashion space in the heart of Le Marais, at 8 rue des Écouffes (75004 Paris), home to some of the most talented, committed designers and curators in Paris. Each one has her own space to showcase her creations and finds and meet her audience. Every piece is one of a kind and vintage, upcycled or regenerated: cruelty free and with no harm to the planet. Shop on site or online, in a responsible, anti fast-fashion spirit.',
     },
   },
@@ -71,7 +71,7 @@ const FAQ: FaqItem[] = [
       en: 'What are the prices? Are there affordable pieces?',
     },
     a: {
-      fr: "Chez Nouvelle Rive, chaque portant est occupé par une créatrice différente, libre de fixer ses prix : chaque portant a donc son propre univers et sa propre gamme de prix. On trouve des articles à moins de 20 € comme des pièces à plus de 10 000 €. Pour servir toutes les bourses, nous développons une offre abordable, la « cheap room », où tout est à moins de 50 €.",
+      fr: "Chez Nouvelle Rive, chaque portant est occupé par une créatrice différente, libre de fixer ses prix : chaque portant a donc son propre univers et sa propre gamme de prix. Vous y trouverez des articles à moins de 20 € comme des pièces à plus de 10 000 €. Pour servir toutes les bourses, nous développons une offre abordable, la « cheap room », où tout est à moins de 50 €.",
       en: 'At Nouvelle Rive, each rack is run by a different designer, free to set her own prices: every rack has its own world and its own price range. You\'ll find items under €20 as well as pieces over €10,000. To suit every budget, we are developing an affordable offer, the "cheap room", where everything is under €50.',
     },
   },
