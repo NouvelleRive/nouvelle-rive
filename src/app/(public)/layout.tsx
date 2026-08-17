@@ -48,13 +48,39 @@ const localBusinessJsonLd = {
   areaServed: { '@type': 'City', name: 'Paris' },
   paymentAccepted: 'Carte bancaire, Apple Pay, Google Pay',
   currenciesAccepted: 'EUR',
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    reviewCount: '61',
-    bestRating: '5',
-    worstRating: '1',
-  },
+}
+
+// Note affichée dans le schema = vraie note Google (jamais en dur).
+// Récupérée via l'API Places, mise en cache 1h. Sans clé ou sans donnée réelle,
+// on n'émet AUCUN aggregateRating (Google sanctionne les notes inventées).
+async function getGoogleRating(): Promise<{ ratingValue: number; reviewCount: number } | null> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY
+  if (!apiKey) return null
+  try {
+    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.rating,places.userRatingCount',
+      },
+      body: JSON.stringify({
+        textQuery: 'Nouvelle Rive 8 rue des Écouffes 75004 Paris',
+        languageCode: 'fr',
+        regionCode: 'FR',
+      }),
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const place = data.places?.[0]
+    const ratingValue = place?.rating
+    const reviewCount = place?.userRatingCount
+    if (!ratingValue || !reviewCount) return null
+    return { ratingValue, reviewCount }
+  } catch {
+    return null
+  }
 }
 
 const websiteJsonLd = {
@@ -72,12 +98,26 @@ const websiteJsonLd = {
   },
 }
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const rating = await getGoogleRating()
+  const storeJsonLd = rating
+    ? {
+        ...localBusinessJsonLd,
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: String(rating.ratingValue),
+          reviewCount: String(rating.reviewCount),
+          bestRating: '5',
+          worstRating: '1',
+        },
+      }
+    : localBusinessJsonLd
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
       />
       <script
         type="application/ld+json"
