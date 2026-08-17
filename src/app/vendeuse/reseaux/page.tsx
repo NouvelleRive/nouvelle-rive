@@ -198,7 +198,8 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
       const d = await fetch('/api/reseaux/weekfav-photos', { cache: 'no-store' }).then((r) => r.json())
       if (!d.success) throw new Error(d.error)
       const imgs: Media[] = (d.items || []).map((it: any) => ({ url: it.photo, type: 'image' as const })).filter((m: Media) => m.url)
-      if (!imgs.length) { alert('Aucune pièce en week fav cette semaine'); return }
+      if (!imgs.length) { alert('Aucune pièce en week fav (cette semaine ni la précédente)'); return }
+      if (d.semaine === 'precedente') alert('Aucune fav cette semaine — j\'ai pris celles de la semaine dernière 🌊')
       setP((x) => ({ ...x, medias: [...(x.medias || []), ...imgs].slice(0, 10) }))
     } catch (e: any) { alert(e?.message || 'Erreur import week fav') }
     finally { setBusy(null) }
