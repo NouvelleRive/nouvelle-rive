@@ -20,8 +20,8 @@ const CHRONIQUES = [
     captionDefaut: "Avec quoi on porte un (sublime) XX ? On en appelle à l'oeil de Lo. Ci-dessus nos plus belles compo.\nToutes ces pépites sont disponibles chez 🌊NOUVELLE RIVE, sur le site et en boutique.\n💙 Commente ta pièce préférée pour recevoir sa réf\n\nWhat do you wear a (stunning) XX with? Lo has the eye for it. Above, our favourite pairings.\nAll these gems are available at 🌊NOUVELLE RIVE, online and in store.\n💙 Comment your fav piece to get the ref\n\n🦋www.nouvellerive.eu\n🧿8 rue des Ecouffes Paris le Marais",
   },
   {
-    key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
-    captionDefaut: "Le book d'Olga 📖 sa sélection coup de cœur de la semaine\n\nDis-nous ta préférée 🦋",
+    key: 'book-olga', day: 2, jour: 'Mardi', titre: "LE BOOK D'OLGA", responsable: 'Olga', heureDefaut: '11:00', objectifDefaut: 'Vendre', ctaDefaut: 'Commentaire', formatDefaut: 'reel',
+    captionDefaut: "Le book d'Olga 📖 sa sélection coup de cœur de la semaine\n💙 Commente pour obtenir le lien\n\nOlga's book 📖 her favourite picks of the week\n💙 Comment to get the link",
   },
   {
     key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
@@ -127,6 +127,30 @@ function captureFrame(video: HTMLVideoElement): Promise<File> {
       if (!blob) return reject(new Error('capture échouée'))
       resolve(new File([blob], `vignette_${Date.now()}.jpg`, { type: 'image/jpeg' }))
     }, 'image/jpeg', 0.9)
+  })
+}
+
+// Capture des frames SANS toucher l'aperçu : vidéo hors-écran en crossOrigin
+// (canvas non « tainted »). Cache-buster pour éviter une copie déjà en cache
+// sans en-têtes CORS (sinon « operation is insecure »). L'aperçu, lui, reste
+// sans crossOrigin pour éviter le rectangle noir quand le CDN n'envoie pas CORS.
+function captureFramesFromUrl(url: string, times: number[]): Promise<File[]> {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement('video')
+    v.crossOrigin = 'anonymous'
+    v.muted = true; v.playsInline = true; v.preload = 'auto'
+    v.src = url + (url.includes('?') ? '&' : '?') + 'cors=' + Date.now()
+    const out: File[] = []
+    let i = 0
+    const seekNext = () => {
+      if (i >= times.length) return resolve(out)
+      try { v.currentTime = Math.max(0, Math.min(times[i], (v.duration || 0.1) - 0.05)) } catch (e) { reject(e as Error) }
+    }
+    v.onloadeddata = () => seekNext()
+    v.onerror = () => reject(new Error('vidéo illisible (CORS ?)'))
+    v.onseeked = () => {
+      captureFrame(v).then((f) => { out.push(f); i++; seekNext() }).catch(reject)
+    }
   })
 }
 
@@ -237,14 +261,6 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     finally { setBusy(null) }
   }
 
-  // Capture la frame à un instant t de la vidéo (via seek).
-  const captureFrameAt = (video: HTMLVideoElement, t: number): Promise<File> =>
-    new Promise((resolve, reject) => {
-      const onSeeked = () => { video.removeEventListener('seeked', onSeeked); captureFrame(video).then(resolve).catch(reject) }
-      video.addEventListener('seeked', onSeeked)
-      video.currentTime = t
-    })
-
   // Propose plusieurs vignettes en capturant des images à différents instants
   // de la vidéo d'aperçu (crossOrigin=anonymous → canvas non "tainted").
   const genVignetteOptions = async () => {
@@ -253,11 +269,9 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     try {
       const d = videoEl.duration || 0
       const times = d > 1 ? [d * 0.1, d * 0.35, d * 0.6, d * 0.85] : [0.1]
+      const frames = await captureFramesFromUrl(p.videoUrl, times)
       const urls: string[] = []
-      for (const t of times) {
-        const frame = await captureFrameAt(videoEl, t)
-        urls.push(await uploadMedia(frame, 'vignette'))
-      }
+      for (const frame of frames) urls.push(await uploadMedia(frame, 'vignette'))
       setP((x) => {
         const prev = x.vignetteUrl ? [x.vignetteUrl] : []
         return {
@@ -342,7 +356,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     if (!videoEl) return
     setBusy('vignette')
     try {
-      const frame = await captureFrame(videoEl)
+      const [frame] = await captureFramesFromUrl(p.videoUrl, [videoEl.currentTime || 0.1])
       addVignette(await uploadMedia(frame, 'vignette'))
     } catch (e: any) { alert(e?.message) }
     finally { setBusy(null) }
@@ -386,7 +400,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
           <div className={label}>Vidéo (postée avec le son)</div>
           {p.videoUrl ? (
             <div className="relative inline-block">
-              <video ref={setVideoEl} src={p.videoUrl} crossOrigin="anonymous" controls className="max-h-72 max-w-full rounded-lg" />
+              <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-72 max-w-full rounded-lg" />
               <CropGuide />
               <button onClick={() => set('videoUrl', '')} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center z-10" title="Supprimer la vidéo">×</button>
             </div>
@@ -678,6 +692,7 @@ function ChroniqueBody({ chronique, collabOptions, onCountsChange }: { chronique
             caption: p.caption || chronique.captionDefaut,
             heurePost: p.heurePost || chronique.heureDefaut,
             objectif: p.objectif || chronique.objectifDefaut,
+            cta: p.cta || (chronique as any).ctaDefaut || '',
             format: p.format || chronique.formatDefaut,
             medias: p.medias || [],
           }))
