@@ -219,7 +219,11 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
   }
 
   const addVignette = (url: string) =>
-    setP((x) => ({ ...x, vignetteOptions: [...new Set([...(x.vignetteOptions || []), url])], vignetteUrl: url }))
+    setP((x) => {
+      // Garde l'ancienne vignette sélectionnée comme option (sinon l'import l'écrase).
+      const prev = x.vignetteUrl && x.vignetteUrl !== url ? [x.vignetteUrl] : []
+      return { ...x, vignetteOptions: [...new Set([...(x.vignetteOptions || []), ...prev, url])], vignetteUrl: url }
+    })
   const removeVignetteOption = (url: string) =>
     setP((x) => {
       const opts = (x.vignetteOptions || []).filter((u) => u !== url)
@@ -241,33 +245,30 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
       video.currentTime = t
     })
 
-  // Propose plusieurs vignettes en capturant des images à différents instants.
-  // Charge la vidéo via un blob (même-origine) → jamais de canvas "tainted".
+  // Propose plusieurs vignettes en capturant des images à différents instants
+  // de la vidéo d'aperçu (crossOrigin=anonymous → canvas non "tainted").
   const genVignetteOptions = async () => {
-    if (!p.videoUrl) return
+    if (!videoEl) { alert('Attends que la vidéo soit chargée'); return }
     setBusy('vignette')
-    let objUrl = ''
     try {
-      const resp = await fetch(p.videoUrl)
-      const blob = await resp.blob()
-      objUrl = URL.createObjectURL(blob)
-      const v = document.createElement('video')
-      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = objUrl
-      await new Promise<void>((res, rej) => { v.onloadeddata = () => res(); v.onerror = () => rej(new Error('vidéo illisible')) })
-      const d = v.duration || 0
+      const d = videoEl.duration || 0
       const times = d > 1 ? [d * 0.1, d * 0.35, d * 0.6, d * 0.85] : [0.1]
       const urls: string[] = []
       for (const t of times) {
-        const frame = await captureFrameAt(v, t)
+        const frame = await captureFrameAt(videoEl, t)
         urls.push(await uploadMedia(frame, 'vignette'))
       }
-      setP((x) => ({
-        ...x,
-        vignetteOptions: [...new Set([...(x.vignetteOptions || []), ...urls])],
-        vignetteUrl: x.vignetteUrl || urls[0],
-      }))
+      setP((x) => {
+        const prev = x.vignetteUrl ? [x.vignetteUrl] : []
+        return {
+          ...x,
+          vignetteOptions: [...new Set([...(x.vignetteOptions || []), ...prev, ...urls])],
+          vignetteUrl: x.vignetteUrl || urls[0],
+        }
+      })
+      try { videoEl.currentTime = 0 } catch {}
     } catch (e: any) { alert(e?.message || 'Erreur') }
-    finally { if (objUrl) URL.revokeObjectURL(objUrl); setBusy(null) }
+    finally { setBusy(null) }
   }
 
   // Drag vertical pour choisir la zone visible (objectPosition Y) du crop 4:5.
