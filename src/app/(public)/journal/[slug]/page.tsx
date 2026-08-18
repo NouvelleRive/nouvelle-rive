@@ -150,6 +150,21 @@ function Block({ block }: { block: ArticleBlock }) {
           )}
         </figure>
       )
+    case 'videorow':
+      return (
+        <div
+          className="my-8 grid gap-3"
+          style={{ gridTemplateColumns: `repeat(${Math.min(block.videos.length, 3)}, 1fr)` }}
+        >
+          {block.videos.map((v, i) => (
+            <figure key={i} className="flex flex-col">
+              <video src={v.src} autoPlay muted loop playsInline preload="metadata" className="block w-full"
+                style={{ borderRadius: 4, aspectRatio: '9 / 16', objectFit: 'cover' }} />
+              {v.alt && <figcaption className="mt-1.5 text-center" style={{ fontSize: '11px', color: '#999' }}>{v.alt}</figcaption>}
+            </figure>
+          ))}
+        </div>
+      )
     case 'slider':
       return <ArticleSlider images={block.images} />
   }
