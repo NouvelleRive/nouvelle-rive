@@ -271,10 +271,10 @@ export default async function ArticlePage(
               <p className="uppercase font-semibold" style={{ fontSize: '11px', letterSpacing: '0.15em', color: '#999' }}>
                 Sources
               </p>
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mt-3 space-y-1">
                 {article.sources.map((s, i) => (
-                  <li key={i} style={{ fontSize: '14px', lineHeight: 1.5 }}>
-                    <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" style={{ color: bleu }}>
+                  <li key={i} style={{ fontSize: '12px', lineHeight: 1.5 }}>
+                    <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" style={{ color: '#999', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
                       {s.label}
                     </a>
                   </li>
