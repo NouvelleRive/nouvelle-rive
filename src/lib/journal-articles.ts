@@ -20,6 +20,7 @@ export type ArticleBlock =
   | { type: 'ul'; items: string[] }
   | { type: 'quote'; text: string }
   | { type: 'img'; src: string; alt: string }
+  | { type: 'video'; src: string; alt: string }
 
 export type Article = {
   slug: string
@@ -85,7 +86,9 @@ export function parseBody(body: string): ArticleBlock[] {
     if (imgMatch) {
       flushList()
       flushPara()
-      blocks.push({ type: 'img', alt: imgMatch[1].trim(), src: imgMatch[2].trim() })
+      const src = imgMatch[2].trim()
+      const alt = imgMatch[1].trim()
+      blocks.push(/\.mp4(\?|$)/i.test(src) ? { type: 'video', src, alt } : { type: 'img', src, alt })
       continue
     }
     if (line.startsWith('## ')) {

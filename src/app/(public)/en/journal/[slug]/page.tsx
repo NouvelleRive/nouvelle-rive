@@ -93,6 +93,14 @@ function Block({ block }: { block: ArticleBlock }) {
           {block.alt && <figcaption className="mt-2 text-center" style={{ fontSize: '12px', color: '#999' }}>{block.alt}</figcaption>}
         </figure>
       )
+    case 'video':
+      return (
+        <figure className="my-8 flex flex-col items-center">
+          <video src={block.src} autoPlay muted loop playsInline controls preload="metadata" className="block"
+            style={{ maxWidth: 340, width: '100%', borderRadius: 4, aspectRatio: '9 / 16', objectFit: 'cover' }} />
+          {block.alt && <figcaption className="mt-2 text-center" style={{ fontSize: '12px', color: '#999' }}>{block.alt}</figcaption>}
+        </figure>
+      )
   }
 }
 
