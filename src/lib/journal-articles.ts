@@ -48,8 +48,8 @@ export const ARTICLES: Article[] = [
       { type: 'p', text: "Dans un dépôt-vente, vous confiez vos pièces à une boutique qui se charge de les mettre en valeur, de les présenter et de les vendre pour vous. Vous restez propriétaire de l'article jusqu'à sa vente : ce n'est qu'une fois la pièce vendue qu'une commission est prélevée par la boutique, le reste vous revient. C'est différent du rachat sec, où l'on vous achète la pièce immédiatement à un prix plus bas." },
       { type: 'h2', text: "Pourquoi passer par un dépôt-vente plutôt que vendre soi-même" },
       { type: 'ul', items: [
-        "Vous ne gérez ni les photos, ni les annonces, ni les acheteurs, ni les arnaques.",
-        "Votre pièce est mise en valeur dans un lieu physique et en ligne, devant une vraie clientèle.",
+        "Vous ne gérez ni les acheteurs, ni les questions, ni les négociations, ni les livraisons, ni les arnaques.",
+        "Votre bien est mis en avant par une équipe qualifiée, dans un lieu premium et en ligne, devant une vraie clientèle.",
         "Les pièces de luxe bénéficient d'un regard d'expert sur l'authenticité et le juste prix.",
         "Vous donnez une seconde vie à vos vêtements plutôt que de les laisser dormir : c'est de la mode circulaire.",
       ] },
