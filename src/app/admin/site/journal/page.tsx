@@ -71,10 +71,10 @@ export default function AdminJournalPage() {
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="text-left text-gray-500 border-b border-gray-200">
+                <th className="py-2 pr-4 font-medium">Date</th>
                 <th className="py-2 pr-4 font-medium">Statut</th>
                 <th className="py-2 pr-4 font-medium">Titre</th>
                 <th className="py-2 pr-4 font-medium">Catégorie</th>
-                <th className="py-2 pr-4 font-medium">Date</th>
                 <th className="py-2 pr-4 font-medium">Mots</th>
               </tr>
             </thead>
@@ -88,6 +88,7 @@ export default function AdminJournalPage() {
                     onClick={() => setSelected(a.slug)}
                     className="border-b border-gray-100 cursor-pointer hover:bg-gray-50"
                   >
+                    <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">{formatDate(a.date)}</td>
                     <td className="py-3 pr-4">
                       <span className="inline-block rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap" style={{ color: s.color, background: s.bg }}>
                         {s.label}
@@ -95,7 +96,6 @@ export default function AdminJournalPage() {
                     </td>
                     <td className="py-3 pr-4 font-medium text-gray-900">{a.title}</td>
                     <td className="py-3 pr-4 text-gray-500">{a.category}</td>
-                    <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">{formatDate(a.date)}</td>
                     <td className="py-3 pr-4 text-gray-500">{words}</td>
                   </tr>
                 )
