@@ -19,6 +19,7 @@ export type ArticleBlock =
   | { type: 'h2'; text: string }
   | { type: 'ul'; items: string[] }
   | { type: 'quote'; text: string }
+  | { type: 'img'; src: string; alt: string }
 
 export type Article = {
   slug: string
@@ -78,6 +79,13 @@ export function parseBody(body: string): ArticleBlock[] {
     if (!line) {
       flushList()
       flushPara()
+      continue
+    }
+    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+    if (imgMatch) {
+      flushList()
+      flushPara()
+      blocks.push({ type: 'img', alt: imgMatch[1].trim(), src: imgMatch[2].trim() })
       continue
     }
     if (line.startsWith('## ')) {
