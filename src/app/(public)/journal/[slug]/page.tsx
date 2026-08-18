@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { parseBody, SEED_ARTICLES, type ArticleBlock } from '@/lib/journal-articles'
-import { getStoredArticle, isArticleLive } from '@/lib/journal-store'
+import { getStoredArticle, isArticleLive, hasEnglish } from '@/lib/journal-store'
 
 export const revalidate = 3600
 
@@ -31,10 +31,13 @@ export async function generateMetadata(
 
   const url = `${BASE_URL}/journal/${article.slug}`
   const live = isArticleLive(article)
+  const languages = hasEnglish(article)
+    ? { 'fr-FR': url, 'en-US': `${BASE_URL}/en/journal/${article.slug}`, 'x-default': url }
+    : undefined
   return {
     title: `${article.title} | NOUVELLE RIVE`,
     description: article.description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, languages },
     // Tant qu'il n'est pas réellement en ligne (relu + publié + date atteinte) : non indexé.
     robots: live ? undefined : { index: false, follow: false },
     openGraph: {
@@ -203,6 +206,23 @@ export default async function ArticlePage(
               >
                 {article.cta.label}
               </Link>
+            </div>
+          )}
+
+          {article.sources && article.sources.length > 0 && (
+            <div className="mt-16 pt-8 border-t border-gray-200">
+              <p className="uppercase font-semibold" style={{ fontSize: '11px', letterSpacing: '0.15em', color: '#999' }}>
+                Sources
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {article.sources.map((s, i) => (
+                  <li key={i} style={{ fontSize: '14px', lineHeight: 1.5 }}>
+                    <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" style={{ color: bleu }}>
+                      {s.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </article>

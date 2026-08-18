@@ -34,8 +34,15 @@ export type Article = {
   cover?: string
   /** Corps de l'article en markdown allégé (voir en-tête). */
   body: string
+  /** Sources citées, affichées en bas d'article (communes FR/EN). */
+  sources?: { label: string; url: string }[]
   /** Appel à l'action interne en bas d'article (maillage SEO). */
   cta?: { href: string; label: string }
+  /** Version anglaise (SEO US/UK). Vide = pas encore traduit → page /en en noindex. */
+  titleEn?: string
+  descriptionEn?: string
+  categoryEn?: string
+  bodyEn?: string
 }
 
 /** Article + état éditorial (tel que stocké dans Firestore). */
@@ -441,6 +448,11 @@ Soyons lucides : la seconde main n'est pas un permis de surconsommer. Accumuler 
 > La seule règle dans la mode est la responsabilité. Le futur sera vintage.
 
 Chez Nouvelle Rive, toutes les pièces — vintage, upcyclées ou régénérées — sont cruelty free et pensées pour n'endommager ni les animaux ni la planète. Nous mettons en avant le travail de créatrices et curateurices engagées, sur le long terme, dans un lieu permanent au cœur du Marais. Chiner ici, c'est s'habiller avec du sens — et du style.`,
+    sources: [
+      { label: 'ADEME — La mode sans dessus dessous', url: 'https://www.ademe.fr' },
+      { label: 'Oxfam France — Impact de la fast fashion', url: 'https://www.oxfamfrance.org' },
+      { label: 'Ellen MacArthur Foundation — A new textiles economy', url: 'https://www.ellenmacarthurfoundation.org' },
+    ],
     cta: { href: '/manifesto', label: 'Lire notre manifesto →' },
   },
   {
@@ -481,6 +493,10 @@ Ces prix cassés ont un coût humain. Derrière l'étiquette à quelques euros, 
 
 Pendant que la planète trinque et que les ouvrières s'épuisent, le modèle concentre des fortunes colossales entre très peu de mains — des fortunes qui, parfois, financent tout sauf le progrès social ou écologique. La fast fashion n'habille pas le monde par générosité : elle le fait pour engraisser un système. Choisir le vintage, c'est sortir de ce circuit-là.
 
+## Elle vole le travail des jeunes créatrices
+
+Il y a aussi ce qu'on dénonce trop peu : la fast fashion copie. Des géants comme Shein sont accusés, à de multiples reprises et jusque devant les tribunaux, de reprendre les créations d'artistes et de créatrices indépendantes — imprimés, bijoux, coupes, illustrations — pour les produire en masse en quelques jours, sans crédit ni rémunération. D'un côté le talent et des mois de travail ; de l'autre, le pillage industrialisé. Chez Nouvelle Rive, on fait exactement l'inverse : on met les jeunes créatrices en lumière et on protège leur travail, au lieu de le laisser se faire voler.
+
 > On ne déteste pas la mode. On déteste ce qu'on en a fait.
 
 ## Ce qu'on préfère, mille fois
@@ -488,6 +504,11 @@ Pendant que la planète trinque et que les ouvrières s'épuisent, le modèle co
 À tout ça, on oppose une autre idée de la mode : des pièces uniques, vintage, upcyclées ou régénérées, toutes cruelty free, choisies par des créatrices et curateurices engagées. De la qualité qui dure, du style qui te ressemble, et une conscience tranquille. C'est ça, Nouvelle Rive — un lieu permanent au cœur du Marais où s'habiller redevient un plaisir, pas une nuisance.
 
 Le futur sera vintage. Et il sera bien plus beau.`,
+    sources: [
+      { label: 'ADEME — La mode sans dessus dessous', url: 'https://www.ademe.fr' },
+      { label: 'Oxfam France — Impact de la fast fashion', url: 'https://www.oxfamfrance.org' },
+      { label: 'Ellen MacArthur Foundation — A new textiles economy', url: 'https://www.ellenmacarthurfoundation.org' },
+    ],
     cta: { href: '/boutique', label: 'Passer au vintage →' },
   },
 ]

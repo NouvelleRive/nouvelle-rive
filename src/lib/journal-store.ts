@@ -16,9 +16,23 @@ const inflight: { current: Promise<StoredArticle[]> | null } = { current: null }
 export type ArticlePatch = Partial<
   Pick<
     StoredArticle,
-    'title' | 'description' | 'category' | 'date' | 'readingMinutes' | 'cover' | 'body' | 'relu' | 'published'
+    | 'title' | 'description' | 'category' | 'date' | 'readingMinutes' | 'cover' | 'body' | 'relu' | 'published'
+    | 'titleEn' | 'descriptionEn' | 'categoryEn' | 'bodyEn'
   >
-> & { cta?: { href: string; label: string } | null }
+> & {
+  cta?: { href: string; label: string } | null
+  sources?: { label: string; url: string }[] | null
+}
+
+/** La version anglaise est diffusable si elle a un titre ET un corps traduits. */
+export function hasEnglish(a: StoredArticle): boolean {
+  return !!(a.titleEn && a.titleEn.trim() && a.bodyEn && a.bodyEn.trim())
+}
+
+/** Articles en ligne ET traduits en anglais, triés récent → ancien. */
+export async function getLiveEnglishArticles(): Promise<StoredArticle[]> {
+  return (await getLiveArticles()).filter(hasEnglish)
+}
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -145,6 +159,11 @@ export async function saveArticle(slug: string, patch: ArticlePatch): Promise<St
   if (patch.cover !== undefined) next.cover = patch.cover || undefined
   if (patch.body !== undefined) next.body = patch.body
   if (patch.cta !== undefined) next.cta = patch.cta || undefined
+  if (patch.sources !== undefined) next.sources = patch.sources || undefined
+  if (patch.titleEn !== undefined) next.titleEn = patch.titleEn || undefined
+  if (patch.descriptionEn !== undefined) next.descriptionEn = patch.descriptionEn || undefined
+  if (patch.categoryEn !== undefined) next.categoryEn = patch.categoryEn || undefined
+  if (patch.bodyEn !== undefined) next.bodyEn = patch.bodyEn || undefined
   if (patch.relu !== undefined) next.relu = !!patch.relu
   if (patch.published !== undefined) next.published = !!patch.published
 

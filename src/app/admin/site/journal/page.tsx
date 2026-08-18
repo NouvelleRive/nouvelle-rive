@@ -208,6 +208,11 @@ function ArticleEditor({
         cover: draft.cover ?? '',
         body: draft.body,
         cta: draft.cta ?? null,
+        sources: draft.sources ?? null,
+        titleEn: draft.titleEn ?? '',
+        descriptionEn: draft.descriptionEn ?? '',
+        categoryEn: draft.categoryEn ?? '',
+        bodyEn: draft.bodyEn ?? '',
       })
       if (res.article) { setDraft(res.article); onSaved(res.article); setDirty(false); setMsg('Enregistré ✓') }
       else setMsg('Erreur à l\'enregistrement')
@@ -325,6 +330,71 @@ function ArticleEditor({
               <label className={label}>Bouton — lien</label>
               <input className={input} value={draft.cta?.href ?? ''} placeholder="/client/login"
                 onChange={e => set('cta', { href: e.target.value, label: draft.cta?.label ?? '' })} />
+            </div>
+          </div>
+
+          <div>
+            <label className={label}>
+              Sources
+              <span className="ml-2 font-normal normal-case text-gray-400">une par ligne — Libellé | https://url</span>
+            </label>
+            <textarea
+              className={input + ' font-mono'}
+              rows={3}
+              placeholder="ADEME — Mode et environnement | https://www.ademe.fr"
+              value={(draft.sources ?? []).map(s => `${s.label} | ${s.url}`).join('\n')}
+              onChange={e =>
+                set(
+                  'sources',
+                  e.target.value
+                    .split('\n')
+                    .map(l => l.trim())
+                    .filter(Boolean)
+                    .map(l => {
+                      const i = l.lastIndexOf('|')
+                      return i === -1
+                        ? { label: l, url: '' }
+                        : { label: l.slice(0, i).trim(), url: l.slice(i + 1).trim() }
+                    })
+                    .filter(s => s.url),
+                )
+              }
+            />
+          </div>
+
+          {/* ── Version anglaise (SEO US/UK) ── */}
+          <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: BLEU }}>
+              Version anglaise
+              <span className="ml-2 font-normal normal-case text-gray-400">
+                {draft.titleEn && draft.bodyEn ? 'traduite — /en/journal actif' : 'vide → page /en non publiée'}
+              </span>
+            </p>
+            <div>
+              <label className={label}>Title (EN)</label>
+              <input className={input} value={draft.titleEn ?? ''} onChange={e => set('titleEn', e.target.value)} />
+            </div>
+            <div>
+              <label className={label}>Meta description (EN)</label>
+              <textarea className={input} rows={2} value={draft.descriptionEn ?? ''} onChange={e => set('descriptionEn', e.target.value)} />
+            </div>
+            <div>
+              <label className={label}>Category (EN)</label>
+              <input className={input} value={draft.categoryEn ?? ''} placeholder="GUIDE" onChange={e => set('categoryEn', e.target.value)} />
+            </div>
+            <div>
+              <label className={label}>
+                Body (EN)
+                <span className="ml-2 font-normal normal-case text-gray-400">
+                  {(draft.bodyEn || '').trim().split(/\s+/).filter(Boolean).length} words
+                </span>
+              </label>
+              <textarea
+                className={input + ' font-mono'}
+                style={{ minHeight: 320, lineHeight: 1.6 }}
+                value={draft.bodyEn ?? ''}
+                onChange={e => set('bodyEn', e.target.value)}
+              />
             </div>
           </div>
         </div>
