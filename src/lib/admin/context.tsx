@@ -2,8 +2,10 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebaseConfig'
+import { collection, getDocs, Timestamp } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth, db } from '@/lib/firebaseConfig'
+import { rehydrateTimestamps } from '@/lib/rehydrateTimestamps'
 
 // =====================
 // TYPES
@@ -130,9 +132,22 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const loadData = async () => {
     setLoading(true)
     try {
-      // Produits
-      const snapProduits = await getDocs(query(collection(db, 'produits'), orderBy('createdAt', 'desc')))
-      const produitsData = snapProduits.docs.map(d => ({ id: d.id, ...d.data() })) as Produit[]
+      // Produits — servis depuis le cache blob via route admin authentifiée
+      // (0 read Firestore par session admin, au lieu d'un scan de ~5000 docs).
+      // Le blob `produits-all` est patché à chaque écriture produit → données fraîches.
+      const token = await auth.currentUser?.getIdToken()
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+      const prodRes = await fetch('/api/admin/produits-full', { headers, cache: 'no-store' })
+      const prodJson = prodRes.ok ? await prodRes.json() : { produits: [] }
+      // rehydrateTimestamps : la route sérialise les Timestamps admin en
+      // { _seconds, _nanoseconds } — on les reconvertit pour que .toDate()/instanceof marchent.
+      const produitsData = (rehydrateTimestamps(Array.isArray(prodJson.produits) ? prodJson.produits : []) as Produit[])
+        // Ordre historique : plus récents d'abord (avant : orderBy createdAt desc côté Firestore).
+        .sort((a, b) => {
+          const ta = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : 0
+          const tb = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : 0
+          return tb - ta
+        })
       setProduits(produitsData)
 
       // Déposants (from chineuse collection)
@@ -178,8 +193,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Le provider est monté au-dessus du gate d'auth du layout : au tout premier
+  // rendu, auth.currentUser peut être null. On attend donc l'état d'auth pour
+  // que le token soit disponible avant d'appeler la route admin authentifiée.
   useEffect(() => {
-    loadData()
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) loadData()
+    })
+    return () => unsub()
   }, [])
 
   // Calculer le prochain SKU quand une chineuse est sélectionnée
