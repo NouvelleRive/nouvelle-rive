@@ -2,13 +2,7 @@
 
 import Link from 'next/link'
 
-const PHOTOS = [
-  '/facade%20paysage.jpg',
-  'PHOTO_BOUTIQUE_2',
-  'PHOTO_BOUTIQUE_3',
-]
-
-const isImg = (u: string) => u.startsWith('http') || u.startsWith('/')
+const PHOTOS = ['/facade%20paysage.jpg']
 
 export default function ConditionsDeposantPage() {
   const font = '"Helvetica Neue", Helvetica, Arial, sans-serif'
@@ -117,22 +111,14 @@ export default function ConditionsDeposantPage() {
         </div>
 
         <div className="hero-right">
-          {PHOTOS.map((url, i) => (
-            <div
-              key={i}
-              className="photo-col"
-              style={{
-                borderLeft: i > 0 ? '1px solid #000' : undefined,
-                backgroundImage: isImg(url) ? `url(${url})` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            >
-              {!isImg(url) && (
-                <span style={{ ...label, color: '#aaa' }}>PHOTO</span>
-              )}
-            </div>
-          ))}
+          <div
+            className="photo-col"
+            style={{
+              backgroundImage: `url(${PHOTOS[0]})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
         </div>
       </div>
 
