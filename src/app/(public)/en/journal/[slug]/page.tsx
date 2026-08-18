@@ -11,6 +11,7 @@ const bleu = '#0000FF'
 const BASE_URL = 'https://www.nouvellerive.eu'
 
 function formatDate(iso: string) {
+  if (!iso) return ''
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 

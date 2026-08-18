@@ -38,9 +38,9 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-/** En ligne = relu ET armé ET date atteinte. */
+/** En ligne = relu ET armé ET date de publication renseignée ET atteinte. */
 export function isArticleLive(a: StoredArticle, today = todayISO()): boolean {
-  return !!a.relu && !!a.published && a.date <= today
+  return !!a.relu && !!a.published && !!a.date && a.date <= today
 }
 
 async function fetchFresh(): Promise<StoredArticle[]> {
@@ -120,13 +120,12 @@ export async function createArticle(title: string): Promise<StoredArticle> {
   let n = 2
   while (articles.some(a => a.slug === slug)) slug = `${base}-${n++}`
 
-  const today = todayISO()
   const article: StoredArticle = {
     slug,
     title: title.trim() || 'Nouvel article',
     description: '',
     category: 'GUIDE',
-    date: today,
+    date: '', // pas de date tant que la publication n'est pas programmée
     readingMinutes: 3,
     body: '',
     relu: false,

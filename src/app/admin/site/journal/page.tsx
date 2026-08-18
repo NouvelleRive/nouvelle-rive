@@ -11,10 +11,11 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
 function formatDate(iso: string) {
+  if (!iso) return '—'
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 function statusOf(a: StoredArticle): { label: string; color: string; bg: string } {
-  const live = a.relu && a.published && a.date <= todayISO()
+  const live = a.relu && a.published && !!a.date && a.date <= todayISO()
   if (live) return { label: 'En ligne', color: '#fff', bg: BLEU }
   if (a.relu && a.published) return { label: `Programmé ${formatDate(a.date)}`, color: '#92400e', bg: '#fef3c7' }
   if (a.relu) return { label: 'Relu', color: '#3730a3', bg: '#e0e7ff' }
@@ -242,7 +243,7 @@ function ArticleEditor({
     const checks = [
       { ok: draft.title.length >= 40 && draft.title.length <= 65, label: `Titre ${draft.title.length} car. (idéal 40–65)` },
       { ok: draft.description.length >= 110 && draft.description.length <= 160, label: `Méta description ${draft.description.length} car. (idéal 110–160)` },
-      { ok: words >= 300, label: `${words} mots (min. 300 conseillé)` },
+      { ok: words >= 800, label: `${words} mots (cible 800–1200)` },
       { ok: h2 >= 2, label: `${h2} sous-titre(s) H2 (min. 2)` },
       { ok: !!draft.cover, label: draft.cover ? 'Image de couverture ✓' : 'Ajouter une image de couverture' },
       { ok: !kw || draft.title.toLowerCase().includes(kw), label: 'Mot-clé dans le titre' },

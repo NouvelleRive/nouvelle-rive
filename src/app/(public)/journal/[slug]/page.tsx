@@ -15,6 +15,7 @@ export function generateStaticParams() {
 }
 
 function formatDate(iso: string) {
+  if (!iso) return ''
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', {
     day: 'numeric',
     month: 'long',
@@ -188,7 +189,7 @@ export default async function ArticlePage(
           </h1>
 
           <p className="mt-4" style={{ fontSize: '13px', letterSpacing: '0.05em', color: '#999' }}>
-            {formatDate(article.date)} · {article.readingMinutes} min de lecture
+            {article.date ? `${formatDate(article.date)} · ` : ''}{article.readingMinutes} min de lecture
           </p>
 
           <div className="w-full border-t border-black mt-8 mb-10" />
