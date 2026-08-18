@@ -60,18 +60,45 @@ export async function generateMetadata(
   }
 }
 
+// Rend les liens markdown [texte](url) cliquables dans le texte courant.
+function renderInline(text: string): React.ReactNode {
+  const re = /\[([^\]]+)\]\(([^)]+)\)/g
+  const out: React.ReactNode[] = []
+  let last = 0
+  let m: RegExpExecArray | null
+  let key = 0
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index))
+    const href = m[2]
+    const ext = href.startsWith('http')
+    out.push(
+      <a
+        key={key++}
+        href={href}
+        {...(ext ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        style={{ color: bleu, textDecoration: 'underline', textUnderlineOffset: '2px' }}
+      >
+        {m[1]}
+      </a>,
+    )
+    last = m.index + m[0].length
+  }
+  if (last < text.length) out.push(text.slice(last))
+  return out.length ? out : text
+}
+
 function Block({ block }: { block: ArticleBlock }) {
   switch (block.type) {
     case 'h2':
       return (
         <h2 className="mt-12 mb-4" style={{ fontSize: '26px', fontWeight: 700, lineHeight: 1.2 }}>
-          {block.text}
+          {renderInline(block.text)}
         </h2>
       )
     case 'p':
       return (
         <p className="mb-5" style={{ fontSize: '17px', lineHeight: 1.7, color: '#222' }}>
-          {block.text}
+          {renderInline(block.text)}
         </p>
       )
     case 'ul':
@@ -79,7 +106,7 @@ function Block({ block }: { block: ArticleBlock }) {
         <ul className="mb-5 space-y-2" style={{ listStyle: 'disc', paddingLeft: '1.2em' }}>
           {block.items.map((it, i) => (
             <li key={i} style={{ fontSize: '17px', lineHeight: 1.6, color: '#222' }}>
-              {it}
+              {renderInline(it)}
             </li>
           ))}
         </ul>
@@ -90,7 +117,7 @@ function Block({ block }: { block: ArticleBlock }) {
           className="my-8 pl-6"
           style={{ borderLeft: `3px solid ${bleu}`, fontSize: '20px', fontStyle: 'italic', lineHeight: 1.5, color: bleu }}
         >
-          {block.text}
+          {renderInline(block.text)}
         </blockquote>
       )
   }

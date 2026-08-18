@@ -3,10 +3,12 @@
 import Link from 'next/link'
 
 const PHOTOS = [
-  'PHOTO_BOUTIQUE_1',
+  '/facade%20paysage.jpg',
   'PHOTO_BOUTIQUE_2',
   'PHOTO_BOUTIQUE_3',
 ]
+
+const isImg = (u: string) => u.startsWith('http') || u.startsWith('/')
 
 export default function ConditionsDeposantPage() {
   const font = '"Helvetica Neue", Helvetica, Arial, sans-serif'
@@ -121,12 +123,12 @@ export default function ConditionsDeposantPage() {
               className="photo-col"
               style={{
                 borderLeft: i > 0 ? '1px solid #000' : undefined,
-                backgroundImage: url.startsWith('http') ? `url(${url})` : undefined,
+                backgroundImage: isImg(url) ? `url(${url})` : undefined,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
             >
-              {!url.startsWith('http') && (
+              {!isImg(url) && (
                 <span style={{ ...label, color: '#aaa' }}>PHOTO</span>
               )}
             </div>
