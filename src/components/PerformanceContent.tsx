@@ -3,11 +3,11 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, deleteDoc, orderBy, query, where } from 'firebase/firestore'
-import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays } from 'date-fns'
+import { collection, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, deleteDoc, orderBy, query, where, documentId, getCountFromServer, limit } from 'firebase/firestore'
+import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays, startOfYear, endOfYear, subYears, eachMonthOfInterval } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
-import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle, Trash2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle, Trash2, RefreshCw } from 'lucide-react'
 import { getMonthEvents } from '@/lib/retailEvents'
 import { formatPrix } from '@/lib/formatPrix'
 
@@ -100,43 +100,129 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const [showHistorique, setShowHistorique] = useState(false)
   const [loadingHistorique, setLoadingHistorique] = useState(false)
   const [noteHistoriqueIds, setNoteHistoriqueIds] = useState<string[]>([])
+  // Produits liés aux ventes chargées (pour l'enrichissement : catégorie, marque, couleur, prixAchat…).
+  // On ne charge PLUS toute la collection produits (~5000) : seulement ceux référencés par les ventes du mois.
+  const [venteProduits, setVenteProduits] = useState<Produit[]>([])
+  const [ventesTotalCount, setVentesTotalCount] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [firstVenteDate, setFirstVenteDate] = useState<Date | null>(null)
 
-  // Charger les déposants
+  // Charger les déposants (fetch ponctuel, plus de listener temps réel)
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
-      setDeposants(snap.docs.map(d => ({ id: d.id, ...d.data() } as Deposant)))
-    })
-    return () => unsub()
-  }, [])
+    let cancelled = false
+    ;(async () => {
+      const snap = await getDocs(collection(db, 'chineuse'))
+      if (!cancelled) setDeposants(snap.docs.map(d => ({ id: d.id, ...d.data() } as Deposant)))
+    })()
+    return () => { cancelled = true }
+  }, [refreshKey])
 
-  // Charger TOUS les produits
+  // Charger UNIQUEMENT les pièces récupérées (invendus) — pas toute la collection produits.
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'produits'), (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Produit))
-      setProduits(data)
-      setLoading(false)
-    })
-    return () => unsub()
-  }, [])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'produits'), where('statut', '==', 'retour')))
+        if (!cancelled) setProduits(snap.docs.map(d => ({ id: d.id, ...d.data() } as Produit)))
+      } catch (e) { console.error('load invendus', e) }
+    })()
+    return () => { cancelled = true }
+  }, [refreshKey])
 
-  // Charger les vendeuses (admin only)
+  // Charger les vendeuses (admin only, fetch ponctuel)
   useEffect(() => {
     if (!isAdmin) return
-    const unsub = onSnapshot(collection(db, 'vendeuses'), (snap) => {
-      setVendeusesList(snap.docs.map(d => ({ id: d.id, ...d.data() } as VendeusePerf)))
-    })
-    return () => unsub()
-  }, [isAdmin])
+    let cancelled = false
+    ;(async () => {
+      const snap = await getDocs(collection(db, 'vendeuses'))
+      if (!cancelled) setVendeusesList(snap.docs.map(d => ({ id: d.id, ...d.data() } as VendeusePerf)))
+    })()
+    return () => { cancelled = true }
+  }, [isAdmin, refreshKey])
 
+  // Charger les ventes : admin = fenêtre [mois précédent → mois sélectionné] (filtre par date côté serveur) ;
+  // chineuse = ses ventes (filtre par trigramme). Plus de scan de toute la collection ventes.
   useEffect(() => {
-    const q = !isAdmin && chineuseTrigramme
-      ? query(collection(db, 'ventes'), where('trigramme', '==', chineuseTrigramme))
-      : collection(db, 'ventes')
-    const unsub = onSnapshot(q, (snap) => {
-      setVentesData(snap.docs.map(d => ({ id: d.id, ...d.data() } as VenteDoc)))
-    })
-    return () => unsub()
-  }, [isAdmin, chineuseTrigramme])
+    let cancelled = false
+    setLoading(true)
+    const yearMode = selectedMonth < 0
+    const cmStart = yearMode ? startOfYear(new Date(selectedYear, 0, 1)) : startOfMonth(new Date(selectedYear, selectedMonth))
+    const cmEnd = yearMode ? endOfYear(new Date(selectedYear, 0, 1)) : endOfMonth(new Date(selectedYear, selectedMonth))
+    const pmStart = yearMode ? startOfYear(subYears(cmStart, 1)) : startOfMonth(subMonths(cmStart, 1))
+    ;(async () => {
+      try {
+        const q = !isAdmin && chineuseTrigramme
+          ? query(collection(db, 'ventes'), where('trigramme', '==', chineuseTrigramme))
+          : query(
+              collection(db, 'ventes'),
+              where('dateVente', '>=', Timestamp.fromDate(pmStart)),
+              where('dateVente', '<=', Timestamp.fromDate(cmEnd)),
+            )
+        const snap = await getDocs(q)
+        if (!cancelled) setVentesData(snap.docs.map(d => ({ id: d.id, ...d.data() } as VenteDoc)))
+      } catch (e) {
+        console.error('load ventes', e)
+        if (!cancelled) setVentesData([])
+      }
+      if (!cancelled) { setLoading(false); setRefreshing(false) }
+    })()
+    return () => { cancelled = true }
+  }, [isAdmin, chineuseTrigramme, selectedMonth, selectedYear, refreshKey])
+
+  // Compteur total de ventes (agrégation serveur = ~1 read) pour le libellé "X ventes totales" (admin)
+  useEffect(() => {
+    if (!isAdmin) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const snap = await getCountFromServer(collection(db, 'ventes'))
+        if (!cancelled) setVentesTotalCount(snap.data().count)
+      } catch (e) { console.error('count ventes', e) }
+    })()
+    return () => { cancelled = true }
+  }, [isAdmin, refreshKey])
+
+  // Date de la 1re vente (admin, ~1 read) → borne basse du sélecteur de mois, pour ne pas
+  // afficher les mois vides d'avant l'ouverture. La chineuse la déduit de ses ventes chargées.
+  useEffect(() => {
+    if (!isAdmin) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'ventes'), orderBy('dateVente', 'asc'), limit(1)))
+        const d = snap.docs[0]?.data()?.dateVente
+        if (!cancelled && d instanceof Timestamp) setFirstVenteDate(d.toDate())
+      } catch (e) { console.error('first vente', e) }
+    })()
+    return () => { cancelled = true }
+  }, [isAdmin, refreshKey])
+
+  // Clé stable = liste triée des produitId présents dans les ventes chargées.
+  // Évite les refetch en boucle (les bornes de date sont recréées à chaque render).
+  const venteProduitIdsKey = useMemo(
+    () => Array.from(new Set(ventesData.map(v => v.produitId).filter(Boolean))).sort().join(','),
+    [ventesData],
+  )
+
+  // Charger seulement les produits référencés par les ventes chargées (lots de 10 via documentId 'in').
+  useEffect(() => {
+    const ids = venteProduitIdsKey ? venteProduitIdsKey.split(',') : []
+    if (ids.length === 0) { setVenteProduits([]); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const out: Produit[] = []
+        for (let i = 0; i < ids.length; i += 10) {
+          const chunk = ids.slice(i, i + 10)
+          const snap = await getDocs(query(collection(db, 'produits'), where(documentId(), 'in', chunk)))
+          snap.docs.forEach(d => out.push({ id: d.id, ...d.data() } as Produit))
+        }
+        if (!cancelled) setVenteProduits(out)
+      } catch (e) { console.error('load produits ventes', e) }
+    })()
+    return () => { cancelled = true }
+  }, [venteProduitIdsKey])
 
   // Charger le planning du mois sélectionné (admin only)
   useEffect(() => {
@@ -237,33 +323,49 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     setShowHistorique(false)
   }
 
-  // Générer tous les mois disponibles depuis les données
+  // Mois disponibles : de la 1re vente (admin) / 1re vente de la chineuse jusqu'au mois courant.
+  // Plus aucun mois vide d'avant l'ouverture.
   const availableMonths = useMemo(() => {
+    // Borne basse
+    let start: Date | null = firstVenteDate
+    if (!isAdmin) {
+      let min: Date | null = null
+      ventesData.forEach(v => {
+        const d = v.dateVente instanceof Timestamp ? v.dateVente.toDate()
+          : v.createdAt instanceof Timestamp ? v.createdAt.toDate() : null
+        if (d && (!min || d < min)) min = d
+      })
+      start = min
+    }
+    // Tant qu'on ne connaît pas encore la borne, on n'affiche que le mois courant.
+    const startY = start ? start.getFullYear() : now.getFullYear()
+    const startM = start ? start.getMonth() : now.getMonth()
     const months: { year: number; month: number; label: string }[] = []
-    const startYear = 2024
-    for (let y = startYear; y <= now.getFullYear(); y++) {
-      const maxMonth = y === now.getFullYear() ? now.getMonth() : 11
-      for (let m = 0; m <= maxMonth; m++) {
-        months.push({ year: y, month: m, label: `${moisCourt[m]} ${y}` })
-      }
+    let y = startY, m = startM
+    while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth())) {
+      months.push({ year: y, month: m, label: `${moisCourt[m]} ${y}` })
+      m++; if (m > 11) { m = 0; y++ }
     }
     return months.reverse()
-  }, [])
+  }, [firstVenteDate, isAdmin, ventesData])
 
   const produitsMap = useMemo(() => {
     const map = new Map<string, Produit>()
-    produits.forEach(p => map.set(p.id, p))
+    venteProduits.forEach(p => map.set(p.id, p))
     return map
-  }, [produits])
+  }, [venteProduits])
 
   // Filtrer les ventes (produits vendus)
   const ventes = ventesData
 
-  // Filtrer par mois
-  const currentMonthStart = startOfMonth(new Date(selectedYear, selectedMonth))
-  const currentMonthEnd = endOfMonth(new Date(selectedYear, selectedMonth))
-  const previousMonthStart = startOfMonth(subMonths(currentMonthStart, 1))
-  const previousMonthEnd = endOfMonth(subMonths(currentMonthStart, 1))
+  // Période sélectionnée : mois précis, ou année entière si selectedMonth < 0.
+  // Les noms currentMonthStart/End sont conservés (bornes de la période) pour limiter les changements.
+  const isYearMode = selectedMonth < 0
+  const currentMonthStart = isYearMode ? startOfYear(new Date(selectedYear, 0, 1)) : startOfMonth(new Date(selectedYear, selectedMonth))
+  const currentMonthEnd = isYearMode ? endOfYear(new Date(selectedYear, 0, 1)) : endOfMonth(new Date(selectedYear, selectedMonth))
+  const previousMonthStart = isYearMode ? startOfYear(subYears(currentMonthStart, 1)) : startOfMonth(subMonths(currentMonthStart, 1))
+  const previousMonthEnd = isYearMode ? endOfYear(subYears(currentMonthStart, 1)) : endOfMonth(subMonths(currentMonthStart, 1))
+  const periodLabel = isYearMode ? `Année ${selectedYear}` : `${moisCourt[selectedMonth]} ${selectedYear}`
 
   // Helper pour obtenir la date de vente
   const getDateVente = (v: any): Date | null => {
@@ -319,10 +421,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const totalVentes = ventesCurrentMonth.length
   const previousCA = ventesPreviousMonth.reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
   const previousVentes = ventesPreviousMonth.length
-  // Pro-rata : nb jours écoulés du mois sélectionné vs nb jours total du mois précédent
-  const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear()
-  const joursEcoules = isCurrentMonth
-    ? now.getDate()
+  // Pro-rata : nb jours écoulés de la période sélectionnée vs nb jours total de la période précédente
+  const isCurrentPeriod = isYearMode
+    ? selectedYear === now.getFullYear()
+    : selectedMonth === now.getMonth() && selectedYear === now.getFullYear()
+  const joursEcoules = isCurrentPeriod
+    ? differenceInDays(now, currentMonthStart) + 1
     : differenceInDays(currentMonthEnd, currentMonthStart) + 1
   const joursMoisPrecedent = differenceInDays(previousMonthEnd, previousMonthStart) + 1
   const prorata = joursEcoules / joursMoisPrecedent
@@ -350,38 +454,44 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     return Math.round(margeBrute * 0.80)
   }, [ventesCurrentMonth, chineuseTrigramme, produitsMap])
 
-  // CA par jour (admin only)
+  // CA par jour (mois) ou par mois (année) — admin only
   const dailyData = useMemo(() => {
     if (!isAdmin) return []
-    const days = eachDayOfInterval({ start: currentMonthStart, end: currentMonthEnd })
-    const previousDays = eachDayOfInterval({ start: previousMonthStart, end: previousMonthEnd })
+    // Granularité mensuelle en vue année, journalière en vue mois.
+    const fmt = isYearMode ? 'yyyy-MM' : 'yyyy-MM-dd'
+    const units = isYearMode
+      ? eachMonthOfInterval({ start: currentMonthStart, end: currentMonthEnd })
+      : eachDayOfInterval({ start: currentMonthStart, end: currentMonthEnd })
+    const previousUnits = isYearMode
+      ? eachMonthOfInterval({ start: previousMonthStart, end: previousMonthEnd })
+      : eachDayOfInterval({ start: previousMonthStart, end: previousMonthEnd })
 
-    return days.map((day, index) => {
-      const dayStr = format(day, 'yyyy-MM-dd')
+    return units.map((unit, index) => {
+      const unitStr = format(unit, fmt)
       const caJour = ventesCurrentMonth
         .filter(v => {
           const d = getDateVente(v)
-          return d && format(d, 'yyyy-MM-dd') === dayStr
+          return d && format(d, fmt) === unitStr
         })
         .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
 
-      const prevDay = previousDays[index]
-      const prevDayStr = prevDay ? format(prevDay, 'yyyy-MM-dd') : ''
-      const caPrecedent = prevDay ? ventesPreviousMonth
+      const prevUnit = previousUnits[index]
+      const prevUnitStr = prevUnit ? format(prevUnit, fmt) : ''
+      const caPrecedent = prevUnit ? ventesPreviousMonth
         .filter(v => {
           const d = getDateVente(v)
-          return d && format(d, 'yyyy-MM-dd') === prevDayStr
+          return d && format(d, fmt) === prevUnitStr
         })
         .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0) : 0
 
       return {
-        jour: index + 1,
-        date: format(day, 'd/M'),
+        jour: isYearMode ? moisCourt[unit.getMonth()] : index + 1,
+        date: isYearMode ? moisCourt[unit.getMonth()] : format(unit, 'd/M'),
         ca: caJour,
         caPrecedent,
       }
     })
-  }, [ventesCurrentMonth, ventesPreviousMonth, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd, isAdmin])
+  }, [ventesCurrentMonth, ventesPreviousMonth, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd, isAdmin, isYearMode])
 
   // Résoudre le nom d'une chineuse (grouper par ID déposant, pas par email)
   const resolveChineuse = (email: string) => {
@@ -818,22 +928,34 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         <div>
           <h1 className="text-lg font-bold text-gray-900">{isAdmin ? 'Performance' : 'Mes Performances'}</h1>
           <p className="text-gray-400 text-xs">
-            {isAdmin ? `${ventes.length} ventes totales • ` : ''}{ventesCurrentMonth.length} vente{ventesCurrentMonth.length > 1 ? 's' : ''} ce mois
+            {isAdmin ? `${ventesTotalCount} ventes totales • ` : ''}{ventesCurrentMonth.length} vente{ventesCurrentMonth.length > 1 ? 's' : ''} ce mois
           </p>
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => { setRefreshing(true); setRefreshKey(k => k + 1) }}
+            disabled={refreshing}
+            title="Rafraîchir"
+            className="p-1.5 rounded-md border border-gray-200 text-gray-400 hover:text-[#22209C] hover:border-[#22209C]/30 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          </button>
           <Calendar size={14} className="text-gray-400" />
           <select
-            value={`${selectedYear}-${selectedMonth}`}
+            value={`${selectedYear}_${selectedMonth}`}
             onChange={(e) => {
-              const [y, m] = e.target.value.split('-')
+              const [y, m] = e.target.value.split('_')
               setSelectedYear(parseInt(y))
               setSelectedMonth(parseInt(m))
             }}
             className="border border-gray-200 rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#22209C]/20 focus:border-[#22209C]"
           >
             {availableMonths.map(({ year, month, label }) => (
-              <option key={`${year}-${month}`} value={`${year}-${month}`}>{label}</option>
+              <option key={`${year}_${month}`} value={`${year}_${month}`}>{label}</option>
+            ))}
+            {/* Vues année entière (agrégées) en bas de la liste */}
+            {Array.from(new Set(availableMonths.map(m => m.year))).sort((a, b) => b - a).map(year => (
+              <option key={`year_${year}`} value={`${year}_-1`}>Année {year}</option>
             ))}
           </select>
         </div>
@@ -956,7 +1078,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
             <div className="flex items-center gap-2 mb-3">
               <Award className="text-amber-500" size={16} />
               <h2 className="text-sm font-semibold text-gray-900">Classement Chineuses</h2>
-              <span className="text-xs text-gray-400">{moisCourt[selectedMonth]} {selectedYear}</span>
+              <span className="text-xs text-gray-400">{periodLabel}</span>
             </div>
             {classementChineuses.length === 0 ? (
               <p className="text-gray-400 text-center py-4 text-xs">Aucune vente ce mois</p>
@@ -1496,7 +1618,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
       {/* Graphique CA par jour */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">CA journalier</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">{isYearMode ? 'CA mensuel' : 'CA journalier'}</h2>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dailyData}>
@@ -1508,8 +1630,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                 contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '12px' }}
               />
               <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Line type="monotone" dataKey="ca" name={moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-              <Line type="monotone" dataKey="caPrecedent" name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+              <Line type="monotone" dataKey="ca" name={isYearMode ? String(selectedYear) : moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="caPrecedent" name={isYearMode ? String(selectedYear - 1) : moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
               {monthEvents.map((evt, i) => (
                 <ReferenceArea key={i} x1={evt.dayStart} x2={evt.dayEnd} fill={evt.color} label={{ value: evt.label, position: 'insideTop', fontSize: 10, fontWeight: 600, fill: '#374151' }} />
               ))}

@@ -24,6 +24,8 @@ export type ChineuseLite = {
   stockType?: string
   authUid?: string
   imageUrl?: string
+  imagePosition?: string
+  displayOnWebsite?: boolean
   specialite?: string
   wearType?: string
   ordre?: number
@@ -62,6 +64,8 @@ async function fetchFresh(): Promise<ChineuseLite[]> {
       stockType: data.stockType || 'unique',
       authUid: data.authUid || '',
       imageUrl: data.imageUrl || '',
+      imagePosition: data.imagePosition || '50% 50%',
+      displayOnWebsite: data.displayOnWebsite === true,
       specialite: data.specialite || '',
       wearType: data.wearType || 'womenswear',
       ordre: typeof data.ordre === 'number' ? data.ordre : 0,
@@ -73,5 +77,7 @@ async function fetchFresh(): Promise<ChineuseLite[]> {
 }
 
 export async function getChineusesLiteCached(): Promise<ChineuseLite[]> {
-  return getBlobCached<ChineuseLite[]>('chineuses-lite', TTL_MS, memory, inflight, fetchFresh)
+  // -v2 : ajout des champs imagePosition / displayOnWebsite → force une reconstruction
+  // unique du blob (l'ancien cache ne les contenait pas).
+  return getBlobCached<ChineuseLite[]>('chineuses-lite-v2', TTL_MS, memory, inflight, fetchFresh)
 }
