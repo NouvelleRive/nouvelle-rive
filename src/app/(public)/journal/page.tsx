@@ -42,27 +42,20 @@ export default async function JournalPage() {
       />
 
       <main className="min-h-screen bg-white">
-        {/* Hero */}
+        {/* Titre — même format que les autres pages */}
         <div className="px-6 py-20">
           <h1
             id="titre"
             style={{
-              fontFamily: 'Didot, "Bodoni MT", serif',
-              fontSize: 'clamp(48px, 9vw, 130px)',
+              fontSize: 'clamp(40px, 8vw, 120px)',
               fontWeight: 700,
-              letterSpacing: '-0.02em',
-              lineHeight: '0.9',
-              color: bleu,
+              letterSpacing: '-0.03em',
+              lineHeight: 0.9,
+              textTransform: 'uppercase',
             }}
           >
             Journal
           </h1>
-          <p
-            className="mt-6 uppercase font-semibold"
-            style={{ fontSize: 'clamp(11px, 1.2vw, 13px)', letterSpacing: '0.04em', maxWidth: 620 }}
-          >
-            Vintage, dépôt-vente & mode circulaire — nos guides depuis le Marais.
-          </p>
         </div>
 
         <div className="w-full border-t border-black" />
@@ -74,41 +67,31 @@ export default async function JournalPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {articles.map((a, i) => (
-              <Link
-                key={a.slug}
-                href={`/journal/${a.slug}`}
-                className="group block border-b border-black transition-colors hover:bg-gray-50 md:border-r"
-                style={{ borderRightWidth: (i + 1) % 3 === 0 ? 0 : undefined }}
-              >
-                {a.cover && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-10 px-6 py-12">
+            {articles.map(a => (
+              <Link key={a.slug} href={`/journal/${a.slug}`} className="group block">
+                {a.cover ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={a.cover} alt={a.title} className="w-full block" style={{ aspectRatio: '3 / 2', objectFit: 'cover' }} />
+                  <img
+                    src={a.cover}
+                    alt={a.title}
+                    className="w-full block"
+                    style={{ aspectRatio: '3 / 4', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div className="w-full bg-gray-100 flex items-center justify-center text-gray-300" style={{ aspectRatio: '3 / 4', fontSize: 40 }}>
+                    ✦
+                  </div>
                 )}
-                <div className="p-8 md:p-10">
-                  <p
-                    className="uppercase font-semibold"
-                    style={{ fontSize: '11px', letterSpacing: '0.15em', color: bleu }}
-                  >
-                    {a.category}
-                  </p>
-                  <h2 className="mt-4" style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.15 }}>
-                    {a.title}
-                  </h2>
-                  <p className="mt-4" style={{ fontSize: '15px', lineHeight: 1.6, color: '#444' }}>
-                    {a.description}
-                  </p>
-                  <p className="mt-6" style={{ fontSize: '12px', letterSpacing: '0.05em', color: '#999' }}>
-                    {formatDate(a.date)} · {a.readingMinutes} min de lecture
-                  </p>
-                  <span
-                    className="inline-block mt-4 group-hover:translate-x-1 transition-transform"
-                    style={{ fontSize: '14px', fontWeight: 600, color: bleu }}
-                  >
-                    Lire →
-                  </span>
-                </div>
+                <p className="mt-3 uppercase font-semibold" style={{ fontSize: '10px', letterSpacing: '0.15em', color: bleu }}>
+                  {a.category}
+                </p>
+                <h2 className="mt-1 group-hover:underline" style={{ fontSize: '17px', fontWeight: 700, lineHeight: 1.2 }}>
+                  {a.title}
+                </h2>
+                <p className="mt-1" style={{ fontSize: '12px', letterSpacing: '0.03em', color: '#999' }}>
+                  {formatDate(a.date)} · {a.readingMinutes} min
+                </p>
               </Link>
             ))}
           </div>
