@@ -1,6 +1,6 @@
 // src/app/(public)/journal/page.tsx — index du Journal (server component)
 import Link from 'next/link'
-import { getPublishedArticles } from '@/lib/journal-articles'
+import { getLiveArticles } from '@/lib/journal-store'
 
 export const revalidate = 3600
 
@@ -14,8 +14,8 @@ function formatDate(iso: string) {
   })
 }
 
-export default function JournalPage() {
-  const articles = getPublishedArticles()
+export default async function JournalPage() {
+  const articles = await getLiveArticles()
 
   const itemListJsonLd = {
     '@context': 'https://schema.org',
@@ -79,35 +79,36 @@ export default function JournalPage() {
               <Link
                 key={a.slug}
                 href={`/journal/${a.slug}`}
-                className="group block border-b border-black p-8 md:p-10 transition-colors hover:bg-gray-50 md:border-r"
-                style={{
-                  borderRightWidth: (i + 1) % 3 === 0 ? 0 : undefined,
-                }}
+                className="group block border-b border-black transition-colors hover:bg-gray-50 md:border-r"
+                style={{ borderRightWidth: (i + 1) % 3 === 0 ? 0 : undefined }}
               >
-                <p
-                  className="uppercase font-semibold"
-                  style={{ fontSize: '11px', letterSpacing: '0.15em', color: bleu }}
-                >
-                  {a.category}
-                </p>
-                <h2
-                  className="mt-4"
-                  style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.15 }}
-                >
-                  {a.title}
-                </h2>
-                <p className="mt-4" style={{ fontSize: '15px', lineHeight: 1.6, color: '#444' }}>
-                  {a.description}
-                </p>
-                <p className="mt-6" style={{ fontSize: '12px', letterSpacing: '0.05em', color: '#999' }}>
-                  {formatDate(a.date)} · {a.readingMinutes} min de lecture
-                </p>
-                <span
-                  className="inline-block mt-4 group-hover:translate-x-1 transition-transform"
-                  style={{ fontSize: '14px', fontWeight: 600, color: bleu }}
-                >
-                  Lire →
-                </span>
+                {a.cover && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.cover} alt={a.title} className="w-full block" style={{ aspectRatio: '3 / 2', objectFit: 'cover' }} />
+                )}
+                <div className="p-8 md:p-10">
+                  <p
+                    className="uppercase font-semibold"
+                    style={{ fontSize: '11px', letterSpacing: '0.15em', color: bleu }}
+                  >
+                    {a.category}
+                  </p>
+                  <h2 className="mt-4" style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.15 }}>
+                    {a.title}
+                  </h2>
+                  <p className="mt-4" style={{ fontSize: '15px', lineHeight: 1.6, color: '#444' }}>
+                    {a.description}
+                  </p>
+                  <p className="mt-6" style={{ fontSize: '12px', letterSpacing: '0.05em', color: '#999' }}>
+                    {formatDate(a.date)} · {a.readingMinutes} min de lecture
+                  </p>
+                  <span
+                    className="inline-block mt-4 group-hover:translate-x-1 transition-transform"
+                    style={{ fontSize: '14px', fontWeight: 600, color: bleu }}
+                  >
+                    Lire →
+                  </span>
+                </div>
               </Link>
             ))}
           </div>

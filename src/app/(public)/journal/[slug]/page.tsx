@@ -2,7 +2,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ARTICLES, getArticleBySlug, type ArticleBlock } from '@/lib/journal-articles'
+import { parseBody, SEED_ARTICLES, type ArticleBlock } from '@/lib/journal-articles'
+import { getStoredArticle, isArticleLive } from '@/lib/journal-store'
 
 export const revalidate = 3600
 
@@ -10,7 +11,7 @@ const bleu = '#0000FF'
 const BASE_URL = 'https://www.nouvellerive.eu'
 
 export function generateStaticParams() {
-  return ARTICLES.map(a => ({ slug: a.slug }))
+  return SEED_ARTICLES.map(a => ({ slug: a.slug }))
 }
 
 function formatDate(iso: string) {
@@ -25,16 +26,17 @@ export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Metadata> {
   const { slug } = await params
-  const article = getArticleBySlug(slug)
+  const article = await getStoredArticle(slug)
   if (!article) return { title: 'Article introuvable — NOUVELLE RIVE' }
 
   const url = `${BASE_URL}/journal/${article.slug}`
+  const live = isArticleLive(article)
   return {
     title: `${article.title} | NOUVELLE RIVE`,
     description: article.description,
     alternates: { canonical: url },
-    // Brouillon = non indexé tant que published:false.
-    robots: article.published ? undefined : { index: false, follow: false },
+    // Tant qu'il n'est pas réellement en ligne (relu + publié + date atteinte) : non indexé.
+    robots: live ? undefined : { index: false, follow: false },
     openGraph: {
       title: article.title,
       description: article.description,
@@ -42,14 +44,14 @@ export async function generateMetadata(
       type: 'article',
       siteName: 'NOUVELLE RIVE',
       publishedTime: article.date,
-      images: [{ url: '/facade%20paysage.jpg', width: 1200, height: 630, alt: article.title }],
+      images: [{ url: article.cover || '/facade%20paysage.jpg', width: 1200, height: 630, alt: article.title }],
       locale: 'fr_FR',
     },
     twitter: {
       card: 'summary_large_image',
       title: article.title,
       description: article.description,
-      images: ['/facade%20paysage.jpg'],
+      images: [article.cover || '/facade%20paysage.jpg'],
     },
   }
 }
@@ -94,10 +96,21 @@ export default async function ArticlePage(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params
-  const article = getArticleBySlug(slug)
+  const article = await getStoredArticle(slug)
   if (!article) notFound()
 
   const url = `${BASE_URL}/journal/${article.slug}`
+  const live = isArticleLive(article)
+  const today = new Date().toISOString().slice(0, 10)
+  const status = live
+    ? null
+    : !article.relu
+      ? 'Brouillon — à relire, non indexé'
+      : !article.published
+        ? 'Relu — pas encore publié, non indexé'
+        : `Programmé le ${formatDate(article.date)} — non indexé avant`
+
+  const blocks = parseBody(article.body)
 
   const articleJsonLd = {
     '@context': 'https://schema.org',
@@ -115,7 +128,9 @@ export default async function ArticlePage(
       name: 'NOUVELLE RIVE',
       logo: { '@type': 'ImageObject', url: `${BASE_URL}/icon-512.png` },
     },
-    image: `${BASE_URL}/facade%20paysage.jpg`,
+    image: article.cover
+      ? (article.cover.startsWith('http') ? article.cover : `${BASE_URL}${article.cover}`)
+      : `${BASE_URL}/facade%20paysage.jpg`,
   }
 
   const breadcrumbJsonLd = {
@@ -134,13 +149,18 @@ export default async function ArticlePage(
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <main className="min-h-screen bg-white">
-        {!article.published && (
+        {status && (
           <div
             className="text-center py-2 px-4 uppercase"
-            style={{ background: bleu, color: '#fff', fontSize: '11px', letterSpacing: '0.15em', fontWeight: 600 }}
+            style={{ background: bleu, color: '#fff', fontSize: '11px', letterSpacing: '0.12em', fontWeight: 600 }}
           >
-            Brouillon — non publié, non indexé
+            {status}
           </div>
+        )}
+
+        {article.cover && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={article.cover} alt={article.title} className="w-full block" style={{ maxHeight: 520, objectFit: 'cover' }} />
         )}
 
         <article className="max-w-3xl mx-auto px-6 py-16">
@@ -152,10 +172,7 @@ export default async function ArticlePage(
             ← Journal
           </Link>
 
-          <p
-            className="mt-8 uppercase font-semibold"
-            style={{ fontSize: '11px', letterSpacing: '0.15em', color: bleu }}
-          >
+          <p className="mt-8 uppercase font-semibold" style={{ fontSize: '11px', letterSpacing: '0.15em', color: bleu }}>
             {article.category}
           </p>
 
@@ -173,7 +190,7 @@ export default async function ArticlePage(
 
           <div className="w-full border-t border-black mt-8 mb-10" />
 
-          {article.blocks.map((block, i) => (
+          {blocks.map((block, i) => (
             <Block key={i} block={block} />
           ))}
 

@@ -2,7 +2,7 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { buildProduitPath, getTypeSlug } from '@/lib/produitSlug'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { getSitemapPages } from '@/lib/site-pages'
-import { getPublishedArticles } from '@/lib/journal-articles'
+import { getLiveArticles } from '@/lib/journal-store'
 
 const DIACRITICS = /[̀-ͯ]/g
 function slugifyBrandStr(s: string): string {
@@ -80,7 +80,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     }
   }
 
-  const journalEntries: SitemapEntry[] = getPublishedArticles().map(a => ({
+  const journalEntries: SitemapEntry[] = (await getLiveArticles()).map(a => ({
     url: `${BASE_URL}/journal/${a.slug}`,
     lastModified: new Date(a.date + 'T12:00:00'),
     changeFrequency: 'monthly',
