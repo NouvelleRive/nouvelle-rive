@@ -38,6 +38,27 @@ export default function AdminJournalPage() {
   }
   useEffect(() => { load() }, [])
 
+  const [creating, setCreating] = useState(false)
+  const createNew = async () => {
+    const title = window.prompt('Titre du nouvel article :')
+    if (!title || !title.trim()) return
+    setCreating(true)
+    try {
+      const r = await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title.trim() }),
+      })
+      const d = await r.json()
+      if (d.article) {
+        setArticles(list => [d.article, ...list])
+        setSelected(d.article.slug)
+      }
+    } finally {
+      setCreating(false)
+    }
+  }
+
   const toggleReluRow = async (slug: string, current: boolean) => {
     const r = await fetch('/api/journal', {
       method: 'PUT',
@@ -67,11 +88,21 @@ export default function AdminJournalPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: BLEU }}>Journal</h1>
-        <p className="text-sm text-gray-500">
-          {articles.length} article{articles.length > 1 ? 's' : ''} · {published} en ligne · clique une ligne pour éditer.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: BLEU }}>Journal</h1>
+          <p className="text-sm text-gray-500">
+            {articles.length} article{articles.length > 1 ? 's' : ''} · {published} en ligne · clique une ligne pour éditer.
+          </p>
+        </div>
+        <button
+          onClick={createNew}
+          disabled={creating}
+          className="text-sm px-4 py-2 rounded text-white font-medium disabled:opacity-40"
+          style={{ background: BLEU }}
+        >
+          {creating ? 'Création…' : '+ Nouvel article'}
+        </button>
       </div>
 
       {loading ? (

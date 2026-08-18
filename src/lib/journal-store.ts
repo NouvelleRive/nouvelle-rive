@@ -88,6 +88,42 @@ async function readFresh(): Promise<StoredArticle[]> {
   return seed
 }
 
+function slugify(s: string): string {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+}
+
+/** Crée un nouvel article (brouillon) à partir d'un titre. Renvoie l'article créé. */
+export async function createArticle(title: string): Promise<StoredArticle> {
+  const articles = await readFresh()
+  const base = slugify(title) || 'nouvel-article'
+  let slug = base
+  let n = 2
+  while (articles.some(a => a.slug === slug)) slug = `${base}-${n++}`
+
+  const today = todayISO()
+  const article: StoredArticle = {
+    slug,
+    title: title.trim() || 'Nouvel article',
+    description: '',
+    category: 'GUIDE',
+    date: today,
+    readingMinutes: 3,
+    body: '',
+    relu: false,
+    published: false,
+  }
+  articles.unshift(article)
+  await adminDb.doc(DOC_PATH).set({ articles })
+  await resetCache()
+  return article
+}
+
 /**
  * Patche un article et réécrit le doc.
  * Règle métier : impossible de passer `published: true` si l'article n'est pas relu.

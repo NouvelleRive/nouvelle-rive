@@ -7,7 +7,7 @@ export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { getAllArticlesCached, saveArticle, type ArticlePatch } from '@/lib/journal-store'
+import { getAllArticlesCached, saveArticle, createArticle, type ArticlePatch } from '@/lib/journal-store'
 
 export async function GET() {
   try {
@@ -16,6 +16,20 @@ export async function GET() {
       { articles },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } },
     )
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'error' }, { status: 500 })
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json()) as { title?: string }
+    if (!body?.title || !body.title.trim()) {
+      return NextResponse.json({ error: 'titre manquant' }, { status: 400 })
+    }
+    const article = await createArticle(body.title)
+    revalidatePath('/journal')
+    return NextResponse.json({ article })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'error' }, { status: 500 })
   }
