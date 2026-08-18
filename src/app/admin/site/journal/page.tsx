@@ -122,7 +122,7 @@ export default function AdminJournalPage() {
               </tr>
             </thead>
             <tbody>
-              {articles.map(a => {
+              {[...articles].sort((a, b) => (a.date || '9999-99-99').localeCompare(b.date || '9999-99-99')).map(a => {
                 const words = a.body.trim().split(/\s+/).filter(Boolean).length
                 return (
                   <tr
