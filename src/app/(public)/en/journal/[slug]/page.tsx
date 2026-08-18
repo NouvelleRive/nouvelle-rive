@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { parseBody, type ArticleBlock } from '@/lib/journal-articles'
 import { getStoredArticle, isArticleLive, hasEnglish } from '@/lib/journal-store'
+import ArticleSlider from '@/components/ArticleSlider'
 
 export const revalidate = 3600
 
@@ -101,6 +102,8 @@ function Block({ block }: { block: ArticleBlock }) {
           {block.alt && <figcaption className="mt-2 text-center" style={{ fontSize: '12px', color: '#999' }}>{block.alt}</figcaption>}
         </figure>
       )
+    case 'slider':
+      return <ArticleSlider images={block.images} />
   }
 }
 

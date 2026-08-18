@@ -21,6 +21,7 @@ export type ArticleBlock =
   | { type: 'quote'; text: string }
   | { type: 'img'; src: string; alt: string }
   | { type: 'video'; src: string; alt: string }
+  | { type: 'slider'; images: { src: string; alt: string }[] }
 
 export type Article = {
   slug: string
@@ -61,6 +62,7 @@ export function parseBody(body: string): ArticleBlock[] {
   const blocks: ArticleBlock[] = []
   let para: string[] = []
   let list: string[] = []
+  let gallery: { src: string; alt: string }[] = []
 
   const flushPara = () => {
     if (para.length) {
@@ -74,39 +76,58 @@ export function parseBody(body: string): ArticleBlock[] {
       list = []
     }
   }
+  // Images consécutives (sans ligne vide entre elles) → 1 image seule, ou un slider si ≥ 2.
+  const flushGallery = () => {
+    if (gallery.length === 1) blocks.push({ type: 'img', ...gallery[0] })
+    else if (gallery.length > 1) blocks.push({ type: 'slider', images: gallery.slice() })
+    gallery = []
+  }
 
   for (const raw of lines) {
     const line = raw.trim()
     if (!line) {
+      flushGallery()
       flushList()
       flushPara()
       continue
     }
     const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
     if (imgMatch) {
-      flushList()
-      flushPara()
       const src = imgMatch[2].trim()
       const alt = imgMatch[1].trim()
-      blocks.push(/\.mp4(\?|$)/i.test(src) ? { type: 'video', src, alt } : { type: 'img', src, alt })
+      if (/\.mp4(\?|$)/i.test(src)) {
+        flushGallery()
+        flushList()
+        flushPara()
+        blocks.push({ type: 'video', src, alt })
+      } else {
+        flushList()
+        flushPara()
+        gallery.push({ src, alt })
+      }
       continue
     }
     if (line.startsWith('## ')) {
+      flushGallery()
       flushList()
       flushPara()
       blocks.push({ type: 'h2', text: line.slice(3).trim() })
     } else if (line.startsWith('> ')) {
+      flushGallery()
       flushList()
       flushPara()
       blocks.push({ type: 'quote', text: line.slice(2).trim() })
     } else if (line.startsWith('- ')) {
+      flushGallery()
       flushPara()
       list.push(line.slice(2).trim())
     } else {
+      flushGallery()
       flushList()
       para.push(line)
     }
   }
+  flushGallery()
   flushList()
   flushPara()
   return blocks
