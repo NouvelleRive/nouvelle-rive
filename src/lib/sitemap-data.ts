@@ -2,6 +2,7 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { buildProduitPath, getTypeSlug } from '@/lib/produitSlug'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { getSitemapPages } from '@/lib/site-pages'
+import { getPublishedArticles } from '@/lib/journal-articles'
 
 const DIACRITICS = /[̀-ͯ]/g
 function slugifyBrandStr(s: string): string {
@@ -79,6 +80,13 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     }
   }
 
+  const journalEntries: SitemapEntry[] = getPublishedArticles().map(a => ({
+    url: `${BASE_URL}/journal/${a.slug}`,
+    lastModified: new Date(a.date + 'T12:00:00'),
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  }))
+
   const typeEntries: SitemapEntry[] = types.map(type => ({
     url: `${BASE_URL}/${type}`,
     lastModified: now,
@@ -101,7 +109,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   }))
 
   const seen = new Set<string>()
-  return [...staticEntries, ...typeEntries, ...brandEntries, ...productEntries]
+  return [...staticEntries, ...journalEntries, ...typeEntries, ...brandEntries, ...productEntries]
     .filter(e => {
       if (seen.has(e.url)) return false
       seen.add(e.url)

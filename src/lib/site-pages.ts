@@ -148,6 +148,16 @@ export const SITE_PAGES: SitePage[] = [
     sitemap: { changeFrequency: 'monthly', priority: 0.7 },
   },
   {
+    id: 'journal',
+    path: '/journal',
+    hash: '#titre',
+    labels: { fr: 'JOURNAL', en: 'JOURNAL' },
+    inNav: true,
+    navOrder: 8.7,
+    inSitemap: true,
+    sitemap: { changeFrequency: 'weekly', priority: 0.7 },
+  },
+  {
     id: 'faq',
     path: '/faq',
     hash: '#titre',
