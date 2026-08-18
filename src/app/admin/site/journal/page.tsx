@@ -38,6 +38,16 @@ export default function AdminJournalPage() {
   }
   useEffect(() => { load() }, [])
 
+  const toggleReluRow = async (slug: string, current: boolean) => {
+    const r = await fetch('/api/journal', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, patch: { relu: !current } }),
+    })
+    const d = await r.json()
+    if (d.article) setArticles(list => list.map(a => (a.slug === slug ? d.article : a)))
+  }
+
   const current = articles.find(a => a.slug === selected) || null
 
   if (current) {
@@ -72,15 +82,15 @@ export default function AdminJournalPage() {
             <thead>
               <tr className="text-left text-gray-500 border-b border-gray-200">
                 <th className="py-2 pr-4 font-medium">Date</th>
-                <th className="py-2 pr-4 font-medium">Statut</th>
-                <th className="py-2 pr-4 font-medium">Titre</th>
+                <th className="py-2 pr-4 font-medium">Relu</th>
                 <th className="py-2 pr-4 font-medium">Catégorie</th>
+                <th className="py-2 pr-4 font-medium">Photo</th>
+                <th className="py-2 pr-4 font-medium">Titre</th>
                 <th className="py-2 pr-4 font-medium">Mots</th>
               </tr>
             </thead>
             <tbody>
               {articles.map(a => {
-                const s = statusOf(a)
                 const words = a.body.trim().split(/\s+/).filter(Boolean).length
                 return (
                   <tr
@@ -90,12 +100,28 @@ export default function AdminJournalPage() {
                   >
                     <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">{formatDate(a.date)}</td>
                     <td className="py-3 pr-4">
-                      <span className="inline-block rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap" style={{ color: s.color, background: s.bg }}>
-                        {s.label}
-                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleReluRow(a.slug, a.relu) }}
+                        className="text-xs font-semibold rounded-full px-3 py-1 border whitespace-nowrap"
+                        style={a.relu
+                          ? { background: '#e0e7ff', borderColor: '#c7d2fe', color: '#3730a3' }
+                          : { borderColor: '#d1d5db', color: '#6b7280' }}
+                      >
+                        {a.relu ? '✓ Relu' : 'Relu ?'}
+                      </button>
+                    </td>
+                    <td className="py-3 pr-4 text-gray-500">{a.category}</td>
+                    <td className="py-3 pr-4">
+                      {a.cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={a.cover} alt="" className="rounded object-cover" style={{ width: 44, height: 44 }} />
+                      ) : (
+                        <div className="rounded bg-gray-100 flex items-center justify-center text-gray-300" style={{ width: 44, height: 44, fontSize: 18 }}>
+                          ✦
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 pr-4 font-medium text-gray-900">{a.title}</td>
-                    <td className="py-3 pr-4 text-gray-500">{a.category}</td>
                     <td className="py-3 pr-4 text-gray-500">{words}</td>
                   </tr>
                 )
