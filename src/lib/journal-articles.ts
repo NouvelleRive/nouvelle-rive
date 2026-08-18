@@ -443,6 +443,53 @@ Soyons lucides : la seconde main n'est pas un permis de surconsommer. Accumuler 
 Chez Nouvelle Rive, toutes les pièces — vintage, upcyclées ou régénérées — sont cruelty free et pensées pour n'endommager ni les animaux ni la planète. Nous mettons en avant le travail de créatrices et curateurices engagées, sur le long terme, dans un lieu permanent au cœur du Marais. Chiner ici, c'est s'habiller avec du sens — et du style.`,
     cta: { href: '/manifesto', label: 'Lire notre manifesto →' },
   },
+  {
+    slug: 'pourquoi-detester-fast-fashion',
+    title: 'Pourquoi on déteste la fast fashion',
+    description:
+      "C'est moche, c'est du plastique, c'est mauvais pour ta santé et pour la planète. Pourquoi la fast fashion est un désastre — et ce qu'on lui préfère.",
+    category: 'MANIFESTE',
+    date: '2026-08-25',
+    readingMinutes: 5,
+    body: `On ne va pas y aller par quatre chemins : chez Nouvelle Rive, on déteste la fast fashion. Pas par snobisme, pas par posture — parce qu'à peu près tout, dans ce modèle, va contre ce en quoi on croit. Voici pourquoi, sans langue de bois.
+
+## C'est moche
+
+Commençons par le plus simple. La fast fashion, c'est la même chose partout, pour tout le monde, en dix exemplaires par ville. Des coupes sans âme, copiées à la va-vite sur les défilés, produites en série et démodées avant même d'être portées. Le vintage, lui, a du caractère : une pièce a une histoire, une singularité, une allure. Tu ne croiseras pas ton double dans la rue.
+
+## C'est du plastique
+
+La plupart des vêtements fast fashion sont en polyester, acrylique, nylon — autrement dit du pétrole transformé en tissu. Tu portes littéralement du plastique. Et à chaque lavage, ces matières relâchent des micro-fibres plastiques qui finissent dans l'eau, puis dans la chaîne alimentaire. Une pièce vintage en matière naturelle — laine, coton, soie, cuir — c'est tout l'inverse.
+
+## C'est mauvais pour ta santé
+
+Ce plastique ne vient pas seul. Teintures, traitements, colles, substances chimiques : les vêtements ultra-bon-marché sont bourrés de résidus qui touchent ta peau toute la journée, dont certains suspectés d'être des perturbateurs endocriniens. S'habiller ne devrait pas être un risque. Une pièce qui a déjà vécu et été lavée des dizaines de fois a évacué l'essentiel de ces substances.
+
+## Ça épuise la planète
+
+Produire du neuf en continu, ça coûte cher à la Terre : des milliers de litres d'eau pour un seul jean, des matières premières extraites sans fin, une énergie colossale — le tout pour des vêtements portés quelques fois. La fast fashion, c'est du gaspillage érigé en modèle économique. Le vintage ne prélève rien de neuf : il fait circuler ce qui existe déjà.
+
+## Ça transforme la planète en poubelle géante
+
+L'autre bout de la chaîne est encore plus violent. Des montagnes de vêtements invendus ou jetés finissent enfouies, brûlées ou entassées dans des décharges à ciel ouvert, à l'autre bout du monde. On produit tellement, si vite, que la planète devient la benne de nos placards. Chaque pièce chinée, c'est une pièce en moins dans cette montagne.
+
+## C'est produit dans des conditions indignes
+
+Ces prix cassés ont un coût humain. Derrière l'étiquette à quelques euros, il y a des ateliers où l'on travaille beaucoup, pour très peu, dans des conditions souvent dangereuses — et, dans certaines chaînes d'approvisionnement, du travail d'enfants documenté par les ONG. Acheter d'occasion, c'est refuser de financer cette machine.
+
+## Ça enrichit une poignée de gens
+
+Pendant que la planète trinque et que les ouvrières s'épuisent, le modèle concentre des fortunes colossales entre très peu de mains — des fortunes qui, parfois, financent tout sauf le progrès social ou écologique. La fast fashion n'habille pas le monde par générosité : elle le fait pour engraisser un système. Choisir le vintage, c'est sortir de ce circuit-là.
+
+> On ne déteste pas la mode. On déteste ce qu'on en a fait.
+
+## Ce qu'on préfère, mille fois
+
+À tout ça, on oppose une autre idée de la mode : des pièces uniques, vintage, upcyclées ou régénérées, toutes cruelty free, choisies par des créatrices et curateurices engagées. De la qualité qui dure, du style qui te ressemble, et une conscience tranquille. C'est ça, Nouvelle Rive — un lieu permanent au cœur du Marais où s'habiller redevient un plaisir, pas une nuisance.
+
+Le futur sera vintage. Et il sera bien plus beau.`,
+    cta: { href: '/boutique', label: 'Passer au vintage →' },
+  },
 ]
 
 /** Graine complète avec état éditorial initial (non relu, non publié). */
