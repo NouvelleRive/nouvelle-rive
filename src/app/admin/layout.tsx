@@ -50,6 +50,7 @@
         adminOnly: true,
         dropdown: [
           { label: 'Structure', href: '/admin/site' },
+          { label: 'Journal', href: '/admin/site/journal' },
           { label: 'Performance', href: '/admin/site/performance' },
         ],
       },
