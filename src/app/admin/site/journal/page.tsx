@@ -119,6 +119,7 @@ export default function AdminJournalPage() {
                 <th className="py-2 pr-4 font-medium">Photo</th>
                 <th className="py-2 pr-4 font-medium">Titre</th>
                 <th className="py-2 pr-4 font-medium">Mots</th>
+                <th className="py-2 pr-4 font-medium">Aperçu</th>
               </tr>
             </thead>
             <tbody>
@@ -155,6 +156,19 @@ export default function AdminJournalPage() {
                     </td>
                     <td className="py-3 pr-4 font-medium text-gray-900">{a.title}</td>
                     <td className="py-3 pr-4 text-gray-500">{words}</td>
+                    <td className="py-3 pr-4">
+                      <a
+                        href={`/journal/${a.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Aperçu de l'article"
+                        className="inline-block hover:opacity-60"
+                        style={{ fontSize: 18, lineHeight: 1 }}
+                      >
+                        👁
+                      </a>
+                    </td>
                   </tr>
                 )
               })}

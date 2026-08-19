@@ -158,7 +158,7 @@ export default async function EnArticlePage(
 
         {article.cover && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={article.cover} alt={article.titleEn || ''} className="w-full block" style={{ height: '78vh', maxHeight: 820, objectFit: 'cover', objectPosition: 'center top' }} />
+          <img src={article.cover} alt={article.titleEn || ''} className="w-full block" style={{ height: '78vh', maxHeight: 820, objectFit: 'cover', objectPosition: 'center' }} />
         )}
 
         <article className="max-w-3xl mx-auto px-6 py-16">
