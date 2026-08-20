@@ -15,10 +15,10 @@ function formatDate(iso: string) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 function statusOf(a: StoredArticle): { label: string; color: string; bg: string } {
-  const live = a.relu && a.published && !!a.date && a.date <= todayISO()
+  const live = a.relu && !!a.date && a.date <= todayISO()
   if (live) return { label: 'En ligne', color: '#fff', bg: BLEU }
-  if (a.relu && a.published) return { label: `Programmé ${formatDate(a.date)}`, color: '#92400e', bg: '#fef3c7' }
-  if (a.relu) return { label: 'Relu', color: '#3730a3', bg: '#e0e7ff' }
+  if (a.relu && a.date) return { label: `Programmé ${formatDate(a.date)}`, color: '#92400e', bg: '#fef3c7' }
+  if (a.relu) return { label: 'Relu — à dater', color: '#3730a3', bg: '#e0e7ff' }
   return { label: 'Brouillon', color: '#6b7280', bg: '#e5e7eb' }
 }
 
@@ -85,7 +85,7 @@ export default function AdminJournalPage() {
     )
   }
 
-  const published = articles.filter(a => a.relu && a.published && a.date <= todayISO()).length
+  const published = articles.filter(a => a.relu && !!a.date && a.date <= todayISO()).length
 
   return (
     <div className="space-y-4">
@@ -238,11 +238,6 @@ function ArticleEditor({
     const res = await put({ relu: !draft.relu })
     if (res.article) { setDraft(res.article); onSaved(res.article) }
   }
-  const togglePublish = async () => {
-    const res = await put({ published: !draft.published })
-    if (res.article) { setDraft(res.article); onSaved(res.article, res.warning) }
-  }
-
   // ── Métriques SEO ──
   const seo = useMemo(() => {
     const bodyText = draft.body || ''
@@ -424,22 +419,18 @@ function ArticleEditor({
               className="w-full text-sm py-2 rounded border font-medium"
               style={draft.relu ? { background: '#e0e7ff', borderColor: '#c7d2fe', color: '#3730a3' } : { borderColor: '#d1d5db', color: '#374151' }}
             >
-              {draft.relu ? '✓ Relu' : 'Marquer comme relu'}
+              {draft.relu ? '✓ Relu — se publie à sa date' : 'Marquer comme relu'}
             </button>
-            <button
-              onClick={togglePublish}
-              disabled={!draft.relu}
-              title={!draft.relu ? 'À relire avant publication' : ''}
-              className="w-full text-sm py-2 rounded text-white font-medium disabled:opacity-40"
-              style={{ background: draft.published ? '#6b7280' : BLEU }}
-            >
-              {draft.published ? 'Dépublier' : 'Publier'}
-            </button>
-            {!draft.relu && (
-              <p className="text-xs text-gray-400">Un article doit être relu avant d&apos;être publié.</p>
-            )}
-            {draft.published && draft.date > todayISO() && (
-              <p className="text-xs text-amber-700">Programmé : sortira le {formatDate(draft.date)}.</p>
+            {!draft.relu ? (
+              <p className="text-xs text-gray-400">
+                Un article relu se met en ligne <strong>tout seul</strong> à sa date. Non relu = jamais publié.
+              </p>
+            ) : !draft.date ? (
+              <p className="text-xs text-amber-700">Relu mais sans date → ajoute une date de publication ci-contre.</p>
+            ) : draft.date > todayISO() ? (
+              <p className="text-xs text-amber-700">Programmé : sortira tout seul le {formatDate(draft.date)}.</p>
+            ) : (
+              <p className="text-xs" style={{ color: '#166534' }}>En ligne ✓</p>
             )}
           </div>
 

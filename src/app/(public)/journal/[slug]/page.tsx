@@ -184,8 +184,8 @@ export default async function ArticlePage(
     ? null
     : !article.relu
       ? 'Brouillon — à relire, non indexé'
-      : !article.published
-        ? 'Relu — pas encore publié, non indexé'
+      : !article.date
+        ? 'Relu — sans date de publication, non indexé'
         : `Programmé le ${formatDate(article.date)} — non indexé avant`
 
   const blocks = parseBody(article.body)

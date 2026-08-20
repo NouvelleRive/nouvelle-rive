@@ -38,9 +38,10 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-/** En ligne = relu ET armé ET date de publication renseignée ET atteinte. */
+/** En ligne = RELU et date de publication renseignée et atteinte.
+ *  (Un article relu se met en ligne tout seul à sa date ; non relu = jamais publié.) */
 export function isArticleLive(a: StoredArticle, today = todayISO()): boolean {
-  return !!a.relu && !!a.published && !!a.date && a.date <= today
+  return !!a.relu && !!a.date && a.date <= today
 }
 
 async function fetchFresh(): Promise<StoredArticle[]> {
