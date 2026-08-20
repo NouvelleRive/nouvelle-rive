@@ -41,7 +41,7 @@ type Candidat = {
   prix: number | null
   sku: string
   image: string | null
-  groupe: 'STRC' | 'MAKI'
+  groupe: 'STRC' | 'MAKI' | 'LUXE'
 }
 
 export default function EbayPostingCalendar({
@@ -161,8 +161,8 @@ export default function EbayPostingCalendar({
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
             {candidats.map((c, i) => {
-              const isStrc = c.groupe === 'STRC'
-              const marque = c.marque || (isStrc ? 'Strass Chronique' : 'MAKI')
+              const marque = c.marque || (c.groupe === 'STRC' ? 'Strass Chronique' : c.groupe === 'MAKI' ? 'MAKI' : 'Luxe')
+              const tagBg = c.groupe === 'STRC' ? 'bg-pink-500' : c.groupe === 'MAKI' ? 'bg-indigo-500' : 'bg-yellow-500'
               return (
                 <div key={c.id} className="border rounded-md overflow-hidden bg-white">
                   <div className="relative aspect-square bg-gray-100">
@@ -173,7 +173,7 @@ export default function EbayPostingCalendar({
                       <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">—</div>
                     )}
                     <span className="absolute top-1 left-1 text-[9px] bg-black/60 text-white px-1 rounded">J{Math.floor(i / 3) + 1}</span>
-                    <span className={`absolute top-1 right-1 text-[9px] text-white px-1 rounded ${isStrc ? 'bg-pink-500' : 'bg-indigo-500'}`}>
+                    <span className={`absolute top-1 right-1 text-[9px] text-white px-1 rounded ${tagBg}`}>
                       {c.groupe}
                     </span>
                   </div>

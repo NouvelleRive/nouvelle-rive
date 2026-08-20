@@ -6,11 +6,17 @@ import { useAdmin } from '@/lib/admin/context'
 import { getBrandPriority } from '@/lib/admin/helpers'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot } from 'firebase/firestore'
+import { useFilteredProducts } from '@/lib/siteConfig'
 import EbayPostingCalendar from './EbayPostingCalendar'
 
 export default function AdminEbayPage() {
   const { produitsFiltres, loadData, loading } = useAdmin()
-  
+  // Appartenance "luxe" = pièces qui matchent les règles de siteConfig/luxe
+  // (liste de marques : Chanel, Dior, Hermès, Gucci…). Servi par /api/page-produits
+  // (cache 6h, 0 read Firestore) — même source de vérité que la page luxe et le cron eBay.
+  const { produits: luxeProduits } = useFilteredProducts('luxe')
+  const luxeIds = useMemo(() => new Set(luxeProduits.map(p => p.id)), [luxeProduits])
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [publishing, setPublishing] = useState(false)
   const [publishingId, setPublishingId] = useState<string | null>(null)
@@ -222,8 +228,18 @@ useEffect(() => {
     ),
   [produitsActifs])
 
+  // Pièces LUXE prêtes à publier (marque dans les règles luxe), hors STRC/MAKI
+  // déjà gérés par le warmup, et hors pièces bloquées (pas reçue / 0 photo / sexe inconnu).
+  const luxeCandidatsDispo = useMemo(() =>
+    produitsActifs.filter(p => {
+      const sku = (p.sku || '').toUpperCase()
+      if (sku.startsWith('STRC') || sku.startsWith('MAK')) return false
+      return luxeIds.has(p.id) && !p.ebayListingId && blocageEbay(p) === null
+    }),
+  [produitsActifs, luxeIds, chineusesList])
+
   const candidatsChauffe = useMemo(() => {
-    const toCand = (p: any, groupe: 'STRC' | 'MAKI') => ({
+    const toCand = (p: any, groupe: 'STRC' | 'MAKI' | 'LUXE') => ({
       id: p.id,
       nom: p.nom || '—',
       marque: p.marque || '',
@@ -235,25 +251,9 @@ useEffect(() => {
     return [
       ...[...strcDispo].sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0)).map(p => toCand(p, 'STRC')),
       ...[...makiDispo].sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0)).map(p => toCand(p, 'MAKI')),
+      ...[...luxeCandidatsDispo].sort((a, b) => (b.prix ?? 0) - (a.prix ?? 0)).map(p => toCand(p, 'LUXE')),
     ]
-  }, [strcDispo, makiDispo])
-
-  // Diagnostic d'éligibilité : pièces actives non publiées + raison qui bloque
-  const diagEbay = useMemo(() => {
-    const rows = produitsActifs
-      .filter(p => !p.ebayListingId)
-      .map(p => ({ p, nbPhotos: compterPhotos(p), sexe: resoudreSexe(p), blocage: blocageEbay(p) }))
-    // Prêtes d'abord, puis regroupées par blocage
-    rows.sort((a, b) => {
-      if (!a.blocage && b.blocage) return -1
-      if (a.blocage && !b.blocage) return 1
-      return (a.blocage || '').localeCompare(b.blocage || '') || (b.p.prix ?? 0) - (a.p.prix ?? 0)
-    })
-    const pretes = rows.filter(r => !r.blocage).length
-    const parBlocage: Record<string, number> = {}
-    rows.filter(r => r.blocage).forEach(r => { parBlocage[r.blocage!] = (parBlocage[r.blocage!] || 0) + 1 })
-    return { rows, pretes, parBlocage }
-  }, [produitsActifs, chineusesList])
+  }, [strcDispo, makiDispo, luxeCandidatsDispo])
 
   if (loading) {
     return (
@@ -275,71 +275,6 @@ useEffect(() => {
         onPublish={askGenderThenPublish}
         publishing={publishing}
       />
-
-      {/* Diagnostic d'éligibilité eBay */}
-      <div className="bg-white border rounded-lg p-4">
-        <h2 className="font-bold text-sm mb-1">🔎 Éligibilité à la publication</h2>
-        <p className="text-xs text-gray-500 mb-3">
-          Pièces actives non encore sur eBay, avec ce qui bloque leur publication.
-        </p>
-
-        {/* Récap */}
-        <div className="flex flex-wrap gap-2 mb-3 text-xs">
-          <span className="px-2 py-1 rounded bg-green-100 text-green-800 font-medium">
-            ✅ {diagEbay.pretes} prête{diagEbay.pretes > 1 ? 's' : ''}
-          </span>
-          {Object.entries(diagEbay.parBlocage).map(([raison, nb]) => (
-            <span key={raison} className="px-2 py-1 rounded bg-red-50 text-red-700 font-medium">
-              ⛔ {nb} · {raison}
-            </span>
-          ))}
-        </div>
-
-        {/* Liste */}
-        <div className="space-y-1 max-h-[420px] overflow-y-auto">
-          {diagEbay.rows.map(({ p, nbPhotos, sexe, blocage }) => (
-            <div
-              key={p.id}
-              className={`flex items-center gap-3 border rounded-md px-2 py-1.5 ${
-                blocage ? 'bg-red-50/40 border-red-100' : 'bg-green-50/40 border-green-100'
-              }`}
-            >
-              <div className="w-9 h-9 flex-shrink-0">
-                {getMainImage(p) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={getMainImage(p)!} alt={p.nom} className="w-9 h-9 object-cover rounded" />
-                ) : (
-                  <div className="w-9 h-9 bg-gray-100 rounded flex items-center justify-center text-gray-300 text-xs">—</div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{p.nom || '—'}</p>
-                <p className="text-[11px] text-gray-500 font-mono truncate">{p.sku || '—'} · {p.marque || '—'}</p>
-              </div>
-              <div className="text-[11px] text-gray-600 whitespace-nowrap flex items-center gap-2">
-                <span className={nbPhotos === 0 ? 'text-red-600 font-medium' : ''}>📷 {nbPhotos}</span>
-                <span className={!sexe ? 'text-red-600 font-medium' : ''}>{sexe || 'sexe ?'}</span>
-              </div>
-              <div className="w-40 text-right">
-                {blocage ? (
-                  <span className="text-[11px] text-red-700">⛔ {blocage}</span>
-                ) : (
-                  <button
-                    onClick={() => { setPublishingId(p.id); askGenderThenPublish([p.id]) }}
-                    disabled={publishing || publishingId === p.id}
-                    className="px-2.5 py-1 bg-yellow-500 text-white text-[11px] rounded hover:bg-yellow-600 disabled:opacity-50"
-                  >
-                    {publishingId === p.id ? '⏳' : '🚀 Publier'}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          {diagEbay.rows.length === 0 && (
-            <p className="text-center text-gray-400 py-6 text-sm">Toutes les pièces actives sont déjà sur eBay 🎉</p>
-          )}
-        </div>
-      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
@@ -439,6 +374,9 @@ useEffect(() => {
           const mainImage = getMainImage(p)
           const isLuxury = getBrandPriority(p.marque) < 20
           const isPublished = !!p.ebayListingId
+          const nbPhotos = compterPhotos(p)
+          const sexe = resoudreSexe(p)
+          const blocage = isPublished ? null : blocageEbay(p)
 
           return (
             <div
@@ -480,6 +418,18 @@ useEffect(() => {
                 <p className="text-xs text-gray-500 truncate">
                   {p.marque || '—'} • {cat || '—'} • {p.taille || '—'}
                 </p>
+                {!isPublished && (
+                  <p className="text-[11px] mt-0.5 flex items-center gap-2 flex-wrap">
+                    <span className={nbPhotos === 0 ? 'text-red-600 font-medium' : 'text-gray-500'}>📷 {nbPhotos}</span>
+                    <span className={!sexe ? 'text-red-600 font-medium' : 'text-gray-500'}>{sexe || 'sexe ?'}</span>
+                    {blocage && (
+                      <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded font-medium">⛔ {blocage}</span>
+                    )}
+                    {!blocage && (
+                      <span className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-medium">✅ prête</span>
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Prix */}
