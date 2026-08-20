@@ -68,7 +68,7 @@ const db=getFirestore(); const ref=db.collection('siteConfig').doc('_journal')
 const snap=await ref.get(); const articles=snap.data().articles
 const regroup=(b)=>{let p;do{p=b;b=b.replace(/(\.mp4\))\n\n(!\[[^\]]*\]\([^)]+\.mp4\))/g,'$1\n$2')}while(b!==p);return b}
 for(const a of articles) if(a.slug==='vintage-upcycle-regenere-difference'){
-  a.titleEn='Vintage, upcycled, regenerated: what\\'s the difference?'
+  a.titleEn = "Vintage, upcycled, regenerated: what’s the difference?"
   a.descriptionEn='Vintage, secondhand, thrift, upcycled, regenerated: all the circular-fashion definitions and how to choose well.'
   a.categoryEn='CIRCULAR FASHION'
   a.bodyEn=bodyEn
