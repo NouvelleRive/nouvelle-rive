@@ -167,6 +167,20 @@ function Block({ block }: { block: ArticleBlock }) {
       )
     case 'slider':
       return <ArticleSlider images={block.images} />
+    case 'map':
+      return (
+        <div className="my-8" style={{ borderRadius: 4, overflow: 'hidden', border: '1px solid #000' }}>
+          <iframe
+            title={`Carte — ${block.query}`}
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(block.query)}&z=14&output=embed`}
+            width="100%"
+            height="440"
+            style={{ border: 0, display: 'block' }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+      )
   }
 }
 

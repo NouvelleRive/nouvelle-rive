@@ -23,6 +23,7 @@ export type ArticleBlock =
   | { type: 'video'; src: string; alt: string }
   | { type: 'videorow'; videos: { src: string; alt: string }[] }
   | { type: 'slider'; images: { src: string; alt: string }[] }
+  | { type: 'map'; query: string }
 
 export type Article = {
   slug: string
@@ -98,6 +99,14 @@ export function parseBody(body: string): ArticleBlock[] {
       flushVideos()
       flushList()
       flushPara()
+      continue
+    }
+    if (line.startsWith('::map ')) {
+      flushGallery()
+      flushVideos()
+      flushList()
+      flushPara()
+      blocks.push({ type: 'map', query: line.slice(6).trim() })
       continue
     }
     const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
