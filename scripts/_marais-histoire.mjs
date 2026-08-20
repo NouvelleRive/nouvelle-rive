@@ -8,11 +8,13 @@ const OLD="C'est un lieu unique, où plusieurs âmes cohabitent : le Marais hist
 const NEW=`C'est un lieu unique, où les époques se superposent. Quartier juif dès le Moyen Âge, puis quartier aristocratique aux XVIe et XVIIe siècles — on en trouve encore les traces partout : des religieux se promènent rue des Rosiers, tout près de l'une des plus anciennes synagogues de Paris ; on y déguste parmi les meilleurs restaurants ashkénazes et séfarades de la ville ; et des hôtels particuliers se cachent derrière les porches. Le Marais regorge de trésors cachés — c'est sûrement pour ça que créatrices, créateurs et artisans en ont fait leur quartier de prédilection aujourd'hui.
 
 C'est aussi un berceau de la mode et l'un des grands quartiers gays de la ville — et le seul quartier de Paris à avoir conservé ses ruelles étroites et ses immeubles parfois de guingois d'avant la Révolution, épargné par la grande transformation du baron Haussmann entamée en 1853. Les rues racontent tout ça : la rue des Écouffes, où l'on est, était « la rue aux vêtements » et l'ancienne rue aux filles ; à deux pas, la rue des Mauvais Garçons. Ambiance pavés, esprit village, et une vraie densité de friperies au kilo, de dépôts-ventes et de vintage de créateur.`
+const INTRO_OLD="Le Marais est LE quartier du vintage à Paris."
+const INTRO_NEW="Le Marais est LE quartier du vintage à Paris, et il offre une expérience de shopping unique et variée."
 const db=getFirestore(); const ref=db.collection('siteConfig').doc('_journal')
 const snap=await ref.get(); const articles=snap.data().articles
 for(const a of articles) if(a.slug==='le-tour-des-fripes-ideal-dans-le-marais'){
-  if(a.body.includes(OLD)){ a.body=a.body.replace(OLD,NEW); console.log('✓ histoire du Marais enrichie (Moyen Âge → nobles → aujourd\\'hui)') }
-  else console.log('✗ ancre non trouvée (le texte a peut-être changé)')
+  if(a.body.includes(OLD)){ a.body=a.body.replace(OLD,NEW); console.log('OK histoire enrichie') } else console.log('deja fait ou ancre absente (histoire)')
+  if(a.body.includes(INTRO_OLD) && !a.body.includes('experience de shopping') && !a.body.includes('expérience de shopping')){ a.body=a.body.replace(INTRO_OLD,INTRO_NEW); console.log('OK intro shopping') } else console.log('intro deja faite ou absente')
 }
 await ref.set({ articles })
 try{ await getStorage().bucket().file('_cache/journal.json.gz').delete() }catch{}
