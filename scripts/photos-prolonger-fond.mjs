@@ -188,14 +188,21 @@ async function traiter(urls) {
   return mapping
 }
 
-// --- Iconiques ---
-const icoSnap = await db.collection('iconiques').get()
-for (const doc of icoSnap.docs) {
-  const images = doc.data().images || []
-  console.log(`iconique ${doc.data().slug} — ${images.length} images`)
-  const map = await traiter(images)
-  if (map.size && !DRY) await doc.ref.update({ images: images.map(u => map.get(u) || u) })
-  console.log(`  ${map.size} prolongées`)
+// Filtre produit (regex sur nom + catégorie + sous-catégorie). Défini ici pour
+// que les iconiques puissent le respecter aussi : un run ciblé (ex "^BRI[0-9]")
+// ne doit PAS retoucher les iconiques au passage.
+const filtre = process.argv.slice(2).find(a => !a.startsWith('--'))
+
+// --- Iconiques (seulement en run global, sans filtre) ---
+if (!filtre) {
+  const icoSnap = await db.collection('iconiques').get()
+  for (const doc of icoSnap.docs) {
+    const images = doc.data().images || []
+    console.log(`iconique ${doc.data().slug} — ${images.length} images`)
+    const map = await traiter(images)
+    if (map.size && !DRY) await doc.ref.update({ images: images.map(u => map.get(u) || u) })
+    console.log(`  ${map.size} prolongées`)
+  }
 }
 
 // --- Produits (liste depuis le cache blob, gratuit) ---
@@ -204,7 +211,6 @@ const raw = blob[0] === 0x1f && blob[1] === 0x8b ? gunzipSync(blob) : blob
 const parsed = JSON.parse(raw.toString())
 const tous = (Array.isArray(parsed) ? parsed : Object.values(parsed).find(Array.isArray))
   .map(e => (e && e.raw ? { id: e.id, ...e.raw } : e))
-const filtre = process.argv.slice(2).find(a => !a.startsWith('--'))
 const produits = filtre
   ? tous.filter(p => new RegExp(filtre, 'i').test(`${p.nom || ''} ${p.categorie || ''} ${p.sousCategorie || ''}`))
   : tous
