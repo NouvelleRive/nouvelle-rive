@@ -41,6 +41,8 @@ export type Article = {
   body: string
   /** Sources citées, affichées en bas d'article (communes FR/EN). */
   sources?: { label: string; url: string }[]
+  /** Pins de carte (bloc ::map) géocodés — communs FR/EN. */
+  mapMarkers?: { name: string; kind: string; lat: number; lng: number }[]
   /** Appel à l'action interne en bas d'article (maillage SEO). */
   cta?: { href: string; label: string }
   /** Version anglaise (SEO US/UK). Vide = pas encore traduit → page /en en noindex. */

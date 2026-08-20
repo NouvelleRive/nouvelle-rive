@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { parseBody, type ArticleBlock } from '@/lib/journal-articles'
 import { getStoredArticle, isArticleLive, hasEnglish } from '@/lib/journal-store'
 import ArticleSlider from '@/components/ArticleSlider'
+import ArticleMap from '@/components/ArticleMap'
 
 export const revalidate = 3600
 
@@ -186,7 +187,13 @@ export default async function EnArticlePage(
 
           <div className="w-full border-t border-black mt-8 mb-10" />
 
-          {blocks.map((block, i) => <Block key={i} block={block} />)}
+          {blocks.map((block, i) =>
+            block.type === 'map' && article.mapMarkers?.length ? (
+              <ArticleMap key={i} markers={article.mapMarkers} />
+            ) : (
+              <Block key={i} block={block} />
+            ),
+          )}
 
           {article.sources && article.sources.length > 0 && (
             <div className="mt-16 pt-8 border-t border-gray-200">
