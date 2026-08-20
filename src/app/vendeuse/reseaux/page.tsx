@@ -28,7 +28,7 @@ const CHRONIQUES = [
     captionDefaut: "Que portent nos stars du vintage ? C'est la mission d'Amanda de le découvrir 🕵️‍♀️🔎🌊\n\nSpoiler ce sera local et de saison 🦋",
   },
   {
-    key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina', heureDefaut: '12:00', objectifDefaut: '', formatDefaut: 'reel',
+    key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: 'TRENDS & VLOGS PAR HINA', responsable: 'Hina', heureDefaut: '12:00', objectifDefaut: '', formatDefaut: 'reel',
     captionDefaut: "La microboutique d'Hina 🛍️ ses trouvailles à shopper avant tout le monde\n\nÇa part vite 🦋",
   },
   {
