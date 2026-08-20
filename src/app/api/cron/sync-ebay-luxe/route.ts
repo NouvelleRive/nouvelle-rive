@@ -149,7 +149,9 @@ export async function GET(req: NextRequest) {
     const visible = isVisibleOnSite(p, config)
     const matchLuxe = visible && matchesLuxeRules(p, config, chineuses)
 
-    if (matchLuxe && !isOnEbay) {
+    // Ne publie QUE des pièces explicitement reçues en boutique (clic « Reçu » -> recu:true).
+    // `recu === true` strict : une pièce sans le champ (undefined) n'est jamais publiée.
+    if (matchLuxe && !isOnEbay && p.recu === true) {
       // Sans genre, publishToEbay échouerait en GENDER_REQUIRED et bloquerait
       // le quota `max` à chaque passage : on les écarte pour que la file avance.
       if (!resolveGender(p)) sansGenre.push(p.sku || p.id)
