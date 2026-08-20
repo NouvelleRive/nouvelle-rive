@@ -15,6 +15,10 @@ import { purchaseEventId } from '@/lib/attribution'
 
 const bleuElectrique = '#0000FF'
 const cleanProductName = (nom: string) => nom.replace(/^[A-Z]+\d*\s*[-–]\s*/i, '')
+// Montant réellement payé pour une pièce : on privilégie prixVenteReel (comme
+// le calcul de CA interne), sinon on retombe sur le prix catalogue. Évite un
+// CA site à zéro quand la pièce ne porte son montant que dans prixVenteReel.
+const montantPiece = (p: any) => Number(p?.prixVenteReel) || Number(p?.prix) || 0
 
 const updateOrCreateClient = async (
   clientInfo: { prenom: string; nom: string; email: string; telephone: string },
@@ -75,7 +79,7 @@ function ConfirmationContent() {
         setProduits(fetched)
 
         if (!isTest && fetched.length > 0) {
-          const totalConversion = fetched.reduce((s, p) => s + (Number(p.prix) || 0), 0)
+          const totalConversion = fetched.reduce((s, p) => s + montantPiece(p), 0)
           trackConversion(
             orderId || `sans-id-${fetched.map(p => p.id).join('-')}`,
             totalConversion
@@ -93,7 +97,7 @@ function ConfirmationContent() {
           if (!dejaTraite) {
             const clientInfoStr = localStorage.getItem('nouvelle-rive-client')
             const clientInfo = clientInfoStr ? JSON.parse(clientInfoStr) : {}
-            const totalMontant = fetched.reduce((s, p) => s + (Number(p.prix) || 0), 0)
+            const totalMontant = fetched.reduce((s, p) => s + montantPiece(p), 0)
 
             await updateOrCreateClient(
               {
