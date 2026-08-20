@@ -250,6 +250,22 @@ export default function BackstagePerformancePage() {
             </div>
           </div>
 
+          <div className="mb-3">
+            <Classement
+              titre="📖 Articles du Journal — vues & temps passé"
+              sousTitre={`Visites et temps de lecture moyen — sur ${days} jours`}
+              lignes={stats.pages
+                .filter((p) => p.page.startsWith('/journal'))
+                .slice(0, 30)
+                .map((p) => ({
+                  label: p.page === '/journal' ? 'Journal (accueil)' : p.page.replace('/journal/', ''),
+                  valeur: `${formatPrix(p.vues)} vues`,
+                  detail: duree(p.tempsMoyenMs),
+                }))}
+              vide="Aucune vue d'article pour l'instant (les articles viennent d'être publiés)."
+            />
+          </div>
+
           <div className="grid lg:grid-cols-2 gap-3">
             <Classement
               titre="Pages les plus vues"
