@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore'
 import Link from 'next/link'
 import { ClipboardList, Package, ShoppingBag, Shirt, Calendar, Inbox, Share2 } from 'lucide-react'
 import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
@@ -22,12 +22,12 @@ function VendeuseNavbar() {
   const [commandesCount, setCommandesCount] = useState(0)
   const [produitsCount, setProduitsCount] = useState(0)
 
-  // Déposantes en attente de validation profil + RDV en attente (3 mois courants)
+  // Déposantes en attente de validation profil + RDV en attente (3 mois courants).
+  // Fetch one-shot au montage (au lieu de 2 listeners temps réel sur collections
+  // entières) : lues 1× par session au lieu d'un scan permanent. deposante est
+  // filtré sur contratSigne pour réduire encore le nombre de docs lus.
   useEffect(() => {
-    let nbProfils = 0
-    let nbRdvs = 0
-    const update = () => setDepotCount(nbProfils + nbRdvs)
-
+    let cancelled = false
     const today = new Date().toISOString().split('T')[0]
     const now = new Date()
     const monthKeys = new Set<string>()
@@ -36,29 +36,32 @@ function VendeuseNavbar() {
       monthKeys.add(`${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`)
     }
 
-    const unsubDep = onSnapshot(collection(db, 'deposante'), (snap) => {
-      nbProfils = snap.docs.filter(d => {
-        const x = d.data() as any
-        return x.contratSigne === true && !x.validee && !x.refusee
-      }).length
-      update()
-    })
-    const unsubRestocks = onSnapshot(collection(db, 'restocks'), (snap) => {
-      let count = 0
-      snap.docs.forEach(d => {
-        if (!monthKeys.has(d.id)) return
-        const slots = (d.data() as any).slots || {}
-        Object.entries(slots).forEach(([key, slot]: [string, any]) => {
-          if (!slot || slot.type !== 'deposante') return
-          if (slot.acceptee === true || slot.refusee === true) return
-          if ((key.split('_')[0] || '') < today) return
-          count++
+    ;(async () => {
+      try {
+        const [depSnap, restSnap] = await Promise.all([
+          getDocs(query(collection(db, 'deposante'), where('contratSigne', '==', true))),
+          getDocs(collection(db, 'restocks')),
+        ])
+        if (cancelled) return
+        const nbProfils = depSnap.docs.filter(d => {
+          const x = d.data() as any
+          return !x.validee && !x.refusee
+        }).length
+        let nbRdvs = 0
+        restSnap.docs.forEach(d => {
+          if (!monthKeys.has(d.id)) return
+          const slots = (d.data() as any).slots || {}
+          Object.entries(slots).forEach(([key, slot]: [string, any]) => {
+            if (!slot || slot.type !== 'deposante') return
+            if (slot.acceptee === true || slot.refusee === true) return
+            if ((key.split('_')[0] || '') < today) return
+            nbRdvs++
+          })
         })
-      })
-      nbRdvs = count
-      update()
-    })
-    return () => { unsubDep(); unsubRestocks() }
+        setDepotCount(nbProfils + nbRdvs)
+      } catch (e) { console.error('badge dépôt', e) }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   // Commandes non terminées : reste tant que ce n'est pas dans l'historique
