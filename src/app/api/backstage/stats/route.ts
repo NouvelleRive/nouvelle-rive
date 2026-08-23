@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
     const villes = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const pays = new Map<string, { label: string; v: number; ms: number; n: number }>()
     const devices = { mobile: 0, desktop: 0 }
+    const bons = { envoyes: 0, utilises: 0 }
 
     snaps.forEach((snap, i) => {
       const d = (snap.exists ? snap.data() : {}) as Record<string, unknown>
@@ -121,6 +122,10 @@ export async function GET(req: NextRequest) {
       const dev = (d.devices as Record<string, number>) || {}
       devices.mobile += Number(dev.mobile) || 0
       devices.desktop += Number(dev.desktop) || 0
+
+      const b = (d.bons as Record<string, number>) || {}
+      bons.envoyes += Number(b.envoyes) || 0
+      bons.utilises += Number(b.utilises) || 0
     })
 
     // Produits les plus mis en favoris : likesCount est déjà tenu à jour sur
@@ -160,7 +165,10 @@ export async function GET(req: NextRequest) {
         totals,
         parJour,
         devices,
+        bons,
         pages: pagesList.slice(0, 60),
+        // Toutes les pages du Journal (pas seulement le top 60) — vues souvent faibles au début.
+        journalPages: pagesList.filter((p) => p.page.startsWith('/journal')).slice(0, 40),
         // Pages où l'on reste le plus longtemps : on écarte le bruit statistique
         // en exigeant au moins 3 vues sur la période.
         pagesLongues: [...pagesList]

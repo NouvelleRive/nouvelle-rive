@@ -31,7 +31,9 @@ type Stats = {
   }
   parJour: Array<{ day: string; sessions: number; pageviews: number; conversions: number; revenue: number }>
   devices: { mobile: number; desktop: number }
+  bons?: { envoyes: number; utilises: number }
   pages: Array<{ page: string; vues: number; tempsMoyenMs: number }>
+  journalPages?: Array<{ page: string; vues: number; tempsMoyenMs: number }>
   pagesLongues: Array<{ page: string; vues: number; tempsMoyenMs: number }>
   sorties: Array<{ page: string; n: number }>
   entrees: Array<{ page: string; n: number }>
@@ -250,13 +252,46 @@ export default function BackstagePerformancePage() {
             </div>
           </div>
 
+          {/* Bons de fidélité MERCI (mail 10j après achat) */}
+          {(() => {
+            const envoyes = stats.bons?.envoyes || 0
+            const utilises = stats.bons?.utilises || 0
+            const taux = envoyes ? (utilises / envoyes) * 100 : 0
+            return (
+              <div className="bg-white border rounded-lg p-4">
+                <div className="font-semibold text-sm">🎟️ Bons de fidélité « MERCI »</div>
+                <div className="text-xs text-gray-400 mb-3">
+                  Mail de remerciement envoyé 10 jours après un achat, avec un code ‑10 % nominatif (valable 1 mois, sur le site) — sur {days} jours
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Bons envoyés</div>
+                    <div className="text-2xl font-bold mt-1" style={{ color: BLEU }}>{formatPrix(envoyes)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Bons utilisés</div>
+                    <div className="text-2xl font-bold mt-1" style={{ color: BLEU }}>{formatPrix(utilises)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Taux d'utilisation</div>
+                    <div className="text-2xl font-bold mt-1" style={{ color: BLEU }}>
+                      {taux.toFixed(1).replace('.', ',')} %
+                    </div>
+                  </div>
+                </div>
+                {envoyes === 0 && (
+                  <div className="text-xs text-gray-400 mt-3">Aucun bon envoyé sur la période.</div>
+                )}
+              </div>
+            )
+          })()}
+
           <div className="mb-3">
             <Classement
               titre="📖 Articles du Journal — vues & temps passé"
               sousTitre={`Visites et temps de lecture moyen — sur ${days} jours`}
-              lignes={stats.pages
-                .filter((p) => p.page.startsWith('/journal'))
-                .slice(0, 30)
+              lignes={(stats.journalPages ?? stats.pages.filter((p) => p.page.startsWith('/journal')))
+                .slice(0, 40)
                 .map((p) => ({
                   label: p.page === '/journal' ? 'Journal (accueil)' : p.page.replace('/journal/', ''),
                   valeur: `${formatPrix(p.vues)} vues`,
