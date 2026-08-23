@@ -265,6 +265,13 @@ export async function publishCarousel(
   if (!IG_BUSINESS_ID || !IG_TOKEN) throw new Error('Instagram non configuré (env vars manquantes)')
   if (!medias.length) throw new Error('Aucun média')
 
+  // Un carrousel IG exige ≥2 médias. Avec 1 seul → post simple (image ou reel),
+  // sinon Instagram refuse (« le champ enfant doit contenir au moins 2 ID »).
+  if (medias.length === 1) {
+    const m = medias[0]
+    return m.type === 'video' ? publishReel(m.url, caption, opts) : publishFeed(m.url, caption)
+  }
+
   // 1) Container enfant par média
   const childIds: string[] = []
   for (const m of medias) {
