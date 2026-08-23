@@ -231,10 +231,10 @@
     }
 
     // =====================
-    // TOGGLE ACTIF
+    // TOGGLE MAILING (active/désactive l'envoi des mails de rappel)
     // =====================
-    const toggleActif = async (v: Vendeuse) => {
-      await updateDoc(doc(db, 'vendeuses', v.id), { actif: !v.actif })
+    const toggleMailing = async (v: Vendeuse) => {
+      await updateDoc(doc(db, 'vendeuses', v.id), { mailingActif: v.mailingActif === false })
       fetchVendeuses()
     }
 
@@ -640,12 +640,13 @@
                 </button>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toggleActif(v)}
+                    onClick={() => toggleMailing(v)}
                     className={`text-xs px-2 py-1 rounded border ${
-                      v.actif ? 'text-green-600 border-green-300' : 'text-gray-400 border-gray-200'
+                      v.mailingActif === false ? 'text-gray-400 border-gray-200' : 'text-green-600 border-green-300'
                     }`}
+                    title="Envoi des mails de rappel"
                   >
-                    {v.actif ? 'Active' : 'Inactive'}
+                    {v.mailingActif === false ? '⏸️ Mails off' : '✅ Mails on'}
                   </button>
                   <button
                     onClick={() => handleDelete(v)}
