@@ -83,9 +83,16 @@
     const [newPrenom, setNewPrenom] = useState('')
     const [newCouleur, setNewCouleur] = useState(COULEURS_PRESET[0])
 
-    // Modal jours fixes
+    // Modal jours fixes + email
     const [editJoursFixesFor, setEditJoursFixesFor] = useState<Vendeuse | null>(null)
     const [tempJoursFixes, setTempJoursFixes] = useState<Record<string, string>>({})
+    const [tempEmail, setTempEmail] = useState('')
+
+    const openVendeuseModal = (v: Vendeuse) => {
+      setEditJoursFixesFor(v)
+      setTempJoursFixes(v.joursFixes || {})
+      setTempEmail(v.email || '')
+    }
 
     // Planning
     const [currentMonth, setCurrentMonth] = useState(() => {
@@ -224,16 +231,6 @@
     }
 
     // =====================
-    // SAUVEGARDER EMAIL (pour les rappels contenu par mail)
-    // =====================
-    const saveEmail = async (v: Vendeuse, email: string) => {
-      const val = email.trim()
-      if (val === (v.email || '')) return
-      await updateDoc(doc(db, 'vendeuses', v.id), { email: val })
-      fetchVendeuses()
-    }
-
-    // =====================
     // TOGGLE MAILING (rappels contenu par mail — comme les chineuses)
     // =====================
     const toggleMailing = async (v: Vendeuse) => {
@@ -264,7 +261,8 @@
     const saveJoursFixes = async () => {
       if (!editJoursFixesFor) return
       await updateDoc(doc(db, 'vendeuses', editJoursFixesFor.id), {
-        joursFixes: tempJoursFixes
+        joursFixes: tempJoursFixes,
+        email: tempEmail.trim(),
       })
       setEditJoursFixesFor(null)
       fetchVendeuses()
@@ -635,21 +633,19 @@
                   !v.actif ? 'opacity-50' : ''
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <button
+                  onClick={() => openVendeuseModal(v)}
+                  className="flex items-center gap-3 text-left flex-1 min-w-0 hover:opacity-70 transition"
+                  title="Jours fixes + email"
+                >
                   <div
                     className="w-4 h-4 rounded-full flex-shrink-0"
                     style={{ backgroundColor: v.couleur }}
                   />
-                <span className="font-semibold text-sm">{v.prenom.toUpperCase()}</span>
+                  <span className="font-semibold text-sm">{v.prenom.toUpperCase()}</span>
                   <span className="text-xs text-gray-400">{heuresSupposees(v)}h prévues</span>
-                  <input
-                    type="email"
-                    defaultValue={v.email || ''}
-                    onBlur={e => saveEmail(v, e.target.value)}
-                    placeholder="email (rappels)"
-                    className="text-xs border border-gray-200 rounded px-2 py-1 w-48 focus:outline-none focus:ring-1 focus:ring-[#22209C]"
-                  />
-                </div>
+                  {!v.email && <span className="text-[10px] text-amber-500">· email manquant</span>}
+                </button>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => toggleMailing(v)}
@@ -659,16 +655,6 @@
                     title="Mailing rappels contenu"
                   >
                     {v.mailingActif === false ? '⏸️ Mail' : '✅ Mail'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditJoursFixesFor(v)
-                      setTempJoursFixes(v.joursFixes || {})
-                    }}
-                    className="text-xs text-gray-500 hover:text-[#22209C] border rounded px-2 py-1"
-                    title="Jours fixes"
-                  >
-                    📅
                   </button>
                   <button
                     onClick={() => toggleActif(v)}
@@ -752,8 +738,19 @@
         {editJoursFixesFor && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setEditJoursFixesFor(null)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-              <h3 className="text-lg font-bold mb-1">Jours fixes — {editJoursFixesFor.prenom.toUpperCase()}</h3>
-              <p className="text-xs text-gray-400 mb-4">Sélectionne le créneau habituel pour chaque jour</p>
+              <h3 className="text-lg font-bold mb-4">{editJoursFixesFor.prenom.toUpperCase()}</h3>
+
+              <label className="text-xs font-medium text-gray-500 block mb-1">Adresse email (rappels)</label>
+              <input
+                type="email"
+                value={tempEmail}
+                onChange={e => setTempEmail(e.target.value)}
+                placeholder="email@exemple.com"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-5 focus:outline-none focus:ring-1 focus:ring-[#22209C]"
+              />
+
+              <label className="text-xs font-medium text-gray-500 block mb-1">Jours fixes</label>
+              <p className="text-xs text-gray-400 mb-3">Sélectionne le créneau habituel pour chaque jour</p>
 
               <div className="space-y-2">
                 {JOURS_LABELS.map((label, idx) => (
