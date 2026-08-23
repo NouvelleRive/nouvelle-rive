@@ -1,4 +1,5 @@
 import { adminDb, adminStorage } from '@/lib/firebaseAdmin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { publishReel, publishCarousel } from '@/lib/igWeekly'
 
 // Supprime le fichier vidéo une fois publié sur IG (il y vit désormais).
@@ -98,10 +99,17 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
     await ref.delete()
     return { published: true, chronique, mediaId }
   } catch (e: any) {
-    // On GARDE le verrou (publishedAt) : une erreur transient (« retry later »)
-    // peut quand même avoir publié côté IG → ne PAS réessayer auto (sinon doublons).
-    // En cas de vrai échec, republication manuelle via « Poster maintenant ».
-    await ref.set({ status: 'error', publishError: e?.message || 'erreur' }, { merge: true })
+    const msg = e?.message || 'erreur'
+    // Erreur IG explicitement NON transitoire (is_transient:false, ex : container
+    // refusé) → rien n'a été posté : on LIBÈRE le verrou pour permettre la reprise
+    // (auto au prochain passage, ou manuelle « Poster maintenant »).
+    // Sinon (transient « retry later » ou inconnu) → on GARDE publishedAt : IG a pu
+    // publier quand même, réessayer créerait un doublon.
+    const definitiveFail = /"is_transient"\s*:\s*false/.test(msg)
+    await ref.set(
+      { status: 'error', publishError: msg, ...(definitiveFail ? { publishedAt: FieldValue.delete() } : {}) },
+      { merge: true },
+    )
     throw e
   }
 }
