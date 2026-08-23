@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { PlusSquare, LayoutGrid, Play, Copy, Pencil } from 'lucide-react'
+import { PlusSquare, LayoutGrid, Play, Copy, Pencil, Pause } from 'lucide-react'
 import { storage } from '@/lib/firebaseConfig'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
@@ -905,7 +905,32 @@ export default function ReseauxPage() {
   const [structureFor, setStructureFor] = useState<Chronique | null>(null)
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [hidden, setHidden] = useState<Set<string>>(new Set())
+  const [suspended, setSuspended] = useState<Set<string>>(new Set())
   const todayDow = new Date().getDay()
+
+  // Met en pause / réactive l'auto-publish d'une chronique (optimiste).
+  const toggleSuspend = async (key: string) => {
+    const willSuspend = !suspended.has(key)
+    setSuspended((prev) => {
+      const n = new Set(prev)
+      if (willSuspend) n.add(key); else n.delete(key)
+      return n
+    })
+    try {
+      await fetch('/api/reseaux/suspend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chronique: key, suspended: willSuspend }),
+      })
+    } catch {
+      // Rollback si l'appel échoue.
+      setSuspended((prev) => {
+        const n = new Set(prev)
+        if (willSuspend) n.delete(key); else n.add(key)
+        return n
+      })
+    }
+  }
 
   const refreshCounts = useCallback(() => {
     fetch('/api/reseaux/counts')
@@ -919,6 +944,10 @@ export default function ReseauxPage() {
     fetch('/api/reseaux/collab-options')
       .then((r) => r.json())
       .then((d) => { if (alive && d.success) setCollabOptions(d.options) })
+      .catch(() => {})
+    fetch('/api/reseaux/suspend')
+      .then((r) => r.json())
+      .then((d) => { if (alive && d.success) setSuspended(new Set(d.suspended)) })
       .catch(() => {})
     refreshCounts()
     return () => { alive = false }
@@ -997,6 +1026,7 @@ export default function ReseauxPage() {
             {CHRONIQUES.map((c) => {
               const isToday = c.day === todayDow
               const open = openKey === c.key
+              const isSuspended = suspended.has(c.key)
               return (
                 <div key={c.key} className={`rounded-xl border overflow-hidden ${open ? 'border-[#22209C]' : isToday ? 'border-[#22209C]/50' : 'border-gray-200'}`}>
                   <div
@@ -1004,12 +1034,24 @@ export default function ReseauxPage() {
                       open ? 'bg-[#22209C]/5' : isToday ? 'bg-[#22209C]/5' : 'bg-white'
                     }`}
                   >
-                    <button onClick={() => setOpenKey(open ? null : c.key)} className="flex-1 min-w-0 text-left">
+                    <button onClick={() => setOpenKey(open ? null : c.key)} className={`flex-1 min-w-0 text-left ${isSuspended ? 'opacity-50' : ''}`}>
                       <div className="text-sm font-semibold text-gray-900 truncate">{c.titre}</div>
                       <div className="text-sm text-gray-500">
                         {c.jour} - {c.responsable}
-                        {isToday && <span className="ml-2 text-xs font-medium text-[#22209C]">· Aujourd'hui</span>}
+                        {isSuspended
+                          ? <span className="ml-2 text-xs font-medium text-amber-600">· En pause</span>
+                          : isToday && <span className="ml-2 text-xs font-medium text-[#22209C]">· Aujourd'hui</span>}
                       </div>
+                    </button>
+                    {/* Bouton pause : suspend l'auto-publish de cette chronique */}
+                    <button
+                      onClick={() => toggleSuspend(c.key)}
+                      className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                        isSuspended ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400 hover:text-gray-600'
+                      }`}
+                      title={isSuspended ? 'Réactiver l\'auto-publication' : 'Suspendre l\'auto-publication'}
+                    >
+                      {isSuspended ? <Play size={15} fill="currentColor" /> : <Pause size={15} fill="currentColor" />}
                     </button>
                     <div className="shrink-0 flex flex-col items-center gap-1">
                       <span

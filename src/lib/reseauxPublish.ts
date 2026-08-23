@@ -61,6 +61,10 @@ export async function publishDueReseaux(dryRun = false): Promise<any> {
   const chronique = DAY_TO_CHRONIQUE[dow]
   if (!chronique) return { skipped: 'no chronique today' }
 
+  // Chronique mise en pause manuellement (bouton pause) → pas d'auto-publish.
+  const susp = await adminDb.collection('reseauxConfig').doc('suspended').get()
+  if (susp.exists && (susp.data() as any)?.[chronique] === true) return { skipped: 'suspended', chronique }
+
   const ref = adminDb.collection(COLL).doc(`${chronique}_${iso}`)
   const snap = await ref.get()
   if (!snap.exists) return { skipped: 'no production today', chronique, iso }
