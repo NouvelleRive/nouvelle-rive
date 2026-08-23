@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteField, onSnapshot, Timestamp } from 'firebase/firestore'
+import { collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteField, query, where, Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { db, auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -103,12 +103,24 @@ export default function VendeuseCalendrierPage() {
     })()
   }, [monthKey])
 
+  // Ventes du mois affiché uniquement (les stats filtrent déjà par mois) — au lieu
+  // d'un listener temps réel sur toute la collection ventes. Refetch au changement de mois.
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'ventes'), snap => {
-      setVentesAll(snap.docs.map(d => ({ id: d.id, ...d.data() } as ProduitVente)))
-    })
-    return () => unsub()
-  }, [])
+    let cancelled = false
+    const start = new Date(currentMonth.year, currentMonth.month, 1)
+    const end = new Date(currentMonth.year, currentMonth.month + 1, 0, 23, 59, 59, 999)
+    ;(async () => {
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'ventes'),
+          where('dateVente', '>=', Timestamp.fromDate(start)),
+          where('dateVente', '<=', Timestamp.fromDate(end)),
+        ))
+        if (!cancelled) setVentesAll(snap.docs.map(d => ({ id: d.id, ...d.data() } as ProduitVente)))
+      } catch (e) { console.error('ventes mois', e) }
+    })()
+    return () => { cancelled = true }
+  }, [currentMonth.year, currentMonth.month])
 
   useEffect(() => {
     const fetchTasks = async () => {

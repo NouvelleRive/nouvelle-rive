@@ -110,7 +110,10 @@ export default function DeposanteCalendrierPage() {
         const [cfgNew, cfgOld, prodSnap] = await Promise.all([
           getDoc(doc(db, 'siteConfig', 'capacite')),
           getDoc(doc(db, 'config', 'capacite')).catch(() => null),
-          getDocs(collection(db, 'produits')),
+          // Places dispo = calculées uniquement sur les pièces source=deposante
+          // (getPlacesDisponibles ignore le reste). On filtre donc la requête au
+          // lieu de scanner toute la collection produits (~5000) à chaque session déposante.
+          getDocs(query(collection(db, 'produits'), where('source', '==', 'deposante'))),
         ])
         const cfgSnap = cfgNew.exists() ? cfgNew : (cfgOld && cfgOld.exists() ? cfgOld : null)
         if (cfgSnap && cfgSnap.exists()) {
