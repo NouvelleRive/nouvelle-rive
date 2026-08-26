@@ -1,6 +1,6 @@
 import { adminDb, adminStorage } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
-import { publishReel, publishCarousel } from '@/lib/igWeekly'
+import { publishCarousel, createReelContainer, finalizePublish } from '@/lib/igWeekly'
 
 // Supprime le fichier vidéo une fois publié sur IG (il y vit désormais).
 // Gère Firebase Storage et Bunny. Non bloquant : un échec n'annule pas la publi.
@@ -96,7 +96,19 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
       // Purge les médias (gros) une fois publiés.
       await Promise.all((p.medias || []).map((m: any) => deletePublishedVideo(m.url)))
     } else {
-      mediaId = await publishReel(p.videoUrl, caption, { coverUrl: p.vignetteUrl || undefined, collaborators })
+      // Reel repostable : on RÉUTILISE le container mémorisé s'il est encore
+      // valide (< 6 h). Sinon on en crée un neuf et on le mémorise AVANT de
+      // finaliser → si la finalisation dépasse le délai (vidéo lente à traiter),
+      // le prochain passage du cron reprend le même container au lieu de rester
+      // bloqué. Aucun doublon : rien n'est publié tant que finalizePublish n'a
+      // pas appelé media_publish.
+      const recent = typeof p.pendingContainerAt === 'number' && Date.now() - p.pendingContainerAt < 6 * 3600 * 1000
+      let containerId: string = recent && p.pendingContainerId ? p.pendingContainerId : ''
+      if (!containerId) {
+        containerId = await createReelContainer(p.videoUrl, caption, { coverUrl: p.vignetteUrl || undefined, collaborators })
+        await ref.set({ pendingContainerId: containerId, pendingContainerAt: Date.now() }, { merge: true })
+      }
+      mediaId = await finalizePublish(containerId, 20, 2500)
       await deletePublishedVideo(p.videoUrl)
     }
     // Publié sur IG → on SUPPRIME la prod de l'app (elle disparaît de New contenu & du feed).
@@ -104,14 +116,19 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
     return { published: true, chronique, mediaId }
   } catch (e: any) {
     const msg = e?.message || 'erreur'
-    // Erreur IG explicitement NON transitoire (is_transient:false, ex : container
-    // refusé) → rien n'a été posté : on LIBÈRE le verrou pour permettre la reprise
-    // (auto au prochain passage, ou manuelle « Poster maintenant »).
-    // Sinon (transient « retry later » ou inconnu) → on GARDE publishedAt : IG a pu
-    // publier quand même, réessayer créerait un doublon.
-    const definitiveFail = /"is_transient"\s*:\s*false/.test(msg)
+    // Échecs survenus AVANT tout media_publish → RIEN n'a été posté → on LIBÈRE
+    // le verrou (publishedAt) pour que le prochain passage horaire du cron
+    // réessaie (reel : reprise du container mémorisé ; sinon container recréé).
+    // C'est le cas du « container pas prêt (timeout) » qui laissait le reel
+    // bloqué définitivement. Seul « publication échouée » (media_publish appelé,
+    // réponse ambiguë) GARDE le verrou : IG a pu publier, réessayer = doublon.
+    const nothingPosted =
+      /container pas prêt \(timeout\)/.test(msg) ||        // container jamais FINISHED
+      /traitement média échoué/.test(msg) ||               // status=ERROR avant publish
+      /container (reel|enfant|carrousel) échoué|création container/.test(msg) || // container jamais créé
+      /"is_transient"\s*:\s*false/.test(msg)
     await ref.set(
-      { status: 'error', publishError: msg, ...(definitiveFail ? { publishedAt: FieldValue.delete() } : {}) },
+      { status: 'error', publishError: msg, ...(nothingPosted ? { publishedAt: FieldValue.delete() } : {}) },
       { merge: true },
     )
     throw e

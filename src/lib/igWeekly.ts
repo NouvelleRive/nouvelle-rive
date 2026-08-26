@@ -9,9 +9,11 @@
 // Firestore `igWeekly/{YYYY-MM-DD}` (id = le mercredi ciblé → idempotent).
 // =============================================================================
 
-import { adminDb } from '@/lib/firebaseAdmin'
+import { adminDb, adminStorage } from '@/lib/firebaseAdmin'
 import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 import { buildProduitPath } from '@/lib/produitSlug'
+import sharp from 'sharp'
+import { randomUUID } from 'crypto'
 
 const IG_BUSINESS_ID = process.env.IG_BUSINESS_ACCOUNT_ID
 const IG_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN
@@ -162,7 +164,7 @@ export function defaultBioLine(c: IgCandidate): string {
  * FINISHED puis appelle media_publish. Renvoie le mediaId.
  * Publier trop tôt → « Media ID is not available », d'où l'attente.
  */
-async function finalizePublish(creationId: string, attempts = 12, delayMs = 2000): Promise<string> {
+export async function finalizePublish(creationId: string, attempts = 12, delayMs = 2000): Promise<string> {
   let statusCode = ''
   for (let i = 0; i < attempts; i++) {
     const statusRes = await fetch(
@@ -219,7 +221,13 @@ export async function publishFeed(imageUrl: string, caption: string): Promise<st
  * vignette (cover) et invités en collaboration. Renvoie le mediaId.
  * La vidéo doit être accessible publiquement (URL Bunny CDN).
  */
-export async function publishReel(
+/**
+ * Crée le container REELS (traitement vidéo côté IG) et renvoie son id, SANS
+ * publier. Permet au posteur de mémoriser l'id : si la finalisation dépasse le
+ * délai (vidéo lente à traiter), le container reste valide et on le REPREND au
+ * passage suivant du cron au lieu d'en recréer un → plus de reel bloqué.
+ */
+export async function createReelContainer(
   videoUrl: string,
   caption: string,
   opts: { coverUrl?: string; collaborators?: string[] } = {},
@@ -227,8 +235,6 @@ export async function publishReel(
   if (!IG_BUSINESS_ID || !IG_TOKEN) {
     throw new Error('Instagram non configuré (env vars manquantes)')
   }
-
-  // 1) Container REELS (partagé au feed) + légende + cover + collaborateurs
   const body: Record<string, any> = {
     media_type: 'REELS',
     video_url: videoUrl,
@@ -248,69 +254,147 @@ export async function publishReel(
   if (!container.id) {
     throw new Error(`création container reel échouée: ${JSON.stringify(container)}`)
   }
+  return container.id as string
+}
+
+/**
+ * Publie une VIDÉO en reel IG (partagée au feed, avec le son), légende,
+ * vignette (cover) et invités en collaboration. Renvoie le mediaId.
+ * La vidéo doit être accessible publiquement (URL Bunny CDN).
+ */
+export async function publishReel(
+  videoUrl: string,
+  caption: string,
+  opts: { coverUrl?: string; collaborators?: string[] } = {},
+): Promise<string> {
+  const id = await createReelContainer(videoUrl, caption, opts)
   // Même tunnel que l'image, mais plus d'essais (traitement vidéo plus long).
-  return finalizePublish(container.id, 20, 2500)
+  return finalizePublish(id, 20, 2500)
+}
+
+/**
+ * Recadre une image en 1080×1350 (4:5, le plus grand format feed Instagram),
+ * en PLEIN CADRE (cover, aucune bande) avec un décalage vertical choisi
+ * (offsetY 0-100 ; 50 = centré). Supprime les bandes noires qu'Instagram
+ * ajoute quand un carrousel mélange des ratios. Renvoie une URL Firebase
+ * Storage publique temporaire + son chemin (purgé après publication).
+ */
+async function normalizeCarouselImage(
+  url: string,
+  offsetY = 50,
+  offsetX = 50,
+): Promise<{ url: string; path: string }> {
+  const TW = 1080, TH = 1350
+  const src = Buffer.from(await (await fetch(url)).arrayBuffer())
+  // Applique l'orientation EXIF puis fige les dimensions réelles.
+  const oriented = await sharp(src, { failOn: 'none' }).rotate().toBuffer()
+  const meta = await sharp(oriented).metadata()
+  const w = meta.width || TW, h = meta.height || TH
+  const scale = Math.max(TW / w, TH / h)
+  const rw = Math.max(TW, Math.round(w * scale))
+  const rh = Math.max(TH, Math.round(h * scale))
+  const clamp = (v: number) => Math.min(100, Math.max(0, v))
+  const left = Math.round((rw - TW) * (clamp(offsetX) / 100))
+  const top = Math.round((rh - TH) * (clamp(offsetY) / 100))
+  const out = await sharp(oriented)
+    .resize(rw, rh, { fit: 'fill' })
+    .extract({ left, top, width: TW, height: TH })
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .jpeg({ quality: 90 })
+    .toBuffer()
+  const token = randomUUID()
+  const path = `_reseaux-norm/${token}.jpg`
+  const file = adminStorage.bucket().file(path)
+  await file.save(out, {
+    contentType: 'image/jpeg',
+    metadata: { metadata: { firebaseStorageDownloadTokens: token } },
+    resumable: false,
+  })
+  const bucket = file.bucket.name
+  return {
+    url: `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media&token=${token}`,
+    path,
+  }
 }
 
 /**
  * Publie un CARROUSEL (post « publi ») : plusieurs images/vidéos + légende.
- * Chaque média → container enfant (is_carousel_item), puis container parent
- * CAROUSEL avec children, puis media_publish. Réutilise finalizePublish.
+ * Chaque IMAGE est d'abord recadrée en 4:5 plein cadre (fond blanc, décalage
+ * réglable) → aucune bande noire. Chaque média → container enfant
+ * (is_carousel_item), puis container parent CAROUSEL, puis media_publish.
  */
 export async function publishCarousel(
-  medias: { url: string; type: 'image' | 'video' }[],
+  medias: { url: string; type: 'image' | 'video'; offsetY?: number }[],
   caption: string,
   opts: { collaborators?: string[] } = {},
 ): Promise<string> {
   if (!IG_BUSINESS_ID || !IG_TOKEN) throw new Error('Instagram non configuré (env vars manquantes)')
   if (!medias.length) throw new Error('Aucun média')
 
-  // Un carrousel IG exige ≥2 médias. Avec 1 seul → post simple (image ou reel),
-  // sinon Instagram refuse (« le champ enfant doit contenir au moins 2 ID »).
-  if (medias.length === 1) {
-    const m = medias[0]
-    return m.type === 'video' ? publishReel(m.url, caption, opts) : publishFeed(m.url, caption)
-  }
-
-  // 1) Container enfant par média
-  const childIds: string[] = []
-  for (const m of medias) {
-    const body: Record<string, any> = { is_carousel_item: true, access_token: IG_TOKEN }
-    if (m.type === 'video') { body.media_type = 'VIDEO'; body.video_url = m.url }
-    else { body.image_url = m.url }
-    const res = await fetch(`https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    })
-    const data = await res.json()
-    if (!data.id) throw new Error(`container enfant échoué: ${JSON.stringify(data)}`)
-    // Attendre FINISHED pour les vidéos (les images sont prêtes vite)
-    if (m.type === 'video') {
-      for (let i = 0; i < 20; i++) {
-        const st = await fetch(`https://graph.facebook.com/${API_VERSION}/${data.id}?fields=status_code&access_token=${IG_TOKEN}`).then((r) => r.json())
-        if (st.status_code === 'FINISHED') break
-        if (st.status_code === 'ERROR') throw new Error(`traitement média échoué: ${JSON.stringify(st)}`)
-        await new Promise((r) => setTimeout(r, 2500))
-      }
+  // Images normalisées temporaires à purger après publication.
+  const tempPaths: string[] = []
+  try {
+    // Un carrousel IG exige ≥2 médias. Avec 1 seul → post simple (image ou reel),
+    // sinon Instagram refuse (« le champ enfant doit contenir au moins 2 ID »).
+    if (medias.length === 1) {
+      const m = medias[0]
+      if (m.type === 'video') return await publishReel(m.url, caption, opts)
+      const norm = await normalizeCarouselImage(m.url, m.offsetY ?? 50)
+      tempPaths.push(norm.path)
+      return await publishFeed(norm.url, caption)
     }
-    childIds.push(data.id)
-  }
 
-  // 2) Container parent CAROUSEL
-  const parentBody: Record<string, any> = {
-    media_type: 'CAROUSEL',
-    children: childIds.join(','),
-    caption,
-    access_token: IG_TOKEN,
-  }
-  const collabs = (opts.collaborators || []).map((c) => c.trim().replace(/^@/, '')).filter(Boolean).slice(0, 3)
-  if (collabs.length) parentBody.collaborators = collabs
-  const parentRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parentBody),
-  })
-  const parent = await parentRes.json()
-  if (!parent.id) throw new Error(`container carrousel échoué: ${JSON.stringify(parent)}`)
+    // 1) Container enfant par média
+    const childIds: string[] = []
+    for (const m of medias) {
+      const body: Record<string, any> = { is_carousel_item: true, access_token: IG_TOKEN }
+      if (m.type === 'video') { body.media_type = 'VIDEO'; body.video_url = m.url }
+      else {
+        const norm = await normalizeCarouselImage(m.url, m.offsetY ?? 50)
+        tempPaths.push(norm.path)
+        body.image_url = norm.url
+      }
+      const res = await fetch(`https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!data.id) throw new Error(`container enfant échoué: ${JSON.stringify(data)}`)
+      // Attendre FINISHED pour les vidéos (les images sont prêtes vite)
+      if (m.type === 'video') {
+        for (let i = 0; i < 20; i++) {
+          const st = await fetch(`https://graph.facebook.com/${API_VERSION}/${data.id}?fields=status_code&access_token=${IG_TOKEN}`).then((r) => r.json())
+          if (st.status_code === 'FINISHED') break
+          if (st.status_code === 'ERROR') throw new Error(`traitement média échoué: ${JSON.stringify(st)}`)
+          await new Promise((r) => setTimeout(r, 2500))
+        }
+      }
+      childIds.push(data.id)
+    }
 
-  return finalizePublish(parent.id, 20, 2500)
+    // 2) Container parent CAROUSEL
+    const parentBody: Record<string, any> = {
+      media_type: 'CAROUSEL',
+      children: childIds.join(','),
+      caption,
+      access_token: IG_TOKEN,
+    }
+    const collabs = (opts.collaborators || []).map((c) => c.trim().replace(/^@/, '')).filter(Boolean).slice(0, 3)
+    if (collabs.length) parentBody.collaborators = collabs
+    const parentRes = await fetch(`https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parentBody),
+    })
+    const parent = await parentRes.json()
+    if (!parent.id) throw new Error(`container carrousel échoué: ${JSON.stringify(parent)}`)
+
+    return await finalizePublish(parent.id, 20, 2500)
+  } finally {
+    // IG a fini d'ingérer les images au retour de media_publish → on purge.
+    await Promise.all(
+      tempPaths.map((pth) =>
+        adminStorage.bucket().file(pth).delete({ ignoreNotFound: true } as any).catch(() => {}),
+      ),
+    )
+  }
 }
 
 // --- Accès au doc hebdo -----------------------------------------------------

@@ -47,7 +47,7 @@ const CHRONIQUES = [
 
 type Chronique = (typeof CHRONIQUES)[number]
 
-type Media = { url: string; type: 'image' | 'video' }
+type Media = { url: string; type: 'image' | 'video'; offsetY?: number }
 
 type Production = {
   date: string
@@ -307,6 +307,23 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
   }
   const onCropUp = () => { dragRef.current = null }
 
+  // Idem par image du carrousel : glisser verticalement pour choisir la zone
+  // visible du recadrage 4:5 (offsetY par média). moved = distingue tap→zoom.
+  const mediaDragRef = useRef<{ startY: number; startOffset: number; h: number; i: number; moved: boolean } | null>(null)
+  const onMediaDown = (i: number) => (e: React.PointerEvent) => {
+    mediaDragRef.current = { startY: e.clientY, startOffset: p.medias?.[i]?.offsetY ?? 50, h: e.currentTarget.clientHeight || 1, i, moved: false }
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+  }
+  const onMediaMove = (e: React.PointerEvent) => {
+    const d = mediaDragRef.current
+    if (!d) return
+    const deltaPct = ((e.clientY - d.startY) / d.h) * 100
+    if (Math.abs(e.clientY - d.startY) > 3) d.moved = true
+    const ny = Math.max(0, Math.min(100, d.startOffset - deltaPct))
+    setP((x) => ({ ...x, medias: x.medias.map((m, j) => (j === d.i ? { ...m, offsetY: ny } : m)) }))
+  }
+  const onMediaUp = () => { mediaDragRef.current = null }
+
   // Publie immédiatement cette prod sur IG (réutilise le posteur partagé).
   const postNow = async () => {
     if (!hasMedia) return
@@ -482,19 +499,32 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
       /* Mode Publi : carrousel de plusieurs images / vidéos */
       <div>
         <div className={label}>Contenu (images / vidéos)</div>
+        {/* Vignettes au ratio 4:5 = exactement le rendu Instagram (plein cadre,
+            aucune bande). Glisser une image ↕ pour choisir la zone visible. */}
         <div className="flex flex-wrap gap-2">
           {p.medias?.map((m, i) => (
-            <div key={i} className="relative w-24 h-28 rounded-lg overflow-hidden bg-gray-100">
+            <div key={i} className="relative w-24 aspect-[4/5] rounded-lg overflow-hidden bg-gray-100">
               {m.type === 'video'
                 ? <video src={`${m.url}#t=0.1`} muted playsInline preload="metadata" onClick={() => setZoom(m)} className="w-full h-full object-cover cursor-zoom-in" />
                 // eslint-disable-next-line @next/next/no-img-element
-                : <img src={m.url} alt="" onClick={() => setZoom(m)} className="w-full h-full object-cover cursor-zoom-in" />}
+                : <img
+                    src={m.url}
+                    alt=""
+                    draggable={false}
+                    onPointerDown={onMediaDown(i)}
+                    onPointerMove={onMediaMove}
+                    onPointerUp={onMediaUp}
+                    onClick={() => { if (!mediaDragRef.current?.moved) setZoom(m) }}
+                    className="w-full h-full object-cover cursor-ns-resize touch-none select-none"
+                    style={{ objectPosition: `50% ${m.offsetY ?? 50}%` }}
+                  />}
+              {m.type === 'image' && <span className="absolute bottom-1 left-1 rounded bg-black/45 text-white text-[10px] leading-none px-1 py-0.5 pointer-events-none">↕ ajuster</span>}
               {m.type === 'video' && <Play size={13} className="absolute bottom-1 left-1 text-white drop-shadow pointer-events-none" fill="white" />}
               <button onClick={() => removeMedia(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center">×</button>
             </div>
           ))}
           {(p.medias?.length || 0) < 10 && (
-            <label className="w-24 h-28 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
+            <label className="w-24 aspect-[4/5] rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-300 cursor-pointer hover:border-[#22209C] hover:text-[#22209C]">
               {busy === 'medias' ? <span className="text-sm text-gray-400">Envoi…</span> : <span className="text-3xl leading-none">+</span>}
               <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => e.target.files?.length && addMedias(e.target.files)} />
             </label>
