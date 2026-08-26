@@ -592,7 +592,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         const dateEntree = produit ? getDateEntree(produit) : null
         if (!dateVente || !dateEntree) return null
         const jours = differenceInDays(dateVente, dateEntree)
-        if (jours < 0) return null
+        if (jours < 0 || jours >= 7) return null
         const photos = produit?.photos || {} as any
         const photo = photos.face || photos.main || Object.values(photos).find((p: any) => typeof p === 'string' && p.startsWith('http')) || null
         return {
@@ -606,8 +606,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         }
       })
       .filter(Boolean)
-      .sort((a, b) => a!.jours - b!.jours)
-      .slice(0, 20) as { id: string; nom: string; marque: string; prix: number; jours: number; dateVente: Date; photo: string | null }[]
+      .sort((a, b) => a!.jours - b!.jours) as { id: string; nom: string; marque: string; prix: number; jours: number; dateVente: Date; photo: string | null }[]
   }, [ventesCurrentMonth])
 
   // Invendus - pièces récupérées par la chineuse ce mois
@@ -1236,7 +1235,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           <div className="flex items-center gap-1.5 mb-3">
             <Zap className="text-orange-500" size={14} />
             <h3 className="text-sm font-semibold text-gray-900">{isAdmin ? 'Fast Sellers' : 'Mes Fast Sellers'}</h3>
-            <span className="text-xs text-gray-400">top 20</span>
+            <span className="text-xs text-gray-400">&lt; 1 semaine · {topFastSellers.length}</span>
           </div>
           {topFastSellers.length === 0 ? (
             <p className="text-gray-400 text-center py-4 text-xs">Aucune donnée</p>
