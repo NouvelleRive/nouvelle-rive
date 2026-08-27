@@ -15,6 +15,8 @@ import { memo, useCallback, useRef, useState } from 'react'
 import { X, Upload } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
 import { ADMIN_EMAIL } from '@/lib/roles'
+import { MOTIF_OPTIONS } from '@/lib/motifs'
+import { MODELES_COMMUNS } from '@/lib/modeles'
 
 /**
  * Extrait le texte brut d'un PDF côté client via pdfjs-dist. On charge la lib
@@ -63,6 +65,13 @@ export type ItemFields = {
   tailleOriginale?: string
   couleur: string
   etat: string
+  // Champs secondaires (comme le formulaire produit)
+  modele?: string
+  motif?: string
+  sleeveLength?: string
+  collarType?: string
+  garmentLength?: string
+  closureType?: string
   description: string
   descriptionOriginale?: string
   vendeur: string
@@ -143,6 +152,36 @@ export const ItemCard = memo(function ItemCard({
           <label className="text-xs text-gray-500">État</label>
           <input value={item.etat} onChange={(e) => onPatch(index, { etat: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
         </div>
+        {!isFleek && (
+          <>
+            <div>
+              <label className="text-xs text-gray-500">Modèle</label>
+              <input value={item.modele || ''} list={`import-modele-${index}`} onChange={(e) => onPatch(index, { modele: e.target.value })} placeholder="ex: Blazer, Oversized…" className="w-full border rounded px-2 py-1.5 text-sm" />
+              <datalist id={`import-modele-${index}`}>{MODELES_COMMUNS.map((m) => <option key={m} value={m} />)}</datalist>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Motif</label>
+              <input value={item.motif || ''} list={`import-motif-${index}`} onChange={(e) => onPatch(index, { motif: e.target.value })} placeholder="ex: Floral, Rayures…" className="w-full border rounded px-2 py-1.5 text-sm" />
+              <datalist id={`import-motif-${index}`}>{MOTIF_OPTIONS.map((m) => <option key={m} value={m} />)}</datalist>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Manches</label>
+              <input value={item.sleeveLength || ''} onChange={(e) => onPatch(index, { sleeveLength: e.target.value })} placeholder="courtes / longues…" className="w-full border rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Col</label>
+              <input value={item.collarType || ''} onChange={(e) => onPatch(index, { collarType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Longueur</label>
+              <input value={item.garmentLength || ''} onChange={(e) => onPatch(index, { garmentLength: e.target.value })} placeholder="courte / longue…" className="w-full border rounded px-2 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Fermeture</label>
+              <input value={item.closureType || ''} onChange={(e) => onPatch(index, { closureType: e.target.value })} placeholder="zip / boutons…" className="w-full border rounded px-2 py-1.5 text-sm" />
+            </div>
+          </>
+        )}
         <div className="col-span-2">
           <label className="text-xs text-gray-500">Description {item.descriptionOriginale ? '(corrigée)' : ''}</label>
           <textarea value={item.description} onChange={(e) => onPatch(index, { description: e.target.value })} rows={3} className="w-full border rounded px-2 py-1.5 text-sm resize-none" />
