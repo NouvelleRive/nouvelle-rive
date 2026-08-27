@@ -162,6 +162,10 @@ async function handleValidatedItems(
       typeof it.prixAchat === 'number'
         ? it.prixAchat
         : parseFloat(String(it.prixAchat || '')) || null
+    const fraisPort =
+      typeof it.fraisPort === 'number'
+        ? it.fraisPort
+        : parseFloat(String(it.fraisPort || '')) || null
 
     for (let p = 0; p < quantiteLot; p++) {
       const sku = `${target.trigramme}${skuCursor}`
@@ -207,6 +211,7 @@ async function handleValidatedItems(
         createdAt: Timestamp.now(),
         prix: prixVente,
         ...(prixAchat != null ? { prixAchat } : {}),
+        ...(fraisPort != null ? { fraisPort } : {}),
         source: sourceField,
         achatProvenance: provenance,
         achatStatut: 'commande',

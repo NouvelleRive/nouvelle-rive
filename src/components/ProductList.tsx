@@ -18,7 +18,7 @@
     import FilterBox from '@/components/FilterBox'
     import { libelleAchatStatut, libelleTransporteur, suggestPrixVente, type AchatStatut } from '@/modules/achat/types'
     import ImportMailModal from '@/modules/achat/ImportMailModal'
-    import { calcMargeNette } from '@/lib/marge'
+    import { calcMargeNette, calcMargeNetteAvecPort } from '@/lib/marge'
     import { formatPrix } from '@/lib/formatPrix'
 
     // Conversion base64 robuste pour gros fichiers
@@ -92,6 +92,8 @@
       ebayOfferId?: string | null
       // Champs achat (Vinted/Vestiaire/Drouot) — voir src/modules/achat/types.ts
       prixAchat?: number
+      /** Frais de port (livraison) — exclus TVA, inclus coût acheteuse */
+      fraisPort?: number
       marge?: number
       achatProvenance?: 'vinted' | 'vestiaire' | 'drouot'
       achatStatut?: 'commande' | 'expedie' | 'livre' | 'recu-boutique' | 'non-conforme' | 'jamais-recu' | 'perso'
@@ -808,6 +810,12 @@
                   ? { prixAchat: parseFloat((data as any).prixAchat) || 0 }
                   : { prixAchat: deleteField() })
               : {}),
+            // fraisPort (livraison) : idem
+            ...((data as any).fraisPort !== undefined
+              ? ((data as any).fraisPort?.trim?.()
+                  ? { fraisPort: parseFloat((data as any).fraisPort) || 0 }
+                  : { fraisPort: deleteField() })
+              : {}),
             quantite: (() => {
               const newQte = isNaN(parseInt(data.quantite)) ? 1 : parseInt(data.quantite)
               const oldQte = editingProduct.quantite ?? 1
@@ -1435,8 +1443,14 @@
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></span>
                       )}
+                      {(isAdmin || isAcheteuse) && typeof p.fraisPort === 'number' && (
+                        <span><span className="text-gray-400">Port:</span> <span className="font-medium">{formatPrix(p.fraisPort)} €</span></span>
+                      )}
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
-                        const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
+                        // Acheteuse : marge avec port (son coût réel). Admin/société : marge TVA hors port.
+                        const m = isAcheteuse
+                          ? calcMargeNetteAvecPort(p.prix, p.prixAchat, p.fraisPort)
+                          : (typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat))
                         return (
                           <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m !== null ? `${formatPrix(m)} €` : '—'}</span></span>
                         )
@@ -1582,8 +1596,13 @@
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></p>
                       )}
+                      {(isAdmin || isAcheteuse) && typeof p.fraisPort === 'number' && (
+                        <p><span className="text-gray-400">Port:</span> <span className="font-medium text-gray-700">{formatPrix(p.fraisPort)} €</span></p>
+                      )}
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
-                        const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
+                        const m = isAcheteuse
+                          ? calcMargeNetteAvecPort(p.prix, p.prixAchat, p.fraisPort)
+                          : (typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat))
                         return (
                           <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m !== null ? `${formatPrix(m)} €` : '—'}</span></p>
                         )

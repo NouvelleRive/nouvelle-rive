@@ -88,6 +88,7 @@ export default function AdminAjouterPage() {
         nom: fullName, description: data.description, categorie: data.categorie,
         prix: parseFloat(data.prix), quantite: parseInt(data.quantite),
         ...((data as any).prixAchat?.trim?.() ? { prixAchat: parseFloat((data as any).prixAchat) || 0 } : {}),
+        ...((data as any).fraisPort?.trim?.() ? { fraisPort: parseFloat((data as any).fraisPort) || 0 } : {}),
         marque: data.marque.trim(), taille: data.taille.trim(),
         material: data.material.trim() || null, color: data.color.trim() || null,
         madeIn: data.madeIn || null, sku: finalSku,

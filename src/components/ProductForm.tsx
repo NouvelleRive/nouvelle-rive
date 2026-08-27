@@ -270,6 +270,9 @@ async function compressImage(file: File): Promise<string> {
     prix: string
     /** Prix d'achat NR (cost) — sert au calcul de la marge nette (admin only) */
     prixAchat?: string
+    /** Frais de port (livraison) — exclus de la base TVA, inclus dans le coût
+     *  réel de l'acheteuse pour sa marge nette / commission. */
+    fraisPort?: string
     quantite: string
     marque: string
     taille: string
@@ -486,6 +489,7 @@ async function compressImage(file: File): Promise<string> {
       categorie: initialData?.categorie || '',
       prix: initialData?.prix || '',
       prixAchat: (initialData as any)?.prixAchat?.toString?.() || '',
+      fraisPort: (initialData as any)?.fraisPort?.toString?.() || '',
       quantite: initialData?.quantite || '1',
       marque: initialData?.marque || '',
       taille: initialData?.taille || '',
@@ -547,6 +551,7 @@ async function compressImage(file: File): Promise<string> {
           categorie: initialData.categorie || '',
           prix: initialData.prix || '',
           prixAchat: (initialData as any).prixAchat?.toString?.() || '',
+          fraisPort: (initialData as any).fraisPort?.toString?.() || '',
           quantite: initialData.quantite || '1',
           marque: initialData.marque || '',
           taille: initialData.taille || '',
@@ -1820,7 +1825,7 @@ async function compressImage(file: File): Promise<string> {
                   rétrocession, donc ce champ ne s'affiche pas pour elles. */}
               {isHousePurchaseTrigramme(trigramme) && (
                 <div>
-                  <label className="block text-xs font-medium mb-1">Prix d'achat (€)</label>
+                  <label className="block text-xs font-medium mb-1">Prix d'achat (€) <span className="text-gray-400 font-normal">article + protection</span></label>
                   <input
                     type="number"
                     value={formData.prixAchat || ''}
@@ -1828,18 +1833,40 @@ async function compressImage(file: File): Promise<string> {
                     step="0.01"
                     min="0"
                     className="w-full border rounded px-2 py-1.5 text-sm"
-                    placeholder="ex: 77.19"
+                    placeholder="ex: 71.29"
+                  />
+                </div>
+              )}
+
+              {/* Frais de port — exclus de la TVA, inclus dans le coût acheteuse */}
+              {isHousePurchaseTrigramme(trigramme) && (
+                <div>
+                  <label className="block text-xs font-medium mb-1">Frais de port (€)</label>
+                  <input
+                    type="number"
+                    value={formData.fraisPort || ''}
+                    onChange={(e) => setFormData({ ...formData, fraisPort: e.target.value })}
+                    step="0.01"
+                    min="0"
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                    placeholder="ex: 5.90"
                   />
                   {(() => {
                     const pa = parseFloat(formData.prixAchat || '')
                     const pv = parseFloat(formData.prix || '')
+                    const port = parseFloat(formData.fraisPort || '') || 0
                     if (!Number.isFinite(pa) || !Number.isFinite(pv)) return null
-                    const marge = Math.round((pv - pa) * 0.80)
+                    const margeTva = Math.round((pv - pa) * 0.80)
+                    const margeAch = Math.round((pv - pa - port) * 0.80)
                     return (
-                      <p className="text-[11px] mt-1 text-gray-500">
-                        Marge nette : <strong className={marge < 0 ? 'text-red-600' : 'text-green-700'}>{marge} €</strong>
-                        <span className="text-gray-400"> ((prix − achat) × 0.80 TVA)</span>
-                      </p>
+                      <div className="text-[11px] mt-1 space-y-0.5">
+                        <p className="text-gray-500">
+                          Marge TVA (hors port) : <strong className={margeTva < 0 ? 'text-red-600' : 'text-green-700'}>{margeTva} €</strong>
+                        </p>
+                        <p className="text-gray-500">
+                          Marge acheteuse (avec port) : <strong className={margeAch < 0 ? 'text-red-600' : 'text-[#09B1BA]'}>{margeAch} €</strong>
+                        </p>
+                      </div>
                     )
                   })()}
                 </div>

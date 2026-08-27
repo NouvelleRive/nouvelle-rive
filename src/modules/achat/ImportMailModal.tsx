@@ -64,6 +64,8 @@ export type ItemFields = {
   descriptionOriginale?: string
   vendeur: string
   prixAchat: number | null
+  /** Frais de port (livraison) — exclus TVA, inclus coût acheteuse */
+  fraisPort?: number | null
   prixSuggere: number | null
   categorie: { label?: string; idsquare?: string } | null
   prixVente: string // saisi par l'admin, requis
@@ -164,9 +166,23 @@ export const ItemCard = memo(function ItemCard({
           )}
         </div>
         <div>
-          <label className="text-xs text-gray-500">Prix d'achat unitaire (€)</label>
+          <label className="text-xs text-gray-500">Prix d'achat (€) <span className="text-gray-400">art. + protection</span></label>
           <input value={item.prixAchat != null ? String(item.prixAchat) : ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
         </div>
+        {!isFleek && (
+          <div>
+            <label className="text-xs text-gray-500">Frais de port (€)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={item.fraisPort != null ? String(item.fraisPort) : ''}
+              onChange={(e) => onPatch(index, { fraisPort: e.target.value === '' ? null : parseFloat(e.target.value) })}
+              placeholder="ex: 4.95"
+              className="w-full border rounded px-2 py-1.5 text-sm"
+            />
+          </div>
+        )}
         <div className="col-span-2">
           <label className="text-xs text-gray-500 font-semibold">
             Prix de vente {isFleek ? 'par pièce ' : ''}(€) *

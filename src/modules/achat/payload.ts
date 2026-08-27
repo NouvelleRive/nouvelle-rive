@@ -55,8 +55,10 @@ export type VintedProduitPayload = {
   createdAt: Date
 
   // ---- champs prix / marge (universels) ----
-  /** Montant total payé sur la plateforme (article + port + frais protection) */
+  /** Prix d'achat = article + frais de protection (base TVA, port EXCLU). */
   prixAchat: number
+  /** Frais de port (livraison) — exclus TVA, inclus dans le coût acheteuse. */
+  fraisPort: number
   // `prix` (prix de vente) non défini — l'UI suggère prixAchat × 2.5 en grisé
   // `marge` non défini — admin only, à saisir/calculer plus tard
 
@@ -98,7 +100,8 @@ export function buildVintedProduitPayload(
     quantite: 1,
     createdAt: new Date(),
 
-    prixAchat: receipt.prixTotal,
+    prixAchat: Math.round((receipt.prixArticle + receipt.fraisProtection) * 100) / 100,
+    fraisPort: receipt.fraisPort,
 
     source: 'achat-vinted',
     achatProvenance: 'vinted',

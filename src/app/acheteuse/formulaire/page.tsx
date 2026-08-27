@@ -135,6 +135,7 @@ export default function AcheteuseFormulairePage() {
       if (formData.existingPhotos.details?.length) photosData.details = formData.existingPhotos.details
 
       const prixAchatNum = formData.prixAchat?.toString().trim() ? parseFloat(formData.prixAchat) : NaN
+      const fraisPortNum = formData.fraisPort?.toString().trim() ? parseFloat(formData.fraisPort) : NaN
 
       const payload = {
         nom: fullName,
@@ -164,6 +165,7 @@ export default function AcheteuseFormulairePage() {
         imageUrl: imageUrls[0] || '',
         ...(formData.videoUrl ? { videos: [formData.videoUrl] } : {}),
         ...(Number.isFinite(prixAchatNum) ? { prixAchat: prixAchatNum } : {}),
+        ...(Number.isFinite(fraisPortNum) ? { fraisPort: fraisPortNum } : {}),
         photosReady,
         vendu: false,
         recu: false,

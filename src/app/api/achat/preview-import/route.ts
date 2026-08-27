@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { parseVintedPage } from '@/modules/achat/parser/vintedPage'
+import { parseVintedReceipt } from '@/modules/achat/parser/vinted'
 import { parseWhatnotPurchase } from '@/modules/achat/parser/whatnot'
 import { parseFleekInvoice } from '@/modules/achat/parser/fleek'
 import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
@@ -52,6 +53,47 @@ export async function POST(req: NextRequest) {
   }
   if (!body.trim()) return NextResponse.json({ error: 'body vide' }, { status: 400 })
 
+  // --- Mail Vinted « Ton reçu » (montants EXACTS avec frais de port) -------
+  // Prioritaire sur la page : le mail contient le détail article + port +
+  // protection, donc le vrai coût. On teste avant la page (qui matche aussi
+  // "Protection acheteurs"). prixAchat = article + protection (base TVA, port
+  // exclu) ; fraisPort = livraison (inclus dans le coût de l'acheteuse).
+  const looksLikeVintedReceipt =
+    /Montant\s*pay[eé]/i.test(body) &&
+    /Frais de port/i.test(body) &&
+    /Frais de Protection acheteurs/i.test(body)
+
+  if (looksLikeVintedReceipt) {
+    const receipt = parseVintedReceipt(body)
+    if (!receipt.ok) return NextResponse.json({ ok: false, reason: receipt.reason })
+    const categorieEntry = await detectCategorie(targetChineuseUid, receipt.titre)
+    const cleaned = await cleanWithClaude({ titre: receipt.titre, description: '' })
+    const prixAchat = Math.round((receipt.prixArticle + receipt.fraisProtection) * 100) / 100
+    return NextResponse.json({
+      ok: true,
+      kind: 'vinted-receipt',
+      fields: {
+        provenance: 'vinted',
+        itemId: null,
+        achatOrderId: receipt.transactionId || null,
+        titre: cleaned.titre,
+        titreOriginal: receipt.titre || '',
+        marque: '',
+        taille: '',
+        tailleOriginale: '',
+        couleur: '',
+        etat: '',
+        description: cleaned.description,
+        descriptionOriginale: '',
+        vendeur: receipt.vendeur || '',
+        prixAchat,
+        fraisPort: receipt.fraisPort,
+        prixSuggere: prixAchat ? Math.round(prixAchat * 2.5) : null,
+        categorie: categorieEntry,
+      },
+    })
+  }
+
   // --- Détection page Vinted ----------------------------------------------
   const looksLikeVintedPage =
     /Inclut la Protection acheteurs/i.test(body) ||
@@ -81,6 +123,11 @@ export async function POST(req: NextRequest) {
       description: page.description || '',
     })
 
+    // Frais de port : la page n'affiche qu'un "Envoi à partir de X €" (minimum
+    // indicatif) — on le pré-remplit, à ajuster/confirmer avec le mail.
+    const portMatch = body.match(/Envoi\s*[àa]\s*partir\s*de\s*([\d]+[.,]?\d*)\s*€/i)
+    const fraisPort = portMatch ? parseFloat(portMatch[1].replace(',', '.')) : null
+
     return NextResponse.json({
       ok: true,
       kind: 'vinted-page',
@@ -98,6 +145,7 @@ export async function POST(req: NextRequest) {
         descriptionOriginale: page.description || '',
         vendeur: page.vendeur || '',
         prixAchat: page.prixAvecProtection ?? page.prixArticle ?? null,
+        fraisPort,
         prixSuggere: (page.prixAvecProtection ?? page.prixArticle)
           ? Math.round((page.prixAvecProtection ?? page.prixArticle)! * 2.5)
           : null,

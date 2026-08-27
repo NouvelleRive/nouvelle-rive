@@ -23,3 +23,21 @@ export function calcMargeNette(
   if (typeof prixVente !== 'number' || typeof prixAchat !== 'number') return null
   return Math.round((prixVente - prixAchat) * (1 - TAUX_TVA))
 }
+
+/**
+ * Marge nette AVEC frais de port déduits, en euros. Sert pour la rémunération
+ * de l'acheteuse : son coût réel inclut la livraison.
+ *   marge = (prixVente − prixAchat − fraisPort) × 0.80
+ * `fraisPort` absent/invalide est traité comme 0.
+ * ⚠️ À ne PAS utiliser pour la marge société/TVA : la livraison est exclue de
+ * la base TVA (utiliser `calcMargeNette` sans le port pour ça).
+ */
+export function calcMargeNetteAvecPort(
+  prixVente: number | undefined | null,
+  prixAchat: number | undefined | null,
+  fraisPort: number | undefined | null
+): number | null {
+  if (typeof prixVente !== 'number' || typeof prixAchat !== 'number') return null
+  const port = typeof fraisPort === 'number' ? fraisPort : 0
+  return Math.round((prixVente - prixAchat - port) * (1 - TAUX_TVA))
+}

@@ -457,13 +457,16 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     return Math.round(margeBrute * 0.80)
   }, [ventesCurrentMonth, chineuseTrigramme, produitsMap])
 
-  // Commission acheteuse (barème par tranche 10 %/15 %). Seuil de 4K€ appliqué
-  // PAR MOIS : on regroupe la marge nette par mois et on somme la commission de
-  // chaque mois → correct en vue mois comme en vue année. Trigramme ACH seulement.
+  // Acheteuse (ACH) : sa marge nette et sa commission incluent les FRAIS DE PORT
+  // dans le coût (contrairement à la marge société/TVA qui les exclut).
+  //   coût acheteuse = prixAchat + fraisPort ; marge = (vente − coût) × 0.80
+  // Commission : barème par tranche 10 %/15 %, seuil de 4K€ appliqué PAR MOIS
+  // (regroupement mensuel puis somme → correct en vue mois comme en vue année).
   const isAcheteuseView = chineuseTrigramme === ACHETEUSE_TRIGRAMME
-  const commissionAcheteuse = useMemo(() => {
-    if (!isAcheteuseView) return 0
+  const acheteuseStats = useMemo(() => {
+    if (!isAcheteuseView) return { marge: 0, commission: 0 }
     const margeParMois = new Map<string, number>()
+    let margeTotale = 0
     ventesCurrentMonth.forEach(v => {
       const d = getDateVente(v)
       if (!d) return
@@ -471,13 +474,18 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       const produit = v.produitId ? produitsMap.get(v.produitId) : null
       const prixAchat = (v as any).prixAchat ?? (produit as any)?.prixAchat
       if (typeof prixAchat !== 'number' || prixAchat <= 0) return
+      const fraisPort = (v as any).fraisPort ?? (produit as any)?.fraisPort ?? 0
+      const port = typeof fraisPort === 'number' ? fraisPort : 0
+      const marge = Math.max(prixVente - prixAchat - port, 0) * 0.80
+      margeTotale += marge
       const key = `${d.getFullYear()}-${d.getMonth()}`
-      margeParMois.set(key, (margeParMois.get(key) || 0) + Math.max(prixVente - prixAchat, 0) * 0.80)
+      margeParMois.set(key, (margeParMois.get(key) || 0) + marge)
     })
-    let total = 0
-    margeParMois.forEach(marge => { total += calcCommissionAchat(Math.round(marge)) })
-    return total
+    let commission = 0
+    margeParMois.forEach(marge => { commission += calcCommissionAchat(Math.round(marge)) })
+    return { marge: Math.round(margeTotale), commission }
   }, [isAcheteuseView, ventesCurrentMonth, produitsMap])
+  const commissionAcheteuse = acheteuseStats.commission
 
   // CA par jour (mois) ou par mois (année) — admin only
   const dailyData = useMemo(() => {
@@ -999,9 +1007,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         {isAdmin && (
           <KpiCard title="Marge" value={formatPrix(classementChineuses.reduce((s, c) => s + c.benef, 0))} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         )}
-        {!isAdmin && isHousePurchaseTrigramme(chineuseTrigramme) && (
-          <KpiCard title="Marge nette" value={formatPrix(totalMargeNetteNR)} unit="€" evolution={totalCA > 0 ? String(Math.round(totalMargeNetteNR / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
-        )}
+        {!isAdmin && isHousePurchaseTrigramme(chineuseTrigramme) && (() => {
+          // Acheteuse : marge nette AVEC port (son coût réel). NR : marge TVA hors port.
+          const marge = isAcheteuseView ? acheteuseStats.marge : totalMargeNetteNR
+          return <KpiCard title="Marge nette" value={formatPrix(marge)} unit="€" evolution={totalCA > 0 ? String(Math.round(marge / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+        })()}
         {isAcheteuseView && (
           <KpiCard title="Commission" value={formatPrix(commissionAcheteuse)} unit="€" icon={Star} color="bg-[#09B1BA]" />
         )}
