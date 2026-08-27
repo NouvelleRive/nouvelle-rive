@@ -2437,16 +2437,22 @@ async function compressImage(file: File): Promise<string> {
                 )}
               </div>
 
-              {/* Motif (optionnel) */}
+              {/* Motif (optionnel) — liste de suggestions, saisie libre autorisée */}
               <div className="col-span-2">
                 <label className="block text-xs text-gray-600 mb-1">Motif</label>
                 <input
                   type="text"
+                  list="motif-options"
                   value={formData.motif}
                   onChange={(e) => setFormData({ ...formData, motif: e.target.value })}
-                  placeholder="ex: Uni, Rayé, Fleuri, Carreaux…"
+                  placeholder="ex: Floral, Léopard, Rayures…"
                   className="w-full border rounded px-2 py-1.5 text-sm"
                 />
+                <datalist id="motif-options">
+                  {['Floral', 'Léopard', 'Zèbre', 'Rayures', 'Carreaux', 'Polka dot', 'Vichy', 'Tartan', 'Madras', 'Liberty', 'Tropical', 'Python', 'Croco', 'Abstrait'].map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="col-span-2 md:col-span-4">
