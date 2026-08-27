@@ -6,7 +6,7 @@ import { auth, db } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, query, where, onSnapshot } from 'firebase/firestore'
 import ProductList, { Produit } from '@/components/ProductList'
-import { ACHETEUSE_TRIGRAMME } from '@/lib/roles'
+import { ACHETEUSE_TRIGRAMME, ACHETEUSE_EMAIL, ACHETEUSE_CHINEUSE_DOC } from '@/lib/roles'
 
 export default function AcheteuseMesProduits() {
   const [produits, setProduits] = useState<Produit[]>([])
@@ -31,6 +31,7 @@ export default function AcheteuseMesProduits() {
       produits={produits}
       isAdmin={false}
       isAcheteuse={true}
+      targetChineuse={{ uid: ACHETEUSE_CHINEUSE_DOC, email: ACHETEUSE_EMAIL, trigramme: ACHETEUSE_TRIGRAMME }}
       loading={loading}
     />
   )

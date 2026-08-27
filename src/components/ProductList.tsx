@@ -1069,7 +1069,7 @@
           <div className="mb-6">
             <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
           </div>
-          {isAdmin && importModalOpen && (
+          {(isAdmin || isAcheteuse) && importModalOpen && (
             <ImportMailModal
               onClose={() => setImportModalOpen(false)}
               targetChineuse={targetChineuse}
@@ -1179,7 +1179,7 @@
                     {forcingBlob ? 'Rafraîchissement…' : '🔄 Forcer le cache'}
                   </button>
                 )}
-                {isAdmin && (() => {
+                {(isAdmin || isAcheteuse) && (() => {
                   // Règles d'affichage :
                   // - smallBatch → rien
                   // - NR → Vinted + Whatnot

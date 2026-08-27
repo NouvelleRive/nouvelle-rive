@@ -23,9 +23,9 @@ function AcheteuseNavbar() {
     { href: '/acheteuse/strategie', label: "Stratégie d'achat" },
     { href: '/acheteuse/formulaire', label: 'Ajouter un produit' },
     { href: '/acheteuse/mes-produits', label: 'Mes produits' },
-    { href: '/acheteuse/calendrier', label: 'RDV dépôt' },
     { href: '/acheteuse/mes-ventes', label: 'Mes ventes' },
     { href: '/acheteuse/performance', label: 'Mes perf' },
+    { href: '/acheteuse/calendrier', label: 'Calendrier' },
   ]
 
   const isActive = (href: string) => pathname === href
