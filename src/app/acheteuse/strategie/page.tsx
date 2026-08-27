@@ -161,7 +161,6 @@ function ObjectifTab({
   saving: boolean
   msg: string | null
 }) {
-  const totalPct = objectif.rules.reduce((s, r) => s + (r.targetPct || 0), 0)
   return (
     <div className="space-y-5">
       <div className="bg-white border rounded-lg p-4">
@@ -177,12 +176,7 @@ function ObjectifTab({
       </div>
 
       <div className="bg-white border rounded-lg p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Règles d'assortiment</h2>
-          <span className={`text-xs ${totalPct > 100 ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
-            Total ciblé : {totalPct}%
-          </span>
-        </div>
+        <h2 className="text-sm font-semibold text-gray-900">Règles d'assortiment</h2>
 
         {objectif.rules.length === 0 && (
           <p className="text-sm text-gray-400 py-2">Aucune règle. Ajoutes-en une (ex: 50 % de pièces noires).</p>
