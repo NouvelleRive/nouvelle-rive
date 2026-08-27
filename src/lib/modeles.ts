@@ -208,6 +208,7 @@ export function detectTypeModele(categorieComplete: string): TypeModele {
 // Coupes / détails transversaux : proposés en plus des modèles de chaque
 // catégorie (et en suggestions pour les catégories sans modèle prédéfini).
 export const MODELES_COMMUNS: string[] = [
+  'Blazer',
   'Asymétrique',
   'Franges',
   'Cintré',
@@ -218,7 +219,7 @@ export const MODELES_COMMUNS: string[] = [
 export function getModelesForCategorie(categorieComplete: string): string[] {
   const type = detectTypeModele(categorieComplete)
   if (!type || !MODELES[type]) return []
-  return [...MODELES[type], ...MODELES_COMMUNS]
+  return [...new Set([...MODELES[type], ...MODELES_COMMUNS])]
 }
 
 export const ALL_MODELES = [...new Set([...Object.values(MODELES).flat(), ...MODELES_COMMUNS])].sort((a, b) => a.localeCompare(b, 'fr'))
@@ -227,9 +228,10 @@ export const ALL_MODELES = [...new Set([...Object.values(MODELES).flat(), ...MOD
 // AUTO-DÉTECTION MODÈLE DEPUIS LE TITRE
 // =====================
 
-const ALL_MODELES_FLAT = Object.entries(MODELES).flatMap(([type, models]) =>
-  models.map(m => ({ model: m, type }))
-).sort((a, b) => b.model.length - a.model.length)
+const ALL_MODELES_FLAT = [
+  ...Object.entries(MODELES).flatMap(([type, models]) => models.map(m => ({ model: m, type }))),
+  ...MODELES_COMMUNS.map(m => ({ model: m, type: 'commun' })),
+].sort((a, b) => b.model.length - a.model.length)
 
 export function detectModele(titre: string): string | null {
   const t = titre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')

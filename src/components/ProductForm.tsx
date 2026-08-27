@@ -10,7 +10,7 @@
   import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
   import { COLOR_PALETTE, getColorsPrioritized } from '@/lib/couleurs'
-  import { MOTIF_OPTIONS } from '@/lib/motifs'
+  import { MOTIF_OPTIONS, detectMotif } from '@/lib/motifs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
   import { detectModele, getModelesForCategorie, MODELES_COMMUNS } from '@/lib/modeles'
@@ -1671,6 +1671,10 @@ async function compressImage(file: File): Promise<string> {
                     if (!formData.modele) {
                       const detected = detectModele(nom)
                       if (detected) updates.modele = detected
+                    }
+                    if (!formData.motif) {
+                      const detectedMotif = detectMotif(nom)
+                      if (detectedMotif) updates.motif = detectedMotif
                     }
                     setFormData(prev => ({ ...prev, ...updates }))
                   }}
