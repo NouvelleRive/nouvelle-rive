@@ -35,7 +35,9 @@ export type StrategieRule = {
   /** Libellé libre affiché (ex: « Vestes courtes »). */
   label: string
   axis: AxisKey
-  /** Valeur à matcher (insensible à la casse, sous-chaîne). Pour `prix` : "min-max". */
+  /** Valeur(s) à matcher (insensible casse, sous-chaîne). Plusieurs valeurs
+   *  séparées par virgule = logique OU (ex: "Camel, Marron, Cognac"). Pour
+   *  `prix` : "min-max". */
   match: string
   /** Objectif en % du nombre de pièces cible. */
   targetPct: number
@@ -78,9 +80,12 @@ export function matchRule(p: StrategieProduit, rule: StrategieRule): boolean {
   }
   const field = (p as any)[rule.axis]
   if (typeof field !== 'string' || !field.trim()) return false
-  const needle = rule.match.trim().toLowerCase()
-  if (!needle) return false
-  return field.toLowerCase().includes(needle)
+  // `match` peut regrouper PLUSIEURS valeurs séparées par virgule → logique OU
+  // (ex: règle "Marron" = camel OU marron OU caramel OU cognac).
+  const needles = rule.match.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  if (!needles.length) return false
+  const f = field.toLowerCase()
+  return needles.some(n => f.includes(n))
 }
 
 export type RuleResult = StrategieRule & {

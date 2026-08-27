@@ -49,6 +49,46 @@ function newRule(): StrategieRule {
   return { id: `r_${Math.round(performance.now())}_${Math.floor(performance.now() % 1000)}`, label: '', axis: 'color', match: '', targetPct: 10 }
 }
 
+// Multi-sélection (cases à cocher) — valeurs jointes par virgule (logique OU).
+function MultiSelect({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const selected = value ? value.split(',').map(s => s.trim()).filter(Boolean) : []
+  return (
+    <div className="relative">
+      <div
+        className="w-full border rounded px-2 py-1.5 text-sm bg-white cursor-pointer flex items-center justify-between min-h-[34px]"
+        onClick={() => setOpen(!open)}
+      >
+        <span className={`truncate ${selected.length ? 'text-gray-900' : 'text-gray-400'}`}>
+          {selected.length ? selected.join(', ') : '— Choisir —'}
+        </span>
+        <span className="text-gray-400 shrink-0 ml-1">{open ? '▲' : '▼'}</span>
+      </div>
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          {options.map(opt => {
+            const isSel = selected.includes(opt)
+            return (
+              <label key={opt} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                <input
+                  type="checkbox"
+                  checked={isSel}
+                  onChange={() => {
+                    const updated = isSel ? selected.filter(x => x !== opt) : [...selected, opt]
+                    onChange(updated.join(', '))
+                  }}
+                  className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+                />
+                <span>{opt}</span>
+              </label>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function StrategieAchatPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
@@ -244,14 +284,13 @@ function ObjectifTab({
               {AXES.map(a => <option key={a} value={a}>{AXIS_LABELS[a]}</option>)}
             </select>
             {OPTIONS_BY_AXIS[r.axis] ? (
-              <select
-                className="col-span-4 sm:col-span-3 border rounded px-2 py-1.5 text-sm bg-white"
-                value={r.match}
-                onChange={(e) => updateRule(r.id, { match: e.target.value })}
-              >
-                <option value="">— Choisir —</option>
-                {OPTIONS_BY_AXIS[r.axis]!.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
+              <div className="col-span-4 sm:col-span-3">
+                <MultiSelect
+                  options={OPTIONS_BY_AXIS[r.axis]!}
+                  value={r.match}
+                  onChange={(v) => updateRule(r.id, { match: v })}
+                />
+              </div>
             ) : (
               <input
                 className="col-span-4 sm:col-span-3 border rounded px-2 py-1.5 text-sm"
