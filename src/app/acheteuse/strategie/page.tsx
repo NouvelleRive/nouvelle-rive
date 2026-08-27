@@ -9,6 +9,11 @@ import { onAuthStateChanged, User } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import { formatPrix } from '@/lib/formatPrix'
 import { ADMIN_EMAIL, ACHETEUSE_EMAIL } from '@/lib/roles'
+import { COLOR_PALETTE } from '@/lib/couleurs'
+import { ALL_MODELES } from '@/lib/modeles'
+import { ALL_TAILLES } from '@/lib/tailles'
+import { MARQUES } from '@/lib/marques'
+import { MOTIF_OPTIONS } from '@/lib/motifs'
 import {
   AXIS_LABELS,
   OBJECTIF_VIDE,
@@ -19,6 +24,26 @@ import {
 } from '@/modules/achat-strategie/types'
 
 const AXES = Object.keys(AXIS_LABELS) as AxisKey[]
+
+// Catégories courantes (sous-chaînes qui matchent les libellés Square, ex:
+// "Veste" ⊂ "NR - Veste / Manteau"). matchRule est en sous-chaîne.
+const CATEGORIE_OPTIONS = [
+  'Veste', 'Manteau', 'Blazer', 'Robe', 'Jupe', 'Pantalon', 'Jean', 'Short',
+  'Top', 'Chemise', 'Blouse', 'Pull', 'Gilet', 'Combinaison', 'Maillot',
+  'Sac', 'Ceinture', 'Foulard', 'Écharpe', 'Chapeau',
+  'Chaussures', 'Bottes', 'Baskets', 'Sandales',
+  'Collier', 'Bague', 'Bracelet', "Boucles d'oreilles", 'Broche',
+]
+
+// Options de valeur par axe. Absent → saisie libre ; 'prix' → fourchette min-max.
+const OPTIONS_BY_AXIS: Partial<Record<AxisKey, string[]>> = {
+  color: COLOR_PALETTE.map(c => c.name),
+  modele: ALL_MODELES,
+  motif: MOTIF_OPTIONS,
+  taille: ALL_TAILLES,
+  marque: MARQUES,
+  categorie: CATEGORIE_OPTIONS,
+}
 
 function newRule(): StrategieRule {
   return { id: `r_${Math.round(performance.now())}_${Math.floor(performance.now() % 1000)}`, label: '', axis: 'color', match: '', targetPct: 10 }
@@ -214,16 +239,27 @@ function ObjectifTab({
             <select
               className="col-span-5 sm:col-span-3 border rounded px-2 py-1.5 text-sm"
               value={r.axis}
-              onChange={(e) => updateRule(r.id, { axis: e.target.value as AxisKey })}
+              onChange={(e) => updateRule(r.id, { axis: e.target.value as AxisKey, match: '' })}
             >
               {AXES.map(a => <option key={a} value={a}>{AXIS_LABELS[a]}</option>)}
             </select>
-            <input
-              className="col-span-4 sm:col-span-3 border rounded px-2 py-1.5 text-sm"
-              placeholder={r.axis === 'prix' ? 'ex: 0-50' : 'ex: noir'}
-              value={r.match}
-              onChange={(e) => updateRule(r.id, { match: e.target.value })}
-            />
+            {OPTIONS_BY_AXIS[r.axis] ? (
+              <select
+                className="col-span-4 sm:col-span-3 border rounded px-2 py-1.5 text-sm bg-white"
+                value={r.match}
+                onChange={(e) => updateRule(r.id, { match: e.target.value })}
+              >
+                <option value="">— Choisir —</option>
+                {OPTIONS_BY_AXIS[r.axis]!.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+            ) : (
+              <input
+                className="col-span-4 sm:col-span-3 border rounded px-2 py-1.5 text-sm"
+                placeholder={r.axis === 'prix' ? 'ex: 0-50' : 'ex: zip'}
+                value={r.match}
+                onChange={(e) => updateRule(r.id, { match: e.target.value })}
+              />
+            )}
             <div className="col-span-2 sm:col-span-2 flex items-center gap-1">
               <input
                 type="number" min="0" max="100"
