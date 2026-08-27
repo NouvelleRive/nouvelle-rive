@@ -224,7 +224,7 @@ export const MODELES_COMMUNS: string[] = [
 export function getModelesForCategorie(categorieComplete: string): string[] {
   const type = detectTypeModele(categorieComplete)
   if (!type || !MODELES[type]) return []
-  return [...new Set([...MODELES[type], ...MODELES_COMMUNS])]
+  return [...new Set([...MODELES[type], ...MODELES_COMMUNS])].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
 export const ALL_MODELES = [...new Set([...Object.values(MODELES).flat(), ...MODELES_COMMUNS])].sort((a, b) => a.localeCompare(b, 'fr'))

@@ -523,6 +523,8 @@ async function compressImage(file: File): Promise<string> {
 
     // État dropdown matière
     const [showMatiereDropdown, setShowMatiereDropdown] = useState(false)
+    const [showModeleDropdown, setShowModeleDropdown] = useState(false)
+    const [showMotifDropdown, setShowMotifDropdown] = useState(false)
     
     // État validation SKU
     const [skuValidating, setSkuValidating] = useState(false)
@@ -2453,56 +2455,81 @@ async function compressImage(file: File): Promise<string> {
                 </div>
               </div>
 
-              {/* Modèle (optionnel) — liste déroulante si modèles prédéfinis pour la
-                  catégorie, sinon saisie libre. Toujours disponible. */}
+              {/* Modèle (optionnel) — multi-sélection (cases). Modèles de la
+                  catégorie + transversaux, ou transversaux seuls si aucun. */}
               <div className="col-span-2">
                 <label className="block text-xs text-gray-600 mb-1">Modèle</label>
-                {modelesDisponibles.length > 0 ? (
-                  <select
-                    value={formData.modele}
-                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
-                    className="w-full border rounded px-2 py-1.5 text-sm"
+                <div className="relative">
+                  <div
+                    className="w-full border rounded px-2 py-1.5 text-sm cursor-pointer flex items-center justify-between bg-white min-h-[34px]"
+                    onClick={() => setShowModeleDropdown(!showModeleDropdown)}
                   >
-                    <option value="">—</option>
-                    {modelesDisponibles.map((m, i) => (
-                      <option key={i} value={m}>{m}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      list="modele-communs"
-                      value={formData.modele}
-                      onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
-                      placeholder="ex: 501, Oversized, Cintré…"
-                      className="w-full border rounded px-2 py-1.5 text-sm"
-                    />
-                    <datalist id="modele-communs">
-                      {MODELES_COMMUNS.map((m) => (
-                        <option key={m} value={m} />
-                      ))}
-                    </datalist>
-                  </>
-                )}
+                    <span className={formData.modele ? 'text-gray-900' : 'text-gray-400'}>
+                      {formData.modele || '— Sélectionner —'}
+                    </span>
+                    <span className="text-gray-400">{showModeleDropdown ? '▲' : '▼'}</span>
+                  </div>
+                  {showModeleDropdown && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {(modelesDisponibles.length > 0 ? modelesDisponibles : MODELES_COMMUNS).map((m) => {
+                        const isSelected = formData.modele?.split(', ').includes(m)
+                        return (
+                          <label key={m} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                const current = formData.modele ? formData.modele.split(', ').filter(Boolean) : []
+                                const updated = isSelected ? current.filter(x => x !== m) : [...current, m]
+                                setFormData({ ...formData, modele: updated.join(', ') })
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+                            />
+                            <span>{m}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Motif (optionnel) — liste de suggestions, saisie libre autorisée */}
+              {/* Motif (optionnel) — multi-sélection (cases). */}
               <div className="col-span-2">
                 <label className="block text-xs text-gray-600 mb-1">Motif</label>
-                <input
-                  type="text"
-                  list="motif-options"
-                  value={formData.motif}
-                  onChange={(e) => setFormData({ ...formData, motif: e.target.value })}
-                  placeholder="ex: Floral, Léopard, Rayures…"
-                  className="w-full border rounded px-2 py-1.5 text-sm"
-                />
-                <datalist id="motif-options">
-                  {MOTIF_OPTIONS.map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
+                <div className="relative">
+                  <div
+                    className="w-full border rounded px-2 py-1.5 text-sm cursor-pointer flex items-center justify-between bg-white min-h-[34px]"
+                    onClick={() => setShowMotifDropdown(!showMotifDropdown)}
+                  >
+                    <span className={formData.motif ? 'text-gray-900' : 'text-gray-400'}>
+                      {formData.motif || '— Sélectionner —'}
+                    </span>
+                    <span className="text-gray-400">{showMotifDropdown ? '▲' : '▼'}</span>
+                  </div>
+                  {showMotifDropdown && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {MOTIF_OPTIONS.map((m) => {
+                        const isSelected = formData.motif?.split(', ').includes(m)
+                        return (
+                          <label key={m} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                const current = formData.motif ? formData.motif.split(', ').filter(Boolean) : []
+                                const updated = isSelected ? current.filter(x => x !== m) : [...current, m]
+                                setFormData({ ...formData, motif: updated.join(', ') })
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 text-[#22209C] focus:ring-[#22209C]"
+                            />
+                            <span>{m}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="col-span-2 md:col-span-4">
