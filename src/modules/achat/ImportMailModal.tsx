@@ -47,6 +47,9 @@ type Props = {
    *  l'aperçu — la modal se ferme et le parent rend l'éditeur en flow de page
    *  (pas dans une modal) pour éviter les sauts de scroll. */
   onItemsReady?: (items: ItemFields[]) => void
+  /** Contexte acheteuse / non-admin : n'affiche QUE Vinted, aucune mention
+   *  Whatnot/Fleek (même si un admin est connecté et teste cet espace). */
+  vintedOnly?: boolean
 }
 
 export type ItemFields = {
@@ -203,7 +206,7 @@ export const ItemCard = memo(function ItemCard({
   )
 })
 
-export default function ImportMailModal({ onClose, targetChineuse, categories = [], onItemsReady }: Props) {
+export default function ImportMailModal({ onClose, targetChineuse, categories = [], onItemsReady, vintedOnly }: Props) {
   const [step, setStep] = useState<Step>('paste')
   const [pasted, setPasted] = useState('')
   const [verifying, setVerifying] = useState(false)
@@ -216,7 +219,10 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
   // Whatnot & Fleek = sources réservées à l'admin. Tout le monde d'autre
   // (acheteuse, vendeuse, chineuse, déposante) ne voit QUE Vinted — aucune
   // mention Whatnot/Fleek ni import de facture PDF. Défaut = masqué.
-  const isAdminUser = auth.currentUser?.email === ADMIN_EMAIL
+  // Whatnot/Fleek visibles UNIQUEMENT si : contexte non restreint (pas
+  // `vintedOnly`) ET admin connecté. Le `vintedOnly` gagne toujours → même un
+  // admin qui teste l'espace acheteuse ne voit que Vinted.
+  const isAdminUser = !vintedOnly && auth.currentUser?.email === ADMIN_EMAIL
 
   // Hoisted pour pouvoir être appelée depuis handlePdfFile (auto-trigger après extraction).
   const verifyWithBody = async (body: string) => {

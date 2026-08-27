@@ -297,6 +297,7 @@ export default function AcheteuseFormulairePage() {
           onClose={() => setVintedModalOpen(false)}
           targetChineuse={targetChineuse}
           categories={categories}
+          vintedOnly
           onItemsReady={(items) => { setVintedModalOpen(false); setPendingPreview(items) }}
         />
       )}

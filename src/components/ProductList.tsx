@@ -1081,6 +1081,7 @@
             <ImportMailModal
               onClose={() => setImportModalOpen(false)}
               targetChineuse={targetChineuse}
+              vintedOnly={isAcheteuse}
             />
           )}
 
