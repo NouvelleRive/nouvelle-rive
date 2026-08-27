@@ -9,6 +9,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import Link from 'next/link'
 import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
 import LogoutButton from '@/components/LogoutButton'
+import { ACHETEUSE_EMAIL } from '@/lib/roles'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
@@ -162,6 +163,12 @@ export default function ChineuseLayout({ children }: { children: React.ReactNode
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (!u) {
         router.push('/login')
+        return
+      }
+      // L'acheteuse a son propre espace (Stratégie, prix d'achat, import Vinted) :
+      // on ne la laisse pas dans l'espace chineuse.
+      if (u.email === ACHETEUSE_EMAIL) {
+        router.replace('/acheteuse/performance')
         return
       }
       setUser(u)

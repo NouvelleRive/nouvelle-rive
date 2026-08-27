@@ -20,9 +20,9 @@ function AcheteuseNavbar() {
   useEffect(() => { setMenuOpen(false) }, [pathname])
 
   const links = [
+    { href: '/acheteuse/strategie', label: "Stratégie d'achat" },
     { href: '/acheteuse/formulaire', label: 'Ajouter un produit' },
     { href: '/acheteuse/mes-produits', label: 'Mes produits' },
-    { href: '/acheteuse/strategie', label: "Stratégie d'achat" },
     { href: '/acheteuse/calendrier', label: 'RDV dépôt' },
     { href: '/acheteuse/mes-ventes', label: 'Mes ventes' },
     { href: '/acheteuse/performance', label: 'Mes perf' },
