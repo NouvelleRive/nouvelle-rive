@@ -214,6 +214,11 @@ export const MODELES_COMMUNS: string[] = [
   'Cintré',
   'Oversized',
   'Funnel neck',
+  'Court',
+  'Long',
+  'Manches courtes',
+  'Manches longues',
+  'Y2K',
 ]
 
 export function getModelesForCategorie(categorieComplete: string): string[] {

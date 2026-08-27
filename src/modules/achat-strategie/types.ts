@@ -12,6 +12,7 @@ export type AxisKey =
   | 'color'         // couleur
   | 'categorie'     // catégorie (label Square)
   | 'marque'        // marque
+  | 'modele'        // modèle / coupe (ex: Blazer, Oversized, Court, Y2K…)
   | 'motif'         // motif
   | 'garmentLength' // longueur de vêtement (ex: court/long)
   | 'sleeveLength'  // longueur de manche
@@ -22,6 +23,7 @@ export const AXIS_LABELS: Record<AxisKey, string> = {
   color: 'Couleur',
   categorie: 'Catégorie',
   marque: 'Marque',
+  modele: 'Modèle',
   motif: 'Motif',
   garmentLength: 'Longueur vêtement',
   sleeveLength: 'Longueur manche',
@@ -54,6 +56,7 @@ export type StrategieProduit = {
   color?: string | null
   categorie?: string | null
   marque?: string | null
+  modele?: string | null
   motif?: string | null
   garmentLength?: string | null
   sleeveLength?: string | null
