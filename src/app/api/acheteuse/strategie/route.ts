@@ -10,7 +10,6 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
-import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
 import { ADMIN_EMAIL, ACHETEUSE_EMAIL, ACHETEUSE_TRIGRAMME, ACHETEUSE_CHINEUSE_DOC } from '@/lib/roles'
 import {
   evaluer,
@@ -68,10 +67,13 @@ async function readObjectif(): Promise<StrategieObjectif> {
 }
 
 async function readProduitsACH(): Promise<StrategieProduit[]> {
-  const all = await getAllProduitsCached()
-  return all
-    .map(({ raw }) => raw as any)
-    .filter((p) => (p?.trigramme || '').toUpperCase() === ACHETEUSE_TRIGRAMME)
+  // Requête fraîche bornée au trigramme ACH (~qq dizaines de docs, pas un scan
+  // de collection) — plutôt que le cache blob 6h qui affichait des données
+  // périmées (modèles/tailles récemment tagués absents). Coût Firestore
+  // négligeable vu le faible volume ACH.
+  const snap = await adminDb.collection('produits').where('trigramme', '==', ACHETEUSE_TRIGRAMME).get()
+  return snap.docs
+    .map((d) => d.data() as any)
     .map((p): StrategieProduit => ({
       color: p.color,
       categorie: p.categorie,
