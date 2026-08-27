@@ -221,10 +221,16 @@ export const MODELES_COMMUNS: string[] = [
   'Y2K',
 ]
 
+// Modèles remontés en tête de liste (la longueur prime, ex: vestes).
+const MODELES_PRIORITAIRES = ['Court', 'Long']
+
 export function getModelesForCategorie(categorieComplete: string): string[] {
   const type = detectTypeModele(categorieComplete)
   if (!type || !MODELES[type]) return []
-  return [...new Set([...MODELES[type], ...MODELES_COMMUNS])].sort((a, b) => a.localeCompare(b, 'fr'))
+  const all = [...new Set([...MODELES[type], ...MODELES_COMMUNS])]
+  const tete = MODELES_PRIORITAIRES.filter(m => all.includes(m))
+  const reste = all.filter(m => !MODELES_PRIORITAIRES.includes(m)).sort((a, b) => a.localeCompare(b, 'fr'))
+  return [...tete, ...reste]
 }
 
 export const ALL_MODELES = [...new Set([...Object.values(MODELES).flat(), ...MODELES_COMMUNS])].sort((a, b) => a.localeCompare(b, 'fr'))
