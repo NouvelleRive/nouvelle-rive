@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
   if (!ADMIN_EMAILS.has(email)) {
     return NextResponse.json({ error: 'not admin' }, { status: 403 })
   }
+  // Whatnot & Fleek = réservés à l'admin. Les autres (acheteuse…) n'ont accès
+  // qu'à Vinted : aucun parsing ni retour Whatnot/Fleek pour eux.
+  const isAdminCaller = email === ADMIN_EMAIL
 
   // --- Payload ------------------------------------------------------------
   let body = ''
@@ -107,7 +110,7 @@ export async function POST(req: NextRequest) {
   // --- Fleek (facture marketplace lots) ----------------------------------
   // Détection robuste avant Whatnot car Fleek a un format texte différent
   // (Order Number: #X, ligne "N / piece", aucun chevauchement avec Whatnot).
-  if (/Fleek/i.test(body) && /Order\s*Number:\s*#?\s*\d+/i.test(body) && /\d+\s*\/\s*piece/i.test(body)) {
+  if (isAdminCaller && /Fleek/i.test(body) && /Order\s*Number:\s*#?\s*\d+/i.test(body) && /\d+\s*\/\s*piece/i.test(body)) {
     const invoice = parseFleekInvoice(body)
     if (!invoice.ok) return NextResponse.json({ ok: false, reason: invoice.reason })
 
@@ -142,7 +145,7 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Whatnot (1 mail = potentiellement plusieurs items) ----------------
-  if (/Whatnot/i.test(body) && /Order\s*#\s*\d+/i.test(body)) {
+  if (isAdminCaller && /Whatnot/i.test(body) && /Order\s*#\s*\d+/i.test(body)) {
     const purchase = parseWhatnotPurchase(body)
     if (!purchase.ok) return NextResponse.json({ ok: false, reason: purchase.reason })
 

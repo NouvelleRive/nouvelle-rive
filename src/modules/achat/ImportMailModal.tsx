@@ -14,6 +14,7 @@
 import { memo, useCallback, useRef, useState } from 'react'
 import { X, Upload } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
+import { ADMIN_EMAIL } from '@/lib/roles'
 
 /**
  * Extrait le texte brut d'un PDF côté client via pdfjs-dist. On charge la lib
@@ -196,6 +197,10 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
   const [isDragging, setIsDragging] = useState(false)
   const [extractingPdf, setExtractingPdf] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Whatnot & Fleek = sources réservées à l'admin. Tout le monde d'autre
+  // (acheteuse, vendeuse, chineuse, déposante) ne voit QUE Vinted — aucune
+  // mention Whatnot/Fleek ni import de facture PDF. Défaut = masqué.
+  const isAdminUser = auth.currentUser?.email === ADMIN_EMAIL
 
   // Hoisted pour pouvoir être appelée depuis handlePdfFile (auto-trigger après extraction).
   const verifyWithBody = async (body: string) => {
@@ -349,11 +354,13 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         <div className="flex items-start justify-between px-6 pt-6 pb-3 shrink-0 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              {step === 'preview' ? 'Vérifie avant création' : 'Importer depuis Vinted / Whatnot / Fleek'}
+              {step === 'preview' ? 'Vérifie avant création' : (isAdminUser ? 'Importer depuis Vinted / Whatnot / Fleek' : 'Importer depuis Vinted')}
             </h2>
             {step === 'paste' && (
               <p className="text-sm text-gray-500 mt-1">
-                Colle ici la page Vinted, le mail Whatnot ou le texte de la facture Fleek.
+                {isAdminUser
+                  ? 'Colle ici la page Vinted, le mail Whatnot ou le texte de la facture Fleek.'
+                  : 'Colle ici la page Vinted.'}
               </p>
             )}
             {step === 'preview' && (
@@ -370,7 +377,8 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         {step === 'paste' && (
           <>
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 flex flex-col">
-            {/* Zone drag&drop / parcourir (Fleek = facture PDF) */}
+            {/* Zone drag&drop / parcourir (Fleek = facture PDF) — ADMIN UNIQUEMENT */}
+            {isAdminUser && (
             <div
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
               onDragLeave={() => setIsDragging(false)}
@@ -406,11 +414,12 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
                 }}
               />
             </div>
-            <div className="text-xs text-gray-400 mb-2 text-center">— ou colle le contenu ci-dessous —</div>
+            )}
+            {isAdminUser && <div className="text-xs text-gray-400 mb-2 text-center">— ou colle le contenu ci-dessous —</div>}
             <textarea
               value={pasted}
               onChange={(e) => setPasted(e.target.value)}
-              placeholder="Colle ici le mail ou la page Vinted/Whatnot…"
+              placeholder={isAdminUser ? 'Colle ici le mail ou la page Vinted/Whatnot…' : 'Colle ici la page Vinted…'}
               className="flex-1 min-h-[200px] w-full border border-gray-300 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#09B1BA] resize-none"
             />
             {errorMsg && (
