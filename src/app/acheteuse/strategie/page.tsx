@@ -32,13 +32,15 @@ export default function StrategieAchatPage() {
   const [realise, setRealise] = useState<StrategieRealise | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
-  const load = useCallback(async (u: User) => {
-    setLoading(true)
+  const load = useCallback(async (u: User, refresh = false) => {
+    if (refresh) setRefreshing(true); else setLoading(true)
     try {
       const token = await u.getIdToken()
-      const res = await fetch('/api/acheteuse/strategie', { headers: { Authorization: `Bearer ${token}` } })
+      const url = refresh ? '/api/acheteuse/strategie?refresh=1' : '/api/acheteuse/strategie'
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json()
       if (data.success) {
         setObjectif(data.objectif || OBJECTIF_VIDE)
@@ -48,8 +50,14 @@ export default function StrategieAchatPage() {
       console.error('Erreur chargement stratégie', e)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [])
+
+  const handleRefresh = () => {
+    const u = auth.currentUser
+    if (u) load(u, true)
+  }
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -109,19 +117,32 @@ export default function StrategieAchatPage() {
       <h1 className="text-xl font-bold text-[#22209C] mb-1">STRATÉGIE D'ACHAT</h1>
       <p className="text-sm text-gray-500 mb-4">Définis ton assortiment cible, suis ton réalisé.</p>
 
-      {/* Onglets */}
-      <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-lg w-fit">
-        {(['realise', 'objectif'] as const).map(t => (
+      {/* Onglets + actualiser */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+          {(['realise', 'objectif'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
+                tab === t ? 'bg-white text-[#22209C] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {t === 'realise' ? 'Réalisé' : 'Objectif'}
+            </button>
+          ))}
+        </div>
+        {tab === 'realise' && (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition ${
-              tab === t ? 'bg-white text-[#22209C] shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Recalcule le réalisé avec les pièces à jour (à cliquer après avoir tagué des modèles/tailles)"
+            className="flex items-center gap-1.5 text-sm text-[#22209C] border border-[#22209C]/30 rounded-lg px-3 py-1.5 hover:bg-[#22209C]/5 disabled:opacity-50"
           >
-            {t === 'realise' ? 'Réalisé' : 'Objectif'}
+            <span className={refreshing ? 'inline-block animate-spin' : ''}>↻</span>
+            {refreshing ? 'Actualisation…' : 'Actualiser'}
           </button>
-        ))}
+        )}
       </div>
 
       {loading ? (

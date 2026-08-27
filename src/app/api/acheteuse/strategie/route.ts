@@ -10,6 +10,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
+import { getAllProduitsCached, forceRefreshProduitsBlob } from '@/lib/getAllProduitsCached'
 import { ADMIN_EMAIL, ACHETEUSE_EMAIL, ACHETEUSE_TRIGRAMME, ACHETEUSE_CHINEUSE_DOC } from '@/lib/roles'
 import {
   evaluer,
@@ -67,13 +68,12 @@ async function readObjectif(): Promise<StrategieObjectif> {
 }
 
 async function readProduitsACH(): Promise<StrategieProduit[]> {
-  // Requête fraîche bornée au trigramme ACH (~qq dizaines de docs, pas un scan
-  // de collection) — plutôt que le cache blob 6h qui affichait des données
-  // périmées (modèles/tailles récemment tagués absents). Coût Firestore
-  // négligeable vu le faible volume ACH.
-  const snap = await adminDb.collection('produits').where('trigramme', '==', ACHETEUSE_TRIGRAMME).get()
-  return snap.docs
-    .map((d) => d.data() as any)
+  // Cache blob (0 lecture Firestore). Peut être périmé jusqu'à 6h après un tag —
+  // le bouton "Actualiser" côté page force le refresh (cf. GET ?refresh=1).
+  const all = await getAllProduitsCached()
+  return all
+    .map(({ raw }) => raw as any)
+    .filter((p) => (p?.trigramme || '').toUpperCase() === ACHETEUSE_TRIGRAMME)
     .map((p): StrategieProduit => ({
       color: p.color,
       categorie: p.categorie,
@@ -94,11 +94,16 @@ export async function GET(req: NextRequest) {
   const email = await authEmail(req)
   if (!email) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
   try {
+    // ?refresh=1 : reconstruit le cache blob produits AVANT de lire (bouton
+    // "Actualiser"). Sinon on sert le cache (0 lecture Firestore).
+    if (req.nextUrl.searchParams.get('refresh') === '1') {
+      await forceRefreshProduitsBlob()
+    }
     const [objectif, produits] = await Promise.all([readObjectif(), readProduitsACH()])
     const realise = evaluer(objectif, produits)
     return NextResponse.json(
       { success: true, objectif, realise },
-      { headers: { 'Cache-Control': 'private, max-age=120' } },
+      { headers: { 'Cache-Control': 'no-store' } },
     )
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'error' }, { status: 500 })
