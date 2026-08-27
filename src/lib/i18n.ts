@@ -182,8 +182,18 @@ const MOTIF_EN: Record<string, string> = {
   'léopard / animal': 'leopard / animal print',
   'camouflage': 'camouflage',
   'pois': 'polka dot',
+  'polka dot': 'polka dot',
   'géométrique': 'geometric',
   'abstrait': 'abstract',
+  'floral': 'floral',
+  'zèbre': 'zebra',
+  'madras': 'madras',
+  'liberty': 'liberty print',
+  'tropical': 'tropical',
+  'python': 'python',
+  'croco': 'crocodile',
+  'bandana': 'bandana',
+  'ethnique': 'ethnic',
 }
 
 const MODELE_EN: Record<string, string> = {

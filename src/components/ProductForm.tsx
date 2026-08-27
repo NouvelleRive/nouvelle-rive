@@ -10,6 +10,7 @@
   import { checkSkuUnique, getNextAvailableSkuForTrigramme } from '@/lib/admin/helpers'
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
   import { COLOR_PALETTE, getColorsPrioritized } from '@/lib/couleurs'
+  import { MOTIF_OPTIONS } from '@/lib/motifs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
   import { detectModele, getModelesForCategorie } from '@/lib/modeles'
@@ -2449,7 +2450,7 @@ async function compressImage(file: File): Promise<string> {
                   className="w-full border rounded px-2 py-1.5 text-sm"
                 />
                 <datalist id="motif-options">
-                  {['Floral', 'Léopard', 'Zèbre', 'Rayures', 'Carreaux', 'Polka dot', 'Vichy', 'Tartan', 'Madras', 'Liberty', 'Tropical', 'Python', 'Croco', 'Abstrait', 'Bandana', 'Ethnique'].map((m) => (
+                  {MOTIF_OPTIONS.map((m) => (
                     <option key={m} value={m} />
                   ))}
                 </datalist>
