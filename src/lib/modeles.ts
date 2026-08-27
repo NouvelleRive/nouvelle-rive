@@ -205,13 +205,23 @@ export function detectTypeModele(categorieComplete: string): TypeModele {
   return null
 }
 
+// Coupes / détails transversaux : proposés en plus des modèles de chaque
+// catégorie (et en suggestions pour les catégories sans modèle prédéfini).
+export const MODELES_COMMUNS: string[] = [
+  'Asymétrique',
+  'Franges',
+  'Cintré',
+  'Oversized',
+  'Funnel neck',
+]
+
 export function getModelesForCategorie(categorieComplete: string): string[] {
   const type = detectTypeModele(categorieComplete)
   if (!type || !MODELES[type]) return []
-  return MODELES[type]
+  return [...MODELES[type], ...MODELES_COMMUNS]
 }
 
-export const ALL_MODELES = [...new Set(Object.values(MODELES).flat())].sort((a, b) => a.localeCompare(b, 'fr'))
+export const ALL_MODELES = [...new Set([...Object.values(MODELES).flat(), ...MODELES_COMMUNS])].sort((a, b) => a.localeCompare(b, 'fr'))
 
 // =====================
 // AUTO-DÉTECTION MODÈLE DEPUIS LE TITRE

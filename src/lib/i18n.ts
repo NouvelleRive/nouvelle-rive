@@ -303,6 +303,11 @@ const MODELE_EN: Record<string, string> = {
   'casquette': 'cap',
   'fedora': 'fedora',
   'panama': 'panama hat',
+  // Coupes / détails transversaux
+  'franges': 'fringed',
+  'cintré': 'fitted',
+  'oversized': 'oversized',
+  'funnel neck': 'funnel neck',
 }
 
 const COLOR_EN: Record<string, string> = {

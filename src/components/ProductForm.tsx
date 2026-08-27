@@ -13,7 +13,7 @@
   import { MOTIF_OPTIONS } from '@/lib/motifs'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
-  import { detectModele, getModelesForCategorie } from '@/lib/modeles'
+  import { detectModele, getModelesForCategorie, MODELES_COMMUNS } from '@/lib/modeles'
   import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
   import { isHousePurchaseTrigramme } from '@/lib/roles'
 
@@ -2428,13 +2428,21 @@ async function compressImage(file: File): Promise<string> {
                     ))}
                   </select>
                 ) : (
-                  <input
-                    type="text"
-                    value={formData.modele}
-                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
-                    placeholder="ex: 501, Speedy, Marmont…"
-                    className="w-full border rounded px-2 py-1.5 text-sm"
-                  />
+                  <>
+                    <input
+                      type="text"
+                      list="modele-communs"
+                      value={formData.modele}
+                      onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
+                      placeholder="ex: 501, Oversized, Cintré…"
+                      className="w-full border rounded px-2 py-1.5 text-sm"
+                    />
+                    <datalist id="modele-communs">
+                      {MODELES_COMMUNS.map((m) => (
+                        <option key={m} value={m} />
+                      ))}
+                    </datalist>
+                  </>
                 )}
               </div>
 
