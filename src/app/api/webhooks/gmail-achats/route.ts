@@ -19,6 +19,36 @@ import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
 import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 import { ACHETEUSE_TRIGRAMME } from '@/lib/roles'
+import { detectMarque } from '@/lib/marques'
+import { detectModele } from '@/lib/modeles'
+import { detectMotif } from '@/lib/motifs'
+import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
+import { ALL_MATIERES } from '@/lib/matieres'
+import { COLOR_PALETTE } from '@/lib/couleurs'
+
+const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+/** Pré-remplit les champs secondaires d'une pièce achat à partir de son titre
+ *  (mêmes détecteurs que le formulaire, appliqués à l'import auto). */
+function detecterChampsDepuisTitre(titre: string, categories: CategorieEntry[]) {
+  const t = norm(titre)
+  const out: Record<string, string> = {}
+  const cat = detectCategorieFromTitre(titre, categories)
+  if (cat?.label) out.categorie = cat.label
+  const marque = detectMarque(titre); if (marque) out.marque = marque
+  const modele = detectModele(titre); if (modele) out.modele = modele
+  const motif = detectMotif(titre); if (motif) out.motif = motif
+  // Matière : première matière connue trouvée dans le titre (ex: "cuir" → Cuir)
+  const mat = ALL_MATIERES.find(m => new RegExp(`\\b${norm(m).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(t))
+  if (mat) out.material = mat
+  // Couleur : première couleur de la palette trouvée dans le titre
+  const col = COLOR_PALETTE.find(c => t.includes(norm(c.name)))
+  if (col) out.color = col.name
+  // Taille : "taille S", "taille 38"
+  const tm = titre.match(/taille\s+([A-Za-z0-9]{1,4})/i)
+  if (tm) out.taille = tm[1].toUpperCase()
+  return out
+}
 
 type Payload = {
   gmailMessageId: string
@@ -99,9 +129,14 @@ async function handleVintedReceipt(body: string, gmailMessageId: string) {
   const payload = buildVintedProduitPayload(receipt, { chineuseNR: chineuse, sku, trigramme })
   const docId = vintedDocId(receipt.transactionId)
 
+  // Pré-remplissage des champs secondaires depuis le titre (catégorie ACH,
+  // marque, modèle, motif, matière, couleur, taille) — comme l'import manuel.
+  const champs = detecterChampsDepuisTitre(receipt.titre, chineuse.categories)
+
   await adminDb.collection('produits').doc(docId).set(
     {
       ...payload,
+      ...champs,
       createdAt: Timestamp.fromDate(payload.createdAt),
       achatDateCommande: Timestamp.fromDate(payload.achatDateCommande),
       achatGmailMessageId: gmailMessageId,
@@ -195,11 +230,15 @@ async function handleChronopostPickup(body: string) {
 // Helpers Firestore
 // ---------------------------------------------------------------------------
 
-async function findChineuse(trigramme: string): Promise<{ uid: string; email: string } | null> {
+async function findChineuse(trigramme: string): Promise<{ uid: string; email: string; categories: CategorieEntry[] } | null> {
   const snap = await adminDb.collection('chineuse').where('trigramme', '==', trigramme).limit(1).get()
   if (snap.empty) return null
   const d = snap.docs[0]
-  return { uid: d.id, email: d.data().email || '' }
+  const raw = d.data()['Catégorie']
+  const categories: CategorieEntry[] = Array.isArray(raw)
+    ? raw.map((c: any) => (typeof c === 'string' ? { label: c } : { label: c?.label, idsquare: c?.idsquare })).filter((c: CategorieEntry) => !!c.label)
+    : []
+  return { uid: d.id, email: d.data().email || '', categories }
 }
 
 async function computeNextSku(trigramme: string): Promise<string> {
