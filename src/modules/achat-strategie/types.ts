@@ -12,10 +12,8 @@ export type AxisKey =
   | 'color'         // couleur
   | 'categorie'     // catégorie (label Square)
   | 'marque'        // marque
-  | 'modele'        // modèle / coupe (ex: Blazer, Oversized, Court, Y2K…)
+  | 'modele'        // modèle / coupe (ex: Blazer, Oversized, Court, Long, Y2K, Manches courtes…)
   | 'motif'         // motif
-  | 'garmentLength' // longueur de vêtement (ex: court/long)
-  | 'sleeveLength'  // longueur de manche
   | 'closureType'   // type de fermeture
   | 'prix'          // fourchette de prix de vente (match = "min-max")
 
@@ -25,8 +23,6 @@ export const AXIS_LABELS: Record<AxisKey, string> = {
   marque: 'Marque',
   modele: 'Modèle',
   motif: 'Motif',
-  garmentLength: 'Longueur vêtement',
-  sleeveLength: 'Longueur manche',
   closureType: 'Fermeture',
   prix: 'Prix (min-max €)',
 }

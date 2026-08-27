@@ -35,7 +35,7 @@ async function authEmail(req: NextRequest): Promise<string | null> {
   }
 }
 
-const VALID_AXES: AxisKey[] = ['color', 'categorie', 'marque', 'modele', 'motif', 'garmentLength', 'sleeveLength', 'closureType', 'prix']
+const VALID_AXES: AxisKey[] = ['color', 'categorie', 'marque', 'modele', 'motif', 'closureType', 'prix']
 
 /** Nettoie/valide l'objectif reçu du client avant écriture. */
 function sanitizeObjectif(input: any): StrategieObjectif {
