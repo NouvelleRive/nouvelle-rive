@@ -10,6 +10,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle, Trash2, RefreshCw } from 'lucide-react'
 import { getMonthEvents } from '@/lib/retailEvents'
 import { formatPrix } from '@/lib/formatPrix'
+import { isHousePurchaseTrigramme, ACHETEUSE_TRIGRAMME } from '@/lib/roles'
+import { calcCommissionAchat } from '@/lib/commission'
 
 type Produit = {
   id: string
@@ -441,9 +443,10 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     ? String(Math.round((panierMoyen - previousPanierMoyenProrata) / previousPanierMoyenProrata * 100))
     : null
 
-  // Marge nette NR : (prixVente − prixAchat) × 0.80. prixAchat est stocké sur le produit, pas sur la vente.
+  // Marge nette stock maison (NR + acheteuse ACH) : (prixVente − prixAchat) × 0.80.
+  // prixAchat est stocké sur le produit, pas sur la vente.
   const totalMargeNetteNR = useMemo(() => {
-    if (chineuseTrigramme !== 'NR') return 0
+    if (!isHousePurchaseTrigramme(chineuseTrigramme)) return 0
     const margeBrute = ventesCurrentMonth.reduce((s, v) => {
       const prixVente = (v as any).prixVenteReel || (v as any).prix || 0
       const produit = v.produitId ? produitsMap.get(v.produitId) : null
@@ -453,6 +456,28 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     }, 0)
     return Math.round(margeBrute * 0.80)
   }, [ventesCurrentMonth, chineuseTrigramme, produitsMap])
+
+  // Commission acheteuse (barème par tranche 10 %/15 %). Seuil de 4K€ appliqué
+  // PAR MOIS : on regroupe la marge nette par mois et on somme la commission de
+  // chaque mois → correct en vue mois comme en vue année. Trigramme ACH seulement.
+  const isAcheteuseView = chineuseTrigramme === ACHETEUSE_TRIGRAMME
+  const commissionAcheteuse = useMemo(() => {
+    if (!isAcheteuseView) return 0
+    const margeParMois = new Map<string, number>()
+    ventesCurrentMonth.forEach(v => {
+      const d = getDateVente(v)
+      if (!d) return
+      const prixVente = (v as any).prixVenteReel || (v as any).prix || 0
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const prixAchat = (v as any).prixAchat ?? (produit as any)?.prixAchat
+      if (typeof prixAchat !== 'number' || prixAchat <= 0) return
+      const key = `${d.getFullYear()}-${d.getMonth()}`
+      margeParMois.set(key, (margeParMois.get(key) || 0) + Math.max(prixVente - prixAchat, 0) * 0.80)
+    })
+    let total = 0
+    margeParMois.forEach(marge => { total += calcCommissionAchat(Math.round(marge)) })
+    return total
+  }, [isAcheteuseView, ventesCurrentMonth, produitsMap])
 
   // CA par jour (mois) ou par mois (année) — admin only
   const dailyData = useMemo(() => {
@@ -539,9 +564,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     return Array.from(map.entries())
       .map(([tri, data]) => {
         const dep = deposants.find(d => d.trigramme === tri)
-        const isNR = tri === 'NR'
+        // Stock maison acheté (NR + acheteuse ACH) : marge nette calculée sur le
+        // prix d'achat. Les autres chineuses : rétrocession = ca × taux%.
+        const isNR = isHousePurchaseTrigramme(tri)
         const taux = dep?.taux ?? 0
-        // NR : marge nette = (prixVente − prixAchat) × 0.80 (TVA 20% déduite)
+        // NR/ACH : marge nette = (prixVente − prixAchat) × 0.80 (TVA 20% déduite)
         // Autres : bénéf = ca × taux% (rétrocession)
         const benef = isNR
           ? Math.round(data.margeBrute * 0.80)
@@ -735,7 +762,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       const benef = items.reduce((s, v) => {
         const prix = v.prixVenteReel || v.prix || 0
         const tri = (v as any).trigramme || ''
-        const isNR = tri === 'NR'
+        const isNR = isHousePurchaseTrigramme(tri)
         if (isNR) return s + prix
         const dep = deposants.find(d => d.trigramme === tri)
         const taux = dep?.taux ?? 0
@@ -961,15 +988,22 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       </div>
 
       {/* KPIs */}
-      <div className={`grid ${(isAdmin || chineuseTrigramme === 'NR') ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-3'} gap-3`}>
+      <div className={`grid ${
+        isAcheteuseView ? 'grid-cols-2 lg:grid-cols-5'
+        : (isAdmin || chineuseTrigramme === 'NR') ? 'grid-cols-2 lg:grid-cols-4'
+        : 'grid-cols-2 lg:grid-cols-3'
+      } gap-3`}>
         <KpiCard title="Chiffre d'affaires" value={formatPrix(totalCA)} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
         <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
         <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
         {isAdmin && (
           <KpiCard title="Marge" value={formatPrix(classementChineuses.reduce((s, c) => s + c.benef, 0))} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         )}
-        {!isAdmin && chineuseTrigramme === 'NR' && (
+        {!isAdmin && isHousePurchaseTrigramme(chineuseTrigramme) && (
           <KpiCard title="Marge nette" value={formatPrix(totalMargeNetteNR)} unit="€" evolution={totalCA > 0 ? String(Math.round(totalMargeNetteNR / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+        )}
+        {isAcheteuseView && (
+          <KpiCard title="Commission" value={formatPrix(commissionAcheteuse)} unit="€" icon={Star} color="bg-[#09B1BA]" />
         )}
       </div>
 

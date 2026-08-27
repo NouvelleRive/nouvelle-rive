@@ -14,6 +14,7 @@
   import { detectMarque } from '@/lib/marques'
   import { detectModele, getModelesForCategorie } from '@/lib/modeles'
   import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
+  import { isHousePurchaseTrigramme } from '@/lib/roles'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -1786,9 +1787,10 @@ async function compressImage(file: File): Promise<string> {
                 })()}
               </div>
 
-              {/* Prix d'achat + marge nette — uniquement pour NR (les autres chineuses
-                  ne payent pas d'achat, leur marge dépend de la rétrocession). */}
-              {trigramme?.toUpperCase() === 'NR' && (
+              {/* Prix d'achat + marge nette — stock maison acheté (NR + acheteuse ACH).
+                  Les autres chineuses ne payent pas d'achat, leur marge dépend de la
+                  rétrocession, donc ce champ ne s'affiche pas pour elles. */}
+              {isHousePurchaseTrigramme(trigramme) && (
                 <div>
                   <label className="block text-xs font-medium mb-1">Prix d'achat (€)</label>
                   <input

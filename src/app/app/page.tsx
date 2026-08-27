@@ -4,6 +4,7 @@
 // Dispatche vers la bonne page d'accueil selon le rôle de l'user connecté :
 //   admin   → /admin/performance
 //   vendeuse → /vendeuse/restock
+//   acheteuse → /acheteuse/performance
 //   chineuse → /chineuse/performance
 //   non connecté → /login
 
@@ -11,6 +12,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
+import { ACHETEUSE_EMAIL } from '@/lib/roles'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
@@ -26,6 +28,7 @@ export default function AppDispatchPage() {
       }
       if (u.email === ADMIN_EMAIL) router.replace('/admin/performance')
       else if (u.email === VENDEUSE_EMAIL) router.replace('/vendeuse/restock')
+      else if (u.email === ACHETEUSE_EMAIL) router.replace('/acheteuse/performance')
       else router.replace('/chineuse/performance')
     })
     return () => unsub()

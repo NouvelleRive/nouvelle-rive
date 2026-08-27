@@ -20,8 +20,11 @@ import { fleekPieceDocId } from '@/modules/achat/parser/fleek'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
 import { patchBlobCache } from '@/lib/blobCache'
+import { ADMIN_EMAIL, ACHETEUSE_EMAIL, ACHETEUSE_TRIGRAMME, ACHETEUSE_CHINEUSE_DOC } from '@/lib/roles'
 
-const ADMIN_EMAILS = new Set(['nouvelleriveparis@gmail.com'])
+// Admin + acheteuse peuvent importer. L'acheteuse est cantonnée au trigramme ACH
+// (cf. override plus bas) — elle ne peut pas écrire sous une autre chineuse.
+const ADMIN_EMAILS = new Set([ADMIN_EMAIL, ACHETEUSE_EMAIL])
 
 export async function POST(req: NextRequest) {
   // --- Auth admin ---------------------------------------------------------
@@ -59,6 +62,12 @@ export async function POST(req: NextRequest) {
     }
   } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
+  }
+
+  // Acheteuse : quel que soit le targetChineuse envoyé, on force le trigramme ACH.
+  // Elle ne peut pas écrire sous une autre chineuse (NR incluse).
+  if (email === ACHETEUSE_EMAIL) {
+    targetChineuse = { uid: ACHETEUSE_CHINEUSE_DOC, email: ACHETEUSE_EMAIL, trigramme: ACHETEUSE_TRIGRAMME }
   }
 
   // Si le client n'a pas précisé de chineuse cible, on tombe sur NR par défaut.

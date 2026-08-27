@@ -9,6 +9,7 @@ import {
   sendPasswordResetEmail,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
+import { ACHETEUSE_EMAIL } from '@/lib/roles'
 
 const googleProvider = new GoogleAuthProvider()
 
@@ -31,6 +32,8 @@ export default function LoginPage() {
       router.push('/admin/performance')
     } else if (userEmail === VENDEUSE_EMAIL) {
       router.push('/vendeuse/restock')
+    } else if (userEmail === ACHETEUSE_EMAIL) {
+      router.push('/acheteuse/performance')
     } else {
       router.push('/chineuse/performance')
     }

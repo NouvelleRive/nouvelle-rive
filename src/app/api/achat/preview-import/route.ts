@@ -15,8 +15,10 @@ import { parseWhatnotPurchase } from '@/modules/achat/parser/whatnot'
 import { parseFleekInvoice } from '@/modules/achat/parser/fleek'
 import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
 import { mapTailleVintedVersNR } from '@/modules/achat/mapTaille'
+import { ADMIN_EMAIL, ACHETEUSE_EMAIL } from '@/lib/roles'
 
-const ADMIN_EMAILS = new Set(['nouvelleriveparis@gmail.com'])
+// Admin + acheteuse peuvent utiliser l'import achat (étape parsing).
+const ADMIN_EMAILS = new Set([ADMIN_EMAIL, ACHETEUSE_EMAIL])
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

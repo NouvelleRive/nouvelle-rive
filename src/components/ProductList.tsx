@@ -120,6 +120,9 @@
   deposants?: Deposant[]
   isAdmin?: boolean
   isDeposante?: boolean
+  /** Espace acheteuse : affiche prix d'achat + marge (comme l'admin) sans donner
+   *  les autres droits admin (suppression, try-on, etc.). */
+  isAcheteuse?: boolean
   loading?: boolean
   onSearch?: () => void
   showSearchButton?: boolean
@@ -202,6 +205,7 @@
       deposants = [],
       isAdmin = false,
       isDeposante = false,
+      isAcheteuse = false,
       loading = false,
       onSearch,
       showSearchButton = false,
@@ -1428,10 +1432,10 @@
                         <span className="font-medium">—</span>
                       )}</span>
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
-                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
+                      {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></span>
                       )}
-                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
+                      {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
                         return (
                           <span><span className="text-gray-400">Marge:</span> <span className="font-medium">{m !== null ? `${formatPrix(m)} €` : '—'}</span></span>
@@ -1575,10 +1579,10 @@
                       ) : (
                         <span className="font-medium text-gray-700">—</span>
                       )}</p>
-                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
+                      {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></p>
                       )}
-                      {isAdmin && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
+                      {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.marge === 'number' || (typeof p.prix === 'number' && typeof p.prixAchat === 'number')) && (() => {
                         const m = typeof p.marge === 'number' ? p.marge : calcMargeNette(p.prix, p.prixAchat)
                         return (
                           <p><span className="text-gray-400">Marge:</span> <span className="font-medium text-gray-700">{m !== null ? `${formatPrix(m)} €` : '—'}</span></p>

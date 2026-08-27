@@ -10,7 +10,7 @@ const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
 const CRENEAUX_RESTOCK = ['13h', '16h', '18h'] as const
 const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
-type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean }
+type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string> }
 type Task = { id: string; texte: string }
 type PlanningSlots = Record<string, string>
 type RestockSlotData = { nom: string; type: 'chineuse' | 'deposante'; trigramme?: string }
@@ -26,8 +26,12 @@ interface PlanningCalendarProps {
   onAutoFill?: () => void
   showAutoFill?: boolean
   participants?: Participant[]
-  userType?: 'admin' | 'chineuse' | 'deposante'
+  userType?: 'admin' | 'chineuse' | 'deposante' | 'acheteuse'
   userNom?: string
+  // Restock/acheteuse : bloque les jours où cette vendeuse (par prénom) est présente
+  // en boutique — présence = ses jours fixes OU une assignation planning du mois.
+  // Générique (pas de nom en dur) : l'acheteuse passe "Sarah".
+  blockVendeusePrenom?: string
   readOnly?: boolean
   tasksData?: Record<string, Task[]>
   userCompletedTaskIds?: Set<string>
@@ -74,6 +78,7 @@ export default function PlanningCalendar({
   onRestockSlotPick,
   currentVendeuseId = '',
   onSaveAll,
+  blockVendeusePrenom,
 }: PlanningCalendarProps) {
 
   // ── Feedback "Enregistré ✓" affiché brièvement après chaque sauvegarde ─────
@@ -171,7 +176,7 @@ export default function PlanningCalendar({
       }
       // Notif admin : uniquement quand une chineuse crée/modifie un slot (les déposantes
       // passent par /api/deposante/rdv-demande qui envoie déjà sa propre push).
-      if (nom && userType === 'chineuse') {
+      if (nom && (userType === 'chineuse' || userType === 'acheteuse')) {
         try {
           await fetch('/api/notif/annonce-restock', {
             method: 'POST',
@@ -181,6 +186,24 @@ export default function PlanningCalendar({
         } catch {}
       }
     })
+  }
+
+  // Vendeuse dont la présence bloque les RDV (ex: acheteuse ne vient pas les
+  // jours de Sarah). Résolue par prénom dans la liste des vendeuses du restock.
+  const blockVendeuse = useMemo(() => {
+    if (!blockVendeusePrenom) return null
+    const needle = blockVendeusePrenom.trim().toLowerCase()
+    return vendeusesRestock.find(v => (v.prenom || '').trim().toLowerCase() === needle) || null
+  }, [blockVendeusePrenom, vendeusesRestock])
+
+  // La vendeuse ciblée est-elle présente ce jour ? Présence = assignation concrète
+  // dans le planning du mois OU jour fixe récurrent (joursFixes).
+  const isBlockedByVendeuse = (ds: string, dow: number): boolean => {
+    if (!blockVendeuse) return false
+    if (planningRestockSlots[`${ds}_12-20`] === blockVendeuse.id) return true
+    if (planningRestockSlots[`${ds}_11-17`] === blockVendeuse.id) return true
+    if (blockVendeuse.joursFixes && blockVendeuse.joursFixes[String(dow)]) return true
+    return false
   }
 
   const handleRestockChange = (ds: string, cr: string, val: string) => {
@@ -311,9 +334,11 @@ export default function PlanningCalendar({
     const [y, m, d] = ds.split('-').map(Number)
     const dow = new Date(y, m - 1, d).getDay()
     const isWeekend = dow === 0 || dow === 6
-    // Week-end : autorisé uniquement pour les déposantes (la boutique reste fermée pour les
-    // chineuses le week-end, donc on n'affiche pas de créneaux pour elles).
-    if (isWeekend && userType !== 'deposante') return null
+    // Week-end : autorisé pour les déposantes et l'acheteuse (mêmes créneaux). La
+    // boutique reste fermée pour les chineuses le week-end → pas de créneaux pour elles.
+    if (isWeekend && userType !== 'deposante' && userType !== 'acheteuse') return null
+    // Acheteuse : jamais les jours de présence de la vendeuse bloquante (Sarah).
+    if (userType === 'acheteuse' && isBlockedByVendeuse(ds, dow)) return null
     const creneaux: string[] = dow === 2 ? ['13h', '16h', '18h'] : ['13h', '16h']
     const slots = usePlanningSlots ? planningSlots : planningRestockSlots
     const vList = usePlanningSlots ? vendeuses : vendeusesRestock
