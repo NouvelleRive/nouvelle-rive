@@ -14,6 +14,7 @@ export type AxisKey =
   | 'marque'        // marque
   | 'modele'        // modèle / coupe (ex: Blazer, Oversized, Court, Long, Y2K, Manches courtes…)
   | 'motif'         // motif
+  | 'taille'        // taille (ex: S, M, 38…)
   | 'closureType'   // type de fermeture
   | 'prix'          // fourchette de prix de vente (match = "min-max")
 
@@ -23,6 +24,7 @@ export const AXIS_LABELS: Record<AxisKey, string> = {
   marque: 'Marque',
   modele: 'Modèle',
   motif: 'Motif',
+  taille: 'Taille',
   closureType: 'Fermeture',
   prix: 'Prix (min-max €)',
 }
@@ -54,6 +56,7 @@ export type StrategieProduit = {
   marque?: string | null
   modele?: string | null
   motif?: string | null
+  taille?: string | null
   garmentLength?: string | null
   sleeveLength?: string | null
   closureType?: string | null

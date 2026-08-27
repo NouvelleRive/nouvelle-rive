@@ -35,7 +35,7 @@ async function authEmail(req: NextRequest): Promise<string | null> {
   }
 }
 
-const VALID_AXES: AxisKey[] = ['color', 'categorie', 'marque', 'modele', 'motif', 'closureType', 'prix']
+const VALID_AXES: AxisKey[] = ['color', 'categorie', 'marque', 'modele', 'motif', 'taille', 'closureType', 'prix']
 
 /** Nettoie/valide l'objectif reçu du client avant écriture. */
 function sanitizeObjectif(input: any): StrategieObjectif {
@@ -78,6 +78,7 @@ async function readProduitsACH(): Promise<StrategieProduit[]> {
       marque: p.marque,
       modele: p.modele,
       motif: p.motif,
+      taille: p.taille,
       garmentLength: p.garmentLength,
       sleeveLength: p.sleeveLength,
       closureType: p.closureType,
