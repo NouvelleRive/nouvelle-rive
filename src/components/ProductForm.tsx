@@ -1708,7 +1708,7 @@ async function compressImage(file: File): Promise<string> {
                 </div>
 
               {/* Catégorie */}
-              <div>
+              <div className="col-span-2 md:col-span-2">
                 <label className="block text-xs font-medium mb-1">Catégorie</label>
                 <select
                   value={formData.categorie}
@@ -1727,6 +1727,19 @@ async function compressImage(file: File): Promise<string> {
                     <option key={i} value={cat.label}>{cat.label}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Quantité — sur la même ligne que Catégorie en desktop */}
+              <div className="col-span-2 md:col-span-2">
+                <label className="block text-xs font-medium mb-1">Quantité</label>
+                <input
+                  type="number"
+                  value={lockQuantity ? '1' : formData.quantite}
+                  onChange={lockQuantity ? undefined : (e) => setFormData({ ...formData, quantite: e.target.value })}
+                  readOnly={lockQuantity}
+                  tabIndex={lockQuantity ? -1 : undefined}
+                  className={`w-full border rounded px-2 py-1.5 text-sm ${lockQuantity ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''}`}
+                />
               </div>
 
             </div>
@@ -1817,18 +1830,6 @@ async function compressImage(file: File): Promise<string> {
                 </div>
               )}
 
-              {/* Quantité */}
-              <div>
-                <label className="block text-xs font-medium mb-1">Quantité</label>
-                <input
-                  type="number"
-                  value={lockQuantity ? '1' : formData.quantite}
-                  onChange={lockQuantity ? undefined : (e) => setFormData({ ...formData, quantite: e.target.value })}
-                  readOnly={lockQuantity}
-                  tabIndex={lockQuantity ? -1 : undefined}
-                  className={`w-full border rounded px-2 py-1.5 text-sm ${lockQuantity ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''}`}
-                />
-              </div>
             </div>
 
             {/* Marque (obligatoire si requireBrand) */}
@@ -2358,7 +2359,7 @@ async function compressImage(file: File): Promise<string> {
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {!requireBrand && (
-                <div>
+                <div className="col-span-2 md:col-span-2">
                   <label className="block text-xs text-gray-600 mb-1">Marque</label>
                   <input
                     type="text"
@@ -2370,7 +2371,7 @@ async function compressImage(file: File): Promise<string> {
                 </div>
               )}
 
-              <div className="col-span-2 md:col-span-4">
+              <div className={`col-span-2 ${requireBrand ? 'md:col-span-4' : 'md:col-span-2'}`}>
                 <label className="block text-xs text-gray-600 mb-1">Matière</label>
                 <div className="relative">
                   <div
@@ -2410,10 +2411,11 @@ async function compressImage(file: File): Promise<string> {
                 </div>
               </div>
 
-              {/* Modèle (optionnel) */}
-              {modelesDisponibles.length > 0 && (
-                <div className="col-span-2">
-                  <label className="block text-xs text-gray-600 mb-1">Modèle</label>
+              {/* Modèle (optionnel) — liste déroulante si modèles prédéfinis pour la
+                  catégorie, sinon saisie libre. Toujours disponible. */}
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-600 mb-1">Modèle</label>
+                {modelesDisponibles.length > 0 ? (
                   <select
                     value={formData.modele}
                     onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
@@ -2424,8 +2426,28 @@ async function compressImage(file: File): Promise<string> {
                       <option key={i} value={m}>{m}</option>
                     ))}
                   </select>
-                </div>
-              )}
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.modele}
+                    onChange={(e) => setFormData({ ...formData, modele: e.target.value })}
+                    placeholder="ex: 501, Speedy, Marmont…"
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                  />
+                )}
+              </div>
+
+              {/* Motif (optionnel) */}
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-600 mb-1">Motif</label>
+                <input
+                  type="text"
+                  value={formData.motif}
+                  onChange={(e) => setFormData({ ...formData, motif: e.target.value })}
+                  placeholder="ex: Uni, Rayé, Fleuri, Carreaux…"
+                  className="w-full border rounded px-2 py-1.5 text-sm"
+                />
+              </div>
 
               <div className="col-span-2 md:col-span-4">
                 <label className="block text-xs text-gray-600 mb-1">Couleur</label>
