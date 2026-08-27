@@ -4,6 +4,23 @@
 // réutilisable. Les traductions EN vivent dans src/lib/i18n.ts (MOTIF_EN),
 // comme pour les couleurs/matières.
 
+// Vocabulaire des facettes motif de la boutique publique (filtre ProductGrid).
+// NE PAS SUPPRIMER : ProductGrid.tsx en dépend (import { MOTIFS }).
+export const MOTIFS = [
+  'Uni',
+  'Rayures',
+  'Carreaux / Tartan',
+  'Pied-de-poule',
+  'Vichy',
+  'Fleurs',
+  'Léopard / Animal',
+  'Camouflage',
+  'Pois',
+  'Géométrique',
+  'Abstrait',
+]
+
+// Liste de suggestions du champ « Motif » à la saisie produit (datalist).
 export const MOTIF_OPTIONS: string[] = [
   'Floral',
   'Léopard',
