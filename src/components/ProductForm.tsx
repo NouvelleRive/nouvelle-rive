@@ -2449,7 +2449,7 @@ async function compressImage(file: File): Promise<string> {
                   className="w-full border rounded px-2 py-1.5 text-sm"
                 />
                 <datalist id="motif-options">
-                  {['Floral', 'Léopard', 'Zèbre', 'Rayures', 'Carreaux', 'Polka dot', 'Vichy', 'Tartan', 'Madras', 'Liberty', 'Tropical', 'Python', 'Croco', 'Abstrait'].map((m) => (
+                  {['Floral', 'Léopard', 'Zèbre', 'Rayures', 'Carreaux', 'Polka dot', 'Vichy', 'Tartan', 'Madras', 'Liberty', 'Tropical', 'Python', 'Croco', 'Abstrait', 'Bandana', 'Ethnique'].map((m) => (
                     <option key={m} value={m} />
                   ))}
                 </datalist>
