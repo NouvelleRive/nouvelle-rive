@@ -11,6 +11,7 @@
   import { getTaillesPourCategorie, detectTypeTaille, ALL_TAILLES } from '@/lib/tailles'
   import { COLOR_PALETTE, getColorsPrioritized } from '@/lib/couleurs'
   import { MOTIF_OPTIONS, detectMotif } from '@/lib/motifs'
+  import { detectCategorieFromTitre } from '@/modules/achat/detectCategorie'
   import { getMatieresForCategorie, ALL_MATIERES } from '@/lib/matieres'
   import { detectMarque } from '@/lib/marques'
   import { detectModele, getModelesForCategorie, MODELES_COMMUNS } from '@/lib/modeles'
@@ -1675,6 +1676,15 @@ async function compressImage(file: File): Promise<string> {
                     if (!formData.motif) {
                       const detectedMotif = detectMotif(nom)
                       if (detectedMotif) updates.motif = detectedMotif
+                    }
+                    // Catégorie auto (ex: "blouson" → Veste / Manteau) si pas encore choisie
+                    if (!formData.categorie) {
+                      const detectedCat = detectCategorieFromTitre(nom, displayCategories)
+                      if (detectedCat?.label) {
+                        updates.categorie = detectedCat.label
+                        const tailles = getTaillesPourCategorie(detectedCat.label)
+                        if (tailles.length === 1) updates.taille = tailles[0]
+                      }
                     }
                     setFormData(prev => ({ ...prev, ...updates }))
                   }}
