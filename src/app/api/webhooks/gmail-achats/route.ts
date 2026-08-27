@@ -18,6 +18,7 @@ import { parseChronopostEnChemin } from '@/modules/achat/parser/chronopost'
 import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
 import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
+import { ACHETEUSE_TRIGRAMME } from '@/lib/roles'
 
 type Payload = {
   gmailMessageId: string
@@ -82,13 +83,20 @@ async function handleVintedReceipt(body: string, gmailMessageId: string) {
     return NextResponse.json({ ok: false, reason: receipt.reason })
   }
 
-  const nrChineuse = await findChineuseNR()
-  if (!nrChineuse) {
-    return NextResponse.json({ ok: false, reason: 'chineuse NR introuvable' }, { status: 500 })
+  // La boîte achats = l'acheteuse → pièces rattachées au trigramme ACH (marge
+  // et commission isolées). Fallback NR si le doc ACH n'existe pas encore.
+  let chineuse = await findChineuse(ACHETEUSE_TRIGRAMME)
+  let trigramme = ACHETEUSE_TRIGRAMME
+  if (!chineuse) {
+    chineuse = await findChineuse('NR')
+    trigramme = 'NR'
+  }
+  if (!chineuse) {
+    return NextResponse.json({ ok: false, reason: 'chineuse ACH/NR introuvable' }, { status: 500 })
   }
 
-  const sku = await computeNextSkuNR()
-  const payload = buildVintedProduitPayload(receipt, { chineuseNR: nrChineuse, sku })
+  const sku = await computeNextSku(trigramme)
+  const payload = buildVintedProduitPayload(receipt, { chineuseNR: chineuse, sku, trigramme })
   const docId = vintedDocId(receipt.transactionId)
 
   await adminDb.collection('produits').doc(docId).set(
@@ -187,22 +195,23 @@ async function handleChronopostPickup(body: string) {
 // Helpers Firestore
 // ---------------------------------------------------------------------------
 
-async function findChineuseNR(): Promise<{ uid: string; email: string } | null> {
-  const snap = await adminDb.collection('chineuse').where('trigramme', '==', 'NR').limit(1).get()
+async function findChineuse(trigramme: string): Promise<{ uid: string; email: string } | null> {
+  const snap = await adminDb.collection('chineuse').where('trigramme', '==', trigramme).limit(1).get()
   if (snap.empty) return null
   const d = snap.docs[0]
   return { uid: d.id, email: d.data().email || '' }
 }
 
-async function computeNextSkuNR(): Promise<string> {
-  const snap = await adminDb.collection('produits').where('trigramme', '==', 'NR').get()
+async function computeNextSku(trigramme: string): Promise<string> {
+  const snap = await adminDb.collection('produits').where('trigramme', '==', trigramme).get()
   let maxNum = 0
+  const re = new RegExp(`^${trigramme}(\\d+)$`)
   snap.docs.forEach((d) => {
     const sku = String(d.data().sku || '')
-    const m = sku.match(/^NR(\d+)$/)
+    const m = sku.match(re)
     if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10))
   })
-  return `NR${maxNum + 1}`
+  return `${trigramme}${maxNum + 1}`
 }
 
 async function findVintedProduitSansSuivi() {

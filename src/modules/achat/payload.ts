@@ -18,10 +18,12 @@ export type ChineuseNR = {
 }
 
 export type BuildVintedPayloadOpts = {
-  /** Chineuse NR (trigramme = "NR"), à laquelle on rattache la pièce */
+  /** Chineuse à laquelle on rattache la pièce (NR maison ou ACH acheteuse) */
   chineuseNR: ChineuseNR
-  /** SKU à attribuer — calculé en amont (max(NR{n}) + 1) */
+  /** SKU à attribuer — calculé en amont (max({tri}{n}) + 1) */
   sku: string
+  /** Trigramme cible (défaut NR). Pour la boîte achats acheteuse : 'ACH'. */
+  trigramme?: string
 }
 
 /**
@@ -43,7 +45,7 @@ export type VintedProduitPayload = {
   marque: string
   taille: string
   sku: string
-  trigramme: 'NR'
+  trigramme: string
   chineurUid: string
   chineur: string
   imageUrls: string[]
@@ -81,7 +83,7 @@ export function buildVintedProduitPayload(
   receipt: VintedReceipt,
   opts: BuildVintedPayloadOpts
 ): VintedProduitPayload {
-  const { chineuseNR, sku } = opts
+  const { chineuseNR, sku, trigramme = 'NR' } = opts
   return {
     nom: `${sku} - ${receipt.titre}`,
     description: '',
@@ -89,7 +91,7 @@ export function buildVintedProduitPayload(
     marque: '',
     taille: '',
     sku,
-    trigramme: 'NR',
+    trigramme,
     chineurUid: chineuseNR.uid,
     chineur: chineuseNR.email,
     imageUrls: [],
