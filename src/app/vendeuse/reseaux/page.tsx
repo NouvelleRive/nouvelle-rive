@@ -162,6 +162,94 @@ function CropGuide() {
   )
 }
 
+// Pellicule horizontale type Instagram : glisse le curseur pour parcourir la
+// vidéo (l'aperçu du dessus se met à jour en direct) et « Choisir cette image »
+// capture l'instant affiché comme vignette. Les miniatures de la bande sont
+// locales (object URLs, jamais uploadées).
+function VignetteScrubber({ videoUrl, videoEl, offsetY, onPick, busy }: {
+  videoUrl: string
+  videoEl: HTMLVideoElement | null
+  offsetY: number
+  onPick: (time: number) => void
+  busy: boolean
+}) {
+  const [strip, setStrip] = useState<string[]>([])
+  const [frac, setFrac] = useState(0)
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const draggingRef = useRef(false)
+
+  // Génère la pellicule une fois la durée connue (un seul décodage vidéo).
+  useEffect(() => {
+    if (!videoEl) return
+    let cancelled = false
+    let made: string[] = []
+    const build = async () => {
+      const d = videoEl.duration || 0
+      if (!d) return
+      const N = 10
+      const times = Array.from({ length: N }, (_, i) => (d * (i + 0.5)) / N)
+      try {
+        const files = await captureFramesFromUrl(videoUrl, times)
+        if (cancelled) return
+        made = files.map((f) => URL.createObjectURL(f))
+        setStrip(made)
+      } catch { /* pellicule optionnelle */ }
+    }
+    if (videoEl.duration) build()
+    else {
+      const h = () => build()
+      videoEl.addEventListener('loadedmetadata', h)
+      return () => { cancelled = true; videoEl.removeEventListener('loadedmetadata', h); made.forEach(URL.revokeObjectURL) }
+    }
+    return () => { cancelled = true; made.forEach(URL.revokeObjectURL) }
+  }, [videoUrl, videoEl])
+
+  const seekTo = (clientX: number) => {
+    const el = trackRef.current
+    if (!el || !videoEl) return
+    const r = el.getBoundingClientRect()
+    const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width))
+    setFrac(f)
+    try { videoEl.currentTime = f * (videoEl.duration || 0) } catch {}
+  }
+  const onDown = (e: React.PointerEvent) => {
+    draggingRef.current = true
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+    seekTo(e.clientX)
+  }
+  const onMove = (e: React.PointerEvent) => { if (draggingRef.current) seekTo(e.clientX) }
+  const onUp = () => { draggingRef.current = false }
+
+  return (
+    <div className="mt-2">
+      <div
+        ref={trackRef}
+        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+        className="relative h-14 rounded-lg overflow-hidden bg-gray-900 cursor-ew-resize touch-none select-none flex"
+      >
+        {strip.length ? strip.map((u, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={i} src={u} alt="" className="h-full flex-1 object-cover pointer-events-none" style={{ objectPosition: `50% ${offsetY}%` }} />
+        )) : (
+          <div className="flex-1 flex items-center justify-center text-white/60 text-sm">Chargement de la pellicule…</div>
+        )}
+        {/* Curseur (playhead) */}
+        <div className="absolute top-0 bottom-0 w-1 bg-white shadow -translate-x-1/2 pointer-events-none" style={{ left: `${frac * 100}%` }} />
+      </div>
+      <div className="flex justify-center mt-2">
+        <button
+          onClick={() => onPick(videoEl?.currentTime || 0.1)}
+          disabled={busy || !strip.length}
+          className="text-sm font-medium text-white bg-[#22209C] rounded-lg px-4 py-1.5 disabled:opacity-50"
+        >
+          {busy ? '…' : 'Choisir cette image'}
+        </button>
+      </div>
+      <p className="text-sm text-gray-400 mt-1 text-center">Glisse de droite à gauche et arrête-toi sur l'image qui te plaît.</p>
+    </div>
+  )
+}
+
 function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], onSwapped }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void; collabOptions: CollabOption[]; dates?: string[]; onSwapped?: () => void }) {
   const [p, setP] = useState<Production>(prod)
   const [saving, setSaving] = useState(false)
@@ -376,11 +464,12 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     }
   }
 
-  const grabFrame = async () => {
+  const grabFrame = async (time?: number) => {
     if (!videoEl) return
     setBusy('vignette')
     try {
-      const [frame] = await captureFramesFromUrl(p.videoUrl, [videoEl.currentTime || 0.1])
+      const t = time ?? videoEl.currentTime ?? 0.1
+      const [frame] = await captureFramesFromUrl(p.videoUrl, [t || 0.1])
       addVignette(await uploadMedia(frame, 'vignette'))
     } catch (e: any) { alert(e?.message) }
     finally { setBusy(null) }
@@ -435,6 +524,16 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
               <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && onVideo(e.target.files[0])} />
             </label>
           )}
+          {/* Pellicule type IG : glisse pour choisir l'image → vignette */}
+          {p.videoUrl && (
+            <VignetteScrubber
+              videoUrl={p.videoUrl}
+              videoEl={videoEl}
+              offsetY={p.vignetteOffsetY ?? 50}
+              busy={busy === 'vignette'}
+              onPick={(t) => grabFrame(t)}
+            />
+          )}
         </div>
 
         {/* Vignette : fenêtre 4:5 (ce qui s'affiche dans la grille) ; glisse pour cadrer */}
@@ -483,7 +582,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
               <button onClick={genVignetteOptions} disabled={busy === 'vignette'} className="text-sm font-medium text-[#22209C] border border-[#22209C] rounded-lg px-3 py-1.5">
                 {busy === 'vignette' ? '…' : 'Proposer des vignettes'}
               </button>
-              <button onClick={grabFrame} disabled={busy === 'vignette'} className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
+              <button onClick={() => grabFrame()} disabled={busy === 'vignette'} className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5">
                 Image actuelle
               </button>
               <label className="text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-3 py-1.5 cursor-pointer">
