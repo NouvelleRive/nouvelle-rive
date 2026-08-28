@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { Resend } from 'resend'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { sendCatchupCommande } from '@/lib/emails/commandes'
+// Relance catch-up SUPPRIMÉE — plus aucun mail « on chine pour vous » / MERCI n'est envoyé ici.
 
 const CRON_SECRET = process.env.CRON_SECRET
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -69,43 +69,20 @@ function buildEmailHtml(prenom: string, items: Produit[]) {
   `
 }
 
-const J_CATCHUP = 10 // jours après expédition/retrait pour la relance "on chine pour vous"
-
-// Relance douce 10 jours après que la commande soit partie (expédiée) ou récupérée.
-// Ne lit QUE les commandes armées (catchupPending == true) → requête bornée, zéro coût.
+// Relance catch-up SUPPRIMÉE. On ne fait plus AUCUN envoi.
+// On se contente de désarmer les commandes encore marquées pour ne rien rescanner.
 async function sweepCatchup(dryRun: boolean) {
-  const cutoffMs = Date.now() - J_CATCHUP * MS_PER_DAY
   const snap = await adminDb.collection('commandes').where('catchupPending', '==', true).get()
-
-  const envoyes: { commandeId: string; email: string }[] = []
-  const erreurs: { commandeId: string; error: string }[] = []
-
-  for (const d of snap.docs) {
-    const c = d.data() as any
-    const dateRef: Timestamp | undefined = c.dateExpedition || c.dateRetrait
-    if (!dateRef) continue
-    if (dateRef.toMillis() > cutoffMs) continue // pas encore 10 jours
-
-    const email = c.client?.email
-    if (!email) {
-      // Pas d'email → on désarme pour ne pas le rescanner chaque jour
-      if (!dryRun) await d.ref.update({ catchupPending: false })
-      continue
+  if (!dryRun) {
+    let batch = adminDb.batch()
+    let n = 0
+    for (const d of snap.docs) {
+      batch.update(d.ref, { catchupPending: false })
+      if (++n % 400 === 0) { await batch.commit(); batch = adminDb.batch() }
     }
-
-    try {
-      if (!dryRun) {
-        const res = await sendCatchupCommande({ email, prenom: c.client?.prenom || '' })
-        if (!res.success) throw new Error('resend KO')
-        await d.ref.update({ catchupPending: false, catchupSentAt: Timestamp.now() })
-      }
-      envoyes.push({ commandeId: d.id, email })
-    } catch (e: any) {
-      erreurs.push({ commandeId: d.id, error: e?.message || 'erreur inconnue' })
-    }
+    await batch.commit()
   }
-
-  return { envoyes, erreurs, nbArmees: snap.size }
+  return { envoyes: [], erreurs: [], nbArmees: snap.size, disabled: true }
 }
 
 export async function GET(req: NextRequest) {
