@@ -27,7 +27,6 @@ function layout(titre: string, contenu: string) {
       </h2>
       ${contenu}
       <p style="margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#666;">
-        Une question ? Répondez directement à cet email.<br><br>
         L'équipe Nouvelle Rive
       </p>
     </div>
@@ -177,34 +176,6 @@ export async function sendRetraitConfirme(params: {
     return { success: true }
   } catch (error) {
     console.error('[EMAIL] retrait confirmé KO:', error)
-    return { success: false, error }
-  }
-}
-
-// 4) Catch-up (10 jours après expédition/retrait) — relance douce
-export async function sendCatchupCommande(params: {
-  email: string
-  prenom: string
-}) {
-  const { email, prenom } = params
-  const contenu = `
-    <p style="margin:24px 0;">Bonjour ${prenom || ''},<br><br>
-      Nous espérons que votre pièce vous plaît.<br><br>
-      Recherchez-vous quelque chose en particulier ? Dites-nous ce qui vous ferait plaisir
-      (marque, type de pièce, taille) et nous ouvrons l'œil pour vous.
-    </p>
-  `
-  try {
-    await resend.emails.send({
-      from: FROM,
-      to: email,
-      bcc: OWNER, // Nouvelle Rive en copie cachée pour suivre (à retirer plus tard si besoin)
-      subject: 'Une pièce en tête ? On chine pour vous',
-      html: layout('ON CHINE POUR VOUS', contenu),
-    })
-    return { success: true }
-  } catch (error) {
-    console.error('[EMAIL] catch-up KO:', error)
     return { success: false, error }
   }
 }
