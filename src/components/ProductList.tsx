@@ -1784,6 +1784,7 @@
                       categorie: typeof editingProduct.categorie === 'object' ? editingProduct.categorie?.label : editingProduct.categorie,
                       prix: editingProduct.prix?.toString(),
                       prixAchat: (editingProduct as any).prixAchat?.toString(),
+                      fraisPort: (editingProduct as any).fraisPort?.toString(),
                       quantite: editingProduct.quantite?.toString(),
                       marque: editingProduct.marque,
                       taille: editingProduct.taille,

@@ -357,6 +357,7 @@ async function compressImage(file: File): Promise<string> {
       categorie?: string
       prix?: string
       prixAchat?: string
+      fraisPort?: string
       quantite?: string
       marque?: string
       taille?: string
