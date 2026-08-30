@@ -863,7 +863,7 @@
       return (
         <div
           key={p.id}
-          className={`bg-white rounded-xl border p-3 sm:p-4 shadow-sm transition-all ${
+          className={`bg-white rounded-xl border p-2.5 sm:p-3 shadow-sm transition-all ${
             isFound
               ? 'border-green-400 bg-green-50/50'
               : 'border-gray-200 hover:shadow-md'
@@ -891,7 +891,7 @@
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                     {p.sku && <span className="text-[#22209C]">{p.sku}</span>}
                     {p.sku && ' - '}
                     {(p.nom || '').replace(new RegExp(`^${p.sku}\\s*-\\s*`, 'i'), '')}
@@ -903,11 +903,6 @@
                   </div>
                   {showChineuse && (
                     <p className="text-xs text-gray-400 mt-1">{getChineurName(p.chineur)}</p>
-                  )}
-                  {mode === 'reception' && p.createdAt && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Déposé le {p.createdAt.toDate().toLocaleDateString('fr-FR')}
-                    </p>
                   )}
                 </div>
                 <div className="text-right flex-shrink-0">
@@ -925,7 +920,7 @@
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-2">
                 {mode === 'inventaire' && (
                   <>
                     {isFound ? (
@@ -1586,6 +1581,9 @@
         {/* Popup : restock chineuse fini — phase A (pièces à gérer) puis phase B (photos face à valider) */}
         {restockFiniChineuse && (() => {
           const tri = restockFiniChineuse.trigramme
+          // NOUVELLE RIVE = pièces achetées (pas déposées) : la « récupération »
+          // n'a pas de sens, on doit pouvoir quitter l'écran destock.
+          const isNouvelleRive = tri === 'NR' || /nouvelle\s*rive/i.test(restockFiniChineuse.nom || '')
           const now = new Date()
           const oneMonthAgo = new Date(now); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
           const twoMonthsAgo = new Date(now); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
@@ -1782,8 +1780,18 @@
                     {destockItems.length} pièce{destockItems.length > 1 ? 's' : ''} à récupérer chez {restockFiniChineuse.nom}
                   </h3>
                   <p className="text-xs text-gray-500 mb-4">
-                    Marque chaque pièce « Récupérée » pour continuer.
+                    {isNouvelleRive
+                      ? 'Ces pièces ont été achetées par Nouvelle Rive : pas de récupération. Tu peux quitter.'
+                      : 'Marque chaque pièce « Récupérée » pour continuer.'}
                   </p>
+                  {isNouvelleRive && (
+                    <button
+                      onClick={goToPhaseAOrClose}
+                      className="mb-4 w-full px-3 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1875]"
+                    >
+                      Quitter cet écran
+                    </button>
+                  )}
                   <div className="space-y-2.5">
                     {destockItems.map((p) => {
                       const face = p.photos?.face || p.imageUrls?.[0] || p.imageUrl || ''
