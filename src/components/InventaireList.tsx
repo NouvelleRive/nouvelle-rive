@@ -1095,7 +1095,7 @@
     }
 
     return (
-      <div className="p-4 max-w-4xl mx-auto">
+      <div className="px-2 py-4 max-w-4xl mx-auto">
         <div className="mb-4">
           <h1 className="text-lg sm:text-xl font-bold text-[#22209C]">
             {mode === 'inventaire' && `📋 Inventaire${inventaireNom ? ` - ${inventaireNom}` : ''}`}
