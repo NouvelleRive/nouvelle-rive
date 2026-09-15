@@ -538,7 +538,7 @@
           dateReception: Timestamp.now(),
           recuPar: vendeusePrenom,
         }
-        // Brouillon achat (Vinted/Whatnot/…) : passer aussi achatStatut
+        // Brouillon achat (Vinted/Whatnot/Fleek/…) : passer aussi achatStatut
         // à 'recu-boutique' pour retirer le grisé + le badge livraison et
         // remettre le produit dans le flux vendeuse classique.
         if (typeof p.source === 'string' && p.source.startsWith('achat-')) {

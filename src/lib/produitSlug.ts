@@ -75,6 +75,8 @@ export function extractIdFromSlug(slug: string): string | null {
   if (/^[A-Za-z0-9]{20}$/.test(last)) return last
   // SKU-format id : 2-10 lettres + 1-5 chiffres (PRI171, MAK22, IP123…)
   if (/^[A-Za-z]{2,10}\d{1,5}$/.test(last)) return last
+  // Fleek batch id : fleek_<orderId>_<groupIdx>_<itemIdx>
+  if (/^fleek_\d+_\d+_\d+$/.test(last)) return last
   // Fallback générique
   if (/^[A-Za-z0-9]{15,30}$/.test(last)) return last
   return null
