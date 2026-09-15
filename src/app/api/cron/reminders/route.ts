@@ -1,9 +1,11 @@
 // app/api/cron/reminders/route.ts
 // Endpoint déclenché par Vercel Cron.
 // Vérifie l'heure de Paris et envoie les notifs au tel boutique :
-// - 11h50 : rappel pointage arrivée si vendeuse(s) sur planning du jour pas encore pointée(s)
-// - 12h50 / 15h50 / 17h50 : "[Nom] arrive dans 10 min" pour restock 13h / 16h / 18h
-// - 19h55 : rappel pointage départ si pas pointé
+// - 11h10 / 14h10 : rappel pointage arrivée (poste matin ouvre 11h, poste soir ouvre 14h) si pas pointé
+// - 13h50 / 15h50 / 17h50 : "[Nom] arrive dans 10 min" pour restock 14h / 16h / 18h (18h le mardi)
+// - 17h55 / 19h55 : rappel pointage départ (poste matin ferme 18h, poste soir ferme 20h) si pas pointé
+// NB: les clés Firestore des postes restent '11-17' (matin) / '12-20' (soir) — identifiants
+// historiques stables ; leurs horaires réels sont 11h-18h et 14h-20h depuis le 14/09/2026.
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -11,6 +13,7 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendPushToOwner } from '@/lib/webpush'
 import { publishDueReseaux } from '@/lib/reseauxPublish'
+import { sendPanierOublie, langFromPays } from '@/lib/emails/commandes'
 import { Resend } from 'resend'
 
 const CRON_SECRET = process.env.CRON_SECRET
@@ -154,6 +157,10 @@ export async function GET(req: NextRequest) {
   const monthKey = dateStr.slice(0, 7)
   const actions: string[] = []
 
+  // Bascule horaires vendeuses/restock : à partir du 14/09/2026, poste matin 11h-18h,
+  // poste soir 14h-20h, restock 1er créneau à 14h. Avant, anciens horaires (12h/17h/13h).
+  const avantBascule = dateStr < '2026-09-14'
+
   // Traçage des mails envoyés pour le récap (owner exclu du récap et des copies).
   const OWNER_EMAIL = 'nouvelleriveparis@gmail.com'
   const sentMails: { to: string; subject: string; pieces: PieceInfo[] }[] = []
@@ -164,9 +171,13 @@ export async function GET(req: NextRequest) {
     return res
   }
 
-  // Rappels pointage arrivée — déclenchés 10 min après le début de chaque créneau
-  // 11h10 pour slot 11-17, 12h10 pour slot 12-20.
-  for (const slot of [{ name: '11-17', trigH: 11, trigM: 10 }, { name: '12-20', trigH: 12, trigM: 10 }]) {
+  // Rappels pointage arrivée — déclenchés 10 min après le début de chaque créneau.
+  // Poste matin ouvre 11h (11h10) les deux ères ; poste soir 12h avant le 14/09 (12h10), 14h après (14h10).
+  const arriveeSlots = [
+    { name: '11-17', label: avantBascule ? '11-17' : '11-18', trigH: 11, trigM: 10 },
+    { name: '12-20', label: avantBascule ? '12-20' : '14-20', trigH: avantBascule ? 12 : 14, trigM: 10 },
+  ]
+  for (const slot of arriveeSlots) {
     if (!inWindow(h, m, slot.trigH, slot.trigM)) continue
     const planningSnap = await adminDb.collection('planning').doc(monthKey).get()
     const slots = planningSnap.exists ? (planningSnap.data()?.slots || {}) : {}
@@ -176,7 +187,7 @@ export async function GET(req: NextRequest) {
     if (!ptg.exists || !ptg.data()?.arrivee) {
       await sendPushToOwner('boutique', {
         title: '👑 QUEEN es tu là ?',
-        body: `Pointe avant de faire péter le record 🧿🍀🧧 (créneau ${slot.name})`,
+        body: `Pointe avant de faire péter le record 🧿🍀🧧 (créneau ${slot.label})`,
         url: '/vendeuse/calendrier',
         tag: `arrivee-${slot.name}-${dateStr}`,
       })
@@ -194,7 +205,7 @@ export async function GET(req: NextRequest) {
     const restockSnap = await adminDb.collection('restocks').doc(monthKey).get()
     const restockSlots = restockSnap.exists ? (restockSnap.data()?.slots || {}) : {}
     const restocksAujourdhui: { heure: string; nom: string }[] = []
-    for (const heure of ['13h', '16h', '18h']) {
+    for (const heure of ['13h', '14h', '16h', '18h']) {
       const data = restockSlots[`${dateStr}_${heure}`]
       if (data?.nom) restocksAujourdhui.push({ heure, nom: data.nom })
     }
@@ -260,9 +271,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Rappels pointage départ — déclenchés 5 min avant la fin de chaque créneau
-  // 16h55 pour slot 11-17, 19h55 pour slot 12-20.
-  for (const slot of [{ name: '11-17', trigH: 16, trigM: 55 }, { name: '12-20', trigH: 19, trigM: 55 }]) {
+  // Rappels pointage départ — déclenchés 5 min avant la fin de chaque créneau.
+  // Poste matin ferme 17h avant le 14/09 (16h55), 18h après (17h55) ; poste soir ferme 20h (19h55) les deux ères.
+  const departSlots = [
+    { name: '11-17', trigH: avantBascule ? 16 : 17, trigM: 55 },
+    { name: '12-20', trigH: 19, trigM: 55 },
+  ]
+  for (const slot of departSlots) {
     if (!inWindow(h, m, slot.trigH, slot.trigM)) continue
     const planningSnap = await adminDb.collection('planning').doc(monthKey).get()
     const slots = planningSnap.exists ? (planningSnap.data()?.slots || {}) : {}
@@ -283,7 +298,7 @@ export async function GET(req: NextRequest) {
 
   // Restocks : 12h50 / 15h50 / 17h50 → restock à 13h / 16h / 18h
   const restockTargets = [
-    { trigH: 12, trigM: 50, slot: '13h' },
+    { trigH: 13, trigM: 50, slot: '14h' },
     { trigH: 15, trigM: 50, slot: '16h' },
     { trigH: 17, trigM: 50, slot: '18h' },
   ]
@@ -314,10 +329,10 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Rappel chineuse — 30 min avant son restock (12h30 / 15h30 / 17h30 → restock 13h / 16h / 18h)
+  // Rappel chineuse — 30 min avant son restock (13h30 / 15h30 / 17h30 → restock 14h / 16h / 18h)
   // Push uniquement, à la chineuse elle-même (ownerId = authUid).
   const chineuseRestockTargets = [
-    { trigH: 12, trigM: 30, slot: '13h' },
+    { trigH: 13, trigM: 30, slot: '14h' },
     { trigH: 15, trigM: 30, slot: '16h' },
     { trigH: 17, trigM: 30, slot: '18h' },
   ]
@@ -444,7 +459,13 @@ export async function GET(req: NextRequest) {
       // Compte les actions à prévoir, évaluées à la date du restock (demain)
       const triForCount = (slot.trigramme || chin.trigramme || '').toString().toUpperCase()
       const refDate = new Date(tomorrowStr + 'T12:00:00')
-      const { aRecuperer, prixABaisser, stockActif } = await actionsChineuse(triForCount, refDate)
+      const rawActions = await actionsChineuse(triForCount, refDate)
+      // Petites séries : pas de cycle "faire tourner" (récupération/destock ni baisse),
+      // aligné avec cycles=[] plus bas. On garde uniquement le restock ("amène X pièces").
+      const isSmallBatch = chin.stockType === 'smallBatch'
+      const aRecuperer = isSmallBatch ? [] : rawActions.aRecuperer
+      const prixABaisser = isSmallBatch ? [] : rawActions.prixABaisser
+      const stockActif = rawActions.stockActif
       const cible = typeof chin.cibleStock === 'number' ? chin.cibleStock : 0
       const aAmener = Math.max(0, cible - stockActif - aRecuperer.length)
       const renderPieces = (pieces: PieceInfo[]) => pieces.length === 0 ? '' : `
@@ -1041,6 +1062,70 @@ export async function GET(req: NextRequest) {
         }
       }
     }
+  }
+
+  // Panier oublié — relance ~1h puis ~24h. NON gated par l'heure : tourne à chaque
+  // tick du cron 5 min. Collection volontairement petite (doc supprimé au paiement
+  // ou après 26h), donc getDocs borné à 100 reste négligeable côté coûts.
+  // Règle : on revérifie la dispo de CHAQUE pièce au moment de l'envoi — jamais de
+  // relance sur une pièce vendue/récupérée entre-temps.
+  try {
+    const now = Date.now()
+    const H1 = 60 * 60 * 1000
+    const H24 = 24 * H1
+    const H26 = 26 * H1
+    const snap = await adminDb.collection('paniersEnAttente').limit(100).get()
+    for (const doc of snap.docs) {
+      const d = doc.data() as any
+      if (d.paye === true) { await doc.ref.delete(); continue }
+      const created = d.createdAt?.toDate?.()?.getTime?.()
+      if (!created) continue
+      const age = now - created
+      // Abandon > 26h (24h + fenêtre d'envoi) → on arrête et on nettoie.
+      if (age > H26) { await doc.ref.delete(); continue }
+
+      let relance: 1 | 2 | null = null
+      if (age >= H24 && !d.relance2SentAt) relance = 2
+      else if (age >= H1 && age < H24 && !d.relance1SentAt) relance = 1
+      if (!relance) continue
+
+      // Revérif dispo au moment de l'envoi
+      const articles = Array.isArray(d.articles) ? d.articles : []
+      const dispo: { id: string; nom: string; marque: string | null; prix: number; image: string | null }[] = []
+      for (const a of articles) {
+        if (!a?.id) continue
+        const ps = await adminDb.collection('produits').doc(a.id).get()
+        if (!ps.exists) continue
+        const p = ps.data() as any
+        if (p.vendu === true) continue
+        if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
+        if (p.statutRecuperation) continue
+        if ((p.quantite == null ? 1 : p.quantite) <= 0) continue
+        dispo.push({
+          id: a.id,
+          nom: (p.nom || a.nom || '').replace(`${p.sku || ''} - `, ''),
+          marque: p.marque || null,
+          prix: p.prix ?? a.prix,
+          image: a.image || p.imageUrl || p.photos?.face || (p.imageUrls && p.imageUrls[0]) || null,
+        })
+      }
+      // Plus rien de dispo → pas de mail, on nettoie.
+      if (dispo.length === 0) { await doc.ref.delete(); continue }
+
+      await sendPanierOublie({
+        email: d.email,
+        prenom: d.prenom || '',
+        articles: dispo,
+        relance,
+        lang: langFromPays(d.paysCode),
+      })
+      await doc.ref.update(relance === 1
+        ? { relance1SentAt: FieldValue.serverTimestamp() }
+        : { relance2SentAt: FieldValue.serverTimestamp() })
+      actions.push(`panier-oublie-r${relance}-${doc.id}`)
+    }
+  } catch (e: any) {
+    console.error('[cron/reminders] panier oublié KO:', e?.message)
   }
 
   // Récap : un seul mail à l'owner listant les mails partis dans ce run (gratuit).
