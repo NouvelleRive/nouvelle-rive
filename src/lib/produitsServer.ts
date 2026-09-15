@@ -218,16 +218,21 @@ export async function getCoupsDeCoeurServer(limit: number = 50): Promise<Produit
   }
 }
 
-// Lundi 00h (heure de Paris) de la semaine en cours, en millis.
-function startOfThisWeekMs(): number {
-  const now = new Date()
-  const paris = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }))
+// Lundi 00h (heure de Paris) de la semaine contenant `atMs`, en millis.
+function startOfWeekMs(atMs: number): number {
+  const at = new Date(atMs)
+  const paris = new Date(at.toLocaleString('en-US', { timeZone: 'Europe/Paris' }))
   const day = (paris.getDay() + 6) % 7 // 0 = lundi
   paris.setHours(0, 0, 0, 0)
   paris.setDate(paris.getDate() - day)
   // Décalage Paris↔serveur appliqué pour retomber sur un vrai instant.
-  const offset = now.getTime() - new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getTime()
+  const offset = at.getTime() - new Date(at.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getTime()
   return paris.getTime() + offset
+}
+
+// Lundi 00h (heure de Paris) de la semaine en cours, en millis.
+function startOfThisWeekMs(): number {
+  return startOfWeekMs(new Date().getTime())
 }
 
 // Week fav = sélection de l'équipe (champ favoriEquipe posé au restock + amendé
@@ -268,6 +273,54 @@ export async function getWeekFavServer(limit: number = 50): Promise<ProduitIniti
       .map(({ id, raw }) => serialize(id, raw))
   } catch (err) {
     console.error('[produitsServer] getWeekFavServer error:', err)
+    return []
+  }
+}
+
+export type WeekFavGroup = { weekStart: number; produits: ProduitInitial[] }
+
+// Week fav groupées par semaine (lundi Paris) : la semaine en cours + toutes les
+// précédentes, chacune avec son titre côté page. Alimente /week-fav.
+export async function getWeekFavGroupedServer(limit: number = 200): Promise<WeekFavGroup[]> {
+  try {
+    const snap = await adminDb
+      .collection('produits')
+      .where('favoriEquipe', '==', true)
+      .limit(limit)
+      .get()
+
+    const ms = (raw: any) =>
+      raw.favoriEquipeAt?.toMillis?.() ??
+      (typeof raw.favoriEquipeAt?._seconds === 'number' ? raw.favoriEquipeAt._seconds * 1000 : 0)
+
+    const filtered = snap.docs
+      .map(d => ({ id: d.id, raw: d.data() as any }))
+      .filter(({ raw }) =>
+        ms(raw) > 0 &&
+        raw.statut !== 'supprime' &&
+        raw.statut !== 'retour' &&
+        !raw.statutRecuperation &&
+        raw.recu !== false &&
+        raw.hidden !== true &&
+        raw.forceDisplay !== false &&
+        raw.vendu !== true &&
+        (raw.quantite ?? 1) > 0 &&
+        (raw.imageUrls?.[0] || raw.imageUrl || raw.photos?.face)
+      )
+      .sort((a, b) => ms(b.raw) - ms(a.raw))
+
+    const byWeek = new Map<number, ProduitInitial[]>()
+    for (const { id, raw } of filtered) {
+      const wk = startOfWeekMs(ms(raw))
+      if (!byWeek.has(wk)) byWeek.set(wk, [])
+      byWeek.get(wk)!.push(serialize(id, raw))
+    }
+
+    return [...byWeek.entries()]
+      .sort((a, b) => b[0] - a[0]) // semaine la plus récente en premier
+      .map(([weekStart, produits]) => ({ weekStart, produits }))
+  } catch (err) {
+    console.error('[produitsServer] getWeekFavGroupedServer error:', err)
     return []
   }
 }
