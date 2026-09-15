@@ -134,8 +134,13 @@ function captureFrame(video: HTMLVideoElement): Promise<File> {
 // (canvas non « tainted »). Cache-buster pour éviter une copie déjà en cache
 // sans en-têtes CORS (sinon « operation is insecure »). L'aperçu, lui, reste
 // sans crossOrigin pour éviter le rectangle noir quand le CDN n'envoie pas CORS.
-function captureFramesFromUrl(url: string, times: number[]): Promise<File[]> {
+function captureFramesFromUrl(url: string, times: number[], timeoutMs = 20000): Promise<File[]> {
   return new Promise((resolve, reject) => {
+    // Garde-fou : sur iOS/Safari la vidéo hors-écran peut ne jamais se charger.
+    // Sans ce timeout la promesse reste pendante et la pellicule tourne à l'infini.
+    const timer = setTimeout(() => reject(new Error('vidéo trop longue à charger')), timeoutMs)
+    const done = (fn: (v: any) => void) => (v: any) => { clearTimeout(timer); fn(v) }
+    resolve = done(resolve); reject = done(reject)
     const v = document.createElement('video')
     v.crossOrigin = 'anonymous'
     v.muted = true; v.playsInline = true; v.preload = 'auto'
@@ -174,6 +179,7 @@ function VignetteScrubber({ videoUrl, videoEl, offsetY, onPick, busy }: {
   busy: boolean
 }) {
   const [strip, setStrip] = useState<string[]>([])
+  const [stripFail, setStripFail] = useState(false)
   const [frac, setFrac] = useState(0)
   const trackRef = useRef<HTMLDivElement | null>(null)
   const draggingRef = useRef(false)
@@ -183,9 +189,10 @@ function VignetteScrubber({ videoUrl, videoEl, offsetY, onPick, busy }: {
     if (!videoEl) return
     let cancelled = false
     let made: string[] = []
+    setStripFail(false)
     const build = async () => {
       const d = videoEl.duration || 0
-      if (!d) return
+      if (!d) { setStripFail(true); return }
       const N = 10
       const times = Array.from({ length: N }, (_, i) => (d * (i + 0.5)) / N)
       try {
@@ -193,9 +200,14 @@ function VignetteScrubber({ videoUrl, videoEl, offsetY, onPick, busy }: {
         if (cancelled) return
         made = files.map((f) => URL.createObjectURL(f))
         setStrip(made)
-      } catch { /* pellicule optionnelle */ }
+      } catch {
+        // Pellicule optionnelle : on arrête le « Chargement… » et on laisse
+        // choisir l'image via le lecteur du dessus.
+        if (!cancelled) setStripFail(true)
+      }
     }
-    if (videoEl.duration) build()
+    // readyState ≥ 1 : les métadonnées sont déjà là, l'événement ne viendra plus.
+    if (videoEl.duration || videoEl.readyState >= 1) build()
     else {
       const h = () => build()
       videoEl.addEventListener('loadedmetadata', h)
@@ -231,7 +243,9 @@ function VignetteScrubber({ videoUrl, videoEl, offsetY, onPick, busy }: {
           // eslint-disable-next-line @next/next/no-img-element
           <img key={i} src={u} alt="" className="h-full flex-1 object-cover pointer-events-none" style={{ objectPosition: `50% ${offsetY}%` }} />
         )) : (
-          <div className="flex-1 flex items-center justify-center text-white/60 text-sm">Chargement de la pellicule…</div>
+          <div className="flex-1 flex items-center justify-center text-white/60 text-sm px-3 text-center">
+            {stripFail ? 'Aperçu indisponible — mets la vidéo sur pause à l\'image voulue, puis « Choisir cette image ».' : 'Chargement de la pellicule…'}
+          </div>
         )}
         {/* Curseur (playhead) */}
         <div className="absolute top-0 bottom-0 w-1 bg-white shadow -translate-x-1/2 pointer-events-none" style={{ left: `${frac * 100}%` }} />
@@ -239,7 +253,7 @@ function VignetteScrubber({ videoUrl, videoEl, offsetY, onPick, busy }: {
       <div className="flex justify-center mt-2">
         <button
           onClick={() => onPick(videoEl?.currentTime || 0.1)}
-          disabled={busy || !strip.length}
+          disabled={busy || !videoEl}
           className="text-sm font-medium text-white bg-[#22209C] rounded-lg px-4 py-1.5 disabled:opacity-50"
         >
           {busy ? '…' : 'Choisir cette image'}
