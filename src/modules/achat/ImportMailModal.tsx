@@ -114,7 +114,7 @@ export const ItemCard = memo(function ItemCard({
       {isFleek && (
         <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
           <div>
-            <span className="font-semibold">Lot Fleek</span> · {item.quantiteLot ?? '?'} pièces ·
+            <span className="font-semibold">Lot</span> · {item.quantiteLot ?? '?'} pièces ·
             <span className="ml-1">prix lot {item.prixLot != null ? `${item.prixLot.toFixed(2)} €` : '—'}</span> ·
             <span className="ml-1">unitaire {item.prixAchat != null ? `${item.prixAchat.toFixed(2)} €` : '—'}</span>
           </div>
@@ -510,7 +510,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
                   {isFleek && (
                     <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
                       <div>
-                        <span className="font-semibold">Lot Fleek</span> · {it.quantiteLot ?? '?'} pièces ·
+                        <span className="font-semibold">Lot</span> · {it.quantiteLot ?? '?'} pièces ·
                         <span className="ml-1">prix lot {it.prixLot != null ? `${it.prixLot.toFixed(2)} €` : '—'}</span> ·
                         <span className="ml-1">unitaire {it.prixAchat != null ? `${it.prixAchat.toFixed(2)} €` : '—'}</span>
                       </div>
