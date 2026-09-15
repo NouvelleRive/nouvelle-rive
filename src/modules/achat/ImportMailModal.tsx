@@ -464,11 +464,10 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
               />
             </div>
             )}
-            {isAdminUser && <div className="text-xs text-gray-400 mb-2 text-center">Copier coller un mail ou une page</div>}
             <textarea
               value={pasted}
               onChange={(e) => setPasted(e.target.value)}
-              placeholder="Colle ici la page Vinted…"
+              placeholder="Copier coller un mail ou une page"
               className="flex-1 min-h-[200px] w-full border border-gray-300 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#09B1BA] resize-none"
             />
             {errorMsg && (
