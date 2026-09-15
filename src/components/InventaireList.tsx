@@ -863,7 +863,7 @@
       return (
         <div
           key={p.id}
-          className={`bg-white rounded-xl border p-2.5 sm:p-3 shadow-sm transition-all ${
+          className={`bg-white rounded-xl border p-2 shadow-sm transition-all ${
             isFound
               ? 'border-green-400 bg-green-50/50'
               : 'border-gray-200 hover:shadow-md'
@@ -920,7 +920,7 @@
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-1.5">
                 {mode === 'inventaire' && (
                   <>
                     {isFound ? (
@@ -1274,7 +1274,7 @@
                         </span>
                       )}
                     </h2>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {prods.map((p) => renderProductCard(p, false))}
                     </div>
                   </div>
@@ -1282,7 +1282,7 @@
               })}
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {produitsFiltres.slice(0, visibleCount).map((p) => renderProductCard(p, true))}
           </div>
         )}
