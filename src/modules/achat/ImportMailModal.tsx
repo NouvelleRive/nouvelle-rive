@@ -415,13 +415,11 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         <div className="flex items-start justify-between px-6 pt-6 pb-3 shrink-0 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              {step === 'preview' ? 'Vérifie avant création' : (isAdminUser ? 'Importer depuis Vinted / Whatnot / Fleek' : 'Importer depuis Vinted')}
+              {step === 'preview' ? 'Vérifie avant création' : 'Importer depuis Vinted'}
             </h2>
             {step === 'paste' && (
               <p className="text-sm text-gray-500 mt-1">
-                {isAdminUser
-                  ? 'Colle ici la page Vinted, le mail Whatnot ou le texte de la facture Fleek.'
-                  : 'Colle ici la page Vinted.'}
+                Colle ici la page Vinted.
               </p>
             )}
             {step === 'preview' && (
@@ -456,12 +454,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
             >
               <Upload size={20} className="mx-auto text-gray-400 mb-1" />
               <div className="text-sm text-gray-700">
-                {extractingPdf ? 'Lecture du PDF…' : (
-                  <>
-                    Glisse une facture <strong>Fleek (PDF)</strong> ici, ou{' '}
-                    <span className="text-[#09B1BA] underline">parcourir</span>
-                  </>
-                )}
+                {extractingPdf ? 'Lecture du PDF…' : 'Sélectionner une facture'}
               </div>
               <input
                 ref={fileInputRef}
@@ -476,11 +469,11 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
               />
             </div>
             )}
-            {isAdminUser && <div className="text-xs text-gray-400 mb-2 text-center">— ou colle le contenu ci-dessous —</div>}
+            {isAdminUser && <div className="text-xs text-gray-400 mb-2 text-center">Copier coller un mail ou une page</div>}
             <textarea
               value={pasted}
               onChange={(e) => setPasted(e.target.value)}
-              placeholder={isAdminUser ? 'Colle ici le mail ou la page Vinted/Whatnot…' : 'Colle ici la page Vinted…'}
+              placeholder="Colle ici la page Vinted…"
               className="flex-1 min-h-[200px] w-full border border-gray-300 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#09B1BA] resize-none"
             />
             {errorMsg && (
