@@ -277,11 +277,14 @@ export async function getWeekFavServer(limit: number = 50): Promise<ProduitIniti
   }
 }
 
-export type WeekFavGroup = { weekStart: number; produits: ProduitInitial[] }
+export type WeekFavGroup = { weeksAgo: number; produits: ProduitInitial[] }
 
-// Week fav groupées par semaine (lundi Paris) : la semaine en cours + toutes les
-// précédentes, chacune avec son titre côté page. Alimente /week-fav.
+// Week fav groupées par semaine GLISSANTE : bloc 0 = 7 derniers jours, bloc 1 =
+// 7-14 jours, etc. (relatif à maintenant, pas au calendrier). La page affiche
+// chaque bloc avec son titre. Alimente /week-fav.
 export async function getWeekFavGroupedServer(limit: number = 200): Promise<WeekFavGroup[]> {
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+  const now = Date.now()
   try {
     const snap = await adminDb
       .collection('produits')
@@ -311,14 +314,15 @@ export async function getWeekFavGroupedServer(limit: number = 200): Promise<Week
 
     const byWeek = new Map<number, ProduitInitial[]>()
     for (const { id, raw } of filtered) {
-      const wk = startOfWeekMs(ms(raw))
-      if (!byWeek.has(wk)) byWeek.set(wk, [])
-      byWeek.get(wk)!.push(serialize(id, raw))
+      const weeksAgo = Math.max(0, Math.floor((now - ms(raw)) / WEEK_MS))
+      if (weeksAgo > 1) continue // cette semaine (0) + semaine dernière (1) uniquement
+      if (!byWeek.has(weeksAgo)) byWeek.set(weeksAgo, [])
+      byWeek.get(weeksAgo)!.push(serialize(id, raw))
     }
 
     return [...byWeek.entries()]
-      .sort((a, b) => b[0] - a[0]) // semaine la plus récente en premier
-      .map(([weekStart, produits]) => ({ weekStart, produits }))
+      .sort((a, b) => a[0] - b[0]) // le plus récent (weeksAgo 0) en premier
+      .map(([weeksAgo, produits]) => ({ weeksAgo, produits }))
   } catch (err) {
     console.error('[produitsServer] getWeekFavGroupedServer error:', err)
     return []
