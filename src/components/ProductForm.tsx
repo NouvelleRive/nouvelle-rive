@@ -388,8 +388,6 @@ async function compressImage(file: File): Promise<string> {
     onVintedImport?: () => void
     /** Si fourni, affiche un bouton "Import Whatnot" — admin only, à mettre uniquement quand isAdmin=true. */
     onWhatnotImport?: () => void
-    /** Si fourni, affiche un bouton "Import Fleek" (facture marketplace lots) — admin only. */
-    onFleekImport?: () => void
     onCancel?: () => void
     
     // État
@@ -464,7 +462,6 @@ async function compressImage(file: File): Promise<string> {
     onExcelImport,
     onVintedImport,
     onWhatnotImport,
-    onFleekImport,
     onCancel,
     loading = false,
     submitLabel,
@@ -1487,10 +1484,10 @@ async function compressImage(file: File): Promise<string> {
         {/* === GUIDE PHOTO === */}
         <PhotoGuideModal />
         
-        {/* === ENCART IMPORTER (Excel + Vinted + Whatnot + Fleek) === */}
+        {/* === ENCART IMPORTER (Excel + Vinted + Whatnot) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (() => {
           // Excel (toujours) + boutons optionnels → on calcule le nb de colonnes.
-          const nbCols = 1 + (onVintedImport ? 1 : 0) + (onWhatnotImport ? 1 : 0) + (onFleekImport ? 1 : 0)
+          const nbCols = 1 + (onVintedImport ? 1 : 0) + (onWhatnotImport ? 1 : 0)
           const gridClass =
             nbCols === 4 ? 'grid-cols-4'
             : nbCols === 3 ? 'grid-cols-3'
@@ -1525,15 +1522,6 @@ async function compressImage(file: File): Promise<string> {
                   className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#FFCD2D] text-black rounded-lg text-sm hover:bg-[#f0c020] transition-colors"
                 >
                   Whatnot
-                </button>
-              )}
-              {onFleekImport && (
-                <button
-                  type="button"
-                  onClick={onFleekImport}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#F5C842] text-black rounded-lg text-sm hover:bg-[#e5b832] transition-colors"
-                >
-                  Fleek
                 </button>
               )}
             </div>

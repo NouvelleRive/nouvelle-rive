@@ -30,7 +30,6 @@ export default function AdminAjouterPage() {
   const [creatingProduct, setCreatingProduct] = useState(false)
   const [vintedModalOpen, setVintedModalOpen] = useState(false)
   const [whatnotModalOpen, setWhatnotModalOpen] = useState(false)
-  const [fleekModalOpen, setFleekModalOpen] = useState(false)
   /** Items extraits par la modal d'import, en attente de validation par
    *  l'admin (rendu en flow page, pas en modal, pour le scroll natif). */
   const [pendingPreview, setPendingPreview] = useState<ItemFields[] | null>(null)
@@ -267,12 +266,6 @@ export default function AdminAjouterPage() {
                 ? () => setWhatnotModalOpen(true)
                 : undefined
             }
-            onFleekImport={
-              // Règle : Fleek visible UNIQUEMENT pour NR (rachat marketplace en lots)
-              selectedChineuse?.trigramme?.toUpperCase() === 'NR'
-                ? () => setFleekModalOpen(true)
-                : undefined
-            }
             loading={creatingProduct}
             showExcelImport={true}
           />
@@ -293,18 +286,6 @@ export default function AdminAjouterPage() {
       {whatnotModalOpen && selectedChineuse && (
         <ImportMailModal
           onClose={() => setWhatnotModalOpen(false)}
-          targetChineuse={{
-            uid: selectedChineuse.uid,
-            email: selectedChineuse.email,
-            trigramme: selectedChineuse.trigramme,
-          }}
-          categories={chineuseCategories}
-          onItemsReady={(items) => setPendingPreview(items)}
-        />
-      )}
-      {fleekModalOpen && selectedChineuse && (
-        <ImportMailModal
-          onClose={() => setFleekModalOpen(false)}
           targetChineuse={{
             uid: selectedChineuse.uid,
             email: selectedChineuse.email,

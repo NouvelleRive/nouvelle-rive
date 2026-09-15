@@ -11,33 +11,12 @@
 
 'use client'
 
-import { memo, useCallback, useRef, useState } from 'react'
-import { X, Upload } from 'lucide-react'
+import { memo, useCallback, useState } from 'react'
+import { X } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
 import { ADMIN_EMAIL } from '@/lib/roles'
 import { MOTIF_OPTIONS } from '@/lib/motifs'
 import { MODELES_COMMUNS } from '@/lib/modeles'
-
-/**
- * Extrait le texte brut d'un PDF côté client via pdfjs-dist. On charge la lib
- * en dynamic import pour ne pas plomber le bundle initial (~2 Mo de worker).
- */
-async function extractPdfText(file: File): Promise<string> {
-  const pdfjs: any = await import('pdfjs-dist')
-  // Worker chargé via CDN unpkg — évite la config webpack/Next pour résoudre
-  // l'asset interne. Ça fonctionne en dev comme en prod.
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
-  const buf = await file.arrayBuffer()
-  const pdf = await pdfjs.getDocument({ data: buf }).promise
-  const pages: string[] = []
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p)
-    const content = await page.getTextContent()
-    const text = content.items.map((it: any) => ('str' in it ? it.str : '')).join('\n')
-    pages.push(text)
-  }
-  return pages.join('\n')
-}
 
 type Props = {
   onClose: () => void
@@ -50,12 +29,12 @@ type Props = {
    *  (pas dans une modal) pour éviter les sauts de scroll. */
   onItemsReady?: (items: ItemFields[]) => void
   /** Contexte acheteuse / non-admin : n'affiche QUE Vinted, aucune mention
-   *  Whatnot/Fleek (même si un admin est connecté et teste cet espace). */
+   *  Whatnot (même si un admin est connecté et teste cet espace). */
   vintedOnly?: boolean
 }
 
 export type ItemFields = {
-  provenance: 'vinted' | 'whatnot' | 'fleek'
+  provenance: 'vinted' | 'whatnot'
   itemId?: string | null
   achatOrderId?: string | null
   titre: string
@@ -81,15 +60,12 @@ export type ItemFields = {
   prixSuggere: number | null
   categorie: { label?: string; idsquare?: string } | null
   prixVente: string // saisi par l'admin, requis
-  // Spécifique Fleek : un item = un LOT de N pièces.
-  quantiteLot?: number
-  prixLot?: number
 }
 
 type Step = 'paste' | 'preview' | 'creating' | 'done'
 
-// Card d'un item dans l'aperçu, isolée + memoizée : édition du lot N
-// ne re-render plus les autres lots → plus de focus glitch / scroll jump.
+// Card d'un item dans l'aperçu, isolée + memoizée : édition de la pièce N
+// ne re-render plus les autres pièces → plus de focus glitch / scroll jump.
 export const ItemCard = memo(function ItemCard({
   item,
   index,
@@ -103,45 +79,24 @@ export const ItemCard = memo(function ItemCard({
   categories: { label: string; idsquare?: string }[]
   onPatch: (i: number, patch: Partial<ItemFields>) => void
 }) {
-  const isFleek = item.provenance === 'fleek'
   return (
     <div className="border rounded-xl p-4 bg-gray-50">
       {total > 1 && (
         <div className="text-xs font-semibold text-[#09B1BA] mb-2">
-          {isFleek ? `Lot ${index + 1}/${total}` : `Pièce ${index + 1}/${total}`}
-        </div>
-      )}
-      {isFleek && (
-        <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
-          <div>
-            <span className="font-semibold">Lot Fleek</span> · {item.quantiteLot ?? '?'} pièces ·
-            <span className="ml-1">prix lot {item.prixLot != null ? `${item.prixLot.toFixed(2)} €` : '—'}</span> ·
-            <span className="ml-1">unitaire {item.prixAchat != null ? `${item.prixAchat.toFixed(2)} €` : '—'}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <label className="text-xs text-amber-900">Qté reçue</label>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={item.quantiteLot ?? ''}
-              onChange={(e) => onPatch(index, { quantiteLot: parseInt(e.target.value || '0', 10) || 0 })}
-              className="w-16 border border-amber-300 rounded px-2 py-0.5 text-xs bg-white"
-            />
-          </div>
+          {`Pièce ${index + 1}/${total}`}
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
-          <label className="text-xs text-gray-500">{isFleek ? 'Libellé du lot' : 'Titre'}</label>
+          <label className="text-xs text-gray-500">Titre</label>
           <input value={item.titre} onChange={(e) => onPatch(index, { titre: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
         </div>
         <div>
-          <label className="text-xs text-gray-500">Marque {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
+          <label className="text-xs text-gray-500">Marque</label>
           <input value={item.marque} onChange={(e) => onPatch(index, { marque: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
         </div>
         <div>
-          <label className="text-xs text-gray-500">Taille {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
+          <label className="text-xs text-gray-500">Taille</label>
           <input value={item.taille} onChange={(e) => onPatch(index, { taille: e.target.value })} placeholder={item.tailleOriginale ? `orig: ${item.tailleOriginale}` : ''} className="w-full border rounded px-2 py-1.5 text-sm" />
         </div>
         <div>
@@ -152,36 +107,32 @@ export const ItemCard = memo(function ItemCard({
           <label className="text-xs text-gray-500">État</label>
           <input value={item.etat} onChange={(e) => onPatch(index, { etat: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
         </div>
-        {!isFleek && (
-          <>
-            <div>
-              <label className="text-xs text-gray-500">Modèle</label>
-              <input value={item.modele || ''} list={`import-modele-${index}`} onChange={(e) => onPatch(index, { modele: e.target.value })} placeholder="ex: Blazer, Oversized…" className="w-full border rounded px-2 py-1.5 text-sm" />
-              <datalist id={`import-modele-${index}`}>{MODELES_COMMUNS.map((m) => <option key={m} value={m} />)}</datalist>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Motif</label>
-              <input value={item.motif || ''} list={`import-motif-${index}`} onChange={(e) => onPatch(index, { motif: e.target.value })} placeholder="ex: Floral, Rayures…" className="w-full border rounded px-2 py-1.5 text-sm" />
-              <datalist id={`import-motif-${index}`}>{MOTIF_OPTIONS.map((m) => <option key={m} value={m} />)}</datalist>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Manches</label>
-              <input value={item.sleeveLength || ''} onChange={(e) => onPatch(index, { sleeveLength: e.target.value })} placeholder="courtes / longues…" className="w-full border rounded px-2 py-1.5 text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Col</label>
-              <input value={item.collarType || ''} onChange={(e) => onPatch(index, { collarType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Longueur</label>
-              <input value={item.garmentLength || ''} onChange={(e) => onPatch(index, { garmentLength: e.target.value })} placeholder="courte / longue…" className="w-full border rounded px-2 py-1.5 text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Fermeture</label>
-              <input value={item.closureType || ''} onChange={(e) => onPatch(index, { closureType: e.target.value })} placeholder="zip / boutons…" className="w-full border rounded px-2 py-1.5 text-sm" />
-            </div>
-          </>
-        )}
+        <div>
+          <label className="text-xs text-gray-500">Modèle</label>
+          <input value={item.modele || ''} list={`import-modele-${index}`} onChange={(e) => onPatch(index, { modele: e.target.value })} placeholder="ex: Blazer, Oversized…" className="w-full border rounded px-2 py-1.5 text-sm" />
+          <datalist id={`import-modele-${index}`}>{MODELES_COMMUNS.map((m) => <option key={m} value={m} />)}</datalist>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Motif</label>
+          <input value={item.motif || ''} list={`import-motif-${index}`} onChange={(e) => onPatch(index, { motif: e.target.value })} placeholder="ex: Floral, Rayures…" className="w-full border rounded px-2 py-1.5 text-sm" />
+          <datalist id={`import-motif-${index}`}>{MOTIF_OPTIONS.map((m) => <option key={m} value={m} />)}</datalist>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Manches</label>
+          <input value={item.sleeveLength || ''} onChange={(e) => onPatch(index, { sleeveLength: e.target.value })} placeholder="courtes / longues…" className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Col</label>
+          <input value={item.collarType || ''} onChange={(e) => onPatch(index, { collarType: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Longueur</label>
+          <input value={item.garmentLength || ''} onChange={(e) => onPatch(index, { garmentLength: e.target.value })} placeholder="courte / longue…" className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500">Fermeture</label>
+          <input value={item.closureType || ''} onChange={(e) => onPatch(index, { closureType: e.target.value })} placeholder="zip / boutons…" className="w-full border rounded px-2 py-1.5 text-sm" />
+        </div>
         <div className="col-span-2">
           <label className="text-xs text-gray-500">Description {item.descriptionOriginale ? '(corrigée)' : ''}</label>
           <textarea value={item.description} onChange={(e) => onPatch(index, { description: e.target.value })} rows={3} className="w-full border rounded px-2 py-1.5 text-sm resize-none" />
@@ -211,23 +162,21 @@ export const ItemCard = memo(function ItemCard({
           <label className="text-xs text-gray-500">Prix d'achat (€) <span className="text-gray-400">art. + protection</span></label>
           <input value={item.prixAchat != null ? String(item.prixAchat) : ''} readOnly className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100" />
         </div>
-        {!isFleek && (
-          <div>
-            <label className="text-xs text-gray-500">Frais de port (€)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={item.fraisPort != null ? String(item.fraisPort) : ''}
-              onChange={(e) => onPatch(index, { fraisPort: e.target.value === '' ? null : parseFloat(e.target.value) })}
-              placeholder="ex: 4.95"
-              className="w-full border rounded px-2 py-1.5 text-sm"
-            />
-          </div>
-        )}
+        <div>
+          <label className="text-xs text-gray-500">Frais de port (€)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={item.fraisPort != null ? String(item.fraisPort) : ''}
+            onChange={(e) => onPatch(index, { fraisPort: e.target.value === '' ? null : parseFloat(e.target.value) })}
+            placeholder="ex: 4.95"
+            className="w-full border rounded px-2 py-1.5 text-sm"
+          />
+        </div>
         <div className="col-span-2">
           <label className="text-xs text-gray-500 font-semibold">
-            Prix de vente {isFleek ? 'par pièce ' : ''}(€) *
+            Prix de vente (€) *
           </label>
           <input
             type="number"
@@ -252,21 +201,10 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
   const [items, setItems] = useState<ItemFields[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [resultMsg, setResultMsg] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [extractingPdf, setExtractingPdf] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  // Whatnot & Fleek = sources réservées à l'admin. Tout le monde d'autre
-  // (acheteuse, vendeuse, chineuse, déposante) ne voit QUE Vinted — aucune
-  // mention Whatnot/Fleek ni import de facture PDF. Défaut = masqué.
-  // Whatnot/Fleek visibles UNIQUEMENT si : contexte non restreint (pas
-  // `vintedOnly`) ET admin connecté. Le `vintedOnly` gagne toujours → même un
-  // admin qui teste l'espace acheteuse ne voit que Vinted.
-  const isAdminUser = !vintedOnly && auth.currentUser?.email === ADMIN_EMAIL
 
-  // Hoisted pour pouvoir être appelée depuis handlePdfFile (auto-trigger après extraction).
   const verifyWithBody = async (body: string) => {
     if (!body.trim()) {
-      setErrorMsg('Le PDF est vide ou illisible.')
+      setErrorMsg('Le contenu est vide.')
       return
     }
     setVerifying(true)
@@ -289,7 +227,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         return
       }
       const raw: ItemFields[] =
-        json.kind === 'whatnot-purchase' || json.kind === 'fleek-invoice'
+        json.kind === 'whatnot-purchase'
           ? json.items.map((it: any) => ({ ...it, prixVente: it.prixSuggere ? String(it.prixSuggere) : '' }))
           : [{ ...json.fields, prixVente: json.fields.prixSuggere ? String(json.fields.prixSuggere) : '' }]
       // Si le parent gère le preview en flow page (recommandé pour éviter les
@@ -308,24 +246,6 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
     }
   }
 
-  const handlePdfFile = async (file: File) => {
-    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
-      setErrorMsg('Le fichier doit être un PDF.')
-      return
-    }
-    setExtractingPdf(true)
-    setErrorMsg(null)
-    try {
-      const text = await extractPdfText(file)
-      setPasted(text)
-      await verifyWithBody(text)
-    } catch (e: any) {
-      setErrorMsg(`Lecture PDF impossible : ${e?.message || e}`)
-    } finally {
-      setExtractingPdf(false)
-    }
-  }
-
   // Stable via useCallback pour que ItemCard memoizé ne re-render pas
   // quand une autre card est modifiée.
   const updateItem = useCallback((i: number, patch: Partial<ItemFields>) => {
@@ -338,8 +258,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
     // validation : tous les champs obligatoires doivent être remplis avant création
     for (let i = 0; i < items.length; i++) {
       const it = items[i]
-      const isFleek = it.provenance === 'fleek'
-      const prefix = items.length > 1 ? (isFleek ? `Lot ${i + 1} : ` : `Pièce ${i + 1} : `) : ''
+      const prefix = items.length > 1 ? `Pièce ${i + 1} : ` : ''
       if (!it.titre?.trim()) {
         setErrorMsg(`${prefix}le titre est obligatoire.`)
         return
@@ -348,24 +267,13 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         setErrorMsg(`${prefix}la catégorie est obligatoire (non détectée auto, à compléter à la main après création).`)
         return
       }
-      // Pour Fleek : la marque/taille/etc. seront renseignées pièce par pièce
-      // après réception (lot générique style "Premium Ralph Lauren Polo Shirts").
-      if (!isFleek) {
-        if (!it.marque?.trim()) {
-          setErrorMsg(`${prefix}la marque est obligatoire.`)
-          return
-        }
-        if (!it.taille?.trim()) {
-          setErrorMsg(`${prefix}la taille est obligatoire.`)
-          return
-        }
+      if (!it.marque?.trim()) {
+        setErrorMsg(`${prefix}la marque est obligatoire.`)
+        return
       }
-      if (isFleek) {
-        const qty = Number(it.quantiteLot)
-        if (!Number.isFinite(qty) || qty <= 0) {
-          setErrorMsg(`${prefix}quantité du lot manquante.`)
-          return
-        }
+      if (!it.taille?.trim()) {
+        setErrorMsg(`${prefix}la taille est obligatoire.`)
+        return
       }
       const pv = parseFloat(it.prixVente || '')
       if (!Number.isFinite(pv) || pv <= 0) {
@@ -415,13 +323,11 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         <div className="flex items-start justify-between px-6 pt-6 pb-3 shrink-0 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              {step === 'preview' ? 'Vérifie avant création' : (isAdminUser ? 'Importer depuis Vinted / Whatnot / Fleek' : 'Importer depuis Vinted')}
+              {step === 'preview' ? 'Vérifie avant création' : 'Importer depuis Vinted'}
             </h2>
             {step === 'paste' && (
               <p className="text-sm text-gray-500 mt-1">
-                {isAdminUser
-                  ? 'Colle ici la page Vinted, le mail Whatnot ou le texte de la facture Fleek.'
-                  : 'Colle ici la page Vinted.'}
+                Colle ici la page Vinted.
               </p>
             )}
             {step === 'preview' && (
@@ -438,49 +344,10 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         {step === 'paste' && (
           <>
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 flex flex-col">
-            {/* Zone drag&drop / parcourir (Fleek = facture PDF) — ADMIN UNIQUEMENT */}
-            {isAdminUser && (
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setIsDragging(false)
-                const file = e.dataTransfer.files?.[0]
-                if (file) void handlePdfFile(file)
-              }}
-              onClick={() => fileInputRef.current?.click()}
-              className={`mb-3 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                isDragging ? 'border-[#F5C842] bg-[#fffbe6]' : 'border-gray-300 hover:border-gray-400 bg-gray-50'
-              }`}
-            >
-              <Upload size={20} className="mx-auto text-gray-400 mb-1" />
-              <div className="text-sm text-gray-700">
-                {extractingPdf ? 'Lecture du PDF…' : (
-                  <>
-                    Glisse une facture <strong>Fleek (PDF)</strong> ici, ou{' '}
-                    <span className="text-[#09B1BA] underline">parcourir</span>
-                  </>
-                )}
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/pdf,.pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) void handlePdfFile(file)
-                  e.target.value = ''
-                }}
-              />
-            </div>
-            )}
-            {isAdminUser && <div className="text-xs text-gray-400 mb-2 text-center">— ou colle le contenu ci-dessous —</div>}
             <textarea
               value={pasted}
               onChange={(e) => setPasted(e.target.value)}
-              placeholder={isAdminUser ? 'Colle ici le mail ou la page Vinted/Whatnot…' : 'Colle ici la page Vinted…'}
+              placeholder="Colle ici la page Vinted…"
               className="flex-1 min-h-[200px] w-full border border-gray-300 rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#09B1BA] resize-none"
             />
             {errorMsg && (
@@ -493,7 +360,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
               <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Fermer</button>
               <button
                 onClick={handleVerify}
-                disabled={verifying || extractingPdf || !pasted.trim()}
+                disabled={verifying || !pasted.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-[#09B1BA] hover:bg-[#078a91] disabled:opacity-50 rounded-lg"
               >
                 {verifying ? 'Vérification…' : 'Vérifier'}
@@ -505,46 +372,24 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         {step === 'preview' && (
           <>
             <div className="flex-1 overflow-y-auto min-h-0 px-6 py-4 space-y-4">
-              {items.map((it, i) => {
-                const isFleek = it.provenance === 'fleek'
-                return (
+              {items.map((it, i) => (
                 <div key={i} className="border rounded-xl p-4 bg-gray-50">
                   {items.length > 1 && (
                     <div className="text-xs font-semibold text-[#09B1BA] mb-2">
-                      {isFleek ? `Lot ${i + 1}/${items.length}` : `Pièce ${i + 1}/${items.length}`}
-                    </div>
-                  )}
-                  {isFleek && (
-                    <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
-                      <div>
-                        <span className="font-semibold">Lot Fleek</span> · {it.quantiteLot ?? '?'} pièces ·
-                        <span className="ml-1">prix lot {it.prixLot != null ? `${it.prixLot.toFixed(2)} €` : '—'}</span> ·
-                        <span className="ml-1">unitaire {it.prixAchat != null ? `${it.prixAchat.toFixed(2)} €` : '—'}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <label className="text-xs text-amber-900">Qté reçue</label>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={it.quantiteLot ?? ''}
-                          onChange={(e) => updateItem(i, { quantiteLot: parseInt(e.target.value || '0', 10) || 0 })}
-                          className="w-16 border border-amber-300 rounded px-2 py-0.5 text-xs bg-white"
-                        />
-                      </div>
+                      {`Pièce ${i + 1}/${items.length}`}
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
-                      <label className="text-xs text-gray-500">{isFleek ? 'Libellé du lot' : 'Titre'}</label>
+                      <label className="text-xs text-gray-500">Titre</label>
                       <input value={it.titre} onChange={(e) => updateItem(i, { titre: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500">Marque {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
+                      <label className="text-xs text-gray-500">Marque</label>
                       <input value={it.marque} onChange={(e) => updateItem(i, { marque: e.target.value })} className="w-full border rounded px-2 py-1.5 text-sm" />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500">Taille {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
+                      <label className="text-xs text-gray-500">Taille</label>
                       <input value={it.taille} onChange={(e) => updateItem(i, { taille: e.target.value })} placeholder={it.tailleOriginale ? `orig: ${it.tailleOriginale}` : ''} className="w-full border rounded px-2 py-1.5 text-sm" />
                     </div>
                     <div>
@@ -586,7 +431,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs text-gray-500 font-semibold">
-                        Prix de vente {isFleek ? 'par pièce ' : ''}(€) *
+                        Prix de vente (€) *
                       </label>
                       <input
                         type="number"
@@ -601,8 +446,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
                     </div>
                   </div>
                 </div>
-                )
-              })}
+              ))}
               {errorMsg && (
                 <div className="px-3 py-2 rounded-lg text-sm bg-red-50 text-red-800 border border-red-200">
                   ✗ {errorMsg}

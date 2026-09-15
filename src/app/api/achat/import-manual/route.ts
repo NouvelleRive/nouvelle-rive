@@ -16,7 +16,6 @@ import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
 import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
 import { parseVintedPage, vintedPageDocId } from '@/modules/achat/parser/vintedPage'
 import { parseWhatnotPurchase, whatnotDocId } from '@/modules/achat/parser/whatnot'
-import { fleekPieceDocId } from '@/modules/achat/parser/fleek'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 import { detectCategorieFromTitre, type CategorieEntry } from '@/modules/achat/detectCategorie'
 import { patchBlobCache } from '@/lib/blobCache'
@@ -132,9 +131,6 @@ export async function POST(req: NextRequest) {
  * Mode pré-validé : l'admin a déjà revu les champs dans le modal et a saisi
  * le prix de vente. On écrit directement chaque item en Firestore avec un
  * SKU incrémenté sur la chineuse cible.
- *
- * Cas Fleek : chaque item est un LOT et porte `quantiteLot`. On crée alors
- * N brouillons identiques (mêmes champs sauf SKU + docId déterministe par pièce).
  */
 async function handleValidatedItems(
   items: any[],
@@ -143,7 +139,7 @@ async function handleValidatedItems(
   let skuCursor = await computeNextSkuNum(target.trigramme)
   const created: { docId: string; sku: string }[] = []
   // On garde les payloads écrits pour patcher le blob cache `produits-all` en
-  // fin d'import (sinon les pièces Fleek n'apparaissent sur /admin/nos-produits
+  // fin d'import (sinon les pièces n'apparaissent sur /admin/nos-produits
   // qu'après expiration du cache 6h).
   const freshItems: { id: string; raw: any }[] = []
 
@@ -151,11 +147,7 @@ async function handleValidatedItems(
     const it = items[i]
     const provenance: string = it.provenance || 'vinted'
 
-    // Détermine combien de pièces ce "lot" représente. Fleek = N, autres = 1.
-    const quantiteLot =
-      provenance === 'fleek' && Number.isFinite(Number(it.quantiteLot)) && Number(it.quantiteLot) > 0
-        ? Math.floor(Number(it.quantiteLot))
-        : 1
+    const quantiteLot = 1
 
     const prixVente = parseFloat(String(it.prixVente || '')) || 0
     const prixAchat =
@@ -173,9 +165,7 @@ async function handleValidatedItems(
 
       // ID déterministe par provenance (anti-doublon strict si re-import).
       let docId: string | null = null
-      if (provenance === 'fleek' && it.achatOrderId) {
-        docId = fleekPieceDocId(String(it.achatOrderId), i, p)
-      } else if (it.itemId) {
+      if (it.itemId) {
         docId = `vinted_item_${it.itemId}`
       } else if (it.achatOrderId && provenance === 'vinted') {
         docId = `vinted_${it.achatOrderId}`
@@ -184,11 +174,7 @@ async function handleValidatedItems(
       }
 
       const sourceField =
-        provenance === 'whatnot'
-          ? 'achat-whatnot'
-          : provenance === 'fleek'
-            ? 'achat-fleek'
-            : 'achat-vinted'
+        provenance === 'whatnot' ? 'achat-whatnot' : 'achat-vinted'
 
       const payload: Record<string, unknown> = {
         nom: `${sku} - ${it.titre || ''}`,
