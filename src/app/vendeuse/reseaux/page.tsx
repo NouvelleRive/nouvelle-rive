@@ -981,8 +981,15 @@ function ProductionModal({
     }
   }
   const others = dates.filter((d) => d !== prod.date)
+  // Ne ferme que si le clic a COMMENCÉ sur le fond : sinon une sélection de
+  // texte (caption) relâchée hors du cadre fermerait le modal et perdrait la saisie.
+  const downOnBackdrop = useRef(false)
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onMouseDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget }}
+      onClick={(e) => { if (downOnBackdrop.current && e.target === e.currentTarget) onClose() }}
+    >
       <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl max-h-[88dvh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between z-10">
           <div>
