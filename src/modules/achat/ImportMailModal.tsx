@@ -417,11 +417,6 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
             <h2 className="text-lg font-bold text-gray-900">
               {step === 'preview' ? 'Vérifie avant création' : 'Importer depuis Vinted'}
             </h2>
-            {step === 'paste' && (
-              <p className="text-sm text-gray-500 mt-1">
-                Colle ici la page Vinted.
-              </p>
-            )}
             {step === 'preview' && (
               <p className="text-sm text-gray-500 mt-1">
                 Corrige si besoin et saisis le prix de vente, puis valide.
