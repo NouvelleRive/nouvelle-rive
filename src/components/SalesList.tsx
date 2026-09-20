@@ -8,6 +8,7 @@ import { fr } from 'date-fns/locale'
 import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil, LayoutGrid, List, Heart } from 'lucide-react'
 import SalesFilters from '@/components/SalesFilters'
 import SalesGrid from '@/components/SalesGrid'
+import SaleDetailModal from '@/components/SaleDetailModal'
 export { formatPrix } from '@/lib/formatPrix'
 import { formatPrix } from '@/lib/formatPrix'
 
@@ -23,6 +24,7 @@ export interface Vente {
   categorie?: any
   marque?: string | null
   trigramme?: string | null
+  imageUrls?: string[]
   chineur?: string
   chineurUid?: string
   prix?: number
@@ -105,6 +107,9 @@ export default function SalesList({
   // Vue
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [ventesFiltrées, setVentesFiltrées] = useState<Vente[]>([])
+
+  // Fiche détail (vue liste — la vue grille a la sienne, avec le produit déjà chargé)
+  const [detail, setDetail] = useState<Vente | null>(null)
 
   // =====================
   // HELPERS
@@ -353,13 +358,13 @@ export default function SalesList({
                       {headerLabel}
                     </h3>
                   )}
-                <div className={`bg-white rounded-xl border p-2.5 sm:p-4 shadow-sm ${isAdmin && vente.isAttribue ? 'border-l-4 border-l-green-500' : ''} ${isAdmin && !vente.isAttribue ? 'border-l-4 border-l-amber-500' : ''} ${isSelected ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}>
+                <div onClick={() => setDetail(vente)} className={`bg-white rounded-xl border p-2.5 sm:p-4 shadow-sm cursor-pointer ${isAdmin && vente.isAttribue ? 'border-l-4 border-l-green-500' : ''} ${isAdmin && !vente.isAttribue ? 'border-l-4 border-l-amber-500' : ''} ${isSelected ? 'ring-2 ring-blue-300 bg-blue-50' : ''}`}>
                   {/* MOBILE */}
                   <div className="sm:hidden">
                     {/* Ligne haut : checkbox + statut + trigramme + prix + actions */}
                     <div className="flex items-center gap-1.5">
                       {isAdmin && (
-                        <button onClick={() => toggleSelect(vente.id)} className="flex-shrink-0 text-gray-400">
+                        <button onClick={(e) => { e.stopPropagation(); toggleSelect(vente.id) }} className="flex-shrink-0 text-gray-400">
                           {isSelected ? <CheckSquare size={16} className="text-blue-500" /> : <Square size={16} />}
                         </button>
                       )}
@@ -368,9 +373,9 @@ export default function SalesList({
                       {vente.prixInitial && vente.prixInitial !== prix && <p className="text-[10px] text-gray-400 whitespace-nowrap">({formatPrix(vente.prixInitial)}€)</p>}
                       {isAdmin && (
                         <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
-                          {onAttribuer && <button onClick={() => onAttribuer(vente)} className={`p-1 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={13} /></button>}
-                          {onModifierPrix && <button onClick={() => onModifierPrix(vente)} className="p-1 bg-blue-100 text-blue-600 rounded"><Pencil size={13} /></button>}
-                          {onSupprimer && <button onClick={() => onSupprimer(vente)} className="p-1 bg-red-100 text-red-600 rounded"><Trash2 size={13} /></button>}
+                          {onAttribuer && <button onClick={(e) => { e.stopPropagation(); onAttribuer(vente) }} className={`p-1 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={13} /></button>}
+                          {onModifierPrix && <button onClick={(e) => { e.stopPropagation(); onModifierPrix(vente) }} className="p-1 bg-blue-100 text-blue-600 rounded"><Pencil size={13} /></button>}
+                          {onSupprimer && <button onClick={(e) => { e.stopPropagation(); onSupprimer(vente) }} className="p-1 bg-red-100 text-red-600 rounded"><Trash2 size={13} /></button>}
                         </div>
                       )}
                     </div>
@@ -394,7 +399,7 @@ export default function SalesList({
 
                   {/* DESKTOP */}
                   <div className="hidden sm:flex items-start gap-3">
-                    {isAdmin && (<button onClick={() => toggleSelect(vente.id)} className="flex-shrink-0 text-gray-400 hover:text-gray-600 mt-1">{isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} />}</button>)}
+                    {isAdmin && (<button onClick={(e) => { e.stopPropagation(); toggleSelect(vente.id) }} className="flex-shrink-0 text-gray-400 hover:text-gray-600 mt-1">{isSelected ? <CheckSquare size={20} className="text-blue-500" /> : <Square size={20} />}</button>)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         {vente.trigramme && <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded">{vente.trigramme}</span>}
@@ -416,9 +421,9 @@ export default function SalesList({
                     </div>
                     {isAdmin && (
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        {onAttribuer && <button onClick={() => onAttribuer(vente)} className={`p-2 rounded-lg ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={16} /></button>}
-                        {onModifierPrix && <button onClick={() => onModifierPrix(vente)} className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Pencil size={16} /></button>}
-                        {onSupprimer && <button onClick={() => onSupprimer(vente)} className="p-2 bg-red-100 text-red-600 rounded-lg"><Trash2 size={16} /></button>}
+                        {onAttribuer && <button onClick={(e) => { e.stopPropagation(); onAttribuer(vente) }} className={`p-2 rounded-lg ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={16} /></button>}
+                        {onModifierPrix && <button onClick={(e) => { e.stopPropagation(); onModifierPrix(vente) }} className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Pencil size={16} /></button>}
+                        {onSupprimer && <button onClick={(e) => { e.stopPropagation(); onSupprimer(vente) }} className="p-2 bg-red-100 text-red-600 rounded-lg"><Trash2 size={16} /></button>}
                       </div>
                     )}
                   </div>
@@ -435,6 +440,11 @@ export default function SalesList({
         <div ref={loaderRef} className="flex justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#22209C]" />
         </div>
+      )}
+
+      {/* Fiche détail (vue liste) */}
+      {detail && (
+        <SaleDetailModal vente={detail} isAdmin={isAdmin} onClose={() => setDetail(null)} />
       )}
 
       {/* Modal suppression groupée */}

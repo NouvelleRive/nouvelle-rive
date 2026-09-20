@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { Link, Pencil, Trash2, X } from 'lucide-react'
+import { Link, Pencil, Trash2 } from 'lucide-react'
 
 import { Vente, formatPrix } from '@/components/SalesList'
+import SaleDetailModal from '@/components/SaleDetailModal'
 
 interface SalesGridProps {
   ventes: Vente[]
@@ -37,32 +38,29 @@ export default function SalesGrid({
   onModifierPrix,
   onSupprimer,
 }: SalesGridProps) {
-  const [enriched, setEnriched] = useState<Map<string, { imageUrls: string[]; marque: string }>>(new Map())
-  const [zoomedImg, setZoomedImg] = useState<string | null>(null)
+  // On garde le doc produit complet (même read Firestore qu'avant) : il sert aussi à la fiche détail.
+  const [enriched, setEnriched] = useState<Map<string, any>>(new Map())
+  const dejaFetch = useRef<Set<string>>(new Set())
+  const [detail, setDetail] = useState<Vente | null>(null)
 
   // Fetch images pour les ventes sans imageUrls
   useEffect(() => {
-    const toFetch = ventes.filter(v => v.produitId && !v.imageUrls?.length)
+    const toFetch = ventes.filter(v => v.produitId && !v.imageUrls?.length && !dejaFetch.current.has(v.id))
     if (toFetch.length === 0) return
 
     const fetchAll = async () => {
-      const results = new Map<string, { imageUrls: string[]; marque: string }>()
+      const results = new Map<string, any>()
       await Promise.all(
         toFetch.map(async (v) => {
           if (!v.produitId) return
+          dejaFetch.current.add(v.id)
           try {
             const snap = await getDoc(doc(db, 'produits', v.produitId))
-            if (snap.exists()) {
-              const d = snap.data()
-              results.set(v.id, {
-                imageUrls: d.imageUrls || [],
-                marque: d.marque || '',
-              })
-            }
+            if (snap.exists()) results.set(v.id, snap.data())
           } catch {}
         })
       )
-      setEnriched(results)
+      setEnriched(prev => new Map([...prev, ...results]))
     }
 
     fetchAll()
@@ -71,11 +69,6 @@ export default function SalesGrid({
   const getImage = (v: Vente): string => {
     const urls = v.imageUrls?.length ? v.imageUrls : enriched.get(v.id)?.imageUrls || []
     return urls[0] ? getBunnyUrl(urls[0], 400) : ''
-  }
-
-  const getRawImage = (v: Vente): string => {
-    const urls = v.imageUrls?.length ? v.imageUrls : enriched.get(v.id)?.imageUrls || []
-    return urls[0] || ''
   }
 
   const getMarque = (v: Vente): string => {
@@ -101,7 +94,6 @@ export default function SalesGrid({
     >
       {ventes.map((vente) => {
         const img = getImage(vente)
-        const rawImg = getRawImage(vente)
         const marque = getMarque(vente)
         const prix = getPrix(vente)
         const prixInitial = vente.prixInitial
@@ -110,8 +102,8 @@ export default function SalesGrid({
         return (
           <div
             key={vente.id}
-            onClick={() => rawImg && setZoomedImg(rawImg)}
-            className="relative bg-white cursor-zoom-in group block"
+            onClick={() => setDetail(vente)}
+            className="relative bg-white cursor-pointer group block"
           >
             {/* Photo */}
             <div className="aspect-square overflow-hidden bg-gray-100">
@@ -220,25 +212,13 @@ export default function SalesGrid({
         )
       })}
 
-      {zoomedImg && (
-        <div
-          className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 cursor-zoom-out"
-          onClick={() => setZoomedImg(null)}
-        >
-          <img
-            src={zoomedImg.includes('b-cdn.net') || zoomedImg.includes('bunnycdn') ? `${zoomedImg}?width=1600` : zoomedImg}
-            alt=""
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setZoomedImg(null)}
-            className="absolute top-4 right-4 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg"
-            aria-label="Fermer"
-          >
-            <X size={20} />
-          </button>
-        </div>
+      {detail && (
+        <SaleDetailModal
+          vente={detail}
+          produit={enriched.get(detail.id)}
+          isAdmin={isAdmin}
+          onClose={() => setDetail(null)}
+        />
       )}
     </div>
   )
