@@ -573,11 +573,11 @@ export default function PlanningCalendar({
       </div>
       {dailyCAByCreneau[ds] && (
         <div className="flex gap-1 justify-end">
-          <span className={`text-[8px] ${dailyCAByCreneau[ds]['12-20'] >= 1000 ? 'text-green-500' : 'text-red-300'}`}>
-            ▸{Math.round(dailyCAByCreneau[ds]['12-20'])}€
-          </span>
           <span className={`text-[8px] ${dailyCAByCreneau[ds]['11-17'] >= 1000 ? 'text-green-500' : 'text-red-300'}`}>
             ▸{Math.round(dailyCAByCreneau[ds]['11-17'])}€
+          </span>
+          <span className={`text-[8px] ${dailyCAByCreneau[ds]['12-20'] >= 1000 ? 'text-green-500' : 'text-red-300'}`}>
+            ▸{Math.round(dailyCAByCreneau[ds]['12-20'])}€
           </span>
         </div>
       )}

@@ -12,7 +12,8 @@
 
 export const HORAIRES_CUTOVER = '2026-10-01'
 
-export const CRENEAUX_VENDEUSE = ['12-20', '11-17'] as const
+// Ordre d'affichage : matin d'abord, soir ensuite.
+export const CRENEAUX_VENDEUSE = ['11-17', '12-20'] as const
 export type CreneauVendeuse = (typeof CRENEAUX_VENDEUSE)[number]
 
 export type Plage = { debut: number; fin: number }
