@@ -5,15 +5,9 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Wand2, Plus, Check, Save } from 'lucide-react'
 import { doc, getDoc, setDoc, updateDoc, getDocs, collection, deleteField } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
+import { CRENEAUX_VENDEUSE, labelCreneau } from '@/lib/horairesVendeuses'
 
-const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
-// Les clés '12-20'/'11-17' restent des identifiants de poste stables (Firestore) ;
-// à partir du 01/10/2026 leurs horaires réels deviennent 14h-20h (soir) et 11h-18h (matin).
-// Avant le 01/10, on garde les anciens horaires (12-20 / 11-17).
-const HORAIRES_CUTOVER = '2026-10-01'
-const CRENEAU_LABEL: Record<string, string> = { '12-20': '14-20', '11-17': '11-18' }
-const labelCreneau = (cr: string, ds?: string) =>
-  (ds && ds < HORAIRES_CUTOVER) ? cr : (CRENEAU_LABEL[cr] || cr)
+const CRENEAUX_PLANNING = CRENEAUX_VENDEUSE
 const CRENEAUX_RESTOCK = ['14h', '16h', '18h'] as const
 const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 // Gabarit fixe : la colonne horaires de gauche s'aligne ligne à ligne avec les

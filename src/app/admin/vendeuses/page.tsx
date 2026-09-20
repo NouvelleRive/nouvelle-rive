@@ -11,6 +11,7 @@
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
   import PlanningCalendar from '@/components/PlanningCalendar'
   import PointagesSection from '@/components/admin/PointagesSection'
+  import { CRENEAUX_VENDEUSE, heuresCreneau, labelCreneau, plageCreneau, premierJourDuMois } from '@/lib/horairesVendeuses'
 
   // =====================
   // TYPES
@@ -56,7 +57,7 @@
     taux?: number
   }
 
-  const CRENEAUX = ['12-20', '11-17'] as const
+  const CRENEAUX = CRENEAUX_VENDEUSE
   const JOURS_SEMAINE = ['D', 'L', 'M', 'M', 'J', 'V', 'S']
   const JOURS_LABELS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
@@ -363,18 +364,16 @@
 
     const activeVendeuses = vendeuses.filter(v => v.actif)
 
-    // Heures par créneau
-    const heuresCreneau = (cr: string) => cr === '12-20' ? 8 : cr === '11-17' ? 6 : 0
-
-    // Heures supposées (depuis jours fixes × semaines du mois)
+    // Heures supposées (depuis jours fixes × semaines du mois).
+    // Durée du poste prise jour par jour : elle change à la bascule du 01/10/2026.
     const heuresSupposees = (v: Vendeuse) => {
       if (!v.joursFixes) return 0
       const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
       let total = 0
       for (let day = 1; day <= daysInMonth; day++) {
-        const dow = new Date(currentMonth.year, currentMonth.month, day).getDay().toString()
-        const cr = v.joursFixes[dow]
-        if (cr) total += heuresCreneau(cr)
+        const d = new Date(currentMonth.year, currentMonth.month, day)
+        const cr = v.joursFixes[d.getDay().toString()]
+        if (cr) total += heuresCreneau(cr, format(d, 'yyyy-MM-dd'))
       }
       return total
     }
@@ -431,9 +430,12 @@
         }
 
         if (slot1117 && slot1220) {
-          if (hour < 12) {
+          // Chevauchement matin/soir : bornes réelles du jour (bascule 01/10/2026).
+          const matin = plageCreneau('11-17', dateStr)!
+          const soir = plageCreneau('12-20', dateStr)!
+          if (hour < soir.debut) {
             addTo(slot1117, 1)
-          } else if (hour < 17) {
+          } else if (hour < matin.fin) {
             addTo(slot1117, 1)
             addTo(slot1220, 1)
           } else {
@@ -460,10 +462,12 @@
         const hour = date.getHours()
         const montant = p.prixVenteReel || 0
 
-        if (hour >= 12 && hour < 20) {
+        const matin = plageCreneau('11-17', dateStr)!
+        const soir = plageCreneau('12-20', dateStr)!
+        if (hour >= soir.debut && hour < soir.fin) {
           ca1220.set(dateStr, (ca1220.get(dateStr) || 0) + montant)
         }
-        if (hour >= 11 && hour < 17) {
+        if (hour >= matin.debut && hour < matin.fin) {
           ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
         }
         caJour.set(dateStr, (caJour.get(dateStr) || 0) + montant)
@@ -578,8 +582,10 @@
       const hour = date.getHours()
       const montant = p.prixVenteReel || 0
       if (!ca[dateStr]) ca[dateStr] = { '12-20': 0, '11-17': 0 }
-      if (hour >= 12 && hour < 20) ca[dateStr]['12-20'] += montant
-      if (hour >= 11 && hour < 17) ca[dateStr]['11-17'] += montant
+      const matin = plageCreneau('11-17', dateStr)!
+      const soir = plageCreneau('12-20', dateStr)!
+      if (hour >= soir.debut && hour < soir.fin) ca[dateStr]['12-20'] += montant
+      if (hour >= matin.debut && hour < matin.fin) ca[dateStr]['11-17'] += montant
     })
     return ca
   }, [ventesAll, currentMonth])
@@ -762,7 +768,7 @@
                             backgroundColor: tempJoursFixes[idx.toString()] === cr ? editJoursFixesFor.couleur : undefined
                           }}
                         >
-                          {cr}
+                          {labelCreneau(cr, premierJourDuMois(currentMonth.year, currentMonth.month))}
                         </button>
                       ))}
                       {tempJoursFixes[idx.toString()] && (

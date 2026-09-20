@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { plageCreneau } from '@/lib/horairesVendeuses'
 import { Pencil, X, Save, Plus, Trash2 } from 'lucide-react'
 import { auth } from '@/lib/firebaseConfig'
 import { pointageDocId } from '@/lib/pointage'
@@ -25,14 +26,16 @@ const toLocalInput = (iso: string | null): string => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-// Devine un départ par défaut : même jour que l'arrivée, horaire du slot prévu (ou arrivée + 8h)
+// Devine un départ par défaut : même jour que l'arrivée, fin du slot prévu ce jour-là
 const guessDepart = (arriveeIso: string | null, slot: '12-20' | '11-17' | null): string => {
   if (!arriveeIso) return ''
   const a = new Date(arriveeIso)
   const dep = new Date(a)
-  if (slot === '12-20') dep.setHours(20, 0, 0, 0)
-  else if (slot === '11-17') dep.setHours(17, 0, 0, 0)
-  else dep.setHours(a.getHours() + 8, a.getMinutes(), 0, 0)
+  const pad0 = (n: number) => String(n).padStart(2, '0')
+  const dsArr = `${a.getFullYear()}-${pad0(a.getMonth() + 1)}-${pad0(a.getDate())}`
+  const plage = slot ? plageCreneau(slot, dsArr) : null
+  if (plage) dep.setHours(plage.fin, 0, 0, 0)
+  else dep.setHours(a.getHours() + 7, a.getMinutes(), 0, 0)
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${dep.getFullYear()}-${pad(dep.getMonth() + 1)}-${pad(dep.getDate())}T${pad(dep.getHours())}:${pad(dep.getMinutes())}`
 }
@@ -49,8 +52,9 @@ const decalageMin = (iso: string | null, dateStr: string, slot: '12-20' | '11-17
   if (!iso || !slot) return null
   const d = new Date(iso)
   const target = new Date(d)
-  if (type === 'arr') target.setHours(slot === '12-20' ? 12 : 11, 0, 0, 0)
-  else target.setHours(slot === '12-20' ? 20 : 17, 0, 0, 0)
+  // Horaires réels du poste ce jour-là (clés Firestore historiques, bascule 01/10/2026).
+  const plage = plageCreneau(slot, dateStr)!
+  target.setHours(type === 'arr' ? plage.debut : plage.fin, 0, 0, 0)
   return Math.round((d.getTime() - target.getTime()) / 60000)
 }
 

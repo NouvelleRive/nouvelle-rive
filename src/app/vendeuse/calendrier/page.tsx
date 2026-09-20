@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { db, auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import PlanningCalendar from '@/components/PlanningCalendar'
+import { heuresCreneau, plageCreneau } from '@/lib/horairesVendeuses'
 import PointageWidget from '@/components/PointageWidget'
 import PointagesSection from '@/components/admin/PointagesSection'
 import EnableNotifsButton from '@/components/EnableNotifsButton'
@@ -207,15 +208,15 @@ export default function VendeuseCalendrierPage() {
     await setDoc(doc(db, 'tachesCompletions', currentUserId), { completed: completedMap })
   }
 
-  const heuresCreneau = (cr: string) => cr === '12-20' ? 8 : cr === '11-17' ? 6 : 0
-
+  // Durée des postes prise jour par jour (bascule horaires du 01/10/2026).
   const heuresSupposees = (v: Vendeuse) => {
     if (!v.joursFixes) return 0
     const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
     let total = 0
     for (let day = 1; day <= daysInMonth; day++) {
-      const cr = v.joursFixes[new Date(currentMonth.year, currentMonth.month, day).getDay().toString()]
-      if (cr) total += heuresCreneau(cr)
+      const d = new Date(currentMonth.year, currentMonth.month, day)
+      const cr = v.joursFixes[d.getDay().toString()]
+      if (cr) total += heuresCreneau(cr, format(d, 'yyyy-MM-dd'))
     }
     return total
   }
@@ -223,7 +224,8 @@ export default function VendeuseCalendrierPage() {
   const heuresReelles = (vendeuseId: string) => {
     let total = 0
     Object.entries(planningSlots).forEach(([key, vid]) => {
-      if (vid === vendeuseId) total += heuresCreneau(key.split('_')[1])
+      const [ds, cr] = key.split('_')
+      if (vid === vendeuseId) total += heuresCreneau(cr, ds)
     })
     return total
   }
@@ -253,8 +255,11 @@ export default function VendeuseCalendrierPage() {
         map.set(id, { ...cur, ca: cur.ca + montant * f, ventes: cur.ventes + f, discountCount: cur.discountCount + (discount > 0 ? f : 0), discountTotal: cur.discountTotal + discount * f })
       }
       if (slot1117 && slot1220) {
-        if (hour < 12) addTo(slot1117, 1)
-        else if (hour < 17) { addTo(slot1117, 1); addTo(slot1220, 1) }
+        // Chevauchement matin/soir : bornes réelles du jour (bascule 01/10/2026).
+        const matin = plageCreneau('11-17', dateStr)!
+        const soir = plageCreneau('12-20', dateStr)!
+        if (hour < soir.debut) addTo(slot1117, 1)
+        else if (hour < matin.fin) { addTo(slot1117, 1); addTo(slot1220, 1) }
         else addTo(slot1220, 1)
       } else { const vid = slot1220 || slot1117; if (vid) addTo(vid, 1) }
     })
@@ -269,8 +274,10 @@ export default function VendeuseCalendrierPage() {
       const dateStr = format(date, 'yyyy-MM-dd')
       const hour = date.getHours()
       const montant = p.prixVenteReel || 0
-      if (hour >= 12 && hour < 20) ca1220.set(dateStr, (ca1220.get(dateStr) || 0) + montant)
-      if (hour >= 11 && hour < 17) ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
+      const matinB = plageCreneau('11-17', dateStr)!
+      const soirB = plageCreneau('12-20', dateStr)!
+      if (hour >= soirB.debut && hour < soirB.fin) ca1220.set(dateStr, (ca1220.get(dateStr) || 0) + montant)
+      if (hour >= matinB.debut && hour < matinB.fin) ca1117.set(dateStr, (ca1117.get(dateStr) || 0) + montant)
       // CA jour : toutes les ventes, y compris après 20h
       caJour.set(dateStr, (caJour.get(dateStr) || 0) + montant)
     })
