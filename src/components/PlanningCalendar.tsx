@@ -333,7 +333,7 @@ export default function PlanningCalendar({
               style={{ backgroundColor: v ? v.couleur + '20' : 'transparent', color: v ? v.couleur : '#9ca3af' }}
               title={labelCreneau(cr, ds)}
             >
-              <option value="">{v ? '— Retirer —' : '—'}</option>
+              <option value="">{v ? '— Retirer —' : labelCreneau(cr, ds)}</option>
               {activeVendeuses.map(av => <option key={av.id} value={av.id}>{av.prenom}</option>)}
             </select>
           </div>
@@ -402,12 +402,12 @@ export default function PlanningCalendar({
                   }`}
                   title={cr}
                 >
-                  <option value="">—</option>
+                  <option value="">{cr}</option>
                   {options.map((p, i) => <option key={i} value={p.nom}>{p.nom}</option>)}
                 </select>
               ) : (
                 <div className={`w-full h-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${past ? 'text-gray-300 bg-gray-50 line-through opacity-60' : slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}${past ? ' — passé' : ''}` : cr}>
-                  {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">—</span>}
+                  {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">{cr}</span>}
                 </div>
               )}
             </div>
