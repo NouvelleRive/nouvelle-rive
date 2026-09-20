@@ -48,3 +48,33 @@ export function premierJourDuMois(year: number, month0: number): string {
  */
 export const BONUS_PAR_CRENEAU_DEPUIS = '2026-10-01'
 export const SEUIL_BONUS = 1000
+
+// ── Jours fixes datés ───────────────────────────────────────────────────────
+// `joursFixes` = grille historique (celle d'avant la 1re période). Chaque
+// changement d'organisation ajoute une période `{ depuis, jours }` : les mois
+// déjà passés gardent la grille qui s'appliquait à l'époque.
+
+export type JoursFixes = Record<string, string>
+export type PeriodeJoursFixes = { depuis: string; jours: JoursFixes }
+export type AvecJoursFixes = { joursFixes?: JoursFixes; joursFixesPeriodes?: PeriodeJoursFixes[] }
+
+/** Grille de jours fixes applicable à une date (`yyyy-MM-dd`). */
+export function joursFixesPour(v: AvecJoursFixes, dateStr: string): JoursFixes {
+  const actives = (v.joursFixesPeriodes || [])
+    .filter(p => p && p.depuis && p.depuis <= dateStr)
+    .sort((a, b) => (a.depuis < b.depuis ? -1 : 1))
+  if (actives.length > 0) return actives[actives.length - 1].jours || {}
+  return v.joursFixes || {}
+}
+
+/**
+ * Patch Firestore pour modifier la grille applicable à `dateStr` sans toucher
+ * aux périodes précédentes (l'historique reste figé).
+ */
+export function patchJoursFixesPour(v: AvecJoursFixes, dateStr: string, jours: JoursFixes): Record<string, unknown> {
+  const periodes = (v.joursFixesPeriodes || []).slice().sort((a, b) => (a.depuis < b.depuis ? -1 : 1))
+  const idx = periodes.reduce((acc, p, i) => (p.depuis <= dateStr ? i : acc), -1)
+  if (idx === -1) return { joursFixes: jours }
+  periodes[idx] = { ...periodes[idx], jours }
+  return { joursFixesPeriodes: periodes }
+}

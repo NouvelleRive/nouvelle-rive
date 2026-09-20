@@ -11,7 +11,7 @@
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
   import PlanningCalendar from '@/components/PlanningCalendar'
   import PointagesSection from '@/components/admin/PointagesSection'
-  import { BONUS_PAR_CRENEAU_DEPUIS, CRENEAUX_VENDEUSE, SEUIL_BONUS, heuresCreneau, labelCreneau, plageCreneau, premierJourDuMois } from '@/lib/horairesVendeuses'
+  import { BONUS_PAR_CRENEAU_DEPUIS, CRENEAUX_VENDEUSE, SEUIL_BONUS, heuresCreneau, joursFixesPour, labelCreneau, patchJoursFixesPour, plageCreneau, premierJourDuMois, type PeriodeJoursFixes } from '@/lib/horairesVendeuses'
 
   // =====================
   // TYPES
@@ -25,6 +25,7 @@
     mailingActif?: boolean
     createdAt?: Timestamp
     joursFixes?: Record<string, string> // ex: { "1": "12-20", "0": "11-17" } (0=dimanche, 1=lundi...)
+    joursFixesPeriodes?: PeriodeJoursFixes[] // grilles datées : l'historique ne bouge plus
   }
 
   type PlanningSlots = Record<string, string> // "2026-02-05_12-20": vendeuse_id
@@ -91,7 +92,7 @@
 
     const openVendeuseModal = (v: Vendeuse) => {
       setEditJoursFixesFor(v)
-      setTempJoursFixes(v.joursFixes || {})
+      setTempJoursFixes(joursFixesPour(v, premierJourDuMois(currentMonth.year, currentMonth.month)))
       setTempEmail(v.email || '')
     }
 
@@ -254,7 +255,7 @@
     const saveJoursFixes = async () => {
       if (!editJoursFixesFor) return
       await updateDoc(doc(db, 'vendeuses', editJoursFixesFor.id), {
-        joursFixes: tempJoursFixes,
+        ...patchJoursFixesPour(editJoursFixesFor, premierJourDuMois(currentMonth.year, currentMonth.month), tempJoursFixes),
         email: tempEmail.trim(),
       })
       setEditJoursFixesFor(null)
@@ -312,8 +313,8 @@
         const dateStr = `${currentMonth.year}-${(currentMonth.month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 
         // Pour chaque vendeuse active avec des jours fixes
-        vendeuses.filter(v => v.actif && v.joursFixes).forEach(v => {
-          const creneau = v.joursFixes?.[dayOfWeek]
+        vendeuses.filter(v => v.actif).forEach(v => {
+          const creneau = joursFixesPour(v, dateStr)[dayOfWeek]
           if (creneau) {
             const key = `${dateStr}_${creneau}`
             // Ne pas écraser si déjà assigné
@@ -367,13 +368,13 @@
     // Heures supposées (depuis jours fixes × semaines du mois).
     // Durée du poste prise jour par jour : elle change à la bascule du 01/10/2026.
     const heuresSupposees = (v: Vendeuse) => {
-      if (!v.joursFixes) return 0
       const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
       let total = 0
       for (let day = 1; day <= daysInMonth; day++) {
         const d = new Date(currentMonth.year, currentMonth.month, day)
-        const cr = v.joursFixes[d.getDay().toString()]
-        if (cr) total += heuresCreneau(cr, format(d, 'yyyy-MM-dd'))
+        const ds = format(d, 'yyyy-MM-dd')
+        const cr = joursFixesPour(v, ds)[d.getDay().toString()]
+        if (cr) total += heuresCreneau(cr, ds)
       }
       return total
     }

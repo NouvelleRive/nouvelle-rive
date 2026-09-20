@@ -5,7 +5,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Wand2, Plus, Check, Save } from 'lucide-react'
 import { doc, getDoc, setDoc, updateDoc, getDocs, collection, deleteField } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
-import { CRENEAUX_VENDEUSE, labelCreneau } from '@/lib/horairesVendeuses'
+import { CRENEAUX_VENDEUSE, joursFixesPour, labelCreneau, type PeriodeJoursFixes } from '@/lib/horairesVendeuses'
 
 const CRENEAUX_PLANNING = CRENEAUX_VENDEUSE
 const CRENEAUX_RESTOCK = ['14h', '16h', '18h'] as const
@@ -16,7 +16,7 @@ const ROW_H = 'h-[20px]'
 const DAY_HEAD_H = 'h-[22px]'
 const GUTTER_W = 'w-[42px]'
 
-type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string> }
+type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string>; joursFixesPeriodes?: PeriodeJoursFixes[] }
 type Task = { id: string; texte: string }
 type PlanningSlots = Record<string, string>
 type RestockSlotData = { nom: string; type: 'chineuse' | 'deposante'; trigramme?: string }
@@ -208,7 +208,7 @@ export default function PlanningCalendar({
     if (!blockVendeuse) return false
     if (planningRestockSlots[`${ds}_12-20`] === blockVendeuse.id) return true
     if (planningRestockSlots[`${ds}_11-17`] === blockVendeuse.id) return true
-    if (blockVendeuse.joursFixes && blockVendeuse.joursFixes[String(dow)]) return true
+    if (joursFixesPour(blockVendeuse, ds)[String(dow)]) return true
     return false
   }
 

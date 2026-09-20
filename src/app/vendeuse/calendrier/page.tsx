@@ -7,14 +7,14 @@ import { format } from 'date-fns'
 import { db, auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import PlanningCalendar from '@/components/PlanningCalendar'
-import { BONUS_PAR_CRENEAU_DEPUIS, SEUIL_BONUS, heuresCreneau, plageCreneau } from '@/lib/horairesVendeuses'
+import { BONUS_PAR_CRENEAU_DEPUIS, SEUIL_BONUS, heuresCreneau, joursFixesPour, plageCreneau, type PeriodeJoursFixes } from '@/lib/horairesVendeuses'
 import PointageWidget from '@/components/PointageWidget'
 import PointagesSection from '@/components/admin/PointagesSection'
 import EnableNotifsButton from '@/components/EnableNotifsButton'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
-type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string> }
+type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string>; joursFixesPeriodes?: PeriodeJoursFixes[] }
 type PlanningSlots = Record<string, string>
 type ProduitVente = { id: string; prix?: number; prixVenteReel?: number; dateVente?: Timestamp; venteFamiliale?: boolean; source?: string; skuSource?: string | null }
 type Produit = { id: string; chineur?: string; chineurUid?: string; createdAt?: Timestamp }
@@ -210,13 +210,13 @@ export default function VendeuseCalendrierPage() {
 
   // Durée des postes prise jour par jour (bascule horaires du 01/10/2026).
   const heuresSupposees = (v: Vendeuse) => {
-    if (!v.joursFixes) return 0
     const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
     let total = 0
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(currentMonth.year, currentMonth.month, day)
-      const cr = v.joursFixes[d.getDay().toString()]
-      if (cr) total += heuresCreneau(cr, format(d, 'yyyy-MM-dd'))
+      const ds = format(d, 'yyyy-MM-dd')
+      const cr = joursFixesPour(v, ds)[d.getDay().toString()]
+      if (cr) total += heuresCreneau(cr, ds)
     }
     return total
   }
