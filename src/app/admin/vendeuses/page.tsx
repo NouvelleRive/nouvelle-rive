@@ -11,7 +11,7 @@
   import { Plus, X, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
   import PlanningCalendar from '@/components/PlanningCalendar'
   import PointagesSection from '@/components/admin/PointagesSection'
-  import { CRENEAUX_VENDEUSE, heuresCreneau, labelCreneau, plageCreneau, premierJourDuMois } from '@/lib/horairesVendeuses'
+  import { BONUS_PAR_CRENEAU_DEPUIS, CRENEAUX_VENDEUSE, SEUIL_BONUS, heuresCreneau, labelCreneau, plageCreneau, premierJourDuMois } from '@/lib/horairesVendeuses'
 
   // =====================
   // TYPES
@@ -389,9 +389,6 @@
       return total
     }
 
-    // Seuil de CA (par créneau) à partir duquel le bonus 1% est dû
-    const SEUIL_BONUS = 1000
-
     // CA par vendeuse (réconciliation planning + ventes du mois)
     const caParVendeuse = useMemo(() => {
       // Le créneau planifié d'une vendeuse ce jour-là a-t-il atteint le seuil ?
@@ -495,10 +492,15 @@
         ...ca1220.keys(), ...ca1117.keys(), ...caJour.keys(),
       ])
       for (const dateStr of allDates) {
-        // Seuil de bonus évalué PAR CRÉNEAU : il faut 1 000 € sur le matin (11-17)
-        // ou 1 000 € sur le soir (12-20) — chacun débloque son propre bonus.
-        const okSoir = (ca1220.get(dateStr) || 0) >= SEUIL_BONUS
-        const okMatin = (ca1117.get(dateStr) || 0) >= SEUIL_BONUS
+        // À partir du 01/10/2026 : seuil de 1 000 € évalué PAR CRÉNEAU (matin 11-17
+        // et soir 12-20 séparément). Avant : seuil unique sur le CA du jour.
+        const parCreneau = dateStr >= BONUS_PAR_CRENEAU_DEPUIS
+        const okSoir = parCreneau
+          ? (ca1220.get(dateStr) || 0) >= SEUIL_BONUS
+          : (caJour.get(dateStr) || 0) >= SEUIL_BONUS
+        const okMatin = parCreneau
+          ? (ca1117.get(dateStr) || 0) >= SEUIL_BONUS
+          : (caJour.get(dateStr) || 0) >= SEUIL_BONUS
         if (!okSoir && !okMatin) continue
         const ptsToday = pointagesByDay.get(dateStr) || []
 

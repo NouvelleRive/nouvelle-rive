@@ -41,3 +41,10 @@ export function heuresCreneau(cr: string, dateStr?: string): number {
 export function premierJourDuMois(year: number, month0: number): string {
   return `${year}-${String(month0 + 1).padStart(2, '0')}-01`
 }
+
+/**
+ * Bonus vendeuse : à partir de cette date, le seuil de 1 000 € s'évalue créneau
+ * par créneau (matin / soir séparément). Avant, il portait sur le CA du jour.
+ */
+export const BONUS_PAR_CRENEAU_DEPUIS = '2026-10-01'
+export const SEUIL_BONUS = 1000

@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { db, auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import PlanningCalendar from '@/components/PlanningCalendar'
-import { heuresCreneau, plageCreneau } from '@/lib/horairesVendeuses'
+import { BONUS_PAR_CRENEAU_DEPUIS, SEUIL_BONUS, heuresCreneau, plageCreneau } from '@/lib/horairesVendeuses'
 import PointageWidget from '@/components/PointageWidget'
 import PointagesSection from '@/components/admin/PointagesSection'
 import EnableNotifsButton from '@/components/EnableNotifsButton'
@@ -289,17 +289,17 @@ export default function VendeuseCalendrierPage() {
       pointagesByDay.get(p.date)!.push(p)
     }
     const allDates = new Set<string>([...ca1220.keys(), ...ca1117.keys(), ...caJour.keys()])
-    // Seuil de bonus évalué PAR CRÉNEAU : 1 000 € sur le matin (11-17) ou 1 000 €
-    // sur le soir (12-20) — chacun débloque son propre bonus.
-    const SEUIL_BONUS = 1000
+    // À partir du 01/10/2026 : seuil de 1 000 € évalué PAR CRÉNEAU (matin / soir
+    // séparément). Avant : seuil unique sur le CA du jour.
     const creneauOk = (ds: string, vendeuseId: string, okMatin: boolean, okSoir: boolean) => {
       if (planningSlots[`${ds}_12-20`] === vendeuseId) return okSoir
       if (planningSlots[`${ds}_11-17`] === vendeuseId) return okMatin
       return okMatin || okSoir
     }
     for (const ds of allDates) {
-      const okSoir = (ca1220.get(ds) || 0) >= SEUIL_BONUS
-      const okMatin = (ca1117.get(ds) || 0) >= SEUIL_BONUS
+      const parCreneau = ds >= BONUS_PAR_CRENEAU_DEPUIS
+      const okSoir = parCreneau ? (ca1220.get(ds) || 0) >= SEUIL_BONUS : (caJour.get(ds) || 0) >= SEUIL_BONUS
+      const okMatin = parCreneau ? (ca1117.get(ds) || 0) >= SEUIL_BONUS : (caJour.get(ds) || 0) >= SEUIL_BONUS
       if (!okSoir && !okMatin) continue
       const ptsToday = pointagesByDay.get(ds) || []
       if (ptsToday.length > 0) {
