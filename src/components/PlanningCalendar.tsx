@@ -5,10 +5,9 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Wand2, Plus, Check, Save } from 'lucide-react'
 import { doc, getDoc, setDoc, updateDoc, getDocs, collection, deleteField } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
-import { CRENEAUX_VENDEUSE, joursFixesPour, labelCreneau, type PeriodeJoursFixes } from '@/lib/horairesVendeuses'
+import { CRENEAUX_VENDEUSE, joursFixesPour, labelCreneau, libellesRestock, lignesRestock, type PeriodeJoursFixes } from '@/lib/horairesVendeuses'
 
 const CRENEAUX_PLANNING = CRENEAUX_VENDEUSE
-const CRENEAUX_RESTOCK = ['14h', '16h', '18h'] as const
 const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 // Gabarit fixe : la colonne horaires de gauche s'aligne ligne à ligne avec les
 // créneaux des cases. Hauteurs figées pour que les deux restent en face.
@@ -345,9 +344,8 @@ export default function PlanningCalendar({
     if (isWeekend && userType !== 'deposante' && userType !== 'acheteuse') return null
     // Acheteuse : jamais les jours de présence de la vendeuse bloquante (Sarah).
     if (userType === 'acheteuse' && isBlockedByVendeuse(ds, dow)) return null
-    // Restock : créneaux 13h / 16h (+ 18h le mardi), indépendants des horaires vendeuses.
-    const premierRestock = '13h'
-    const creneaux: string[] = dow === 2 ? [premierRestock, '16h', '18h'] : [premierRestock, '16h', '']
+    // Créneaux restock du jour, alignés sur les 3 lignes de la colonne horaires.
+    const creneaux: string[] = lignesRestock(ds, dow)
     const slots = usePlanningSlots ? planningSlots : planningRestockSlots
     const vList = usePlanningSlots ? vendeuses : vendeusesRestock
     const noms = ['12-20', '11-17']
@@ -360,9 +358,9 @@ export default function PlanningCalendar({
     return (
       <>
         
-        {creneaux.map(cr => {
-          // '' = créneau 18h inexistant ce jour-là : ligne vide, pour rester aligné
-          if (!cr) return <div key="no-18h" className={`mb-0.5 ${ROW_H}`} />
+        {creneaux.map((cr, i) => {
+          // '' = pas de créneau à cette ligne ce jour-là : ligne vide, pour rester aligné
+          if (!cr) return <div key={`vide-${i}`} className={`mb-0.5 ${ROW_H}`} />
           const key = `${ds}_${cr}`
           const slot = restockSlots[key]
           const past = isCreneauPast(ds, cr)
@@ -421,7 +419,7 @@ export default function PlanningCalendar({
     )
     // Mêmes libellés que dans les cases (même règle de bascule d'horaires).
     const planning = CRENEAUX_PLANNING.map(cr => labelCreneau(cr, ds))
-    const restock = ['13h', '16h', '18h']
+    const restock = libellesRestock(ds)
     return (
       <div className={`${GUTTER_W} border-b border-r p-1 bg-gray-50/50`}>
         <div className={`${DAY_HEAD_H} mb-1`} />

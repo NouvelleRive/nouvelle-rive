@@ -2,14 +2,15 @@
 // Endpoint déclenché par Vercel Cron.
 // Vérifie l'heure de Paris et envoie les notifs au tel boutique :
 // - 11h10 / 14h10 : rappel pointage arrivée (poste matin ouvre 11h, poste soir ouvre 14h) si pas pointé
-// - 12h50 / 15h50 / 17h50 : "[Nom] arrive dans 10 min" pour restock 13h / 16h / 18h (18h le mardi)
+// - 10 min avant chaque restock : "[Nom] arrive dans 10 min" (13h/16h, +18h le mardi
+//   jusqu'au 30/09/2026 ; 14h/16h, +12h le mardi à partir du 01/10/2026)
 // - 17h55 / 19h55 : rappel pointage départ (poste matin ferme 18h, poste soir ferme 20h) si pas pointé
 // NB: les clés Firestore des postes restent '11-17' (matin) / '12-20' (soir) — identifiants
 // historiques stables ; leurs horaires réels deviennent 11h-18h et 14h-20h le 01/10/2026.
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { HORAIRES_CUTOVER } from '@/lib/horairesVendeuses'
+import { HORAIRES_CUTOVER, TOUS_CRENEAUX_RESTOCK } from '@/lib/horairesVendeuses'
 import { adminDb } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendPushToOwner } from '@/lib/webpush'
@@ -207,7 +208,7 @@ export async function GET(req: NextRequest) {
     const restockSnap = await adminDb.collection('restocks').doc(monthKey).get()
     const restockSlots = restockSnap.exists ? (restockSnap.data()?.slots || {}) : {}
     const restocksAujourdhui: { heure: string; nom: string }[] = []
-    for (const heure of ['13h', '14h', '16h', '18h']) {
+    for (const heure of TOUS_CRENEAUX_RESTOCK) {
       const data = restockSlots[`${dateStr}_${heure}`]
       if (data?.nom) restocksAujourdhui.push({ heure, nom: data.nom })
     }
@@ -298,12 +299,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Restocks : 12h50 / 15h50 / 17h50 → restock à 13h / 16h / 18h
-  const restockTargets = [
-    { trigH: 12, trigM: 50, slot: '13h' },
-    { trigH: 15, trigM: 50, slot: '16h' },
-    { trigH: 17, trigM: 50, slot: '18h' },
-  ]
+  // Restocks : 10 min avant chaque créneau possible (les créneaux changent au
+  // 01/10/2026, on balaie donc tous les libellés ayant existé — un créneau non
+  // réservé ne déclenche rien).
+  const restockTargets = TOUS_CRENEAUX_RESTOCK.map(slot => ({
+    trigH: parseInt(slot, 10) - 1, trigM: 50, slot,
+  }))
   for (const r of restockTargets) {
     if (!inWindow(h, m, r.trigH, r.trigM)) continue
     const restockSnap = await adminDb.collection('restocks').doc(monthKey).get()
@@ -331,13 +332,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Rappel chineuse — 30 min avant son restock (12h30 / 15h30 / 17h30 → restock 13h / 16h / 18h)
-  // Push uniquement, à la chineuse elle-même (ownerId = authUid).
-  const chineuseRestockTargets = [
-    { trigH: 12, trigM: 30, slot: '13h' },
-    { trigH: 15, trigM: 30, slot: '16h' },
-    { trigH: 17, trigM: 30, slot: '18h' },
-  ]
+  // Rappel chineuse — 30 min avant son restock. Push uniquement, à la chineuse
+  // elle-même (ownerId = authUid).
+  const chineuseRestockTargets = TOUS_CRENEAUX_RESTOCK.map(slot => ({
+    trigH: parseInt(slot, 10) - 1, trigM: 30, slot,
+  }))
   for (const r of chineuseRestockTargets) {
     if (!inWindow(h, m, r.trigH, r.trigM)) continue
     const restockSnap = await adminDb.collection('restocks').doc(monthKey).get()

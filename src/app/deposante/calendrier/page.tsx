@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { creneauxRestock } from '@/lib/horairesVendeuses'
 import { collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth, db } from '@/lib/firebaseConfig'
@@ -9,10 +10,7 @@ import { useEtapes } from '../layout'
 import PlanningCalendar from '@/components/PlanningCalendar'
 
 const MAX_PIECES_PAR_RDV = 5
-// Créneaux horaires (même règles que les chineuses : mardi a un créneau de plus)
-// Restock : 13h / 16h (+ 18h le mardi), indépendants des horaires vendeuses.
-const creneauxRestock = (_dateStr: string, dow: number): string[] =>
-  dow === 2 ? ['13h', '16h', '18h'] : ['13h', '16h']
+// Créneaux horaires : mêmes règles que les chineuses (le mardi a un créneau de plus)
 
 type Piece = { id: string; nom?: string; sku?: string; categorie?: string; recu?: boolean; vendu?: boolean; statutRecuperation?: string; rdvDate?: string; rdvCreneau?: string }
 type Slot = { nom: string; type: 'chineuse' | 'deposante'; trigramme?: string; pieceIds?: string[] }
