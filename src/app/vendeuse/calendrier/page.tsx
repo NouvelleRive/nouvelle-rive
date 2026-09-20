@@ -289,8 +289,18 @@ export default function VendeuseCalendrierPage() {
       pointagesByDay.get(p.date)!.push(p)
     }
     const allDates = new Set<string>([...ca1220.keys(), ...ca1117.keys(), ...caJour.keys()])
+    // Seuil de bonus évalué PAR CRÉNEAU : 1 000 € sur le matin (11-17) ou 1 000 €
+    // sur le soir (12-20) — chacun débloque son propre bonus.
+    const SEUIL_BONUS = 1000
+    const creneauOk = (ds: string, vendeuseId: string, okMatin: boolean, okSoir: boolean) => {
+      if (planningSlots[`${ds}_12-20`] === vendeuseId) return okSoir
+      if (planningSlots[`${ds}_11-17`] === vendeuseId) return okMatin
+      return okMatin || okSoir
+    }
     for (const ds of allDates) {
-      if ((caJour.get(ds) || 0) < 1000) continue
+      const okSoir = (ca1220.get(ds) || 0) >= SEUIL_BONUS
+      const okMatin = (ca1117.get(ds) || 0) >= SEUIL_BONUS
+      if (!okSoir && !okMatin) continue
       const ptsToday = pointagesByDay.get(ds) || []
       if (ptsToday.length > 0) {
         const ventesDuJour = ventesAll.filter(v => {
@@ -303,6 +313,7 @@ export default function VendeuseCalendrierPage() {
           const m = v.prixVenteReel || 0
           for (const p of ptsToday) {
             if (!p.arrivee) continue
+            if (!creneauOk(ds, p.vendeuseId, okMatin, okSoir)) continue
             const arr = new Date(p.arrivee).getTime()
             const dep = p.depart ? new Date(p.depart).getTime() : Infinity
             if (t >= arr && t <= dep) {
@@ -312,8 +323,8 @@ export default function VendeuseCalendrierPage() {
           }
         }
       } else {
-        const v1220 = planningSlots[`${ds}_12-20`]; if (v1220) { const ca = ca1220.get(ds) || 0; const cur = map.get(v1220); if (cur) map.set(v1220, { ...cur, bonus: cur.bonus + ca * 0.01 }) }
-        const v1117 = planningSlots[`${ds}_11-17`]; if (v1117) { const ca = ca1117.get(ds) || 0; const cur = map.get(v1117); if (cur) map.set(v1117, { ...cur, bonus: cur.bonus + ca * 0.01 }) }
+        const v1220 = planningSlots[`${ds}_12-20`]; if (v1220 && okSoir) { const ca = ca1220.get(ds) || 0; const cur = map.get(v1220); if (cur) map.set(v1220, { ...cur, bonus: cur.bonus + ca * 0.01 }) }
+        const v1117 = planningSlots[`${ds}_11-17`]; if (v1117 && okMatin) { const ca = ca1117.get(ds) || 0; const cur = map.get(v1117); if (cur) map.set(v1117, { ...cur, bonus: cur.bonus + ca * 0.01 }) }
       }
     }
     return map

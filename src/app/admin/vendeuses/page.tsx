@@ -389,8 +389,17 @@
       return total
     }
 
+    // Seuil de CA (par créneau) à partir duquel le bonus 1% est dû
+    const SEUIL_BONUS = 1000
+
     // CA par vendeuse (réconciliation planning + ventes du mois)
     const caParVendeuse = useMemo(() => {
+      // Le créneau planifié d'une vendeuse ce jour-là a-t-il atteint le seuil ?
+      const creneauOk = (dateStr: string, vendeuseId: string, okMatin: boolean, okSoir: boolean) => {
+        if (planningSlots[`${dateStr}_12-20`] === vendeuseId) return okSoir
+        if (planningSlots[`${dateStr}_11-17`] === vendeuseId) return okMatin
+        return okMatin || okSoir
+      }
       const map = new Map<string, { ca: number; ventes: number; bonus: number; discountCount: number; discountTotal: number }>()
 
 
@@ -486,7 +495,11 @@
         ...ca1220.keys(), ...ca1117.keys(), ...caJour.keys(),
       ])
       for (const dateStr of allDates) {
-        if ((caJour.get(dateStr) || 0) < 1000) continue
+        // Seuil de bonus évalué PAR CRÉNEAU : il faut 1 000 € sur le matin (11-17)
+        // ou 1 000 € sur le soir (12-20) — chacun débloque son propre bonus.
+        const okSoir = (ca1220.get(dateStr) || 0) >= SEUIL_BONUS
+        const okMatin = (ca1117.get(dateStr) || 0) >= SEUIL_BONUS
+        if (!okSoir && !okMatin) continue
         const ptsToday = pointagesByDay.get(dateStr) || []
 
         if (ptsToday.length > 0) {
@@ -502,6 +515,8 @@
             const montant = v.prixVenteReel || 0
             for (const p of ptsToday) {
               if (!p.arrivee) continue
+              // Son créneau du jour doit avoir passé le seuil
+              if (!creneauOk(dateStr, p.vendeuseId, okMatin, okSoir)) continue
               const arr = new Date(p.arrivee).getTime()
               const dep = p.depart ? new Date(p.depart).getTime() : Infinity
               if (venteTime >= arr && venteTime <= dep) {
@@ -514,12 +529,12 @@
           // Logique planning historique (fallback : pas de pointages ce jour-là)
           const v1220 = planningSlots[`${dateStr}_12-20`]
           const v1117 = planningSlots[`${dateStr}_11-17`]
-          if (v1220) {
+          if (v1220 && okSoir) {
             const ca = ca1220.get(dateStr) || 0
             const cur = map.get(v1220)
             if (cur) map.set(v1220, { ...cur, bonus: cur.bonus + ca * 0.01 })
           }
-          if (v1117) {
+          if (v1117 && okMatin) {
             const ca = ca1117.get(dateStr) || 0
             const cur = map.get(v1117)
             if (cur) map.set(v1117, { ...cur, bonus: cur.bonus + ca * 0.01 })
