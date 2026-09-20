@@ -1,14 +1,26 @@
 // src/components/PlanningCalendar.tsx
 'use client'
 
-import { useMemo, useState, useEffect, useRef } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Wand2, Plus, Check, Save } from 'lucide-react'
 import { doc, getDoc, setDoc, updateDoc, getDocs, collection, deleteField } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 
 const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
-const CRENEAUX_RESTOCK = ['13h', '16h', '18h'] as const
+// Les clés '12-20'/'11-17' restent des identifiants de poste stables (Firestore) ;
+// à partir du 14/09/2026 leurs horaires réels deviennent 14h-20h (soir) et 11h-18h (matin).
+// Avant le 14/09, on garde les anciens horaires (12-20 / 11-17, restock 13h).
+const HORAIRES_CUTOVER = '2026-09-14'
+const CRENEAU_LABEL: Record<string, string> = { '12-20': '14-20', '11-17': '11-18' }
+const labelCreneau = (cr: string, ds?: string) =>
+  (ds && ds < HORAIRES_CUTOVER) ? cr : (CRENEAU_LABEL[cr] || cr)
+const CRENEAUX_RESTOCK = ['14h', '16h', '18h'] as const
 const JOURS_SEMAINE = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+// Gabarit fixe : la colonne horaires de gauche s'aligne ligne à ligne avec les
+// créneaux des cases. Hauteurs figées pour que les deux restent en face.
+const ROW_H = 'h-[20px]'
+const DAY_HEAD_H = 'h-[22px]'
+const GUTTER_W = 'w-[42px]'
 
 type Vendeuse = { id: string; prenom: string; couleur: string; actif: boolean; joursFixes?: Record<string, string> }
 type Task = { id: string; texte: string }
@@ -313,15 +325,15 @@ export default function PlanningCalendar({
         const vendeuseId = planningSlots[`${ds}_${cr}`]
         const v = vendeuseId ? getVendeuse(vendeuseId) : null
         return (
-          <div key={cr} className="mb-0.5">
+          <div key={cr} className={`mb-0.5 ${ROW_H}`}>
             <select
               value={vendeuseId || ''}
               onChange={e => handlePlanningChange(ds, cr, e.target.value)}
-              className="w-full text-[10px] rounded px-1 py-0.5 border-0 cursor-pointer font-medium"
+              className="block w-full h-full text-[10px] rounded px-1 py-0.5 border-0 cursor-pointer font-medium"
               style={{ backgroundColor: v ? v.couleur + '20' : 'transparent', color: v ? v.couleur : '#9ca3af' }}
-              title={cr}
+              title={labelCreneau(cr, ds)}
             >
-              <option value="">{v ? '— Retirer —' : cr}</option>
+              <option value="">{v ? '— Retirer —' : '—'}</option>
               {activeVendeuses.map(av => <option key={av.id} value={av.id}>{av.prenom}</option>)}
             </select>
           </div>
@@ -339,7 +351,9 @@ export default function PlanningCalendar({
     if (isWeekend && userType !== 'deposante' && userType !== 'acheteuse') return null
     // Acheteuse : jamais les jours de présence de la vendeuse bloquante (Sarah).
     if (userType === 'acheteuse' && isBlockedByVendeuse(ds, dow)) return null
-    const creneaux: string[] = dow === 2 ? ['13h', '16h', '18h'] : ['13h', '16h']
+    // Restock : le 1er créneau passe de 13h (avant le 14/09) à 14h (à partir du 14/09) ; 16h et 18h (mardi) inchangés.
+    const premierRestock = ds < HORAIRES_CUTOVER ? '13h' : '14h'
+    const creneaux: string[] = dow === 2 ? [premierRestock, '16h', '18h'] : [premierRestock, '16h', '']
     const slots = usePlanningSlots ? planningSlots : planningRestockSlots
     const vList = usePlanningSlots ? vendeuses : vendeusesRestock
     const noms = ['12-20', '11-17']
@@ -353,6 +367,8 @@ export default function PlanningCalendar({
       <>
         
         {creneaux.map(cr => {
+          // '' = créneau 18h inexistant ce jour-là : ligne vide, pour rester aligné
+          if (!cr) return <div key="no-18h" className={`mb-0.5 ${ROW_H}`} />
           const key = `${ds}_${cr}`
           const slot = restockSlots[key]
           const past = isCreneauPast(ds, cr)
@@ -367,34 +383,58 @@ export default function PlanningCalendar({
           // seule) pour pouvoir s'organiser entre elles. Déposantes : seul leur propre RDV
           // et les créneaux libres sont visibles.
           const isOtherSlot = userType !== 'admin' && slot && !isMine
-          if (isOtherSlot && userType === 'deposante') return null
+          // Lignes masquées : on laisse la place vide (la colonne horaires de
+          // gauche doit rester en face des bons créneaux).
+          const vide = <div key={cr} className={`mb-0.5 ${ROW_H}`} />
+          if (isOtherSlot && userType === 'deposante') return vide
           // Pour les déposantes/chineuses, les créneaux passés vides sont cachés
-          if (past && userType !== 'admin' && !slot) return null
+          if (past && userType !== 'admin' && !slot) return vide
           return (
-            <div key={cr} className="mb-0.5">
+            <div key={cr} className={`mb-0.5 ${ROW_H}`}>
               {editable && options.length > 0 ? (
                 <select
                   value={slot?.nom || ''}
                   onChange={e => handleRestockChange(ds, cr, e.target.value)}
-                  className={`w-full text-[10px] rounded px-1 py-0.5 cursor-pointer font-semibold border ${
+                  className={`block w-full h-full text-[10px] rounded px-1 py-0.5 cursor-pointer font-semibold border ${
                     slot
                       ? `${slotColors} border-transparent`
                       : 'bg-white text-[#22209C] border-[#22209C] hover:bg-[#22209C]/5'
                   }`}
                   title={cr}
                 >
-                  <option value="">{cr}</option>
+                  <option value="">—</option>
                   {options.map((p, i) => <option key={i} value={p.nom}>{p.nom}</option>)}
                 </select>
               ) : (
-                <div className={`w-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${past ? 'text-gray-300 bg-gray-50 line-through opacity-60' : slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}${past ? ' — passé' : ''}` : cr}>
-                  {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">{cr}</span>}
+                <div className={`w-full h-full text-[10px] rounded px-1 py-0.5 font-medium truncate ${past ? 'text-gray-300 bg-gray-50 line-through opacity-60' : slot ? slotColors : 'text-gray-700 bg-gray-50'}`} title={slot ? `${slot.nom}${isDeposante ? ' (déposante)' : ''}${past ? ' — passé' : ''}` : cr}>
+                  {slot ? <>{isDeposante && '◆ '}{slot.nom}</> : <span className="text-gray-300">—</span>}
                 </div>
               )}
             </div>
           )
         })}
       </>
+    )
+  }
+
+  // Colonne horaires de gauche : mêmes libellés que les créneaux des cases,
+  // même police, alignés ligne à ligne grâce aux hauteurs fixes.
+  const renderGutter = (ds: string) => {
+    const ligne = (txt: string, i: number) => (
+      <div key={i} className={`mb-0.5 ${ROW_H} flex items-center justify-end pr-1 text-[9px] text-gray-400 whitespace-nowrap`}>
+        {txt}
+      </div>
+    )
+    // Libellés demandés pour la colonne : postes vendeuses et créneaux restock.
+    const planning = ['12-20', '11-19']
+    const restock = ['13h', '16h', '18h']
+    return (
+      <div className={`${GUTTER_W} border-b border-r p-1 bg-gray-50/50`}>
+        <div className={`${DAY_HEAD_H} mb-1`} />
+        {(mode === 'planning' || mode === 'unified') && planning.map(ligne)}
+        {mode === 'unified' && <div className="border-t border-gray-100 my-0.5" />}
+        {(mode === 'restock' || mode === 'unified') && restock.map(ligne)}
+      </div>
     )
   }
 
@@ -510,20 +550,27 @@ export default function PlanningCalendar({
         </div>
       ) : (
         <div className="bg-white rounded-xl border overflow-x-auto">
-          <div className="min-w-[560px]">
-            <div className="grid grid-cols-7 border-b bg-gray-50">
+          <div className="min-w-[600px]">
+            <div className="grid grid-cols-[42px_repeat(7,minmax(0,1fr))] border-b bg-gray-50">
+              <div className="border-r" />
               {JOURS_SEMAINE.map((j, i) => <div key={i} className="text-center text-xs font-bold text-gray-500 py-2">{j}</div>)}
             </div>
-            <div className="grid grid-cols-7">
+            <div className="grid grid-cols-[42px_repeat(7,minmax(0,1fr))]">
               {calendarDays.map((day, idx) => {
-                if (day === null) return <div key={`pad-${idx}`} className="border-b border-r min-h-[100px] bg-gray-50/50" />
+                // Début de semaine : on insère d'abord la colonne horaires
+                const gutter = idx % 7 === 0
+                  ? renderGutter(`${currentMonth.year}-${String(currentMonth.month + 1).padStart(2, '0')}-${String(calendarDays.slice(idx, idx + 7).find(d => d !== null) || 1).padStart(2, '0')}`)
+                  : null
+                if (day === null) return <React.Fragment key={`pad-${idx}`}>{gutter}<div className="border-b border-r min-h-[100px] bg-gray-50/50" /></React.Fragment>
                 const ds = `${currentMonth.year}-${String(currentMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                 const now = new Date()
                 const isToday = day === now.getDate() && currentMonth.month === now.getMonth() && currentMonth.year === now.getFullYear()
 
                 return (
-                  <div key={ds} className={`border-b border-r min-h-[100px] p-1 ${isToday ? 'bg-blue-50' : ''}`}>
-                    <div className="flex items-center justify-between mb-1">
+                  <React.Fragment key={ds}>
+                  {gutter}
+                  <div className={`border-b border-r min-h-[100px] p-1 ${isToday ? 'bg-blue-50' : ''}`}>
+                    <div className={`flex items-start justify-between mb-1 ${DAY_HEAD_H}`}>
   <span className={`text-xs font-medium ${isToday ? 'text-[#22209C] font-bold' : 'text-gray-400'}`}>{day}</span>
   {dailyCA[ds] !== undefined && (
     <div className="text-right">
@@ -547,6 +594,7 @@ export default function PlanningCalendar({
                     {mode === 'restock' && renderRestockDropdowns(ds, false)}
                     {mode === 'unified' && renderUnifiedCell(ds)}
                   </div>
+                  </React.Fragment>
                 )
               })}
             </div>
