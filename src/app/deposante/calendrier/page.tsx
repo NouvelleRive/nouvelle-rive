@@ -10,8 +10,9 @@ import PlanningCalendar from '@/components/PlanningCalendar'
 
 const MAX_PIECES_PAR_RDV = 5
 // Créneaux horaires (même règles que les chineuses : mardi a un créneau de plus)
-const CRENEAUX_NORMAL = ['13h', '16h']
-const CRENEAUX_MARDI = ['13h', '16h', '18h']
+// Restock : 13h / 16h (+ 18h le mardi), indépendants des horaires vendeuses.
+const creneauxRestock = (_dateStr: string, dow: number): string[] =>
+  dow === 2 ? ['13h', '16h', '18h'] : ['13h', '16h']
 
 type Piece = { id: string; nom?: string; sku?: string; categorie?: string; recu?: boolean; vendu?: boolean; statutRecuperation?: string; rdvDate?: string; rdvCreneau?: string }
 type Slot = { nom: string; type: 'chineuse' | 'deposante'; trigramme?: string; pieceIds?: string[] }
@@ -160,7 +161,7 @@ export default function DeposanteCalendrierPage() {
     const isWeekend = dow === 0 || dow === 6
     const isPast = dateStr < today
 
-    const creneaux: string[] = dow === 2 ? CRENEAUX_MARDI : CRENEAUX_NORMAL
+    const creneaux: string[] = creneauxRestock(dateStr, dow)
 
     // Pour chaque créneau : libre si pas de chineuse ni autre déposante
     const creneauxDispo = creneaux.filter(cr => {

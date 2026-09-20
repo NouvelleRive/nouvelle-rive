@@ -8,9 +8,9 @@ import { db } from '@/lib/firebaseConfig'
 
 const CRENEAUX_PLANNING = ['12-20', '11-17'] as const
 // Les clés '12-20'/'11-17' restent des identifiants de poste stables (Firestore) ;
-// à partir du 14/09/2026 leurs horaires réels deviennent 14h-20h (soir) et 11h-18h (matin).
-// Avant le 14/09, on garde les anciens horaires (12-20 / 11-17, restock 13h).
-const HORAIRES_CUTOVER = '2026-09-14'
+// à partir du 01/10/2026 leurs horaires réels deviennent 14h-20h (soir) et 11h-18h (matin).
+// Avant le 01/10, on garde les anciens horaires (12-20 / 11-17).
+const HORAIRES_CUTOVER = '2026-10-01'
 const CRENEAU_LABEL: Record<string, string> = { '12-20': '14-20', '11-17': '11-18' }
 const labelCreneau = (cr: string, ds?: string) =>
   (ds && ds < HORAIRES_CUTOVER) ? cr : (CRENEAU_LABEL[cr] || cr)
@@ -351,8 +351,8 @@ export default function PlanningCalendar({
     if (isWeekend && userType !== 'deposante' && userType !== 'acheteuse') return null
     // Acheteuse : jamais les jours de présence de la vendeuse bloquante (Sarah).
     if (userType === 'acheteuse' && isBlockedByVendeuse(ds, dow)) return null
-    // Restock : le 1er créneau passe de 13h (avant le 14/09) à 14h (à partir du 14/09) ; 16h et 18h (mardi) inchangés.
-    const premierRestock = ds < HORAIRES_CUTOVER ? '13h' : '14h'
+    // Restock : créneaux 13h / 16h (+ 18h le mardi), indépendants des horaires vendeuses.
+    const premierRestock = '13h'
     const creneaux: string[] = dow === 2 ? [premierRestock, '16h', '18h'] : [premierRestock, '16h', '']
     const slots = usePlanningSlots ? planningSlots : planningRestockSlots
     const vList = usePlanningSlots ? vendeuses : vendeusesRestock
@@ -425,8 +425,8 @@ export default function PlanningCalendar({
         {txt}
       </div>
     )
-    // Libellés demandés pour la colonne : postes vendeuses et créneaux restock.
-    const planning = ['12-20', '11-19']
+    // Mêmes libellés que dans les cases (même règle de bascule d'horaires).
+    const planning = CRENEAUX_PLANNING.map(cr => labelCreneau(cr, ds))
     const restock = ['13h', '16h', '18h']
     return (
       <div className={`${GUTTER_W} border-b border-r p-1 bg-gray-50/50`}>
