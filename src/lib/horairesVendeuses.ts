@@ -82,13 +82,13 @@ export function patchJoursFixesPour(v: AvecJoursFixes, dateStr: string, jours: J
 
 // ── Créneaux restock ────────────────────────────────────────────────────────
 // Jusqu'au 30/09/2026 : 13h / 16h, + 18h le mardi.
-// À partir du 01/10/2026 : 14h / 16h, + 12h le mardi (placé en premier).
+// À partir du 01/10/2026 : 14h / 16h, + 11h le mardi (placé en premier).
 
 export const RESTOCK_CUTOVER = '2026-10-01'
 
 /** Libellés de la colonne horaires (toujours 3 lignes). */
 export function libellesRestock(dateStr: string): string[] {
-  return dateStr < RESTOCK_CUTOVER ? ['13h', '16h', '18h'] : ['12h', '14h', '16h']
+  return dateStr < RESTOCK_CUTOVER ? ['13h', '16h', '18h'] : ['11h', '14h', '16h']
 }
 
 /**
@@ -97,7 +97,7 @@ export function libellesRestock(dateStr: string): string[] {
  */
 export function lignesRestock(dateStr: string, dow: number): string[] {
   if (dateStr < RESTOCK_CUTOVER) return dow === 2 ? ['13h', '16h', '18h'] : ['13h', '16h', '']
-  return dow === 2 ? ['12h', '14h', '16h'] : ['', '14h', '16h']
+  return dow === 2 ? ['11h', '14h', '16h'] : ['', '14h', '16h']
 }
 
 /** Créneaux réellement ouverts ce jour-là. */
@@ -106,4 +106,4 @@ export function creneauxRestock(dateStr: string, dow: number): string[] {
 }
 
 /** Tous les libellés de créneau restock ayant existé (pour les rappels push). */
-export const TOUS_CRENEAUX_RESTOCK = ['12h', '13h', '14h', '16h', '18h'] as const
+export const TOUS_CRENEAUX_RESTOCK = ['11h', '13h', '14h', '16h', '18h'] as const
