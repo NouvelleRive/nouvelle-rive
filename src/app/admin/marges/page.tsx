@@ -148,13 +148,13 @@ export default function MargesAComplererPage() {
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
             <div className="text-xs text-gray-500">Déjà renseignées</div>
-            <div className="text-xl font-bold text-emerald-600">{stats.completes}</div>
+            <div className="text-xl font-bold text-[#09B1BA]">{stats.completes}</div>
           </div>
         </div>
       )}
 
       {stats && stats.ventesSansProduit > 0 && (
-        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+        <div className="flex items-start gap-2 bg-[#e0e7ff] border border-[#c7c9e8] rounded-lg p-3 mb-4 text-xs text-[#22209C]">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           {stats.ventesSansProduit} vente(s) sans fiche produit liée : impossible de leur rattacher un prix d&apos;achat ici.
         </div>
@@ -170,7 +170,7 @@ export default function MargesAComplererPage() {
         </div>
       ) : lignes.length === 0 ? (
         <div className="bg-white rounded-lg p-8 shadow-sm border border-gray-100 text-center">
-          <Check className="mx-auto mb-2 text-emerald-500" size={24} />
+          <Check className="mx-auto mb-2 text-[#09B1BA]" size={24} />
           <p className="text-sm text-gray-600">Tous les prix d&apos;achat {annee} sont renseignés.</p>
         </div>
       ) : (
@@ -216,13 +216,13 @@ export default function MargesAComplererPage() {
                         value={saisies[l.produitId] || ''}
                         onChange={e => setSaisies(s => ({ ...s, [l.produitId]: e.target.value }))}
                         placeholder="€"
-                        className="w-24 border rounded px-2 py-1 text-sm text-right"
+                        className="w-24 border rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-1 focus:ring-[#22209C] focus:border-[#22209C]"
                       />
                     </td>
                     <td className="py-2 px-2 text-right whitespace-nowrap">
                       {marge === null
                         ? <span className="text-gray-300">—</span>
-                        : <span className={marge < 0 ? 'text-red-600 font-semibold' : 'text-emerald-700 font-semibold'}>{formatPrix(marge)} €</span>}
+                        : <span className={marge < 0 ? 'text-red-600 font-semibold' : 'text-[#22209C] font-semibold'}>{formatPrix(marge)} €</span>}
                     </td>
                   </tr>
                 )
@@ -237,12 +237,12 @@ export default function MargesAComplererPage() {
           <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
             <div className="text-xs text-gray-600">
               {aEnregistrer.length} pièce(s) saisie(s) · marge ajoutée{' '}
-              <strong className={margeAjoutee < 0 ? 'text-red-600' : 'text-emerald-700'}>{formatPrix(margeAjoutee)} € HT</strong>
+              <strong className={margeAjoutee < 0 ? 'text-red-600' : 'text-[#22209C]'}>{formatPrix(margeAjoutee)} € HT</strong>
             </div>
             <button
               onClick={enregistrer}
               disabled={saving}
-              className="bg-[#22209C] text-white text-sm font-medium rounded px-4 py-2 disabled:opacity-50"
+              className="bg-[#22209C] hover:bg-[#1a1878] text-white text-sm font-medium rounded px-4 py-2 disabled:opacity-50 transition-colors"
             >
               {saving ? 'Enregistrement…' : 'Enregistrer'}
             </button>
