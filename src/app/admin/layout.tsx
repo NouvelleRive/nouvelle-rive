@@ -40,9 +40,11 @@
       { key: 'ajouter', label: 'Ajouter', href: '/admin/ajouter-produits' },  
       { key: 'produits', label: 'Produits', href: '/admin/nos-produits' },
       { key: 'ventes', label: 'Ventes', href: '/admin/nos-ventes' },
-      { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes' },
+      { key: 'calendrier', label: 'Calendrier', href: '/chineuse/calendrier', chineuseOnly: true },
+      { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes', adminOnly: true },
       { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', adminOnly: true },
       { key: 'perf', label: 'Perf', href: '/admin/performance' },
+      { key: 'marges', label: 'Marges', href: '/admin/marges', adminOnly: true },
       { key: 'achats', label: 'Achats', href: '/acheteuse/performance', adminOnly: true },
       {
         key: 'site',
@@ -56,13 +58,19 @@
         ],
       },
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
-      { key: 'clients', label: 'Clientes', href: '/admin/clientes' },
+      { key: 'clients', label: 'Clientes', href: '/admin/clientes', adminOnly: true },
       { key: 'paiements', label: 'Paiements', href: '/admin/paiements', adminOnly: true },
       { key: 'reseaux', label: 'Réseaux', href: '/vendeuse/reseaux', adminOnly: true },
       ]
 
-    // Filtrer les tabs admin-only si chineuse sélectionnée
-    const visibleTabs = tabs.filter(tab => !tab.adminOnly || !selectedChineuse)
+    // Filtrer selon le rôle sélectionné :
+    // - adminOnly : masqué dès qu'une chineuse est sélectionnée (vue NOUVELLE RIVE only)
+    // - chineuseOnly : visible uniquement quand une chineuse est sélectionnée (ex: Calendrier restock)
+    const visibleTabs = tabs.filter(tab => {
+      if ((tab as any).adminOnly && selectedChineuse) return false
+      if ((tab as any).chineuseOnly && !selectedChineuse) return false
+      return true
+    })
 
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
