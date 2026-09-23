@@ -6,7 +6,7 @@ import { db } from '@/lib/firebaseConfig'
 import { collection, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, deleteDoc, orderBy, query, where, documentId, getCountFromServer, limit } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays, startOfYear, endOfYear, subYears, eachMonthOfInterval } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceArea, PieChart, Pie, Cell, Label } from 'recharts'
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Euro, Award, Calendar, Zap, Star, Package, MessageCircle, Trash2, RefreshCw } from 'lucide-react'
 import { getMonthEvents } from '@/lib/retailEvents'
 import { formatPrix } from '@/lib/formatPrix'
@@ -1667,21 +1667,38 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         <h2 className="text-sm font-semibold text-gray-900 mb-3">{isYearMode ? 'CA mensuel' : 'CA journalier'}</h2>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dailyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="jour" tick={{ fontSize: 10 }} stroke="#9ca3af" />
-              <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} />
-              <Tooltip
-                formatter={(value: number) => [`${value} €`, '']}
-                contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Line type="monotone" dataKey="ca" name={isYearMode ? String(selectedYear) : moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-              <Line type="monotone" dataKey="caPrecedent" name={isYearMode ? String(selectedYear - 1) : moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
-              {monthEvents.map((evt, i) => (
-                <ReferenceArea key={i} x1={evt.dayStart} x2={evt.dayEnd} fill={evt.color} label={{ value: evt.label, position: 'insideTop', fontSize: 10, fontWeight: 600, fill: '#374151' }} />
-              ))}
-            </LineChart>
+            {isYearMode ? (
+              // Vue année : 12 barres par an (courant vs précédent), plus lisible qu'une courbe
+              <BarChart data={dailyData} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="jour" tick={{ fontSize: 10 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} />
+                <Tooltip
+                  cursor={{ fill: '#f9fafb' }}
+                  formatter={(value: number) => [`${formatPrix(value)} €`, '']}
+                  contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+                <Bar dataKey="caPrecedent" name={String(selectedYear - 1)} fill="#d1d5db" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="ca" name={String(selectedYear)} fill="#22209C" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            ) : (
+              <LineChart data={dailyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="jour" tick={{ fontSize: 10 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} />
+                <Tooltip
+                  formatter={(value: number) => [`${value} €`, '']}
+                  contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '12px' }}
+                />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+                <Line type="monotone" dataKey="ca" name={moisCourt[selectedMonth]} stroke="#22209C" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="caPrecedent" name={moisCourt[selectedMonth - 1 < 0 ? 11 : selectedMonth - 1]} stroke="#d1d5db" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+                {monthEvents.map((evt, i) => (
+                  <ReferenceArea key={i} x1={evt.dayStart} x2={evt.dayEnd} fill={evt.color} label={{ value: evt.label, position: 'insideTop', fontSize: 10, fontWeight: 600, fill: '#374151' }} />
+                ))}
+              </LineChart>
+            )}
           </ResponsiveContainer>
         </div>
       </div>
