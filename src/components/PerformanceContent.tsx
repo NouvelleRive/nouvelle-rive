@@ -1,7 +1,7 @@
 // components/PerformanceContent.tsx
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { db } from '@/lib/firebaseConfig'
 import { collection, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, deleteDoc, orderBy, query, where, documentId, getCountFromServer, limit } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays, startOfYear, endOfYear, subYears, eachMonthOfInterval } from 'date-fns'
@@ -489,6 +489,23 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   }, [isAcheteuseView, ventesCurrentMonth, produitsMap])
   const commissionAcheteuse = acheteuseStats.commission
 
+  // Marge nette HT d'une vente — même règle que le KPI Marge :
+  //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
+  //   déposante            → commission NR = prixVente × taux%
+  const margeVente = useCallback((v: any) => {
+    const prixVente = v.prixVenteReel || v.prix || 0
+    const tri = v.trigramme || ''
+    if (isHousePurchaseTrigramme(tri)) {
+      const produit = v.produitId ? produitsMap.get(v.produitId) : null
+      const prixAchat = v.prixAchat ?? (produit as any)?.prixAchat
+      // Pas de prix d'achat connu → on ne sait pas, on ne compte rien.
+      if (typeof prixAchat !== 'number' || prixAchat <= 0) return 0
+      return margeTtcVersHt(Math.max(prixVente - prixAchat, 0))
+    }
+    const taux = deposants.find(d => d.trigramme === tri)?.taux ?? 0
+    return prixVente * taux / 100
+  }, [produitsMap, deposants])
+
   // CA par jour (mois) ou par mois (année) — admin only
   const dailyData = useMemo(() => {
     if (!isAdmin) return []
@@ -503,12 +520,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
     return units.map((unit, index) => {
       const unitStr = format(unit, fmt)
-      const caJour = ventesCurrentMonth
-        .filter(v => {
-          const d = getDateVente(v)
-          return d && format(d, fmt) === unitStr
-        })
-        .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
+      const ventesUnit = ventesCurrentMonth.filter(v => {
+        const d = getDateVente(v)
+        return d && format(d, fmt) === unitStr
+      })
+      const caJour = ventesUnit.reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
+      const margeJour = Math.round(ventesUnit.reduce((sum, v) => sum + margeVente(v), 0))
 
       const prevUnit = previousUnits[index]
       const prevUnitStr = prevUnit ? format(prevUnit, fmt) : ''
@@ -524,9 +541,10 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         date: isYearMode ? moisCourt[unit.getMonth()] : format(unit, 'd/M'),
         ca: caJour,
         caPrecedent,
+        marge: margeJour,
       }
     })
-  }, [ventesCurrentMonth, ventesPreviousMonth, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd, isAdmin, isYearMode])
+  }, [ventesCurrentMonth, ventesPreviousMonth, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd, isAdmin, isYearMode, margeVente])
 
   // Résoudre le nom d'une chineuse (grouper par ID déposant, pas par email)
   const resolveChineuse = (email: string) => {
@@ -1681,6 +1699,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
                 <Bar dataKey="caPrecedent" name={String(selectedYear - 1)} fill="#d1d5db" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="ca" name={String(selectedYear)} fill="#22209C" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="marge" name="Marge HT" fill="#ec4899" radius={[3, 3, 0, 0]} />
               </BarChart>
             ) : (
               <LineChart data={dailyData}>
