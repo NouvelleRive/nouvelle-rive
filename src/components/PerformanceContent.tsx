@@ -895,7 +895,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
       let vendeuseId: string | null = null
       if (slot1220 && slot1117) {
-        vendeuseId = hour < 12 ? slot1117 : hour >= 17 ? slot1220 : slot1220
+        // Poste matin (11-18) jusqu'à l'arrivée du poste soir à 14h, sinon poste soir (14-20).
+        vendeuseId = hour < 14 ? slot1117 : slot1220
       } else {
         vendeuseId = slot1220 || slot1117 || null
       }
@@ -1001,16 +1002,16 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         : (isAdmin || chineuseTrigramme === 'NR') ? 'grid-cols-2 lg:grid-cols-4'
         : 'grid-cols-2 lg:grid-cols-3'
       } gap-3`}>
-        <KpiCard title="Chiffre d'affaires" value={formatPrix(totalCA)} unit="€" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
+        <KpiCard title="Chiffre d'affaires" value={formatPrix(totalCA)} unit="€ TTC" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
         <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
         <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
         {isAdmin && (
-          <KpiCard title="Marge" value={formatPrix(classementChineuses.reduce((s, c) => s + c.benef, 0))} unit="€" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+          <KpiCard title="Marge" value={formatPrix(classementChineuses.reduce((s, c) => s + c.benef, 0))} unit="€ HT" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         )}
         {!isAdmin && isHousePurchaseTrigramme(chineuseTrigramme) && (() => {
           // Acheteuse : marge nette AVEC port (son coût réel). NR : marge TVA hors port.
           const marge = isAcheteuseView ? acheteuseStats.marge : totalMargeNetteNR
-          return <KpiCard title="Marge nette" value={formatPrix(marge)} unit="€" evolution={totalCA > 0 ? String(Math.round(marge / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+          return <KpiCard title="Marge nette" value={formatPrix(marge)} unit="€ HT" evolution={totalCA > 0 ? String(Math.round(marge / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         })()}
         {isAcheteuseView && (
           <KpiCard title="Commission" value={formatPrix(commissionAcheteuse)} unit="€" icon={Star} color="bg-[#09B1BA]" />
