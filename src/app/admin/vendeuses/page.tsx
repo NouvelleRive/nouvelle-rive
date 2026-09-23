@@ -303,24 +303,34 @@
     // =====================
     // AUTO-REMPLIR LE MOIS
     // =====================
+    // Régénère le mois à partir des jours fixes : tout ce qui ne correspond plus à
+    // la grille est supprimé (sinon les anciennes affectations restaient et la
+    // vendeuse se retrouvait sur deux créneaux le même jour).
+    // Les jours déjà passés ne bougent jamais.
     const autoFill = () => {
-      const newSlots = { ...planningSlots }
+      const today = format(new Date(), 'yyyy-MM-dd')
       const daysInMonth = new Date(currentMonth.year, currentMonth.month + 1, 0).getDate()
+      if (!confirm(`Auto-remplir va régénérer ${monthLabel} à partir des jours fixes.\nLes jours déjà passés ne bougent pas. Continuer ?`)) return
+
+      // On repart de zéro, en conservant uniquement l'historique
+      const newSlots: PlanningSlots = {}
+      for (const [key, id] of Object.entries(planningSlots)) {
+        if (key.split('_')[0] < today) newSlots[key] = id
+      }
 
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(currentMonth.year, currentMonth.month, day)
         const dayOfWeek = date.getDay().toString() // 0=dim, 1=lun...
         const dateStr = `${currentMonth.year}-${(currentMonth.month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+        if (dateStr < today) continue
 
         // Pour chaque vendeuse active avec des jours fixes
         vendeuses.filter(v => v.actif).forEach(v => {
           const creneau = joursFixesPour(v, dateStr)[dayOfWeek]
           if (creneau) {
             const key = `${dateStr}_${creneau}`
-            // Ne pas écraser si déjà assigné
-            if (!newSlots[key]) {
-              newSlots[key] = v.id
-            }
+            // Deux vendeuses sur le même créneau : la première de la liste garde la place
+            if (!newSlots[key]) newSlots[key] = v.id
           }
         })
       }
