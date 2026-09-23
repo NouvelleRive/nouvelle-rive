@@ -12,6 +12,7 @@ import { getMonthEvents } from '@/lib/retailEvents'
 import { formatPrix } from '@/lib/formatPrix'
 import { isHousePurchaseTrigramme, ACHETEUSE_TRIGRAMME } from '@/lib/roles'
 import { calcCommissionAchat } from '@/lib/commission'
+import { margeTtcVersHt } from '@/lib/marge'
 
 type Produit = {
   id: string
@@ -443,7 +444,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     ? String(Math.round((panierMoyen - previousPanierMoyenProrata) / previousPanierMoyenProrata * 100))
     : null
 
-  // Marge nette stock maison (NR + acheteuse ACH) : (prixVente − prixAchat) × 0.80.
+  // Marge nette stock maison (NR + acheteuse ACH) : (prixVente − prixAchat) ÷ 1,20
+  // (TVA sur marge : la marge brute est TTC, la TVA vaut marge × 20/120).
   // prixAchat est stocké sur le produit, pas sur la vente.
   const totalMargeNetteNR = useMemo(() => {
     if (!isHousePurchaseTrigramme(chineuseTrigramme)) return 0
@@ -454,12 +456,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       if (typeof prixAchat !== 'number' || prixAchat <= 0) return s
       return s + Math.max(prixVente - prixAchat, 0)
     }, 0)
-    return Math.round(margeBrute * 0.80)
+    return Math.round(margeTtcVersHt(margeBrute))
   }, [ventesCurrentMonth, chineuseTrigramme, produitsMap])
 
   // Acheteuse (ACH) : sa marge nette et sa commission incluent les FRAIS DE PORT
   // dans le coût (contrairement à la marge société/TVA qui les exclut).
-  //   coût acheteuse = prixAchat + fraisPort ; marge = (vente − coût) × 0.80
+  //   coût acheteuse = prixAchat + fraisPort ; marge = (vente − coût) ÷ 1,20
   // Commission : barème par tranche 10 %/15 %, seuil de 4K€ appliqué PAR MOIS
   // (regroupement mensuel puis somme → correct en vue mois comme en vue année).
   const isAcheteuseView = chineuseTrigramme === ACHETEUSE_TRIGRAMME
@@ -476,7 +478,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       if (typeof prixAchat !== 'number' || prixAchat <= 0) return
       const fraisPort = (v as any).fraisPort ?? (produit as any)?.fraisPort ?? 0
       const port = typeof fraisPort === 'number' ? fraisPort : 0
-      const marge = Math.max(prixVente - prixAchat - port, 0) * 0.80
+      const marge = margeTtcVersHt(Math.max(prixVente - prixAchat - port, 0))
       margeTotale += marge
       const key = `${d.getFullYear()}-${d.getMonth()}`
       margeParMois.set(key, (margeParMois.get(key) || 0) + marge)
@@ -576,10 +578,10 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         // prix d'achat. Les autres chineuses : rétrocession = ca × taux%.
         const isNR = isHousePurchaseTrigramme(tri)
         const taux = dep?.taux ?? 0
-        // NR/ACH : marge nette = (prixVente − prixAchat) × 0.80 (TVA 20% déduite)
+        // NR/ACH : marge nette HT = (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
         // Autres : bénéf = ca × taux% (rétrocession)
         const benef = isNR
-          ? Math.round(data.margeBrute * 0.80)
+          ? Math.round(margeTtcVersHt(data.margeBrute))
           : Math.round(data.ca * taux / 100)
         return {
           key: tri,

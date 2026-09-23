@@ -17,6 +17,7 @@
   import { detectModele, getModelesForCategorie, MODELES_COMMUNS } from '@/lib/modeles'
   import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
   import { isHousePurchaseTrigramme } from '@/lib/roles'
+  import { margeTtcVersHt } from '@/lib/marge'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -1841,8 +1842,8 @@ async function compressImage(file: File): Promise<string> {
                     const pv = parseFloat(formData.prix || '')
                     const port = parseFloat(formData.fraisPort || '') || 0
                     if (!Number.isFinite(pa) || !Number.isFinite(pv)) return null
-                    const margeTva = Math.round((pv - pa) * 0.80)
-                    const margeAch = Math.round((pv - pa - port) * 0.80)
+                    const margeTva = Math.round(margeTtcVersHt(pv - pa))
+                    const margeAch = Math.round(margeTtcVersHt(pv - pa - port))
                     return (
                       <div className="text-[11px] mt-1 space-y-0.5">
                         <p className="text-gray-500">
