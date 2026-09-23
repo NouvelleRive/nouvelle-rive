@@ -552,6 +552,13 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     })
   }, [ventesCurrentMonth, ventesPreviousMonth, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd, isAdmin, isYearMode, margeVente])
 
+  // Haut de l'échelle du graphique annuel : sert aussi à placer le repère N-1.
+  // +15% pour laisser la place aux chiffres écrits au-dessus des barres.
+  const yMaxAnnuel = useMemo(() => {
+    const max = dailyData.reduce((m: number, d: any) => Math.max(m, d.ca, d.caPrecedent, d.marge, d.margePrecedente), 0)
+    return max > 0 ? Math.ceil((max * 1.15) / 100) * 100 : 100
+  }, [dailyData])
+
   // Résoudre le nom d'une chineuse (grouper par ID déposant, pas par email)
   const resolveChineuse = (email: string) => {
     const dep = deposants.find(d => d.email === email)
@@ -951,6 +958,45 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     if (index === 1) return '🥈'
     if (index === 2) return '🥉'
     return `${index + 1}.`
+  }
+
+  // Barre annuelle : la valeur de l'année en cours en barre pleine, l'an passé
+  // en repère (trait + point) posé à sa hauteur sur la même barre, et les
+  // chiffres écrits au-dessus (pas besoin de survoler).
+  //   `background` (fourni par recharts) donne le haut et la hauteur de la zone
+  //   de tracé → on convertit une valeur en Y via le domaine [0, yMaxAnnuel].
+  const BarreAnnuelle = ({ x, y, width, height, background, payload, prevKey, fill, markerColor, withStats }: any) => {
+    const prev = payload?.[prevKey] || 0
+    const valeur = payload?.[withStats ? 'ca' : 'marge'] || 0
+    const yPour = (v: number) => {
+      if (background && yMaxAnnuel > 0) return background.y + background.height * (1 - v / yMaxAnnuel)
+      // Filet : si recharts ne fournit pas la zone de tracé, on déduit l'échelle
+      // de la barre elle-même (impossible si elle vaut 0).
+      if (valeur > 0 && height > 0) return y + height - (v * height) / valeur
+      return null
+    }
+    const yPrev = yPour(prev)
+    const cx = x + width / 2
+    const haut = Math.min(y, yPrev ?? y)
+    return (
+      <g>
+        <rect x={x} y={y} width={width} height={Math.max(height, 0)} rx={3} fill={fill} />
+        {yPrev !== null && prev > 0 && (
+          <g>
+            <line x1={x - 3} x2={x + width + 3} y1={yPrev} y2={yPrev} stroke={markerColor} strokeWidth={2} />
+            <circle cx={cx} cy={yPrev} r={2.5} fill={markerColor} />
+          </g>
+        )}
+        <text x={cx} y={haut - (withStats ? 16 : 6)} textAnchor="middle" style={{ fontSize: 10 }} fill={fill} fontWeight={600}>
+          {formatPrix(valeur)} €
+        </text>
+        {withStats && (
+          <text x={cx} y={haut - 5} textAnchor="middle" style={{ fontSize: 9 }} fill="#9ca3af">
+            {payload?.ventes || 0} v. · panier {formatPrix(payload?.panier || 0)} €
+          </text>
+        )}
+      </g>
+    )
   }
 
   // Tooltip du graphique annuel : CA + marge des deux années, avec le nombre
@@ -1713,20 +1759,25 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       {/* Graphique CA par jour */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">{isYearMode ? 'CA mensuel' : 'CA journalier'}</h2>
-        <div className="h-72">
+        <div className={isYearMode ? 'h-96' : 'h-72'}>
           <ResponsiveContainer width="100%" height="100%">
             {isYearMode ? (
               // Vue année : 12 barres par an (courant vs précédent), plus lisible qu'une courbe
               <BarChart data={dailyData} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                 <XAxis dataKey="jour" tick={{ fontSize: 10 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} />
+                <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} domain={[0, yMaxAnnuel]} />
                 <Tooltip cursor={{ fill: '#f9fafb' }} content={<AnnualTooltip />} />
-                <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="caPrecedent" name={`CA ${selectedYear - 1}`} fill="#d1d5db" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="ca" name={`CA ${selectedYear}`} fill="#22209C" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="margePrecedente" name={`Marge ${selectedYear - 1}`} fill="#f9a8d4" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="marge" name={`Marge ${selectedYear}`} fill="#ec4899" radius={[3, 3, 0, 0]} />
+                <Legend
+                  wrapperStyle={{ fontSize: '11px' }}
+                  payload={[
+                    { value: `CA ${selectedYear}`, type: 'square', color: '#22209C' },
+                    { value: `Marge ${selectedYear}`, type: 'square', color: '#ec4899' },
+                    { value: `repère ${selectedYear - 1}`, type: 'line', color: '#6b7280' },
+                  ]}
+                />
+                <Bar dataKey="ca" name={`CA ${selectedYear}`} shape={(props: any) => <BarreAnnuelle {...props} prevKey="caPrecedent" fill="#22209C" markerColor="#6b7280" withStats />} />
+                <Bar dataKey="marge" name={`Marge ${selectedYear}`} shape={(props: any) => <BarreAnnuelle {...props} prevKey="margePrecedente" fill="#ec4899" markerColor="#be185d" />} />
               </BarChart>
             ) : (
               <LineChart data={dailyData}>
