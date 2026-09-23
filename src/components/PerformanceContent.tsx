@@ -960,6 +960,10 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     return `${index + 1}.`
   }
 
+  /** Taux de marge en % (marge HT / CA TTC), 0 si pas de CA. */
+  const tauxMarge = (marge: number | undefined, ca: number | undefined) =>
+    ca && ca > 0 ? Math.round(((marge || 0) / ca) * 100) : 0
+
   // Barre annuelle : la valeur de l'année en cours en barre pleine, l'an passé
   // en repère (trait + point) posé à sa hauteur sur la même barre, et les
   // chiffres écrits au-dessus (pas besoin de survoler).
@@ -987,14 +991,15 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
             <circle cx={cx} cy={yPrev} r={2.5} fill={markerColor} />
           </g>
         )}
-        <text x={cx} y={haut - (withStats ? 16 : 6)} textAnchor="middle" style={{ fontSize: 10 }} fill={fill} fontWeight={600}>
+        <text x={cx} y={haut - 16} textAnchor="middle" style={{ fontSize: 10 }} fill={fill} fontWeight={600}>
           {formatPrix(valeur)} €
         </text>
-        {withStats && (
-          <text x={cx} y={haut - 5} textAnchor="middle" style={{ fontSize: 9 }} fill="#9ca3af">
-            {payload?.ventes || 0} v. · panier {formatPrix(payload?.panier || 0)} €
-          </text>
-        )}
+        <text x={cx} y={haut - 5} textAnchor="middle" style={{ fontSize: 9 }} fill="#9ca3af">
+          {withStats
+            ? `${payload?.ventes || 0} v. · panier ${formatPrix(payload?.panier || 0)} €`
+            // Taux de marge du mois : marge HT / CA TTC
+            : `${tauxMarge(payload?.marge, payload?.ca)}% du CA`}
+        </text>
       </g>
     )
   }
@@ -1010,7 +1015,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           <span className="w-2 h-2 rounded-sm inline-block" style={{ background: color }} />
           {annee}
         </div>
-        <div className="text-gray-600">CA {formatPrix(ca)} € TTC · Marge {formatPrix(marge)} € HT</div>
+        <div className="text-gray-600">CA {formatPrix(ca)} € TTC · Marge {formatPrix(marge)} € HT ({tauxMarge(marge, ca)}%)</div>
         <div className="text-gray-400">{ventes} vente{ventes > 1 ? 's' : ''} · panier moyen {formatPrix(panier)} €</div>
       </div>
     )
