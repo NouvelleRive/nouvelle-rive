@@ -529,12 +529,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
       const prevUnit = previousUnits[index]
       const prevUnitStr = prevUnit ? format(prevUnit, fmt) : ''
-      const caPrecedent = prevUnit ? ventesPreviousMonth
-        .filter(v => {
-          const d = getDateVente(v)
-          return d && format(d, fmt) === prevUnitStr
-        })
-        .reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0) : 0
+      const ventesUnitPrec = prevUnit ? ventesPreviousMonth.filter(v => {
+        const d = getDateVente(v)
+        return d && format(d, fmt) === prevUnitStr
+      }) : []
+      const caPrecedent = ventesUnitPrec.reduce((sum, v) => sum + (v.prixVenteReel || v.prix || 0), 0)
+      const margePrecedente = Math.round(ventesUnitPrec.reduce((sum, v) => sum + margeVente(v), 0))
 
       return {
         jour: isYearMode ? moisCourt[unit.getMonth()] : index + 1,
@@ -542,6 +542,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         ca: caJour,
         caPrecedent,
         marge: margeJour,
+        margePrecedente,
+        // Détail affiché dans le tooltip (pas de barre dédiée)
+        ventes: ventesUnit.length,
+        ventesPrecedent: ventesUnitPrec.length,
+        panier: ventesUnit.length > 0 ? Math.round(caJour / ventesUnit.length) : 0,
+        panierPrecedent: ventesUnitPrec.length > 0 ? Math.round(caPrecedent / ventesUnitPrec.length) : 0,
       }
     })
   }, [ventesCurrentMonth, ventesPreviousMonth, currentMonthStart, currentMonthEnd, previousMonthStart, previousMonthEnd, isAdmin, isYearMode, margeVente])
@@ -945,6 +951,30 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     if (index === 1) return '🥈'
     if (index === 2) return '🥉'
     return `${index + 1}.`
+  }
+
+  // Tooltip du graphique annuel : CA + marge des deux années, avec le nombre
+  // de ventes et le panier moyen (pas de barre dédiée pour ces deux-là).
+  const AnnualTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    const d = payload[0].payload
+    const ligne = (annee: number, ca: number, marge: number, ventes: number, panier: number, color: string) => (
+      <div className="mt-1.5 first:mt-0">
+        <div className="flex items-center gap-1.5 font-semibold text-gray-900">
+          <span className="w-2 h-2 rounded-sm inline-block" style={{ background: color }} />
+          {annee}
+        </div>
+        <div className="text-gray-600">CA {formatPrix(ca)} € TTC · Marge {formatPrix(marge)} € HT</div>
+        <div className="text-gray-400">{ventes} vente{ventes > 1 ? 's' : ''} · panier moyen {formatPrix(panier)} €</div>
+      </div>
+    )
+    return (
+      <div className="bg-white rounded-md border border-gray-200 shadow-sm px-2.5 py-2" style={{ fontSize: '11px' }}>
+        <div className="font-semibold text-gray-900 mb-1">{label}</div>
+        {ligne(selectedYear, d.ca, d.marge, d.ventes, d.panier, '#22209C')}
+        {ligne(selectedYear - 1, d.caPrecedent, d.margePrecedente, d.ventesPrecedent, d.panierPrecedent, '#d1d5db')}
+      </div>
+    )
   }
 
   const KpiCard = ({ title, value, unit, evolution, icon: Icon, color }: any) => (
@@ -1691,15 +1721,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                 <XAxis dataKey="jour" tick={{ fontSize: 10 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 10 }} stroke="#9ca3af" tickFormatter={(v) => `${v}€`} width={45} />
-                <Tooltip
-                  cursor={{ fill: '#f9fafb' }}
-                  formatter={(value: number) => [`${formatPrix(value)} €`, '']}
-                  contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '12px' }}
-                />
+                <Tooltip cursor={{ fill: '#f9fafb' }} content={<AnnualTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
-                <Bar dataKey="caPrecedent" name={String(selectedYear - 1)} fill="#d1d5db" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="ca" name={String(selectedYear)} fill="#22209C" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="marge" name="Marge HT" fill="#ec4899" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="caPrecedent" name={`CA ${selectedYear - 1}`} fill="#d1d5db" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="ca" name={`CA ${selectedYear}`} fill="#22209C" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="margePrecedente" name={`Marge ${selectedYear - 1}`} fill="#f9a8d4" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="marge" name={`Marge ${selectedYear}`} fill="#ec4899" radius={[3, 3, 0, 0]} />
               </BarChart>
             ) : (
               <LineChart data={dailyData}>
