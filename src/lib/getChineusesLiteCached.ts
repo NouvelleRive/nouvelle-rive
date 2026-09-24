@@ -5,7 +5,7 @@
 
 import { adminDb } from '@/lib/firebaseAdmin'
 import { logFirestoreScan } from '@/lib/logFirestoreScan'
-import { getBlobCached } from '@/lib/blobCache'
+import { getBlobCached, forceRebuildBlobCache } from '@/lib/blobCache'
 
 export type ChineuseLite = {
   uid: string
@@ -80,4 +80,14 @@ export async function getChineusesLiteCached(): Promise<ChineuseLite[]> {
   // -v2 : ajout des champs imagePosition / displayOnWebsite → force une reconstruction
   // unique du blob (l'ancien cache ne les contenait pas).
   return getBlobCached<ChineuseLite[]>('chineuses-lite-v2', TTL_MS, memory, inflight, fetchFresh)
+}
+
+/**
+ * Reconstruit le blob `chineuses-lite-v2` sans attendre le TTL (6h).
+ * Appelé après création/modification d'une chineuse en admin — sinon la
+ * nouvelle créatrice n'apparaît ni sur /nos-creatrices ni dans les filtres.
+ */
+export async function forceRefreshChineusesBlob(): Promise<number> {
+  const fresh = await forceRebuildBlobCache<ChineuseLite[]>('chineuses-lite-v2', TTL_MS, memory, fetchFresh)
+  return fresh.length
 }

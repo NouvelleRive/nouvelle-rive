@@ -5,8 +5,24 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebaseAdmin'
 import { getFirestore, FieldValue } from 'firebase-admin/firestore'
+import { revalidatePath } from 'next/cache'
+import { forceRefreshChineusesBlob } from '@/lib/getChineusesLiteCached'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
+
+// La liste des créatrices est servie depuis un blob (TTL 6h) + ISR 1h : sans ce
+// rafraîchissement, une chineuse créée ici n'apparaissait sur /nos-creatrices
+// qu'au bout de plusieurs heures.
+async function rafraichirCacheChineuses() {
+  try {
+    await forceRefreshChineusesBlob()
+    for (const p of ['/nos-creatrices', '/api/chineuses-lite', '/boutique']) {
+      try { revalidatePath(p) } catch { /* best effort */ }
+    }
+  } catch (e: any) {
+    console.error('⚠️ refresh cache chineuses', e?.message || e)
+  }
+}
 
 function generateSlug(nom: string): string {
   return nom
@@ -194,6 +210,7 @@ export async function POST(req: NextRequest) {
     if (existing.exists) {
       docData.updatedAt = FieldValue.serverTimestamp()
       await ref.set(docData, { merge: true })  // merge: true pour ne pas écraser les champs non envoyés
+      await rafraichirCacheChineuses()
       return NextResponse.json({ 
         success: true, 
         action: 'updated', 
@@ -204,6 +221,7 @@ export async function POST(req: NextRequest) {
     } else {
       docData.createdAt = FieldValue.serverTimestamp()
       await ref.set(docData)
+      await rafraichirCacheChineuses()
       return NextResponse.json({ 
         success: true, 
         action: 'created', 
