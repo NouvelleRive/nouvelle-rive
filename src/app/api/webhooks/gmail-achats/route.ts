@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebaseAdmin'
+import { sendPushToOwner } from '@/lib/webpush'
 import { parseVintedReceipt, vintedDocId } from '@/modules/achat/parser/vinted'
 import { parseChronopostEnChemin } from '@/modules/achat/parser/chronopost'
 import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
@@ -55,6 +56,9 @@ type Payload = {
   from: string
   subject: string
   body: string
+  /** `alerte-token` : la Function n'arrive plus à lire la boîte achats. */
+  kind?: 'alerte-token'
+  detail?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -67,6 +71,14 @@ export async function POST(req: NextRequest) {
     payload = await req.json()
   } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
+  }
+
+  // --- Alerte "je ne peux plus lire la boîte achats" ----------------------
+  // L'autorisation Gmail de nouvelleriveachats@ peut sauter (révocation). Sans
+  // alerte, le poll échoue en silence et plus aucun achat n'entre : c'est ce
+  // qui a coûté un mois d'imports. Push 1×/jour max pour ne pas spammer.
+  if (payload.kind === 'alerte-token') {
+    return await handleAlerteToken(payload.detail || '')
   }
 
   const { gmailMessageId, from, subject, body } = payload
@@ -95,11 +107,37 @@ export async function POST(req: NextRequest) {
       return await handleChronopostPickup(body)
     }
 
-    return NextResponse.json({ ok: false, reason: 'unhandled mail type', from, subject })
+    // Mail d'un expéditeur suivi mais dont on n'a rien à tirer (évaluation,
+    // offre, baisse de prix…). `rienAFaire` dit au poll de le marquer lu quand
+    // même : sinon il serait re-téléchargé toutes les 5 min à vie.
+    return NextResponse.json({ ok: false, rienAFaire: true, reason: 'unhandled mail type', from, subject })
   } catch (e: any) {
     console.error('gmail-achats webhook error:', e)
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 })
   }
+}
+
+// ---------------------------------------------------------------------------
+// Alerte panne de lecture de la boîte achats : push à la boutique, 1×/jour max
+// (le poll tourne toutes les 5 min, on ne veut pas 288 notifs).
+// ---------------------------------------------------------------------------
+async function handleAlerteToken(detail: string) {
+  const ref = adminDb.collection('siteConfig').doc('_achatAlerte')
+  const snap = await ref.get()
+  const dernier = snap.data()?.tokenAlerteLe?.toDate?.() as Date | undefined
+  if (dernier && Date.now() - dernier.getTime() < 20 * 60 * 60 * 1000) {
+    return NextResponse.json({ ok: true, kind: 'alerte-token-throttle' })
+  }
+
+  await sendPushToOwner('boutique', {
+    title: '⚠️ Achats Vinted à l’arrêt',
+    body: 'La boîte achats n’est plus lisible : aucun achat ne rentre. Il faut réautoriser Gmail.',
+    url: '/acheteuse/mes-produits',
+    tag: 'achat-token-ko',
+  })
+  await ref.set({ tokenAlerteLe: Timestamp.now(), tokenAlerteDetail: detail.slice(0, 300) }, { merge: true })
+
+  return NextResponse.json({ ok: true, kind: 'alerte-token-envoyee' })
 }
 
 // ---------------------------------------------------------------------------
@@ -111,6 +149,20 @@ async function handleVintedReceipt(body: string, gmailMessageId: string) {
   const receipt = parseVintedReceipt(body)
   if (!receipt.ok) {
     return NextResponse.json({ ok: false, reason: receipt.reason })
+  }
+
+  // Pièce déjà importée → on ne réécrit rien. Le `set(merge)` plus bas
+  // écraserait les retouches faites depuis (nom, prix, photos) et brûlerait un
+  // SKU au passage. Réponse ok:true pour que le rejeu d'un mail soit sans
+  // risque (rattrapage, retry, mail relu à la main).
+  const dejaLa = await adminDb.collection('produits').doc(vintedDocId(receipt.transactionId)).get()
+  if (dejaLa.exists) {
+    return NextResponse.json({
+      ok: true,
+      docId: dejaLa.id,
+      sku: dejaLa.data()?.sku,
+      kind: 'vinted-receipt-deja-importe',
+    })
   }
 
   // La boîte achats = l'acheteuse → pièces rattachées au trigramme ACH (marge
