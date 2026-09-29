@@ -59,7 +59,7 @@ function htmlToText(s: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&euro;/g, '€')
-    .replace(/&#039;/g, "'")
+    .replace(/&#0?39;/g, "'")
     .replace(/&quot;/g, '"')
     .replace(/ /g, ' ')
     .replace(/[ \t]+/g, ' ')
