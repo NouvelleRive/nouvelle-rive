@@ -104,6 +104,15 @@ function previewUrl(p: { vignetteUrl?: string; videoUrl?: string; medias?: Media
   return null
 }
 
+// Même vidéo, servie depuis nouvellerive.eu : le lecteur affiché devient
+// « même origine », donc on peut capturer SON image courante sur un canvas
+// (sinon canvas « tainted ») → la vignette est exactement l'image vue.
+function sameOriginVideo(url: string): string {
+  if (!url) return url
+  if (!/b-cdn\.net|firebasestorage\.googleapis\.com/.test(url)) return url
+  return `/api/reseaux/video?url=${encodeURIComponent(url)}`
+}
+
 // Upload direct vers Firebase Storage (pas de limite de taille Vercel, gratuit,
 // aucune clé exposée). L'URL de download est publique → utilisable par l'API IG.
 async function uploadMedia(file: File, kind: 'video' | 'vignette'): Promise<string> {
@@ -282,6 +291,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null)
+  const [videoSrcFallback, setVideoSrcFallback] = useState(false) // proxy KO → URL directe
   const [collabInput, setCollabInput] = useState('')
   const [posting, setPosting] = useState(false)
   const [tiktokPosting, setTiktokPosting] = useState(false)
@@ -491,12 +501,30 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     }
   }
 
+  // « Choisir cette image » = exactement l'image affichée dans le lecteur :
+  // on capture ce lecteur-là (même origine via le proxy, donc canvas autorisé).
+  // Repli sur une capture hors-écran si le canvas est refusé (URL directe).
   const grabFrame = async (time?: number) => {
     if (!videoEl) return
     setBusy('vignette')
     try {
-      const t = time ?? videoEl.currentTime ?? 0.1
-      const [frame] = await captureFramesFromUrl(p.videoUrl, [t || 0.1])
+      let frame: File | null = null
+      // Le seek lancé par la pellicule peut être encore en cours : on l'attend,
+      // sinon on capturerait l'image précédente.
+      if (videoEl.seeking) {
+        await new Promise<void>((r) => {
+          const done = () => { videoEl.removeEventListener('seeked', done); r() }
+          videoEl.addEventListener('seeked', done)
+          setTimeout(done, 2000)
+        })
+      }
+      if (videoEl.readyState >= 2) {
+        try { frame = await captureFrame(videoEl) } catch { frame = null }
+      }
+      if (!frame) {
+        const t = time ?? videoEl.currentTime ?? 0.1
+        ;[frame] = await captureFramesFromUrl(p.videoUrl, [t || 0.1])
+      }
       addVignette(await uploadMedia(frame, 'vignette'))
     } catch (e: any) { alert(e?.message) }
     finally { setBusy(null) }
@@ -540,7 +568,13 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
           <div className={label}>Vidéo (postée avec le son)</div>
           {p.videoUrl ? (
             <div className="relative inline-block">
-              <video ref={setVideoEl} src={p.videoUrl} controls className="max-h-72 max-w-full rounded-lg" />
+              <video
+                ref={setVideoEl}
+                src={videoSrcFallback ? p.videoUrl : sameOriginVideo(p.videoUrl)}
+                onError={() => setVideoSrcFallback(true)}
+                controls
+                className="max-h-72 max-w-full rounded-lg"
+              />
               <CropGuide />
               <button onClick={() => set('videoUrl', '')} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center z-10" title="Supprimer la vidéo">×</button>
             </div>
