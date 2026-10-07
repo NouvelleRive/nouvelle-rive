@@ -130,11 +130,12 @@ function captureFrame(video: HTMLVideoElement): Promise<File> {
   })
 }
 
-// Capture des frames SANS toucher l'aperçu : vidéo hors-écran en crossOrigin
-// (canvas non « tainted »). Cache-buster pour éviter une copie déjà en cache
-// sans en-têtes CORS (sinon « operation is insecure »). L'aperçu, lui, reste
-// sans crossOrigin pour éviter le rectangle noir quand le CDN n'envoie pas CORS.
-function captureFramesFromUrl(url: string, times: number[], timeoutMs = 20000): Promise<File[]> {
+// Capture des frames SANS toucher l'aperçu : vidéo hors-écran.
+// La source passe par /api/reseaux/video (même origine) → canvas jamais
+// « tainted » et aucun en-tête CORS requis ; c'est ce que le CDN ne renvoyait
+// pas toujours sur iOS (« vidéo illisible (CORS ?) »). L'aperçu, lui, reste sur
+// l'URL d'origine, sans crossOrigin.
+function captureFramesOnce(src: string, times: number[], crossOrigin: boolean, timeoutMs: number): Promise<File[]> {
   return new Promise((resolve, reject) => {
     // Garde-fou : sur iOS/Safari la vidéo hors-écran peut ne jamais se charger.
     // Sans ce timeout la promesse reste pendante et la pellicule tourne à l'infini.
@@ -142,9 +143,9 @@ function captureFramesFromUrl(url: string, times: number[], timeoutMs = 20000): 
     const done = (fn: (v: any) => void) => (v: any) => { clearTimeout(timer); fn(v) }
     resolve = done(resolve); reject = done(reject)
     const v = document.createElement('video')
-    v.crossOrigin = 'anonymous'
+    if (crossOrigin) v.crossOrigin = 'anonymous'
     v.muted = true; v.playsInline = true; v.preload = 'auto'
-    v.src = url + (url.includes('?') ? '&' : '?') + 'cors=' + Date.now()
+    v.src = src
     const out: File[] = []
     let i = 0
     const seekNext = () => {
@@ -152,11 +153,23 @@ function captureFramesFromUrl(url: string, times: number[], timeoutMs = 20000): 
       try { v.currentTime = Math.max(0, Math.min(times[i], (v.duration || 0.1) - 0.05)) } catch (e) { reject(e as Error) }
     }
     v.onloadeddata = () => seekNext()
-    v.onerror = () => reject(new Error('vidéo illisible (CORS ?)'))
+    v.onerror = () => reject(new Error('vidéo illisible'))
     v.onseeked = () => {
       captureFrame(v).then((f) => { out.push(f); i++; seekNext() }).catch(reject)
     }
   })
+}
+
+async function captureFramesFromUrl(url: string, times: number[], timeoutMs = 20000): Promise<File[]> {
+  const proxied = `/api/reseaux/video?url=${encodeURIComponent(url)}`
+  try {
+    return await captureFramesOnce(proxied, times, false, timeoutMs)
+  } catch {
+    // Repli : URL directe en crossOrigin, avec cache-buster pour ne pas réutiliser
+    // une copie déjà en cache sans en-têtes CORS.
+    const direct = url + (url.includes('?') ? '&' : '?') + 'cors=' + Date.now()
+    return await captureFramesOnce(direct, times, true, timeoutMs)
+  }
 }
 
 // Bande centrée 4:5 (format grille IG) : montre ce qui reste visible dans la
