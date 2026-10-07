@@ -25,7 +25,7 @@ const CHRONIQUES = [
   },
   {
     key: 'couleurs-celeste', day: 3, jour: 'Mercredi', titre: 'LES COULEURS DE CÉLESTE', responsable: 'Céleste', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
-    captionDefaut: "Les couleurs de Céleste 🎨 sa palette de la semaine, pièce par pièce 🌊\n\nQuelle couleur te ressemble ? 🦋",
+    captionDefaut: "Les couleurs de Céleste 🌈 sa palette de la semaine, du plus doux au plus vif.\nOn range l'arc-en-ciel, une pièce par couleur, toutes dispo chez 🌊NOUVELLE RIVE, sur le site et en boutique.\n💙 Commente ta couleur pour recevoir sa réf\n\nCeleste's colours 🌈 her palette of the week, from softest to brightest.\nA rainbow sorted one piece at a time, all available at 🌊NOUVELLE RIVE, online and in store.\n💙 Comment your colour to get the ref\n\n🦋www.nouvellerive.eu\n🧿8 rue des Ecouffes Paris le Marais",
   },
   {
     key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: 'TRENDS & VLOGS PAR HINA', responsable: 'Hina', heureDefaut: '12:00', objectifDefaut: '', formatDefaut: 'reel',
