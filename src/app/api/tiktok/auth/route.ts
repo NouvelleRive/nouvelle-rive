@@ -10,7 +10,9 @@ const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY
 const REDIRECT_URI = 'https://www.nouvellerive.eu/api/tiktok/callback'
 // video.publish (Direct Post) est refusé tant que l'app n'est pas auditée →
 // on ne demande que ce qui marche maintenant. On le rajoutera après l'audit.
-const DEFAULT_SCOPES = 'user.info.basic,video.upload'
+// video.list = lecture des vidéos du compte (Display API), nécessaire à
+// l'aperçu Feed → onglet TikTok (/api/reseaux/tiktok-feed).
+const DEFAULT_SCOPES = 'user.info.basic,video.upload,video.list'
 
 export async function GET(req: NextRequest) {
   if (!CLIENT_KEY) {
