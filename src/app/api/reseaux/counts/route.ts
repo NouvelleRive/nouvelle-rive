@@ -11,7 +11,7 @@ const CHRONIQUE_DAY: Record<string, number> = {
   'infinite-slider': 0,
   'compo-de-lo': 1,
   'book-olga': 2,
-  'le-rideau': 3,
+  'couleurs-celeste': 3,
   'microboutique-hina': 4,
   'fond-blanc': 4,
   'shabbat-quote': 5,

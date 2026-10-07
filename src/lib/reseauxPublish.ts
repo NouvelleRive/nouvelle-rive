@@ -35,7 +35,7 @@ const DAY_TO_CHRONIQUE: Record<number, string> = {
   0: 'infinite-slider',
   1: 'compo-de-lo',
   2: 'book-olga',
-  3: 'le-rideau',
+  3: 'couleurs-celeste',
   4: 'microboutique-hina',
   5: 'shabbat-quote',
   6: 'energies-sarah',

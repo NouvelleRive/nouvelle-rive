@@ -54,7 +54,7 @@ const CHRONIQUES_RESEAUX = [
   { key: 'infinite-slider', day: 0, titre: 'INFINITE SLIDER', responsable: 'Salomé', email: 'nouvelleriveparis@gmail.com' },
   { key: 'compo-de-lo', day: 1, titre: 'LES COMPO DE LO', responsable: 'Loah', email: '' },
   { key: 'book-olga', day: 2, titre: "LE BOOK D'OLGA", responsable: 'Olga', email: '' },
-  { key: 'le-rideau', day: 3, titre: 'LE RIDEAU', responsable: 'Amanda', email: '' },
+  { key: 'couleurs-celeste', day: 3, titre: 'LES COULEURS DE CÉLESTE', responsable: 'Céleste', email: '' },
   { key: 'microboutique-hina', day: 4, titre: "LA MICROBOUTIQUE D'HINA", responsable: 'Hina', email: '' },
   { key: 'fond-blanc', day: 4, titre: 'WEEK FAV', responsable: 'Équipe', email: '' },
   { key: 'shabbat-quote', day: 5, titre: 'SHABBAT QUOTE', responsable: 'Salomé', email: 'nouvelleriveparis@gmail.com' },

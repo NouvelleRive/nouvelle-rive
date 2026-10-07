@@ -24,8 +24,8 @@ const CHRONIQUES = [
     captionDefaut: "Le book d'Olga 📖 sa sélection coup de cœur de la semaine\n💙 Commente pour obtenir le lien\n\nOlga's book 📖 her favourite picks of the week\n💙 Comment to get the link",
   },
   {
-    key: 'le-rideau', day: 3, jour: 'Mercredi', titre: 'LE RIDEAU', responsable: 'Amanda', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
-    captionDefaut: "Que portent nos stars du vintage ? C'est la mission d'Amanda de le découvrir 🕵️‍♀️🔎🌊\n\nSpoiler ce sera local et de saison 🦋",
+    key: 'couleurs-celeste', day: 3, jour: 'Mercredi', titre: 'LES COULEURS DE CÉLESTE', responsable: 'Céleste', heureDefaut: '11:00', objectifDefaut: '', formatDefaut: 'reel',
+    captionDefaut: "Les couleurs de Céleste 🎨 sa palette de la semaine, pièce par pièce 🌊\n\nQuelle couleur te ressemble ? 🦋",
   },
   {
     key: 'microboutique-hina', day: 4, jour: 'Jeudi', titre: 'TRENDS & VLOGS PAR HINA', responsable: 'Hina', heureDefaut: '12:00', objectifDefaut: '', formatDefaut: 'reel',
