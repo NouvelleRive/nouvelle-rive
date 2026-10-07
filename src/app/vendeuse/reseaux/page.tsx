@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { PlusSquare, LayoutGrid, Play, Copy, Pencil, Pause } from 'lucide-react'
+import { PlusSquare, LayoutGrid, Play, Copy, Pencil, Pause, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
 import { storage } from '@/lib/firebaseConfig'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
@@ -286,7 +286,7 @@ function VignetteScrubber({ videoUrl, videoEl, offsetY, onPick, busy }: {
   )
 }
 
-function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], onSwapped }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void; collabOptions: CollabOption[]; dates?: string[]; onSwapped?: () => void }) {
+function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], onSwapped, onLiveChange }: { chronique: Chronique; prod: Production; onSaved: (p: Production) => void; collabOptions: CollabOption[]; dates?: string[]; onSwapped?: () => void; onLiveChange?: (p: Production) => void }) {
   const [p, setP] = useState<Production>(prod)
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
@@ -298,6 +298,8 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
   const [zoom, setZoom] = useState<Media | null>(null) // aperçu plein écran
 
   useEffect(() => setP(prod), [prod])
+  // Remonte la saisie en cours pour l'aperçu (bouton oeil de l'entete).
+  useEffect(() => { onLiveChange?.(p) }, [p, onLiveChange])
   const set = (k: keyof Production, v: any) => setP((x) => ({ ...x, [k]: v }))
   const collabHandles = p.collab.split(',').map((t) => t.trim().replace(/^@/, '')).filter(Boolean)
 
@@ -316,6 +318,14 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     finally { setBusy(null) }
   }
   const removeMedia = (i: number) => setP((x) => ({ ...x, medias: x.medias.filter((_, j) => j !== i) }))
+  // Ordre du carrousel : echange la photo avec sa voisine (1re = couverture).
+  const moveMedia = (i: number, dir: -1 | 1) => setP((x) => {
+    const arr = [...(x.medias || [])]
+    const j = i + dir
+    if (j < 0 || j >= arr.length) return x
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    return { ...x, medias: arr }
+  })
 
   // Importe les photos fond blanc des pièces « week fav » de la semaine.
   const importWeekFav = async () => {
@@ -681,6 +691,26 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
               {m.type === 'image' && <span className="absolute bottom-1 left-1 rounded bg-black/45 text-white text-[10px] leading-none px-1 py-0.5 pointer-events-none">↕ ajuster</span>}
               {m.type === 'video' && <Play size={13} className="absolute bottom-1 left-1 text-white drop-shadow pointer-events-none" fill="white" />}
               <button onClick={() => removeMedia(i)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-sm leading-none flex items-center justify-center">×</button>
+              {/* Ordre du carrousel */}
+              <span className="absolute top-1 left-1 rounded bg-black/55 text-white text-[10px] leading-none px-1 py-0.5 pointer-events-none">{i + 1}</span>
+              <div className="absolute bottom-1 right-1 flex gap-0.5">
+                <button
+                  onClick={() => moveMedia(i, -1)}
+                  disabled={i === 0}
+                  title="Avancer"
+                  className="w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center disabled:opacity-30"
+                >
+                  <ChevronLeft size={13} />
+                </button>
+                <button
+                  onClick={() => moveMedia(i, 1)}
+                  disabled={i === (p.medias?.length || 0) - 1}
+                  title="Reculer"
+                  className="w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center disabled:opacity-30"
+                >
+                  <ChevronRight size={13} />
+                </button>
+              </div>
             </div>
           ))}
           {(p.medias?.length || 0) < 10 && (
@@ -807,6 +837,83 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
           >×</button>
         </div>
       )}
+    </div>
+  )
+}
+
+// Aperçu du post tel qu'il sortira : média au cadre 4:5 (comme Instagram),
+// carrousel feuilletable, légende complète et comptes co-auteurs.
+function PostPreview({ p, onClose }: { p: Production; onClose: () => void }) {
+  const [i, setI] = useState(0)
+  const medias = p.format === 'publi' ? (p.medias || []) : []
+  const current = medias[Math.min(i, Math.max(0, medias.length - 1))]
+  const handles = p.collab.split(',').map((t) => t.trim().replace(/^@/, '')).filter(Boolean)
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden max-h-[88dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
+          <div className="w-7 h-7 rounded-full bg-[#22209C] text-white text-[10px] font-semibold flex items-center justify-center">NR</div>
+          <div className="text-sm font-semibold text-gray-900">
+            nouvellerive
+            {handles.length > 0 && <span className="font-normal text-gray-500"> et {handles.length} autre{handles.length > 1 ? 's' : ''}</span>}
+          </div>
+          <button onClick={onClose} className="ml-auto text-gray-400 text-2xl leading-none">×</button>
+        </div>
+
+        <div className="relative bg-black aspect-[4/5]">
+          {p.format === 'publi' ? (
+            current ? (
+              current.type === 'video' ? (
+                <video src={current.url} controls playsInline className="w-full h-full object-cover" style={{ objectPosition: `50% ${current.offsetY ?? 50}%` }} />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={current.url} alt="" className="w-full h-full object-cover" style={{ objectPosition: `50% ${current.offsetY ?? 50}%` }} />
+              )
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">Aucun média</div>
+            )
+          ) : p.videoUrl ? (
+            <video src={p.videoUrl} controls playsInline className="w-full h-full object-cover" style={{ objectPosition: `50% ${p.vignetteOffsetY ?? 50}%` }} />
+          ) : p.vignetteUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.vignetteUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `50% ${p.vignetteOffsetY ?? 50}%` }} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">Aucune vidéo</div>
+          )}
+
+          {medias.length > 1 && (
+            <>
+              <button onClick={() => setI((v) => Math.max(0, v - 1))} disabled={i === 0} className="absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center disabled:opacity-0">
+                <ChevronLeft size={18} />
+              </button>
+              <button onClick={() => setI((v) => Math.min(medias.length - 1, v + 1))} disabled={i >= medias.length - 1} className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center disabled:opacity-0">
+                <ChevronRight size={18} />
+              </button>
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                {medias.map((_, k) => (
+                  <span key={k} className={`w-1.5 h-1.5 rounded-full ${k === i ? 'bg-white' : 'bg-white/40'}`} />
+                ))}
+              </div>
+              <span className="absolute top-2 right-2 rounded-full bg-black/55 text-white text-[11px] px-2 py-0.5">{i + 1}/{medias.length}</span>
+            </>
+          )}
+        </div>
+
+        <div className="px-3 py-3 space-y-2">
+          <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">
+            <span className="font-semibold">nouvellerive </span>
+            {p.caption || <span className="text-gray-400">Pas de légende</span>}
+          </p>
+          {handles.length > 0 && (
+            <p className="text-sm text-gray-500">Avec {handles.map((h) => `@${h}`).join(', ')}</p>
+          )}
+          <p className="text-xs text-gray-400">
+            {p.format === 'publi' ? 'Publication' : 'Reel'} · {frDate(p.date)}{p.heurePost ? ` à ${p.heurePost}` : ''}
+            {p.lieu ? ` · ${p.lieu}` : ''}
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1042,6 +1149,9 @@ function ProductionModal({
     }
   }
   const others = dates.filter((d) => d !== prod.date)
+  // Saisie en cours (remontee par ProductionCard) pour l'apercu du post.
+  const [live, setLive] = useState<Production>(prod)
+  const [preview, setPreview] = useState(false)
   // Ne ferme que si le clic a COMMENCÉ sur le fond : sinon une sélection de
   // texte (caption) relâchée hors du cadre fermerait le modal et perdrait la saisie.
   const downOnBackdrop = useRef(false)
@@ -1070,12 +1180,18 @@ function ProductionModal({
               <div className="text-xs text-gray-500 capitalize">post du {frDate(prod.date)}</div>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
+          <div className="flex flex-col items-center gap-1">
+            <button onClick={onClose} className="text-gray-400 text-2xl leading-none">×</button>
+            <button onClick={() => setPreview(true)} className="text-gray-400 hover:text-[#22209C]" title="Aperçu du post">
+              <Eye size={18} />
+            </button>
+          </div>
         </div>
         <div className="px-4 pb-4">
-          <ProductionCard chronique={chronique} prod={prod} onSaved={onSaved} collabOptions={collabOptions} />
+          <ProductionCard chronique={chronique} prod={prod} onSaved={onSaved} collabOptions={collabOptions} onLiveChange={setLive} />
         </div>
       </div>
+      {preview && <PostPreview p={live} onClose={() => setPreview(false)} />}
     </div>
   )
 }
