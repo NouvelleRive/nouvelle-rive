@@ -1786,7 +1786,14 @@
                   </p>
                   {isNouvelleRive && (
                     <button
-                      onClick={goToPhaseAOrClose}
+                      onClick={() => setPhaseASession(prev => {
+                        // NR = pièces achetées : on marque tout le destock comme traité
+                        // pour que `step` passe à l'étape suivante (il est piloté par
+                        // le travail restant, pas par un flag d'affichage).
+                        const n = new Set(prev)
+                        destockItems.forEach(p => n.add(p.id))
+                        return n
+                      })}
                       className="mb-4 w-full px-3 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1875]"
                     >
                       Quitter cet écran
