@@ -1,6 +1,7 @@
 import { adminDb, adminStorage } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { publishCarousel, createReelContainer, finalizePublish } from '@/lib/igWeekly'
+import { publishTikTokDraft, publishTikTokPhotos } from '@/lib/tiktokPublish'
 
 // Supprime le fichier vidéo une fois publié sur IG (il y vit désormais).
 // Gère Firebase Storage et Bunny. Non bloquant : un échec n'annule pas la publi.
@@ -83,6 +84,23 @@ export async function publishDueReseaux(dryRun = false): Promise<any> {
   return doPublish(ref, p, chronique)
 }
 
+// Dépose le même contenu en BROUILLON sur TikTok, au moment où il part sur IG.
+// Best effort : TikTok n'accepte que le brouillon (video.upload), et un échec
+// ici ne doit jamais faire rater la publication Instagram. À appeler AVANT la
+// purge des médias, sinon le fichier n'existe plus.
+async function postTikTokDraft(p: any): Promise<void> {
+  try {
+    if (p.format === 'publi') {
+      const urls = (p.medias || []).map((m: any) => m?.url).filter(Boolean)
+      if (urls.length) await publishTikTokPhotos(urls, p.caption || '')
+    } else if (p.videoUrl) {
+      await publishTikTokDraft(p.videoUrl)
+    }
+  } catch (e: any) {
+    console.error('[RESEAUX] brouillon TikTok échoué:', e?.message || e)
+  }
+}
+
 // Publication effective d'une prod (container→publish, purge vidéo). Partagé.
 async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chronique: string): Promise<any> {
   const collaborators = String(p.collab || '').split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -93,6 +111,7 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
     let mediaId: string
     if (p.format === 'publi') {
       mediaId = await publishCarousel(p.medias || [], caption, { collaborators })
+      await postTikTokDraft(p)
       // Purge les médias (gros) une fois publiés.
       await Promise.all((p.medias || []).map((m: any) => deletePublishedVideo(m.url)))
     } else {
@@ -109,6 +128,7 @@ async function doPublish(ref: FirebaseFirestore.DocumentReference, p: any, chron
         await ref.set({ pendingContainerId: containerId, pendingContainerAt: Date.now() }, { merge: true })
       }
       mediaId = await finalizePublish(containerId, 20, 2500)
+      await postTikTokDraft(p)
       await deletePublishedVideo(p.videoUrl)
     }
     // Publié sur IG → on SUPPRIME la prod de l'app (elle disparaît de New contenu & du feed).
