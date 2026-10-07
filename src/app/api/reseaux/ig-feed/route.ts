@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // Récupère les vrais posts publiés du compte Instagram (feed profil).
 // Sert à la « preview » du feed dans /vendeuse/reseaux (onglet Feed).
@@ -18,7 +18,9 @@ type IgMedia = {
   timestamp: string
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // ?fresh=1 → on court-circuite le cache (bouton « recharger » de l'onglet Feed).
+  const fresh = req.nextUrl.searchParams.get('fresh') === '1'
   if (!IG_BUSINESS_ID || !IG_TOKEN) {
     return NextResponse.json({ success: false, error: 'IG non configuré' }, { status: 500 })
   }
@@ -26,7 +28,9 @@ export async function GET() {
   try {
     const fields = 'id,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp'
     const url = `https://graph.facebook.com/${API_VERSION}/${IG_BUSINESS_ID}/media?fields=${fields}&limit=40&access_token=${IG_TOKEN}`
-    const res = await fetch(url, { next: { revalidate: 1800 } })
+    const res = fresh
+      ? await fetch(url, { cache: 'no-store' })
+      : await fetch(url, { next: { revalidate: 1800 } })
     const data = await res.json()
 
     if (!res.ok || data.error) {
@@ -52,7 +56,7 @@ export async function GET() {
 
     return NextResponse.json(
       { success: true, posts },
-      { headers: { 'Cache-Control': 's-maxage=1800, stale-while-revalidate=3600' } },
+      { headers: { 'Cache-Control': fresh ? 'no-store' : 's-maxage=1800, stale-while-revalidate=3600' } },
     )
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'Erreur' }, { status: 500 })

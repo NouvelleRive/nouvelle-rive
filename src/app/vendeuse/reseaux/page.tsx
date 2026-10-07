@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { PlusSquare, LayoutGrid, Play, Copy, Pencil, Pause, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import { PlusSquare, LayoutGrid, Play, Copy, Pencil, Pause, Eye, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react'
 import { storage } from '@/lib/firebaseConfig'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
@@ -1211,6 +1211,7 @@ export default function ReseauxPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [tiktokPosts, setTiktokPosts] = useState<Post[]>([])
   const [planned, setPlanned] = useState<{ date: string; chronique: string; vignetteUrl: string; videoUrl: string; offsetY?: number }[]>([])
+  const [reloading, setReloading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [openKey, setOpenKey] = useState<string | null>(null)
@@ -1297,6 +1298,24 @@ export default function ReseauxPage() {
       .then((d) => { if (d?.planned) setPlanned(d.planned) })
       .catch(() => {})
   }, [activeTab])
+
+  // Recharge les vrais posts Instagram en court-circuitant le cache 30 min.
+  const reloadFeed = useCallback(async () => {
+    setReloading(true)
+    try {
+      const [feed, pl] = await Promise.all([
+        fetch('/api/reseaux/ig-feed?fresh=1', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/reseaux/planned', { cache: 'no-store' }).then((r) => r.json()).catch(() => ({ planned: [] })),
+      ])
+      if (feed.success) { setPosts(feed.posts.filter((p: Post) => p.imageUrl)); setError('') }
+      else setError(feed.error || 'Erreur')
+      if (pl?.planned) setPlanned(pl.planned)
+    } catch (e: any) {
+      setError(e?.message || 'Erreur')
+    } finally {
+      setReloading(false)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1398,12 +1417,23 @@ export default function ReseauxPage() {
           <section>
             {/* Toggle IG/TikTok petit, à droite + connexion TikTok */}
             <div className="flex items-center justify-between mb-3">
-              <button
-                onClick={() => { window.location.href = '/api/tiktok/auth' }}
-                className="text-[11px] text-gray-400 hover:text-[#22209C]"
-              >
-                Connecter TikTok
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={reloadFeed}
+                  disabled={reloading}
+                  className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#22209C] disabled:opacity-50"
+                  title="Recharger le feed Instagram"
+                >
+                  <RotateCw size={12} className={reloading ? 'animate-spin' : ''} />
+                  {reloading ? 'Rechargement…' : 'Recharger'}
+                </button>
+                <button
+                  onClick={() => { window.location.href = '/api/tiktok/auth' }}
+                  className="text-[11px] text-gray-400 hover:text-[#22209C]"
+                >
+                  Connecter TikTok
+                </button>
+              </div>
               <div className="inline-flex bg-gray-100 rounded-full p-0.5 text-[11px] font-medium">
                 <button
                   onClick={() => setReseau('ig')}
