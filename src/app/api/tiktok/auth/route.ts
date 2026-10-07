@@ -10,9 +10,11 @@ const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY
 const REDIRECT_URI = 'https://www.nouvellerive.eu/api/tiktok/callback'
 // video.publish (Direct Post) est refusé tant que l'app n'est pas auditée →
 // on ne demande que ce qui marche maintenant. On le rajoutera après l'audit.
-// video.list = lecture des vidéos du compte (Display API), nécessaire à
-// l'aperçu Feed → onglet TikTok (/api/reseaux/tiktok-feed).
-const DEFAULT_SCOPES = 'user.info.basic,video.upload,video.list'
+// video.list (lecture des vidéos du compte, pour l'aperçu Feed → onglet
+// TikTok) exige le produit « Display API » : tant qu'il n'est pas ajouté à
+// l'app dans le portail développeur, TikTok refuse l'autorisation entière
+// avec « Something went wrong … scope ». À remettre une fois le produit actif.
+const DEFAULT_SCOPES = 'user.info.basic,video.upload'
 
 export async function GET(req: NextRequest) {
   if (!CLIENT_KEY) {
