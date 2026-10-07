@@ -72,7 +72,13 @@ export async function GET() {
           heurePost: d.heurePost || CHRONIQUE_HEURE[d.chronique] || '',
           vignetteUrl: d.vignetteUrl || (firstMedia && firstMedia.type === 'image' ? firstMedia.url : ''),
           videoUrl: d.videoUrl || (firstMedia && firstMedia.type === 'video' ? firstMedia.url : ''),
-          offsetY: typeof d.vignetteOffsetY === 'number' ? d.vignetteOffsetY : 50,
+          // Le recadrage est propre à l'aperçu affiché : vignette du doc → vignetteOffsetY,
+          // sinon 1er média → son offsetY réglé à la main dans New contenu.
+          offsetY: d.vignetteUrl
+            ? (typeof d.vignetteOffsetY === 'number' ? d.vignetteOffsetY : 50)
+            : (firstMedia && typeof firstMedia.offsetY === 'number'
+                ? firstMedia.offsetY
+                : (typeof d.vignetteOffsetY === 'number' ? d.vignetteOffsetY : 50)),
         }
       })
       // Ordre du feed = ordre de publication inversé (le plus récent en haut) :
