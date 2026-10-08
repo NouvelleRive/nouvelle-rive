@@ -505,6 +505,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   }, [isAcheteuseView, ventesCurrentMonth, produitsMap])
   const commissionAcheteuse = acheteuseStats.commission
 
+  // Marge nette acheteuse — UNE seule définition, partagée par le KPI et le P&L :
+  // (ventes − achats) ÷ 1,20. Le transport n'y entre pas (exclu de la base de la
+  // TVA sur marge), il se déduit après, en frais de vente.
+  const margeNetteAcheteuse = Math.round(margeTtcVersHt(totalCA - acheteuseStats.achatVendu))
+
   // ── P&L acheteuse ─────────────────────────────────────────────────────────
   // Montant investi : (prixAchat + fraisPort) de tout ce qui a été ACHETÉ sur la
   // période affichée, vendu ou pas. Vient d'une route serveur qui lit le cache
@@ -545,7 +550,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     // la base de la TVA sur marge, donc il se déduit après, en frais.
     const achatMarchandise = acheteuseStats.achatVendu
     const margeBrute = totalCA - achatMarchandise
-    const margeNette = Math.round(margeTtcVersHt(margeBrute))
+    const margeNette = margeNetteAcheteuse
     const transport = acheteuseStats.portVendu
 
     const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
@@ -572,7 +577,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       nbMois: mois.length,
       margeNetteNette: margeNette - frais,
     }
-  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse])
+  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse, margeNetteAcheteuse])
 
   // Marge nette HT d'une vente — même règle que le KPI Marge :
   //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
@@ -1196,7 +1201,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         )}
         {!isAdmin && isHousePurchaseTrigramme(chineuseTrigramme) && (() => {
           // Acheteuse : marge nette AVEC port (son coût réel). NR : marge TVA hors port.
-          const marge = isAcheteuseView ? acheteuseStats.marge : totalMargeNetteNR
+          const marge = isAcheteuseView ? margeNetteAcheteuse : totalMargeNetteNR
           return <KpiCard title="Marge nette" value={formatPrix(marge)} unit="€ HT" evolution={totalCA > 0 ? String(Math.round(marge / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         })()}
         {isAcheteuseView && (
@@ -1969,7 +1974,7 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
       <div className="mt-2 pt-2 border-t border-gray-100">
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Frais de vente</p>
         <Ligne label="Transport" valeur={pl.transport} negatif titre="Frais de port des pièces vendues" />
-        <Ligne label="Commission acheteuse" valeur={pl.commission} negatif titre="10 % de la marge nette jusqu'à 4 000 €, 15 % au-delà" />
+        <Ligne label="Commission acheteuse" valeur={pl.commission} negatif titre="10 % jusqu'à 4 000 €, 15 % au-delà — calculée sur la marge transport déduit" />
         <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif titre={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
         <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif titre={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
         <Ligne
