@@ -552,23 +552,17 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       { montant: 0, pieces: 0 },
     )
 
-    // Marge brute = ventes − achats. Le transport n'y est PAS : il est exclu de
-    // la base de la TVA sur marge, donc il se déduit après, en frais.
+    // Marge brute TTC = ventes − achats. Le transport n'y est PAS : il est exclu
+    // de la base de la TVA sur marge, il se déduit après.
     const achatMarchandise = acheteuseStats.achatVendu
-    const margeBrute = totalCA - achatMarchandise
-    const margeNette = margeNetteAcheteuse
+    const margeBruteTtc = totalCA - achatMarchandise
+    const margeBruteHt = margeNetteAcheteuse
     // TVA sur marge : la marge brute est TTC, la TVA vaut marge × 20/120.
-    const tva = margeBrute - margeNette
-    const transport = acheteuseStats.portVendu
+    const tva = margeBruteTtc - margeBruteHt
 
+    const transport = acheteuseStats.portVendu
     const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
     const fraisPaiement = Math.round(totalCA * TAUX_FRAIS_PAIEMENT)
-    // Fixe vendeuse : un forfait par mois de la période, au SMIC de ce mois-là.
-    const fixeVendeuse = mois.reduce(
-      (s, d) => s + fixeVendeuseMensuel(format(d, 'yyyy-MM-dd')),
-      0,
-    )
-    const frais = transport + commissionAcheteuse + bonusVendeuse + fraisPaiement + fixeVendeuse
 
     return {
       investi: investi.montant,
@@ -576,16 +570,14 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       ca: totalCA,
       caPieces: ventesCurrentMonth.length,
       achatMarchandise,
-      margeBrute,
+      margeBruteTtc,
       tva,
-      margeNette,
+      margeBruteHt,
       transport,
-      commission: commissionAcheteuse,
       bonusVendeuse,
       fraisPaiement,
-      fixeVendeuse,
       nbMois: mois.length,
-      margeNetteNette: margeNette - frais,
+      margeNette: margeBruteHt - transport - bonusVendeuse - fraisPaiement,
     }
   }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, ventesCurrentMonth.length, acheteuseStats, commissionAcheteuse, margeNetteAcheteuse])
 
@@ -1923,16 +1915,14 @@ type PLData = {
   ca: number
   caPieces: number
   achatMarchandise: number
-  margeBrute: number
+  margeBruteTtc: number
   tva: number
-  margeNette: number
+  margeBruteHt: number
   transport: number
-  commission: number
   bonusVendeuse: number
   fraisPaiement: number
-  fixeVendeuse: number
   nbMois: number
-  margeNetteNette: number
+  margeNette: number
 }
 
 function PLAcheteuse({ pl }: { pl: PLData }) {
@@ -1954,7 +1944,7 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         <span
           className={`tabular-nums ${total ? 'text-base font-bold' : 'text-xs font-semibold'} ${
             total
-              ? pl.margeNetteNette >= 0 ? 'text-green-600' : 'text-red-600'
+              ? valeur >= 0 ? 'text-green-600' : 'text-red-600'
               : negatif ? 'text-red-500' : fort ? 'text-gray-900' : 'text-gray-700'
           }`}
         >
@@ -1988,9 +1978,9 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
           fort
         />
         <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif titre="Prix d'achat des pièces vendues, hors transport" />
-        <Ligne label="Marge brute TTC" valeur={pl.margeBrute} titre="Ventes − achats, hors transport" />
+        <Ligne label="Marge brute TTC" valeur={pl.margeBruteTtc} titre="Ventes − achats, hors transport" />
         <Ligne label="TVA sur marge" valeur={pl.tva} negatif titre="Marge brute TTC × 20/120 (régime de la TVA sur marge)" />
-        <Ligne label="Marge brute HT" valeur={pl.margeNette} fort titre="Marge brute TTC − TVA" />
+        <Ligne label="Marge brute HT" valeur={pl.margeBruteHt} fort titre="Marge brute TTC − TVA" />
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100">
@@ -1998,6 +1988,13 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif titre={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
         <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif titre={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
       </div>
+
+      <Ligne
+        label="Marge nette"
+        valeur={pl.margeNette}
+        total
+        titre="Marge brute HT − transport − bonus vendeuse − frais de paiement"
+      />
     </div>
   )
 }
