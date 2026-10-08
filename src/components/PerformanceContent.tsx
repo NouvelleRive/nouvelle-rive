@@ -16,8 +16,6 @@ import { margeTtcVersHt } from '@/lib/marge'
 import {
   TAUX_BONUS_VENDEUSE,
   TAUX_FRAIS_PAIEMENT,
-  FIXE_VENDEUSE_JOURS,
-  FIXE_VENDEUSE_HEURES_PAR_JOUR,
   fixeVendeuseMensuel,
 } from '@/lib/coutsVendeuse'
 
@@ -1996,20 +1994,10 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Frais de vente</p>
         <Ligne label="Transport" valeur={pl.transport} negatif titre="Frais de port des pièces vendues" />
         <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif titre={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
         <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif titre={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
-        <Ligne label="Commission acheteuse" valeur={pl.commission} negatif titre="10 % jusqu'à 4 000 €, 15 % au-delà — calculée sur la marge transport déduit" />
-        <Ligne
-          label="Fixe vendeuse"
-          valeur={pl.fixeVendeuse}
-          negatif
-          titre={`${FIXE_VENDEUSE_JOURS} jours de ${FIXE_VENDEUSE_HEURES_PAR_JOUR} h au SMIC, charges patronales incluses${pl.nbMois > 1 ? ` × ${pl.nbMois} mois` : ''}`}
-        />
       </div>
-
-      <Ligne label="Marge nette nette" valeur={pl.margeNetteNette} total />
     </div>
   )
 }
