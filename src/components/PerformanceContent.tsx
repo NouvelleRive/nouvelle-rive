@@ -1988,9 +1988,9 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
           fort
         />
         <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif titre="Prix d'achat des pièces vendues, hors transport" />
-        <Ligne label="Marge brute" valeur={pl.margeBrute} titre="Ventes − achats, hors transport" />
-        <Ligne label="TVA sur marge" valeur={pl.tva} negatif titre="Marge brute × 20/120 (régime de la TVA sur marge)" />
-        <Ligne label="Marge nette" valeur={pl.margeNette} fort titre="Marge brute − TVA" />
+        <Ligne label="Marge brute TTC" valeur={pl.margeBrute} titre="Ventes − achats, hors transport" />
+        <Ligne label="TVA sur marge" valeur={pl.tva} negatif titre="Marge brute TTC × 20/120 (régime de la TVA sur marge)" />
+        <Ligne label="Marge brute HT" valeur={pl.margeNette} fort titre="Marge brute TTC − TVA" />
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100">
