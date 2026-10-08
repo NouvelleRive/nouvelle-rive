@@ -1951,7 +1951,7 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
   }) => (
     <div
       title={titre}
-      className={`flex items-baseline justify-between gap-3 py-1.5 ${total ? 'border-t border-gray-200 mt-1 pt-2.5' : ''}`}
+      className={`flex items-baseline justify-between gap-3 py-0.5 ${total ? 'border-t border-gray-200 mt-1 pt-1.5' : ''}`}
     >
       <span className={`text-xs truncate ${fort || total ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
         {label}
@@ -1977,7 +1977,7 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
 
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-900 mb-1">P&amp;L</h3>
+      <h3 className="text-sm font-semibold text-gray-900 mb-1.5">P&amp;L</h3>
 
       <Ligne
         label="Montant investi"
@@ -1986,7 +1986,7 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         titre="Prix d'achat + transport des pièces achetées sur la période, vendues ou pas"
       />
 
-      <div className="mt-2 pt-2 border-t border-gray-100">
+      <div className="mt-1.5 pt-1.5 border-t border-gray-100">
         <Ligne
           label="Chiffre d'affaires"
           valeur={pl.ca}
@@ -1999,13 +1999,13 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         <Ligne label="Marge brute HT" valeur={pl.margeBruteHt} fort titre="Marge brute TTC − TVA" />
       </div>
 
-      <div className="mt-2 pt-2 border-t border-gray-100">
+      <div className="mt-1.5 pt-1.5 border-t border-gray-100">
         <Ligne label="Transport" valeur={pl.transport} negatif titre="Frais de port des pièces vendues" />
         <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif titre={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
         <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif titre={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
       </div>
 
-      <div className="mt-1 pt-2 border-t border-gray-200">
+      <div className="mt-1.5 pt-1.5 border-t border-gray-200">
         <Ligne
           label="Marge nette"
           valeur={pl.margeNette}
