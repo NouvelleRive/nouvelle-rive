@@ -559,6 +559,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     const achatMarchandise = acheteuseStats.achatVendu
     const margeBrute = totalCA - achatMarchandise
     const margeNette = margeNetteAcheteuse
+    // TVA sur marge : la marge brute est TTC, la TVA vaut marge × 20/120.
+    const tva = margeBrute - margeNette
     const transport = acheteuseStats.portVendu
 
     const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
@@ -577,6 +579,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       caPieces: ventesCurrentMonth.length,
       achatMarchandise,
       margeBrute,
+      tva,
       margeNette,
       transport,
       commission: commissionAcheteuse,
@@ -1923,6 +1926,7 @@ type PLData = {
   caPieces: number
   achatMarchandise: number
   margeBrute: number
+  tva: number
   margeNette: number
   transport: number
   commission: number
@@ -1987,7 +1991,8 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         />
         <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif titre="Prix d'achat des pièces vendues, hors transport" />
         <Ligne label="Marge brute" valeur={pl.margeBrute} titre="Ventes − achats, hors transport" />
-        <Ligne label="Marge nette" valeur={pl.margeNette} fort titre="Marge brute ÷ 1,20 (TVA sur marge 20 %)" />
+        <Ligne label="TVA sur marge" valeur={pl.tva} negatif titre="Marge brute × 20/120 (régime de la TVA sur marge)" />
+        <Ligne label="Marge nette" valeur={pl.margeNette} fort titre="Marge brute − TVA" />
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100">
