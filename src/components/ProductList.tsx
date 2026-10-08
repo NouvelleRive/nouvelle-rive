@@ -809,6 +809,13 @@
                   ? { fraisPort: parseFloat((data as any).fraisPort) || 0 }
                   : { fraisPort: deleteField() })
               : {}),
+            // Date d'achat : stockée en Timestamp à midi (pas de décalage de
+            // jour selon le fuseau). Vidée → champ supprimé.
+            ...((data as any).achatDateCommande !== undefined
+              ? ((data as any).achatDateCommande?.trim?.()
+                  ? { achatDateCommande: Timestamp.fromDate(new Date(`${(data as any).achatDateCommande}T12:00:00`)) }
+                  : { achatDateCommande: deleteField() })
+              : {}),
             quantite: (() => {
               const newQte = isNaN(parseInt(data.quantite)) ? 1 : parseInt(data.quantite)
               const oldQte = editingProduct.quantite ?? 1
@@ -1738,6 +1745,9 @@
                       prix: editingProduct.prix?.toString(),
                       prixAchat: (editingProduct as any).prixAchat?.toString(),
                       fraisPort: (editingProduct as any).fraisPort?.toString(),
+                      achatDateCommande: (editingProduct as any).achatDateCommande instanceof Timestamp
+                        ? format((editingProduct as any).achatDateCommande.toDate(), 'yyyy-MM-dd')
+                        : '',
                       quantite: editingProduct.quantite?.toString(),
                       marque: editingProduct.marque,
                       taille: editingProduct.taille,

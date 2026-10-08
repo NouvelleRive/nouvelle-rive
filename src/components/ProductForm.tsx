@@ -274,6 +274,10 @@ async function compressImage(file: File): Promise<string> {
     /** Frais de port (livraison) — exclus de la base TVA, inclus dans le coût
      *  réel de l'acheteuse pour sa marge nette / commission. */
     fraisPort?: string
+    /** Date d'achat de la pièce (`yyyy-MM-dd`) — c'est elle qui range la pièce
+     *  dans le bon mois du P&L. Renseignée automatiquement par le reçu Vinted,
+     *  modifiable à la main pour les saisies manuelles. */
+    achatDateCommande?: string
     quantite: string
     marque: string
     taille: string
@@ -359,6 +363,7 @@ async function compressImage(file: File): Promise<string> {
       prix?: string
       prixAchat?: string
       fraisPort?: string
+      achatDateCommande?: string
       quantite?: string
       marque?: string
       taille?: string
@@ -492,6 +497,7 @@ async function compressImage(file: File): Promise<string> {
       prix: initialData?.prix || '',
       prixAchat: (initialData as any)?.prixAchat?.toString?.() || '',
       fraisPort: (initialData as any)?.fraisPort?.toString?.() || '',
+      achatDateCommande: (initialData as any)?.achatDateCommande || '',
       quantite: initialData?.quantite || '1',
       marque: initialData?.marque || '',
       taille: initialData?.taille || '',
@@ -556,6 +562,7 @@ async function compressImage(file: File): Promise<string> {
           prix: initialData.prix || '',
           prixAchat: (initialData as any).prixAchat?.toString?.() || '',
           fraisPort: (initialData as any).fraisPort?.toString?.() || '',
+          achatDateCommande: (initialData as any).achatDateCommande || '',
           quantite: initialData.quantite || '1',
           marque: initialData.marque || '',
           taille: initialData.taille || '',
@@ -1855,6 +1862,22 @@ async function compressImage(file: File): Promise<string> {
                       </div>
                     )
                   })()}
+                </div>
+              )}
+
+              {/* Date d'achat — range la pièce dans le bon mois du P&L. Posée
+                  par le reçu Vinted ; à corriger à la main pour les saisies
+                  manuelles, où elle vaut par défaut la date de création. */}
+              {isHousePurchaseTrigramme(trigramme) && (
+                <div>
+                  <label className="block text-xs font-medium mb-1">Date d&apos;achat</label>
+                  <input
+                    type="date"
+                    value={formData.achatDateCommande || ''}
+                    onChange={(e) => setFormData({ ...formData, achatDateCommande: e.target.value })}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">Mois d&apos;imputation dans le P&amp;L.</p>
                 </div>
               )}
 
