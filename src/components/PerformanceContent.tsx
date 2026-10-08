@@ -511,11 +511,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const margeNetteAcheteuse = Math.round(margeTtcVersHt(totalCA - acheteuseStats.achatVendu))
 
   // ── P&L acheteuse ─────────────────────────────────────────────────────────
-  // Montant investi : (prixAchat + fraisPort) de tout ce qui a été ACHETÉ sur la
-  // période affichée, vendu ou pas. Vient d'une route serveur qui lit le cache
-  // blob produits (0 lecture Firestore) : les pièces non vendues ne sont pas
-  // dans `ventes`.
-  const [investiParMois, setInvestiParMois] = useState<Record<string, { montant: number; pieces: number }>>({})
+  // Montant investi : (prixAchat + fraisPort) de TOUTES les pièces ACH — elles
+  // ont toutes été achetées. Aucun filtre de date : c'est ce qui a été mis dans
+  // le portant. Vient d'une route serveur qui lit le cache blob produits
+  // (0 lecture Firestore) : les pièces non vendues ne sont pas dans `ventes`.
+  const [investi, setInvesti] = useState<{ montant: number; pieces: number }>({ montant: 0, pieces: 0 })
   useEffect(() => {
     if (!isAcheteuseView) return
     let cancelled = false
@@ -527,7 +527,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           headers: { Authorization: `Bearer ${await u.getIdToken()}` },
         })
         const data = await res.json()
-        if (!cancelled && data.success) setInvestiParMois(data.parMois || {})
+        if (!cancelled && data.success) setInvesti(data.total || { montant: 0, pieces: 0 })
       } catch (e) { console.error('load investi', e) }
     })()
     return () => { cancelled = true }
@@ -541,10 +541,6 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     const mois = borne < currentMonthStart
       ? []
       : eachMonthOfInterval({ start: currentMonthStart, end: borne })
-
-    const moisKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    const investi = mois.reduce((s, d) => s + (investiParMois[moisKey(d)]?.montant || 0), 0)
-    const investiPieces = mois.reduce((s, d) => s + (investiParMois[moisKey(d)]?.pieces || 0), 0)
 
     // Marge brute = ventes − achats. Le transport n'y est PAS : il est exclu de
     // la base de la TVA sur marge, donc il se déduit après, en frais.
@@ -563,8 +559,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     const frais = transport + commissionAcheteuse + bonusVendeuse + fraisPaiement + fixeVendeuse
 
     return {
-      investi,
-      investiPieces,
+      investi: investi.montant,
+      investiPieces: investi.pieces,
       ca: totalCA,
       achatMarchandise,
       margeBrute,
@@ -577,7 +573,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       nbMois: mois.length,
       margeNetteNette: margeNette - frais,
     }
-  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse, margeNetteAcheteuse])
+  }, [isAcheteuseView, investi, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse, margeNetteAcheteuse])
 
   // Marge nette HT d'une vente — même règle que le KPI Marge :
   //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
@@ -1965,7 +1961,7 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         label="Montant investi"
         valeur={pl.investi}
         suffixe={`${pl.investiPieces} pièce${pl.investiPieces > 1 ? 's' : ''}`}
-        titre="Prix d'achat + transport de tout ce qui a été acheté sur la période, vendu ou pas"
+        titre="Prix d'achat + transport de toutes les pièces ACH, vendues ou pas"
       />
 
       <div className="mt-2 pt-2 border-t border-gray-100">
