@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { db } from '@/lib/firebaseConfig'
+import { auth, db } from '@/lib/firebaseConfig'
 import { collection, Timestamp, doc, getDoc, setDoc, addDoc, getDocs, deleteDoc, orderBy, query, where, documentId, getCountFromServer, limit } from 'firebase/firestore'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, differenceInDays, startOfYear, endOfYear, subYears, eachMonthOfInterval } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -13,6 +13,13 @@ import { formatPrix } from '@/lib/formatPrix'
 import { isHousePurchaseTrigramme, ACHETEUSE_TRIGRAMME } from '@/lib/roles'
 import { calcCommissionAchat } from '@/lib/commission'
 import { margeTtcVersHt } from '@/lib/marge'
+import {
+  TAUX_BONUS_VENDEUSE,
+  TAUX_FRAIS_PAIEMENT,
+  FIXE_VENDEUSE_JOURS,
+  FIXE_VENDEUSE_HEURES_PAR_JOUR,
+  fixeVendeuseMensuel,
+} from '@/lib/coutsVendeuse'
 
 type Produit = {
   id: string
@@ -466,9 +473,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   // (regroupement mensuel puis somme → correct en vue mois comme en vue année).
   const isAcheteuseView = chineuseTrigramme === ACHETEUSE_TRIGRAMME
   const acheteuseStats = useMemo(() => {
-    if (!isAcheteuseView) return { marge: 0, commission: 0 }
+    if (!isAcheteuseView) return { marge: 0, commission: 0, margeBrute: 0, coutAchatVendu: 0 }
     const margeParMois = new Map<string, number>()
     let margeTotale = 0
+    let margeBruteTotale = 0
+    let coutAchatVendu = 0
     ventesCurrentMonth.forEach(v => {
       const d = getDateVente(v)
       if (!d) return
@@ -478,16 +487,88 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       if (typeof prixAchat !== 'number' || prixAchat <= 0) return
       const fraisPort = (v as any).fraisPort ?? (produit as any)?.fraisPort ?? 0
       const port = typeof fraisPort === 'number' ? fraisPort : 0
-      const marge = margeTtcVersHt(Math.max(prixVente - prixAchat - port, 0))
+      const margeBrute = Math.max(prixVente - prixAchat - port, 0)
+      const marge = margeTtcVersHt(margeBrute)
+      margeBruteTotale += margeBrute
+      coutAchatVendu += prixAchat + port
       margeTotale += marge
       const key = `${d.getFullYear()}-${d.getMonth()}`
       margeParMois.set(key, (margeParMois.get(key) || 0) + marge)
     })
     let commission = 0
     margeParMois.forEach(marge => { commission += calcCommissionAchat(Math.round(marge)) })
-    return { marge: Math.round(margeTotale), commission }
+    return {
+      marge: Math.round(margeTotale),
+      commission,
+      margeBrute: Math.round(margeBruteTotale),
+      coutAchatVendu: Math.round(coutAchatVendu),
+    }
   }, [isAcheteuseView, ventesCurrentMonth, produitsMap])
   const commissionAcheteuse = acheteuseStats.commission
+
+  // ── P&L acheteuse ─────────────────────────────────────────────────────────
+  // Montant investi : (prixAchat + fraisPort) des pièces ACHETÉES sur la période,
+  // vendues ou pas. Vient d'une route serveur qui lit le cache blob produits
+  // (0 lecture Firestore) — les pièces non vendues ne sont pas dans `ventes`.
+  const [investiParMois, setInvestiParMois] = useState<Record<string, { montant: number; pieces: number }>>({})
+  useEffect(() => {
+    if (!isAcheteuseView) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const u = auth.currentUser
+        if (!u) return
+        const res = await fetch('/api/acheteuse/investi', {
+          headers: { Authorization: `Bearer ${await u.getIdToken()}` },
+        })
+        const data = await res.json()
+        if (!cancelled && data.success) setInvestiParMois(data.parMois || {})
+      } catch (e) { console.error('load investi', e) }
+    })()
+    return () => { cancelled = true }
+  }, [isAcheteuseView, refreshKey])
+
+  const pl = useMemo(() => {
+    if (!isAcheteuseView) return null
+    // Mois couverts par la période affichée, sans dépasser le mois en cours
+    // (en vue année, le fixe vendeuse ne court pas sur les mois à venir).
+    const borne = currentMonthEnd.getTime() > Date.now() ? new Date() : currentMonthEnd
+    const mois = borne < currentMonthStart
+      ? []
+      : eachMonthOfInterval({ start: currentMonthStart, end: borne })
+
+    const investi = mois.reduce((s, d) => {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      return s + (investiParMois[key]?.montant || 0)
+    }, 0)
+    const piecesAchetees = mois.reduce((s, d) => {
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      return s + (investiParMois[key]?.pieces || 0)
+    }, 0)
+
+    const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
+    const fraisPaiement = Math.round(totalCA * TAUX_FRAIS_PAIEMENT)
+    // Fixe vendeuse : un forfait par mois de la période, au SMIC de ce mois-là.
+    const fixeVendeuse = mois.reduce(
+      (s, d) => s + fixeVendeuseMensuel(format(d, 'yyyy-MM-dd')),
+      0,
+    )
+    const fraisVendeuse = commissionAcheteuse + bonusVendeuse + fraisPaiement + fixeVendeuse
+
+    return {
+      investi,
+      piecesAchetees,
+      ca: totalCA,
+      margeBrute: acheteuseStats.margeBrute,
+      margeNette: acheteuseStats.marge,
+      commission: commissionAcheteuse,
+      bonusVendeuse,
+      fraisPaiement,
+      fixeVendeuse,
+      nbMois: mois.length,
+      margeNetteNette: acheteuseStats.marge - fraisVendeuse,
+    }
+  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse])
 
   // Marge nette HT d'une vente — même règle que le KPI Marge :
   //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
@@ -1332,6 +1413,9 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       ) : (
         /* CHINEUSE: Top Catégories + Répartition côte à côte */
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {isAcheteuseView && pl ? (
+          <PLAcheteuse pl={pl} />
+        ) : (
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">Mes Top Catégories</h3>
           {topCategories.length === 0 ? (
@@ -1355,6 +1439,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
             </div>
           )}
         </div>
+        )}
         <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
           <h2 className="text-sm font-semibold text-gray-900 mb-3">Répartition par tranche de prix</h2>
           <p className="text-xs text-gray-500 font-medium text-center mb-1">Chiffre d&apos;affaires</p>
@@ -1806,6 +1891,84 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       </div>
       </>
       )}
+    </div>
+  )
+}
+// ============================================================
+// P&L acheteuse — remplace « Mes Top Catégories » sur sa page perf.
+// Du montant investi jusqu'à la marge nette nette (frais vendeuse déduits).
+// ============================================================
+type PLData = {
+  investi: number
+  piecesAchetees: number
+  ca: number
+  margeBrute: number
+  margeNette: number
+  commission: number
+  bonusVendeuse: number
+  fraisPaiement: number
+  fixeVendeuse: number
+  nbMois: number
+  margeNetteNette: number
+}
+
+function PLAcheteuse({ pl }: { pl: PLData }) {
+  const Ligne = ({
+    label, valeur, aide, negatif, fort, total,
+  }: {
+    label: string; valeur: number; aide?: string
+    negatif?: boolean; fort?: boolean; total?: boolean
+  }) => (
+    <div className={`flex items-baseline justify-between gap-3 py-1.5 ${total ? 'border-t border-gray-200 mt-1 pt-2.5' : ''}`}>
+      <div className="min-w-0">
+        <span className={`text-xs ${fort || total ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{label}</span>
+        {aide && <span className="block text-[10px] text-gray-400 leading-tight">{aide}</span>}
+      </div>
+      <span
+        className={`shrink-0 whitespace-nowrap tabular-nums ${total ? 'text-base font-bold' : 'text-xs font-semibold'} ${
+          total
+            ? pl.margeNetteNette >= 0 ? 'text-green-600' : 'text-red-600'
+            : negatif ? 'text-red-500' : fort ? 'text-gray-900' : 'text-gray-700'
+        }`}
+      >
+        {negatif ? '− ' : ''}{formatPrix(Math.abs(valeur))} €
+      </span>
+    </div>
+  )
+
+  return (
+    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+      <h3 className="text-sm font-semibold text-gray-900 mb-1">P&amp;L</h3>
+      <p className="text-[10px] text-gray-400 mb-2">
+        Montants TTC jusqu&apos;à la marge brute, puis HT (TVA sur marge 20 %).
+      </p>
+
+      <Ligne
+        label="Montant investi"
+        valeur={pl.investi}
+        aide={`${pl.piecesAchetees} pièce${pl.piecesAchetees > 1 ? 's' : ''} achetée${pl.piecesAchetees > 1 ? 's' : ''} sur la période · prix d'achat + transport`}
+      />
+
+      <div className="mt-2 pt-2 border-t border-gray-100">
+        <Ligne label="Chiffre d'affaires" valeur={pl.ca} fort aide="Ventes de la période" />
+        <Ligne label="Marge brute" valeur={pl.margeBrute} aide="CA − prix d'achat − transport des pièces vendues" />
+        <Ligne label="Marge nette" valeur={pl.margeNette} fort aide="Marge brute ÷ 1,20 (TVA sur marge)" />
+      </div>
+
+      <div className="mt-2 pt-2 border-t border-gray-100">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Frais de vente</p>
+        <Ligne label="Commission acheteuse" valeur={pl.commission} negatif aide="10 % de la marge nette jusqu'à 4 000 €, 15 % au-delà" />
+        <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif aide={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
+        <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif aide={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
+        <Ligne
+          label="Fixe vendeuse"
+          valeur={pl.fixeVendeuse}
+          negatif
+          aide={`${FIXE_VENDEUSE_JOURS} j × ${FIXE_VENDEUSE_HEURES_PAR_JOUR} h au SMIC, charges incluses${pl.nbMois > 1 ? ` × ${pl.nbMois} mois` : ''}`}
+        />
+      </div>
+
+      <Ligne label="Marge nette nette" valeur={pl.margeNetteNette} total />
     </div>
   )
 }
