@@ -507,10 +507,15 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const commissionAcheteuse = acheteuseStats.commission
 
   // ── P&L acheteuse ─────────────────────────────────────────────────────────
-  // Montant investi : (prixAchat + fraisPort) des pièces ACHETÉES sur la période,
-  // vendues ou pas. Vient d'une route serveur qui lit le cache blob produits
-  // (0 lecture Firestore) — les pièces non vendues ne sont pas dans `ventes`.
-  const [investiParMois, setInvestiParMois] = useState<Record<string, { montant: number; pieces: number }>>({})
+  // Montant investi : (prixAchat + fraisPort) de TOUTES les pièces achetées
+  // depuis le début — ce qui a été mis dans le portant, pas un flux du mois.
+  // Vient d'une route serveur qui lit le cache blob produits (0 lecture
+  // Firestore) : les pièces non vendues ne sont pas dans `ventes`.
+  type InvestiLot = { montant: number; pieces: number }
+  const [investi, setInvesti] = useState<{ total: InvestiLot; enSurface: InvestiLot }>({
+    total: { montant: 0, pieces: 0 },
+    enSurface: { montant: 0, pieces: 0 },
+  })
   useEffect(() => {
     if (!isAcheteuseView) return
     let cancelled = false
@@ -522,7 +527,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           headers: { Authorization: `Bearer ${await u.getIdToken()}` },
         })
         const data = await res.json()
-        if (!cancelled && data.success) setInvestiParMois(data.parMois || {})
+        if (!cancelled && data.success) {
+          setInvesti({
+            total: data.total || { montant: 0, pieces: 0 },
+            enSurface: data.enSurface || { montant: 0, pieces: 0 },
+          })
+        }
       } catch (e) { console.error('load investi', e) }
     })()
     return () => { cancelled = true }
@@ -537,14 +547,9 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       ? []
       : eachMonthOfInterval({ start: currentMonthStart, end: borne })
 
-    const investi = mois.reduce((s, d) => {
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      return s + (investiParMois[key]?.montant || 0)
-    }, 0)
-    const piecesAchetees = mois.reduce((s, d) => {
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      return s + (investiParMois[key]?.pieces || 0)
-    }, 0)
+    // Marge brute = ventes − achats (prix d'achat + transport des pièces vendues).
+    const achatMarchandise = acheteuseStats.coutAchatVendu
+    const margeBrute = totalCA - achatMarchandise
 
     const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
     const fraisPaiement = Math.round(totalCA * TAUX_FRAIS_PAIEMENT)
@@ -556,10 +561,13 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     const fraisVendeuse = commissionAcheteuse + bonusVendeuse + fraisPaiement + fixeVendeuse
 
     return {
-      investi,
-      piecesAchetees,
+      investi: investi.total.montant,
+      investiPieces: investi.total.pieces,
+      investiEnSurface: investi.enSurface.montant,
+      investiEnSurfacePieces: investi.enSurface.pieces,
       ca: totalCA,
-      margeBrute: acheteuseStats.margeBrute,
+      achatMarchandise,
+      margeBrute,
       margeNette: acheteuseStats.marge,
       commission: commissionAcheteuse,
       bonusVendeuse,
@@ -568,7 +576,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       nbMois: mois.length,
       margeNetteNette: acheteuseStats.marge - fraisVendeuse,
     }
-  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse])
+  }, [isAcheteuseView, investi, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse])
 
   // Marge nette HT d'une vente — même règle que le KPI Marge :
   //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
@@ -1900,8 +1908,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 // ============================================================
 type PLData = {
   investi: number
-  piecesAchetees: number
+  investiPieces: number
+  investiEnSurface: number
+  investiEnSurfacePieces: number
   ca: number
+  achatMarchandise: number
   margeBrute: number
   margeNette: number
   commission: number
@@ -1940,18 +1951,20 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
       <h3 className="text-sm font-semibold text-gray-900 mb-1">P&amp;L</h3>
       <p className="text-[10px] text-gray-400 mb-2">
-        Montants TTC jusqu&apos;à la marge brute, puis HT (TVA sur marge 20 %).
+        Montant investi : cumul depuis le début. Le reste sur la période affichée.
+        TTC jusqu&apos;à la marge brute, puis HT (TVA sur marge 20 %).
       </p>
 
       <Ligne
         label="Montant investi"
         valeur={pl.investi}
-        aide={`${pl.piecesAchetees} pièce${pl.piecesAchetees > 1 ? 's' : ''} achetée${pl.piecesAchetees > 1 ? 's' : ''} sur la période · prix d'achat + transport`}
+        aide={`${pl.investiPieces} pièce${pl.investiPieces > 1 ? 's' : ''} achetée${pl.investiPieces > 1 ? 's' : ''} depuis le début · prix d'achat + transport · dont ${formatPrix(pl.investiEnSurface)} € encore en surface (${pl.investiEnSurfacePieces})`}
       />
 
       <div className="mt-2 pt-2 border-t border-gray-100">
         <Ligne label="Chiffre d'affaires" valeur={pl.ca} fort aide="Ventes de la période" />
-        <Ligne label="Marge brute" valeur={pl.margeBrute} aide="CA − prix d'achat − transport des pièces vendues" />
+        <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif aide="Prix d'achat + transport des pièces vendues" />
+        <Ligne label="Marge brute" valeur={pl.margeBrute} aide="Ventes − achats" />
         <Ligne label="Marge nette" valeur={pl.margeNette} fort aide="Marge brute ÷ 1,20 (TVA sur marge)" />
       </div>
 
