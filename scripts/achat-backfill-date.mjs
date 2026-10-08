@@ -3,10 +3,10 @@
 // mois de sa saisie dans le P&L acheteuse, et le champ reste vide dans la fiche
 // — donc incorrigeable à la main.
 //
-// Usage : node scripts/achat-backfill-date.mjs [--go] [--all]
-//   sans --go  : liste seulement ce qui serait écrit.
-//   sans --all : limité au trigramme ACH (le P&L acheteuse). Avec --all, inclut
-//                les lots Fleek rattachés à NR.
+// Usage : node scripts/achat-backfill-date.mjs [--go]
+//   sans --go : liste seulement ce qui serait écrit.
+//
+// STRICTEMENT limité au trigramme ACH. Ne touche JAMAIS aux pièces NR.
 import { config } from 'dotenv'
 import { initializeApp, cert, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
@@ -19,16 +19,13 @@ if (!getApps().length) initializeApp({ credential: cert({
 }) })
 const db = getFirestore()
 const GO = process.argv.includes('--go')
-const ALL = process.argv.includes('--all')
 
 const snap = await db.collection('produits').get()
 const aFaire = []
 snap.forEach(d => {
   const p = d.data()
-  // Le P&L acheteuse se base sur le TRIGRAMME, pas sur la source : certaines
-  // pièces ACH ont été saisies sans `source: achat-*`.
-  const estACH = (p.trigramme || '').toUpperCase() === 'ACH'
-  if (!estACH && !(ALL && String(p.source || '').startsWith('achat-'))) return
+  // Trigramme ACH uniquement — jamais NR.
+  if ((p.trigramme || '').toUpperCase() !== 'ACH') return
   if (p.achatDateCommande) return
   if (!p.createdAt) return
   aFaire.push({ ref: d.ref, sku: p.sku, source: p.source || '(aucune)', createdAt: p.createdAt })
