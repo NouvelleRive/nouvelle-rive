@@ -506,15 +506,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   const commissionAcheteuse = acheteuseStats.commission
 
   // ── P&L acheteuse ─────────────────────────────────────────────────────────
-  // Montant investi : (prixAchat + fraisPort) de TOUTES les pièces achetées
-  // depuis le début — ce qui a été mis dans le portant, pas un flux du mois.
-  // Vient d'une route serveur qui lit le cache blob produits (0 lecture
-  // Firestore) : les pièces non vendues ne sont pas dans `ventes`.
-  type InvestiLot = { montant: number; pieces: number }
-  const [investi, setInvesti] = useState<{ total: InvestiLot; enSurface: InvestiLot }>({
-    total: { montant: 0, pieces: 0 },
-    enSurface: { montant: 0, pieces: 0 },
-  })
+  // Montant investi : (prixAchat + fraisPort) de tout ce qui a été ACHETÉ sur la
+  // période affichée, vendu ou pas. Vient d'une route serveur qui lit le cache
+  // blob produits (0 lecture Firestore) : les pièces non vendues ne sont pas
+  // dans `ventes`.
+  const [investiParMois, setInvestiParMois] = useState<Record<string, { montant: number; pieces: number }>>({})
   useEffect(() => {
     if (!isAcheteuseView) return
     let cancelled = false
@@ -526,12 +522,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           headers: { Authorization: `Bearer ${await u.getIdToken()}` },
         })
         const data = await res.json()
-        if (!cancelled && data.success) {
-          setInvesti({
-            total: data.total || { montant: 0, pieces: 0 },
-            enSurface: data.enSurface || { montant: 0, pieces: 0 },
-          })
-        }
+        if (!cancelled && data.success) setInvestiParMois(data.parMois || {})
       } catch (e) { console.error('load investi', e) }
     })()
     return () => { cancelled = true }
@@ -545,6 +536,10 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     const mois = borne < currentMonthStart
       ? []
       : eachMonthOfInterval({ start: currentMonthStart, end: borne })
+
+    const moisKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const investi = mois.reduce((s, d) => s + (investiParMois[moisKey(d)]?.montant || 0), 0)
+    const investiPieces = mois.reduce((s, d) => s + (investiParMois[moisKey(d)]?.pieces || 0), 0)
 
     // Marge brute = ventes − achats. Le transport n'y est PAS : il est exclu de
     // la base de la TVA sur marge, donc il se déduit après, en frais.
@@ -563,10 +558,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     const frais = transport + commissionAcheteuse + bonusVendeuse + fraisPaiement + fixeVendeuse
 
     return {
-      investi: investi.total.montant,
-      investiPieces: investi.total.pieces,
-      investiEnSurface: investi.enSurface.montant,
-      investiEnSurfacePieces: investi.enSurface.pieces,
+      investi,
+      investiPieces,
       ca: totalCA,
       achatMarchandise,
       margeBrute,
@@ -579,7 +572,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       nbMois: mois.length,
       margeNetteNette: margeNette - frais,
     }
-  }, [isAcheteuseView, investi, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse])
+  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse])
 
   // Marge nette HT d'une vente — même règle que le KPI Marge :
   //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
@@ -1912,8 +1905,6 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 type PLData = {
   investi: number
   investiPieces: number
-  investiEnSurface: number
-  investiEnSurfacePieces: number
   ca: number
   achatMarchandise: number
   margeBrute: number
@@ -1928,25 +1919,31 @@ type PLData = {
 }
 
 function PLAcheteuse({ pl }: { pl: PLData }) {
+  // `titre` = détail au survol : la ligne reste sur une seule hauteur.
   const Ligne = ({
-    label, valeur, aide, negatif, fort, total,
+    label, valeur, suffixe, titre, negatif, fort, total,
   }: {
-    label: string; valeur: number; aide?: string
+    label: string; valeur: number; suffixe?: string; titre?: string
     negatif?: boolean; fort?: boolean; total?: boolean
   }) => (
-    <div className={`flex items-baseline justify-between gap-3 py-1.5 ${total ? 'border-t border-gray-200 mt-1 pt-2.5' : ''}`}>
-      <div className="min-w-0">
-        <span className={`text-xs ${fort || total ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{label}</span>
-        {aide && <span className="block text-[10px] text-gray-400 leading-tight">{aide}</span>}
-      </div>
-      <span
-        className={`shrink-0 whitespace-nowrap tabular-nums ${total ? 'text-base font-bold' : 'text-xs font-semibold'} ${
-          total
-            ? pl.margeNetteNette >= 0 ? 'text-green-600' : 'text-red-600'
-            : negatif ? 'text-red-500' : fort ? 'text-gray-900' : 'text-gray-700'
-        }`}
-      >
-        {negatif ? '− ' : ''}{formatPrix(Math.abs(valeur))} €
+    <div
+      title={titre}
+      className={`flex items-baseline justify-between gap-3 py-1.5 ${total ? 'border-t border-gray-200 mt-1 pt-2.5' : ''}`}
+    >
+      <span className={`text-xs truncate ${fort || total ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+        {label}
+      </span>
+      <span className="shrink-0 whitespace-nowrap">
+        <span
+          className={`tabular-nums ${total ? 'text-base font-bold' : 'text-xs font-semibold'} ${
+            total
+              ? pl.margeNetteNette >= 0 ? 'text-green-600' : 'text-red-600'
+              : negatif ? 'text-red-500' : fort ? 'text-gray-900' : 'text-gray-700'
+          }`}
+        >
+          {negatif ? '\u2212 ' : ''}{formatPrix(Math.abs(valeur))} €
+        </span>
+        {suffixe && <span className="text-[10px] text-gray-400 ml-1.5">{suffixe}</span>}
       </span>
     </div>
   )
@@ -1958,27 +1955,28 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
       <Ligne
         label="Montant investi"
         valeur={pl.investi}
-        aide={`${pl.investiPieces} pièce${pl.investiPieces > 1 ? 's' : ''} achetée${pl.investiPieces > 1 ? 's' : ''} depuis le début · prix d'achat + transport · dont ${formatPrix(pl.investiEnSurface)} € encore en surface (${pl.investiEnSurfacePieces})`}
+        suffixe={`${pl.investiPieces} pièce${pl.investiPieces > 1 ? 's' : ''}`}
+        titre="Prix d'achat + transport de tout ce qui a été acheté sur la période, vendu ou pas"
       />
 
       <div className="mt-2 pt-2 border-t border-gray-100">
-        <Ligne label="Chiffre d'affaires" valeur={pl.ca} fort aide="Ventes de la période" />
-        <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif aide="Prix d'achat des pièces vendues, hors transport" />
-        <Ligne label="Marge brute" valeur={pl.margeBrute} aide="Ventes − achats, hors transport" />
-        <Ligne label="Marge nette" valeur={pl.margeNette} fort aide="Marge brute ÷ 1,20 (TVA sur marge)" />
+        <Ligne label="Chiffre d'affaires" valeur={pl.ca} fort />
+        <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif titre="Prix d'achat des pièces vendues, hors transport" />
+        <Ligne label="Marge brute" valeur={pl.margeBrute} titre="Ventes − achats, hors transport" />
+        <Ligne label="Marge nette" valeur={pl.margeNette} fort titre="Marge brute ÷ 1,20 (TVA sur marge 20 %)" />
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100">
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Frais de vente</p>
-        <Ligne label="Transport" valeur={pl.transport} negatif aide="Frais de port des pièces vendues" />
-        <Ligne label="Commission acheteuse" valeur={pl.commission} negatif aide="10 % de la marge nette jusqu'à 4 000 €, 15 % au-delà" />
-        <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif aide={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
-        <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif aide={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
+        <Ligne label="Transport" valeur={pl.transport} negatif titre="Frais de port des pièces vendues" />
+        <Ligne label="Commission acheteuse" valeur={pl.commission} negatif titre="10 % de la marge nette jusqu'à 4 000 €, 15 % au-delà" />
+        <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif titre={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
+        <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif titre={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
         <Ligne
           label="Fixe vendeuse"
           valeur={pl.fixeVendeuse}
           negatif
-          aide={`${FIXE_VENDEUSE_JOURS} j × ${FIXE_VENDEUSE_HEURES_PAR_JOUR} h au SMIC, charges incluses${pl.nbMois > 1 ? ` × ${pl.nbMois} mois` : ''}`}
+          titre={`${FIXE_VENDEUSE_JOURS} jours de ${FIXE_VENDEUSE_HEURES_PAR_JOUR} h au SMIC, charges patronales incluses${pl.nbMois > 1 ? ` × ${pl.nbMois} mois` : ''}`}
         />
       </div>
 
