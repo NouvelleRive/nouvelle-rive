@@ -574,6 +574,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       investi: investi.montant,
       investiPieces: investi.pieces,
       ca: totalCA,
+      caPieces: ventesCurrentMonth.length,
       achatMarchandise,
       margeBrute,
       margeNette,
@@ -585,7 +586,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       nbMois: mois.length,
       margeNetteNette: margeNette - frais,
     }
-  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse, margeNetteAcheteuse])
+  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, ventesCurrentMonth.length, acheteuseStats, commissionAcheteuse, margeNetteAcheteuse])
 
   // Marge nette HT d'une vente — même règle que le KPI Marge :
   //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
@@ -1919,6 +1920,7 @@ type PLData = {
   investi: number
   investiPieces: number
   ca: number
+  caPieces: number
   achatMarchandise: number
   margeBrute: number
   margeNette: number
@@ -1977,7 +1979,12 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
       />
 
       <div className="mt-2 pt-2 border-t border-gray-100">
-        <Ligne label="Chiffre d'affaires" valeur={pl.ca} fort />
+        <Ligne
+          label="Chiffre d'affaires"
+          valeur={pl.ca}
+          suffixe={`${pl.caPieces} pièce${pl.caPieces > 1 ? 's' : ''}`}
+          fort
+        />
         <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif titre="Prix d'achat des pièces vendues, hors transport" />
         <Ligne label="Marge brute" valeur={pl.margeBrute} titre="Ventes − achats, hors transport" />
         <Ligne label="Marge nette" valeur={pl.margeNette} fort titre="Marge brute ÷ 1,20 (TVA sur marge 20 %)" />
