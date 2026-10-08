@@ -1948,7 +1948,11 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         >
           {negatif ? '\u2212 ' : ''}{formatPrix(Math.abs(valeur))} €
         </span>
-        {suffixe && <span className="text-[10px] text-gray-400 ml-1.5">{suffixe}</span>}
+        {suffixe && (
+          <span className="text-[10px] text-gray-400 ml-2">
+            <span className="mr-1.5">·</span>{suffixe}
+          </span>
+        )}
       </span>
     </div>
   )
