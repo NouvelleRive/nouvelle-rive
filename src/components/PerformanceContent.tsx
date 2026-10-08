@@ -523,7 +523,10 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       try {
         const u = auth.currentUser
         if (!u) return
-        const res = await fetch('/api/acheteuse/investi', {
+        // Le bouton ↻ force la reconstruction du cache produits : sans ça une
+        // date d'achat corrigée n'apparaît qu'au bout du TTL (6 h).
+        const url = refreshKey > 0 ? '/api/acheteuse/investi?refresh=1' : '/api/acheteuse/investi'
+        const res = await fetch(url, {
           headers: { Authorization: `Bearer ${await u.getIdToken()}` },
         })
         const data = await res.json()

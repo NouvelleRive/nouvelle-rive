@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebaseAdmin'
-import { getAllProduitsCached } from '@/lib/getAllProduitsCached'
+import { getAllProduitsCached, forceRefreshProduitsBlob } from '@/lib/getAllProduitsCached'
 import { toMillis } from '@/lib/produitsServer'
 import { ADMIN_EMAIL, ACHETEUSE_EMAIL, ACHETEUSE_TRIGRAMME } from '@/lib/roles'
 
@@ -34,6 +34,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
   }
   try {
+    // ?refresh=1 : reconstruit le cache blob AVANT de lire (bouton ↻ de la page
+    // perf). Sinon une date d'achat corrigée reste invisible jusqu'au TTL (6h).
+    if (req.nextUrl.searchParams.get('refresh') === '1') {
+      await forceRefreshProduitsBlob()
+    }
     const all = await getAllProduitsCached()
     // Clé `yyyy-MM` → { montant, pieces }. La date d'achat est celle de la
     // commande sur la plateforme (`achatDateCommande`) ; à défaut la date de
