@@ -8,7 +8,6 @@
 //   - utiliser un ID de doc déterministe (cf. vintedDocId du parser) pour la dédup
 
 import type { VintedReceipt } from './parser/vinted'
-import type { AchatStatut } from './types'
 
 export type ChineuseNR = {
   /** UID Firebase Auth de la chineuse Nouvelle Rive */
@@ -67,7 +66,6 @@ export type VintedProduitPayload = {
   // ---- champs Achat ----
   source: 'achat-vinted'
   achatProvenance: 'vinted'
-  achatStatut: AchatStatut
   achatOrderId: string
   achatVendeur: string
   achatDateCommande: Date
@@ -107,7 +105,6 @@ export function buildVintedProduitPayload(
 
     source: 'achat-vinted',
     achatProvenance: 'vinted',
-    achatStatut: 'commande',
     achatOrderId: receipt.transactionId,
     achatVendeur: receipt.vendeur,
     achatDateCommande: receipt.dateAchat,

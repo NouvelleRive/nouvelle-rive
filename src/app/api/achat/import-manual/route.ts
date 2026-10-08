@@ -11,9 +11,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { parseVintedReceipt, vintedDocId } from '@/modules/achat/parser/vinted'
-import { parseChronopostEnChemin } from '@/modules/achat/parser/chronopost'
-import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
-import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
 import { parseVintedPage, vintedPageDocId } from '@/modules/achat/parser/vintedPage'
 import { parseWhatnotPurchase, whatnotDocId } from '@/modules/achat/parser/whatnot'
 import { fleekPieceDocId } from '@/modules/achat/parser/fleek'
@@ -105,16 +102,6 @@ export async function POST(req: NextRequest) {
     if (/Whatnot/i.test(body) && /Order\s*#\s*\d+/i.test(body)) {
       return await handleWhatnotPurchase(body, targetChineuse)
     }
-    if (/colis\s+[A-Z0-9]{8,20}\s+est en chemin/i.test(body)) {
-      return await handleCarrierTracking(body)
-    }
-    if (/sera\s+(?:finalement\s+)?livr[ée]\s+(?:dans\s+un\s+autre\s+Point\s+Relais|à\s+cette\s+adresse)/i.test(body)
-        || /est\s+disponible/i.test(body) && /POINT\s*RELAIS/i.test(body)) {
-      return await handleMondialRelay(body)
-    }
-    if (/Pickup\s+Pass/i.test(body) || /arriv[ée]\s+en\s+relais\s+Pickup/i.test(body)) {
-      return await handleChronopostPickup(body)
-    }
     return NextResponse.json({ ok: false, reason: 'contenu non reconnu (colle une page Vinted complète ou un mail)' }, { status: 400 })
   } catch (e: any) {
     console.error('import-manual error:', e)
@@ -124,7 +111,7 @@ export async function POST(req: NextRequest) {
 
 // ---------------------------------------------------------------------------
 // Mêmes handlers que la route webhook /api/webhooks/gmail-achats. Duplication
-// volontaire et minimale : ces 4 fonctions disparaîtront en même temps que
+// volontaire et minimale : ces fonctions disparaîtront en même temps que
 // cette route quand le webhook Pub/Sub aura validé le backlog.
 // ---------------------------------------------------------------------------
 
@@ -220,7 +207,6 @@ async function handleValidatedItems(
         ...(fraisPort != null ? { fraisPort } : {}),
         source: sourceField,
         achatProvenance: provenance,
-        achatStatut: 'commande',
         achatVendeur: it.vendeur || '',
         achatTitreOriginal: it.titreOriginal || it.titre || '',
         ...(it.achatOrderId ? { achatOrderId: String(it.achatOrderId) } : {}),
@@ -298,7 +284,6 @@ async function handleWhatnotPurchase(
       prixAchat: item.prixTotal,
       source: 'achat-whatnot',
       achatProvenance: 'whatnot',
-      achatStatut: 'commande',
       achatOrderId: item.orderId,
       achatVendeur: purchase.vendeur,
       achatTitreOriginal: item.titre,
@@ -349,7 +334,6 @@ async function handleVintedPage(
     ...(page.prixAvecProtection !== null ? { prixAchat: page.prixAvecProtection } : {}),
     source: 'achat-vinted',
     achatProvenance: 'vinted',
-    achatStatut: 'commande',
     achatVendeur: page.vendeur || '',
     achatTitreOriginal: page.titre || '',
     ...(page.itemId ? { achatVintedItemId: page.itemId } : {}),
@@ -393,63 +377,6 @@ async function handleVintedReceipt(
   )
 
   return NextResponse.json({ ok: true, docId, sku, kind: 'vinted-receipt' })
-}
-
-async function handleCarrierTracking(body: string) {
-  const r = parseChronopostEnChemin(body)
-  if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason })
-
-  const target = await findVintedProduitSansSuivi()
-  if (!target) {
-    return NextResponse.json({ ok: false, reason: 'aucun brouillon Vinted commandé sans suivi', numeroSuivi: r.numeroSuivi })
-  }
-  await target.ref.update({
-    achatStatut: 'expedie',
-    achatNumeroSuivi: r.numeroSuivi,
-    achatTransporteur: 'chronopost',
-  })
-  return NextResponse.json({ ok: true, docId: target.ref.id, kind: 'tracking-set', numeroSuivi: r.numeroSuivi })
-}
-
-async function handleMondialRelay(body: string) {
-  const r = parseMondialRelayDispo(body)
-  if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason })
-
-  const target = await findProduitByNumeroSuivi(r.numeroColis)
-  if (!target) {
-    return NextResponse.json({ ok: false, reason: 'aucun produit avec ce numéro de colis', numeroColis: r.numeroColis })
-  }
-  const updates: Record<string, unknown> = {
-    achatTransporteur: 'mondial-relay',
-    achatLieuLivraison: r.lieuLivraison,
-  }
-  if (r.kind === 'disponible') {
-    updates.achatStatut = 'livre'
-    updates.achatCodeRetrait = r.codeRetrait
-    updates.achatDateLimiteRetrait = r.dateLimiteRetrait
-    updates.achatDateLivraison = Timestamp.now()
-  }
-  await target.ref.update(updates)
-  return NextResponse.json({ ok: true, docId: target.ref.id, kind: `mondial-relay-${r.kind}` })
-}
-
-async function handleChronopostPickup(body: string) {
-  const r = parseChronopostPickupDispo(body)
-  if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason })
-
-  const target = await findProduitByNumeroSuivi(r.numeroSuivi)
-  if (!target) {
-    return NextResponse.json({ ok: false, reason: 'aucun produit avec ce numéro de suivi', numeroSuivi: r.numeroSuivi })
-  }
-  await target.ref.update({
-    achatStatut: 'livre',
-    achatTransporteur: 'chronopost-pickup',
-    achatLieuLivraison: r.lieuLivraison,
-    achatCodeRetrait: r.codeRetrait,
-    achatDateLimiteRetrait: r.dateLimiteRetrait,
-    achatDateLivraison: Timestamp.now(),
-  })
-  return NextResponse.json({ ok: true, docId: target.ref.id, kind: 'chronopost-pickup' })
 }
 
 // ---------------------------------------------------------------------------
@@ -511,25 +438,3 @@ async function computeNextSkuNum(trigramme: string): Promise<number> {
   return maxNum + 1
 }
 
-async function findVintedProduitSansSuivi() {
-  const snap = await adminDb
-    .collection('produits')
-    .where('source', '==', 'achat-vinted')
-    .where('achatStatut', '==', 'commande')
-    .orderBy('createdAt', 'desc')
-    .limit(20)
-    .get()
-  for (const d of snap.docs) {
-    if (!d.data().achatNumeroSuivi) return d
-  }
-  return null
-}
-
-async function findProduitByNumeroSuivi(numero: string) {
-  const snap = await adminDb
-    .collection('produits')
-    .where('achatNumeroSuivi', '==', numero)
-    .limit(1)
-    .get()
-  return snap.empty ? null : snap.docs[0]
-}

@@ -153,7 +153,6 @@ if (!receipt.ok) {
     ['trigramme', payload.trigramme, 'NR'],
     ['chineurUid', payload.chineurUid, 'NR-uid-test'],
     ['source', payload.source, 'achat-vinted'],
-    ['achatStatut', payload.achatStatut, 'commande'],
     ['achatOrderId', payload.achatOrderId, '20032156409'],
     ['achatVendeur', payload.achatVendeur, 'fripants'],
     ['achatTitreOriginal', payload.achatTitreOriginal, 'Jean Twist Barrel Leg COS gris foncé / noir | W27'],

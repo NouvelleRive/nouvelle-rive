@@ -16,7 +16,7 @@
     import autoTable from 'jspdf-autotable'
     import ProductForm, { ProductFormData } from '@/components/ProductForm'
     import FilterBox from '@/components/FilterBox'
-    import { libelleAchatStatut, libelleTransporteur, suggestPrixVente, type AchatStatut } from '@/modules/achat/types'
+    import { suggestPrixVente } from '@/modules/achat/types'
     import ImportMailModal from '@/modules/achat/ImportMailModal'
     import { calcMargeNette, calcMargeNetteAvecPort } from '@/lib/marge'
     import { formatPrix } from '@/lib/formatPrix'
@@ -96,17 +96,10 @@
       fraisPort?: number
       marge?: number
       achatProvenance?: 'vinted' | 'vestiaire' | 'drouot'
-      achatStatut?: 'commande' | 'expedie' | 'livre' | 'recu-boutique' | 'non-conforme' | 'jamais-recu' | 'perso'
       achatOrderId?: string
       achatVendeur?: string
       achatDateCommande?: Timestamp
       achatTitreOriginal?: string
-      achatNumeroSuivi?: string
-      achatTransporteur?: string
-      achatLieuLivraison?: string
-      achatCodeRetrait?: string
-      achatDateLivraison?: Timestamp
-      achatDateLimiteRetrait?: string
     }
 
     export type Deposant = {
@@ -1321,10 +1314,9 @@
 
               // Brouillon achat (Vinted/Vestiaire/Drouot) pas encore arrivé en boutique :
               // bordure aux couleurs de la plateforme + opacité, jusqu'à ce que la pièce
-              // soit marquée 'recu-boutique'. Voir src/modules/achat/types.ts.
+              // soit reçue (`recu: true`). Voir src/modules/achat/types.ts.
               const achatSource = typeof p.source === 'string' && p.source.startsWith('achat-') ? p.source : null
-              const achatStatut = (p as any).achatStatut as string | undefined
-              const isAchatBrouillon = !!achatSource && achatStatut !== 'recu-boutique'
+              const isAchatBrouillon = !!achatSource && p.recu !== true
               const achatBorderClass = isAchatBrouillon && !isSelected
                 ? achatSource === 'achat-vinted' ? 'border-[#09B1BA] border-2' :
                   achatSource === 'achat-vestiaire' ? 'border-black border-2' :
@@ -1360,13 +1352,9 @@
                           </span>
                         </span>
                         {/* Badge statut directement sous la date */}
-                        {isAchatBrouillon && p.achatStatut ? (
-                          <span className="inline-flex items-center gap-1 text-[12px] text-[#09B1BA]">
-                            <Clock size={12} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
-                          </span>
-                        ) : p.recu === false ? (
+                        {p.recu !== true && (
                           <span className="inline-flex items-center gap-1 text-[12px] text-amber-600"><Clock size={12} /> En attente</span>
-                        ) : null}
+                        )}
                         {/* Miniatures secondaires */}
                         {allImages.length > 1 && (
                           <div className="flex gap-1 mt-1">
@@ -1462,20 +1450,6 @@
                       <button onClick={() => handleToggleForceDisplay(p)} className={`ml-auto p-0.5 rounded ${isHidden(p) ? 'text-gray-300' : 'text-green-500'}`}>{isHidden(p) ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                     </div>
 
-                    {/* Encart Livraison — uniquement pour les brouillons achat pas encore reçus. */}
-                    {isAchatBrouillon && (
-                      <div className="mt-2 pt-2 border-t border-[#09B1BA]/30 text-[11px] flex flex-wrap gap-x-3 gap-y-1">
-                        <span className="font-semibold text-[#09B1BA] uppercase tracking-wide text-[10px] basis-full">Livraison</span>
-                        {p.achatTransporteur && <span><span className="text-gray-400">Livreur:</span> <span className="font-medium">{libelleTransporteur(p.achatTransporteur)}</span></span>}
-                        {p.achatStatut && <span><span className="text-gray-400">Statut:</span> <span className="font-medium">{libelleAchatStatut(p.achatStatut as AchatStatut)}</span></span>}
-                        {p.achatDateLivraison instanceof Timestamp && <span><span className="text-gray-400">Date:</span> <span className="font-medium">{format(p.achatDateLivraison.toDate(), 'd MMM yyyy', { locale: fr })}</span></span>}
-                        {p.achatNumeroSuivi && <span><span className="text-gray-400">Suivi:</span> <span className="font-medium">{p.achatNumeroSuivi}</span></span>}
-                        {p.achatCodeRetrait && (
-                          <span><span className="text-gray-400">Code retrait:</span> <span className="font-medium">{p.achatCodeRetrait}{p.achatDateLimiteRetrait ? ` (avant ${p.achatDateLimiteRetrait})` : ''}</span></span>
-                        )}
-                        {p.achatLieuLivraison && <span className="basis-full"><span className="text-gray-400">Adresse:</span> <span className="font-medium">{p.achatLieuLivraison}</span></span>}
-                      </div>
-                    )}
 
                     {isExpanded && allImages.length > 2 && (
                       <div className="mt-2 pt-2 border-t border-gray-100">
@@ -1515,14 +1489,7 @@
                         </span>
                       </p>
                       {/* Display chineur retiré : info inutile dans la grille admin (mais le champ reste en base). */}
-                      {isAchatBrouillon && p.achatStatut ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-[#09B1BA] mt-1">
-                          <Clock size={12} /> {libelleAchatStatut(p.achatStatut as AchatStatut)}
-                          {p.achatStatut === 'livre' && p.achatLieuLivraison && (
-                            <span className="text-gray-500"> · {p.achatLieuLivraison}</span>
-                          )}
-                        </span>
-                      ) : p.recu === false && (
+                      {p.recu !== true && (
                         <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1"><Clock size={12} /> En attente de réception</span>
                       )}
                       {p.recu === true && p.source === 'deposante' && p.dateReception instanceof Timestamp && (
@@ -1561,20 +1528,6 @@
     🚨 À récupérer – prix baissé il y a 1 mois+
   </span>
 )}
-                      {/* Encart Livraison desktop — même règle d'affichage que mobile */}
-                      {isAchatBrouillon && (
-                        <div className="mt-2 pt-2 border-t border-[#09B1BA]/30 text-[11px] flex flex-wrap gap-x-3 gap-y-1">
-                          <span className="font-semibold text-[#09B1BA] uppercase tracking-wide text-[10px] basis-full">Livraison</span>
-                          {p.achatTransporteur && <span><span className="text-gray-400">Livreur:</span> <span className="font-medium">{libelleTransporteur(p.achatTransporteur)}</span></span>}
-                          {p.achatStatut && <span><span className="text-gray-400">Statut:</span> <span className="font-medium">{libelleAchatStatut(p.achatStatut as AchatStatut)}</span></span>}
-                          {p.achatDateLivraison instanceof Timestamp && <span><span className="text-gray-400">Date:</span> <span className="font-medium">{format(p.achatDateLivraison.toDate(), 'd MMM yyyy', { locale: fr })}</span></span>}
-                          {p.achatNumeroSuivi && <span><span className="text-gray-400">Suivi:</span> <span className="font-medium">{p.achatNumeroSuivi}</span></span>}
-                          {p.achatCodeRetrait && (
-                            <span><span className="text-gray-400">Code retrait:</span> <span className="font-medium">{p.achatCodeRetrait}{p.achatDateLimiteRetrait ? ` (avant ${p.achatDateLimiteRetrait})` : ''}</span></span>
-                          )}
-                          {p.achatLieuLivraison && <span className="basis-full"><span className="text-gray-400">Adresse:</span> <span className="font-medium">{p.achatLieuLivraison}</span></span>}
-                        </div>
-                      )}
                     </div>
                     <div className="hidden md:flex flex-col text-sm text-gray-600 space-y-1 min-w-[120px]">
                       <p><span className="text-gray-400">Cat:</span> <span className="font-medium text-gray-700">{cat || '—'}</span></p>

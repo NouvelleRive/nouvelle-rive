@@ -1,12 +1,9 @@
 // Webhook qui reçoit les mails relayés par la Firebase Function de watch Gmail
 // (fonction `gmailWatcherAchats` à ajouter dans functions/index.js).
 //
-// Détecte le type de mail (Vinted/Chronopost/Mondial Relay/Chronopost Pickup),
-// appelle le parser approprié, puis :
+// Détecte le type de mail Vinted, appelle le parser approprié, puis :
 //   - mail Vinted "Ton reçu" → crée un brouillon produit (chineuse NR)
 //   - mail Vinted "Nouveau message" → pose la photo de l'annonce sur la pièce
-//   - mail transporteur "en chemin" → ajoute le numéro de suivi au produit
-//   - mail transporteur "disponible" → marque le produit comme livré
 //
 // Authentification simple via header X-Internal-Token (la Function doit poser
 // le même token). Tous les writes Firestore sont déterministes (anti-doublon).
@@ -20,9 +17,6 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { sendPushToOwner } from '@/lib/webpush'
 import sharp from 'sharp'
 import { parseVintedReceipt, vintedDocId } from '@/modules/achat/parser/vinted'
-import { parseChronopostEnChemin } from '@/modules/achat/parser/chronopost'
-import { parseMondialRelayDispo } from '@/modules/achat/parser/mondialRelay'
-import { parseChronopostPickupDispo } from '@/modules/achat/parser/chronopostPickup'
 import { buildVintedProduitPayload } from '@/modules/achat/payload'
 import { ACHETEUSE_TRIGRAMME } from '@/lib/roles'
 import { detectMarque } from '@/lib/marques'
@@ -104,21 +98,6 @@ export async function POST(req: NextRequest) {
     // le lien de l'annonce, donc la seule photo récupérable sans navigateur.
     if (/vinted\.fr/i.test(from) && /Nouveau message à propos de/i.test(subject)) {
       return await handleVintedPhoto(body, subject)
-    }
-
-    // --- Chronopost "en chemin" → ajout numéro de suivi -------------------
-    if (/chronopost\.fr/i.test(from) && /en chemin/i.test(subject)) {
-      return await handleCarrierTracking(body, 'chronopost')
-    }
-
-    // --- Mondial Relay (disponible ou redirigé) → livraison ---------------
-    if (/mondialrelay\.fr/i.test(from)) {
-      return await handleMondialRelay(body)
-    }
-
-    // --- Chronopost Pickup "arrivé en relais" → livraison -----------------
-    if (/pickup\.fr/i.test(from)) {
-      return await handleChronopostPickup(body)
     }
 
     // Mail d'un expéditeur suivi mais dont on n'a rien à tirer (évaluation,
@@ -322,85 +301,6 @@ async function posePhotoCarree(docId: string, srcUrl: string): Promise<string | 
 }
 
 // ---------------------------------------------------------------------------
-// Mail transporteur "en chemin" : on a juste le numéro de suivi, pas la ref
-// Vinted. Heuristique : on attache au brouillon Vinted le plus récent en statut
-// `commande` qui n'a pas encore de numéro de suivi. À sa réception du mail
-// "expédié" Vinted (à parser plus tard), on pourra matcher proprement.
-// ---------------------------------------------------------------------------
-async function handleCarrierTracking(body: string, transporteur: 'chronopost') {
-  const r = parseChronopostEnChemin(body)
-  if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason })
-
-  const target = await findVintedProduitSansSuivi()
-  if (!target) {
-    return NextResponse.json({ ok: false, reason: 'aucun brouillon Vinted commandé sans suivi', numeroSuivi: r.numeroSuivi })
-  }
-
-  await target.ref.update({
-    achatStatut: 'expedie',
-    achatNumeroSuivi: r.numeroSuivi,
-    achatTransporteur: transporteur,
-  })
-
-  return NextResponse.json({ ok: true, docId: target.ref.id, kind: 'tracking-set', numeroSuivi: r.numeroSuivi })
-}
-
-// ---------------------------------------------------------------------------
-// Mondial Relay : matching par numéro de colis avec achatNumeroSuivi.
-// Si pas de match : on logge un warning (mail orphelin) mais on renvoie 200
-// pour éviter les retries.
-// ---------------------------------------------------------------------------
-async function handleMondialRelay(body: string) {
-  const r = parseMondialRelayDispo(body)
-  if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason })
-
-  const target = await findProduitByNumeroSuivi(r.numeroColis)
-  if (!target) {
-    return NextResponse.json({ ok: false, reason: 'aucun produit avec ce numéro de colis', numeroColis: r.numeroColis })
-  }
-
-  const updates: Record<string, unknown> = {
-    achatTransporteur: 'mondial-relay',
-    achatLieuLivraison: r.lieuLivraison,
-  }
-  if (r.kind === 'disponible') {
-    updates.achatStatut = 'livre'
-    updates.achatCodeRetrait = r.codeRetrait
-    updates.achatDateLimiteRetrait = r.dateLimiteRetrait
-    updates.achatDateLivraison = Timestamp.now()
-  }
-  // kind === 'redirige' : on met juste l'adresse, statut reste 'expedie'
-
-  await target.ref.update(updates)
-
-  return NextResponse.json({ ok: true, docId: target.ref.id, kind: `mondial-relay-${r.kind}` })
-}
-
-// ---------------------------------------------------------------------------
-// Chronopost Pickup : matching par numéro de suivi (XW…).
-// ---------------------------------------------------------------------------
-async function handleChronopostPickup(body: string) {
-  const r = parseChronopostPickupDispo(body)
-  if (!r.ok) return NextResponse.json({ ok: false, reason: r.reason })
-
-  const target = await findProduitByNumeroSuivi(r.numeroSuivi)
-  if (!target) {
-    return NextResponse.json({ ok: false, reason: 'aucun produit avec ce numéro de suivi', numeroSuivi: r.numeroSuivi })
-  }
-
-  await target.ref.update({
-    achatStatut: 'livre',
-    achatTransporteur: 'chronopost-pickup',
-    achatLieuLivraison: r.lieuLivraison,
-    achatCodeRetrait: r.codeRetrait,
-    achatDateLimiteRetrait: r.dateLimiteRetrait,
-    achatDateLivraison: Timestamp.now(),
-  })
-
-  return NextResponse.json({ ok: true, docId: target.ref.id, kind: 'chronopost-pickup' })
-}
-
-// ---------------------------------------------------------------------------
 // Helpers Firestore
 // ---------------------------------------------------------------------------
 
@@ -427,25 +327,3 @@ async function computeNextSku(trigramme: string): Promise<string> {
   return `${trigramme}${maxNum + 1}`
 }
 
-async function findVintedProduitSansSuivi() {
-  const snap = await adminDb
-    .collection('produits')
-    .where('source', '==', 'achat-vinted')
-    .where('achatStatut', '==', 'commande')
-    .orderBy('createdAt', 'desc')
-    .limit(20)
-    .get()
-  for (const d of snap.docs) {
-    if (!d.data().achatNumeroSuivi) return d
-  }
-  return null
-}
-
-async function findProduitByNumeroSuivi(numero: string) {
-  const snap = await adminDb
-    .collection('produits')
-    .where('achatNumeroSuivi', '==', numero)
-    .limit(1)
-    .get()
-  return snap.empty ? null : snap.docs[0]
-}

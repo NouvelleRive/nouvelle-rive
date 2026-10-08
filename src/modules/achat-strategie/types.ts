@@ -64,7 +64,6 @@ export type StrategieProduit = {
   closureType?: string | null
   prix?: number | null
   vendu?: boolean
-  achatStatut?: string
   recu?: boolean
 }
 
@@ -111,12 +110,10 @@ export type StrategieRealise = {
   aRestocker: RuleResult[]
 }
 
-/** Une pièce est-elle « en surface » = reçue boutique et pas encore vendue.
- *  Certaines pièces sont reçues sans passer par le flux achat (pas d'`achatStatut`)
- *  mais portent `recu: true` → elles comptent aussi. */
+/** Une pièce est-elle « en surface » = physiquement en boutique et pas vendue.
+ *  `recu` est le seul état de réception (cf. src/modules/achat/types.ts). */
 export function estEnSurface(p: StrategieProduit): boolean {
-  if (p.vendu) return false
-  return p.achatStatut === 'recu-boutique' || p.recu === true
+  return p.recu === true && !p.vendu
 }
 
 /**
