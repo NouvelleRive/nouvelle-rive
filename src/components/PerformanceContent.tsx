@@ -473,11 +473,11 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
   // (regroupement mensuel puis somme → correct en vue mois comme en vue année).
   const isAcheteuseView = chineuseTrigramme === ACHETEUSE_TRIGRAMME
   const acheteuseStats = useMemo(() => {
-    if (!isAcheteuseView) return { marge: 0, commission: 0, margeBrute: 0, coutAchatVendu: 0 }
+    if (!isAcheteuseView) return { marge: 0, commission: 0, achatVendu: 0, portVendu: 0 }
     const margeParMois = new Map<string, number>()
     let margeTotale = 0
-    let margeBruteTotale = 0
-    let coutAchatVendu = 0
+    let achatVendu = 0
+    let portVendu = 0
     ventesCurrentMonth.forEach(v => {
       const d = getDateVente(v)
       if (!d) return
@@ -487,10 +487,9 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       if (typeof prixAchat !== 'number' || prixAchat <= 0) return
       const fraisPort = (v as any).fraisPort ?? (produit as any)?.fraisPort ?? 0
       const port = typeof fraisPort === 'number' ? fraisPort : 0
-      const margeBrute = Math.max(prixVente - prixAchat - port, 0)
-      const marge = margeTtcVersHt(margeBrute)
-      margeBruteTotale += margeBrute
-      coutAchatVendu += prixAchat + port
+      const marge = margeTtcVersHt(Math.max(prixVente - prixAchat - port, 0))
+      achatVendu += prixAchat
+      portVendu += port
       margeTotale += marge
       const key = `${d.getFullYear()}-${d.getMonth()}`
       margeParMois.set(key, (margeParMois.get(key) || 0) + marge)
@@ -500,8 +499,8 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     return {
       marge: Math.round(margeTotale),
       commission,
-      margeBrute: Math.round(margeBruteTotale),
-      coutAchatVendu: Math.round(coutAchatVendu),
+      achatVendu: Math.round(achatVendu),
+      portVendu: Math.round(portVendu),
     }
   }, [isAcheteuseView, ventesCurrentMonth, produitsMap])
   const commissionAcheteuse = acheteuseStats.commission
@@ -547,9 +546,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       ? []
       : eachMonthOfInterval({ start: currentMonthStart, end: borne })
 
-    // Marge brute = ventes − achats (prix d'achat + transport des pièces vendues).
-    const achatMarchandise = acheteuseStats.coutAchatVendu
+    // Marge brute = ventes − achats. Le transport n'y est PAS : il est exclu de
+    // la base de la TVA sur marge, donc il se déduit après, en frais.
+    const achatMarchandise = acheteuseStats.achatVendu
     const margeBrute = totalCA - achatMarchandise
+    const margeNette = Math.round(margeTtcVersHt(margeBrute))
+    const transport = acheteuseStats.portVendu
 
     const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
     const fraisPaiement = Math.round(totalCA * TAUX_FRAIS_PAIEMENT)
@@ -558,7 +560,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       (s, d) => s + fixeVendeuseMensuel(format(d, 'yyyy-MM-dd')),
       0,
     )
-    const fraisVendeuse = commissionAcheteuse + bonusVendeuse + fraisPaiement + fixeVendeuse
+    const frais = transport + commissionAcheteuse + bonusVendeuse + fraisPaiement + fixeVendeuse
 
     return {
       investi: investi.total.montant,
@@ -568,13 +570,14 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       ca: totalCA,
       achatMarchandise,
       margeBrute,
-      margeNette: acheteuseStats.marge,
+      margeNette,
+      transport,
       commission: commissionAcheteuse,
       bonusVendeuse,
       fraisPaiement,
       fixeVendeuse,
       nbMois: mois.length,
-      margeNetteNette: acheteuseStats.marge - fraisVendeuse,
+      margeNetteNette: margeNette - frais,
     }
   }, [isAcheteuseView, investi, currentMonthStart, currentMonthEnd, totalCA, acheteuseStats, commissionAcheteuse])
 
@@ -1915,6 +1918,7 @@ type PLData = {
   achatMarchandise: number
   margeBrute: number
   margeNette: number
+  transport: number
   commission: number
   bonusVendeuse: number
   fraisPaiement: number
@@ -1950,10 +1954,6 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
       <h3 className="text-sm font-semibold text-gray-900 mb-1">P&amp;L</h3>
-      <p className="text-[10px] text-gray-400 mb-2">
-        Montant investi : cumul depuis le début. Le reste sur la période affichée.
-        TTC jusqu&apos;à la marge brute, puis HT (TVA sur marge 20 %).
-      </p>
 
       <Ligne
         label="Montant investi"
@@ -1963,13 +1963,14 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
 
       <div className="mt-2 pt-2 border-t border-gray-100">
         <Ligne label="Chiffre d'affaires" valeur={pl.ca} fort aide="Ventes de la période" />
-        <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif aide="Prix d'achat + transport des pièces vendues" />
-        <Ligne label="Marge brute" valeur={pl.margeBrute} aide="Ventes − achats" />
+        <Ligne label="Achat marchandise" valeur={pl.achatMarchandise} negatif aide="Prix d'achat des pièces vendues, hors transport" />
+        <Ligne label="Marge brute" valeur={pl.margeBrute} aide="Ventes − achats, hors transport" />
         <Ligne label="Marge nette" valeur={pl.margeNette} fort aide="Marge brute ÷ 1,20 (TVA sur marge)" />
       </div>
 
       <div className="mt-2 pt-2 border-t border-gray-100">
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Frais de vente</p>
+        <Ligne label="Transport" valeur={pl.transport} negatif aide="Frais de port des pièces vendues" />
         <Ligne label="Commission acheteuse" valeur={pl.commission} negatif aide="10 % de la marge nette jusqu'à 4 000 €, 15 % au-delà" />
         <Ligne label="Bonus vendeuse" valeur={pl.bonusVendeuse} negatif aide={`${TAUX_BONUS_VENDEUSE * 100} % du CA`} />
         <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif aide={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
