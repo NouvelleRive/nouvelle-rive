@@ -87,6 +87,7 @@ async function readProduitsACH(): Promise<StrategieProduit[]> {
       prix: typeof p.prix === 'number' ? p.prix : null,
       vendu: !!p.vendu,
       achatStatut: p.achatStatut,
+      recu: p.recu === true,
     }))
 }
 
