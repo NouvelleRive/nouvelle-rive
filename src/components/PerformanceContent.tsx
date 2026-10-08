@@ -16,6 +16,8 @@ import { margeTtcVersHt } from '@/lib/marge'
 import {
   TAUX_BONUS_VENDEUSE,
   TAUX_FRAIS_PAIEMENT,
+  FIXE_VENDEUSE_JOURS,
+  FIXE_VENDEUSE_HEURES_PAR_JOUR,
   fixeVendeuseMensuel,
 } from '@/lib/coutsVendeuse'
 
@@ -501,12 +503,18 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       portVendu: Math.round(portVendu),
     }
   }, [isAcheteuseView, ventesCurrentMonth, produitsMap])
-  const commissionAcheteuse = acheteuseStats.commission
-
   // Marge nette acheteuse — UNE seule définition, partagée par le KPI et le P&L :
   // (ventes − achats) ÷ 1,20. Le transport n'y entre pas (exclu de la base de la
   // TVA sur marge), il se déduit après, en frais de vente.
-  const margeNetteAcheteuse = Math.round(margeTtcVersHt(totalCA - acheteuseStats.achatVendu))
+  const margeBruteHtAcheteuse = Math.round(margeTtcVersHt(totalCA - acheteuseStats.achatVendu))
+
+  // Frais de vente, puis marge nette = marge brute HT − ces frais. Le bonus de
+  // l'acheteuse se calcule sur cette marge nette (10 %, 15 % au-delà de 4 000 €).
+  const transportAcheteuse = acheteuseStats.portVendu
+  const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
+  const fraisPaiement = Math.round(totalCA * TAUX_FRAIS_PAIEMENT)
+  const margeNetteAcheteuse = margeBruteHtAcheteuse - transportAcheteuse - bonusVendeuse - fraisPaiement
+  const bonusAcheteuse = calcCommissionAchat(margeNetteAcheteuse)
 
   // ── P&L acheteuse ─────────────────────────────────────────────────────────
   // Montant investi : (prixAchat + fraisPort) des pièces ACH achetées sur la
@@ -556,13 +564,14 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
     // de la base de la TVA sur marge, il se déduit après.
     const achatMarchandise = acheteuseStats.achatVendu
     const margeBruteTtc = totalCA - achatMarchandise
-    const margeBruteHt = margeNetteAcheteuse
     // TVA sur marge : la marge brute est TTC, la TVA vaut marge × 20/120.
-    const tva = margeBruteTtc - margeBruteHt
+    const tva = margeBruteTtc - margeBruteHtAcheteuse
 
-    const transport = acheteuseStats.portVendu
-    const bonusVendeuse = Math.round(totalCA * TAUX_BONUS_VENDEUSE)
-    const fraisPaiement = Math.round(totalCA * TAUX_FRAIS_PAIEMENT)
+    // Fixe vendeuse : un forfait par mois de la période, au SMIC de ce mois-là.
+    const fixeVendeuse = mois.reduce(
+      (s, d) => s + fixeVendeuseMensuel(format(d, 'yyyy-MM-dd')),
+      0,
+    )
 
     return {
       investi: investi.montant,
@@ -572,14 +581,18 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
       achatMarchandise,
       margeBruteTtc,
       tva,
-      margeBruteHt,
-      transport,
+      margeBruteHt: margeBruteHtAcheteuse,
+      transport: transportAcheteuse,
       bonusVendeuse,
       fraisPaiement,
+      margeNette: margeNetteAcheteuse,
+      bonusAcheteuse,
+      fixeVendeuse,
       nbMois: mois.length,
-      margeNette: margeBruteHt - transport - bonusVendeuse - fraisPaiement,
+      margeNetteNette: margeNetteAcheteuse - bonusAcheteuse - fixeVendeuse,
     }
-  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, ventesCurrentMonth.length, acheteuseStats, commissionAcheteuse, margeNetteAcheteuse])
+  }, [isAcheteuseView, investiParMois, currentMonthStart, currentMonthEnd, totalCA, ventesCurrentMonth.length,
+      acheteuseStats, margeBruteHtAcheteuse, transportAcheteuse, bonusVendeuse, fraisPaiement, margeNetteAcheteuse, bonusAcheteuse])
 
   // Marge nette HT d'une vente — même règle que le KPI Marge :
   //   stock maison (NR/ACH) → (prixVente − prixAchat) ÷ 1,20 (TVA sur marge)
@@ -1202,12 +1215,12 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
           <KpiCard title="Marge" value={formatPrix(classementChineuses.reduce((s, c) => s + c.benef, 0))} unit="€ HT" evolution={totalCA > 0 ? String(Math.round(classementChineuses.reduce((s, c) => s + c.benef, 0) / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         )}
         {!isAdmin && isHousePurchaseTrigramme(chineuseTrigramme) && (() => {
-          // Acheteuse : marge nette AVEC port (son coût réel). NR : marge TVA hors port.
-          const marge = isAcheteuseView ? margeNetteAcheteuse : totalMargeNetteNR
-          return <KpiCard title="Marge nette" value={formatPrix(marge)} unit="€ HT" evolution={totalCA > 0 ? String(Math.round(marge / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
+          // Acheteuse : marge brute HT (= marge TVA déduite), même chiffre que le P&L.
+          const marge = isAcheteuseView ? margeBruteHtAcheteuse : totalMargeNetteNR
+          return <KpiCard title={isAcheteuseView ? 'Marge brute HT' : 'Marge nette'} value={formatPrix(marge)} unit="€ HT" evolution={totalCA > 0 ? String(Math.round(marge / totalCA * 100)) : null} icon={Award} color="bg-pink-500" />
         })()}
         {isAcheteuseView && (
-          <KpiCard title="Commission" value={formatPrix(commissionAcheteuse)} unit="€" icon={Star} color="bg-[#09B1BA]" />
+          <KpiCard title="Bonus" value={formatPrix(bonusAcheteuse)} unit="€" icon={Star} color="bg-[#09B1BA]" />
         )}
       </div>
 
@@ -1921,8 +1934,11 @@ type PLData = {
   transport: number
   bonusVendeuse: number
   fraisPaiement: number
-  nbMois: number
   margeNette: number
+  bonusAcheteuse: number
+  fixeVendeuse: number
+  nbMois: number
+  margeNetteNette: number
 }
 
 function PLAcheteuse({ pl }: { pl: PLData }) {
@@ -1989,12 +2005,23 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
         <Ligne label="Frais de paiement" valeur={pl.fraisPaiement} negatif titre={`${TAUX_FRAIS_PAIEMENT * 100} % du CA`} />
       </div>
 
-      <Ligne
-        label="Marge nette"
-        valeur={pl.margeNette}
-        total
-        titre="Marge brute HT − transport − bonus vendeuse − frais de paiement"
-      />
+      <div className="mt-1 pt-2 border-t border-gray-200">
+        <Ligne
+          label="Marge nette"
+          valeur={pl.margeNette}
+          fort
+          titre="Marge brute HT − transport − bonus vendeuse − frais de paiement"
+        />
+        <Ligne label="Bonus acheteuse" valeur={pl.bonusAcheteuse} negatif titre="10 % de la marge nette (15 % au-delà de 4 000 €)" />
+        <Ligne
+          label="Fixe vendeuse"
+          valeur={pl.fixeVendeuse}
+          negatif
+          titre={`${FIXE_VENDEUSE_JOURS} jours de ${FIXE_VENDEUSE_HEURES_PAR_JOUR} h au SMIC, charges patronales incluses${pl.nbMois > 1 ? ` × ${pl.nbMois} mois` : ''}`}
+        />
+      </div>
+
+      <Ligne label="Marge nette nette" valeur={pl.margeNetteNette} total />
     </div>
   )
 }
