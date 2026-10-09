@@ -11,7 +11,7 @@ export function formatPrix(n: number | null | undefined, opts?: { decimals?: 0 |
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     })
-    .replace(/[  ]/g, ' ')
+    .replace(/[\u202f\u00a0\u2009]/g, ' ')
 }
 
 // Version avec symbole € collé : "1 500 €"

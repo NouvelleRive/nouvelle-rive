@@ -9,7 +9,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth } from '@/lib/firebaseAdmin'
+import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
+import { AggregateField, Timestamp } from 'firebase-admin/firestore'
 import { getBankAccounts, getFiscalYears, getTrialBalance, type TrialBalanceLine } from '@/lib/pennylane'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -77,6 +78,60 @@ function agreger(lignes: TrialBalanceLine[]) {
   }
 }
 
+// Découpe une période en mois civils (bornés par la période).
+function moisDe(start: string, end: string) {
+  const out: { cle: string; start: string; end: string }[] = []
+  const d = new Date(start + 'T12:00:00')
+  d.setDate(1)
+  const fin = new Date(end + 'T12:00:00')
+  while (d <= fin && out.length < 36) {
+    const an = d.getFullYear()
+    const mo = d.getMonth()
+    const premier = `${an}-${String(mo + 1).padStart(2, '0')}-01`
+    const dernier = new Date(an, mo + 1, 0)
+    const dernierStr = `${an}-${String(mo + 1).padStart(2, '0')}-${String(dernier.getDate()).padStart(2, '0')}`
+    out.push({
+      cle: `${an}-${String(mo + 1).padStart(2, '0')}`,
+      start: premier < start ? start : premier,
+      end: dernierStr > end ? end : dernierStr,
+    })
+    d.setMonth(mo + 1)
+  }
+  return out
+}
+
+// Exécute `taches` par paquets pour ne pas marteler l'API Pennylane.
+async function parPaquets<T>(taches: (() => Promise<T>)[], taille = 4): Promise<T[]> {
+  const out: T[] = []
+  for (let i = 0; i < taches.length; i += taille) {
+    out.push(...(await Promise.all(taches.slice(i, i + taille).map(t => t()))))
+  }
+  return out
+}
+
+// Pièces vendues et CA encaissé : ça n'existe pas dans la compta (Pennylane ne
+// connaît que des commissions), ça vient de nos ventes. Requêtes d'agrégation
+// Firestore : un count/sum ne lit pas les documents, ça reste quasi gratuit.
+async function volumesParMois(mois: { cle: string; start: string; end: string }[]) {
+  const res = await Promise.all(mois.map(async m => {
+    const debut = Timestamp.fromDate(new Date(m.start + 'T00:00:00'))
+    const fin = Timestamp.fromDate(new Date(m.end + 'T23:59:59.999'))
+    const base = adminDb.collection('ventes')
+      .where('dateVente', '>=', debut)
+      .where('dateVente', '<=', fin)
+    // Le count ne demande aucun index ; la somme de prixVenteReel en réclame un
+    // composite (dateVente, prixVenteReel). Tant qu'il n'existe pas, on affiche
+    // les pièces sans le CA plutôt que de faire tomber toute la page.
+    const [pieces, ca] = await Promise.all([
+      base.count().get().then(s => s.data().count || 0).catch(() => 0),
+      base.aggregate({ ca: AggregateField.sum('prixVenteReel') }).get()
+        .then(s => s.data().ca || 0).catch(() => null),
+    ])
+    return { cle: m.cle, pieces, ca }
+  }))
+  return Object.fromEntries(res.map(r => [r.cle, { pieces: r.pieces, ca: r.ca }]))
+}
+
 export async function GET(req: NextRequest) {
   const refus = await requireAdmin(req)
   if (refus) return refus
@@ -90,7 +145,13 @@ export async function GET(req: NextRequest) {
     const start = sp.get('start') || courant?.start || `${new Date().getFullYear()}-01-01`
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
-    const [comptes, balance] = await Promise.all([getBankAccounts(), getTrialBalance(start, end)])
+    const mois = moisDe(start, end)
+    const [comptes, balance, balancesMois, volumes] = await Promise.all([
+      getBankAccounts(),
+      getTrialBalance(start, end),
+      parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
+      volumesParMois(mois),
+    ])
 
     const banques = comptes.map(c => ({
       id: c.id,
@@ -106,6 +167,18 @@ export async function GET(req: NextRequest) {
       exercices: exercices.map(e => ({ start: e.start, finish: e.finish, status: e.status })),
       tresorerie: { comptes: banques, total: banques.reduce((s, c) => s + c.solde, 0) },
       pnl: agreger(balance),
+      mois: mois.map((m, i) => {
+        const a = agreger(balancesMois[i])
+        return {
+          cle: m.cle,
+          produits: a.produits,
+          charges: a.charges,
+          resultat: a.resultat,
+          postes: Object.fromEntries(a.postes.map(p => [p.cle, p.montant])),
+          pieces: volumes[m.cle]?.pieces ?? 0,
+          caVentes: volumes[m.cle]?.ca ?? null,
+        }
+      }),
     })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'erreur Pennylane' }, { status: 500 })
