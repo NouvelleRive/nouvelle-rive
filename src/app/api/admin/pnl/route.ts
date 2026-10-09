@@ -15,6 +15,10 @@ import { getBankAccounts, getFiscalYears, getTrialBalance, type TrialBalanceLine
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
+// Comptes agrégés dans Pennylane mais hors périmètre NR1 (compte séparé) :
+// ils ne doivent pas entrer dans la trésorerie affichée.
+const COMPTES_BANCAIRES_EXCLUS = [12660555776] // PRI
+
 async function requireAdmin(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || ''
   if (!token) return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
@@ -153,13 +157,15 @@ export async function GET(req: NextRequest) {
       volumesParMois(mois),
     ])
 
-    const banques = comptes.map(c => ({
-      id: c.id,
-      nom: c.name,
-      solde: num(c.balance),
-      devise: c.currency,
-      majLe: c.updated_at,
-    }))
+    const banques = comptes
+      .filter(c => !COMPTES_BANCAIRES_EXCLUS.includes(c.id))
+      .map(c => ({
+        id: c.id,
+        nom: c.name,
+        solde: num(c.balance),
+        devise: c.currency,
+        majLe: c.updated_at,
+      }))
 
     return NextResponse.json({
       success: true,
