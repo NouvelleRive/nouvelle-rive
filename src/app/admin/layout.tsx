@@ -44,7 +44,17 @@
       { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes', adminOnly: true },
       { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', adminOnly: true },
       { key: 'perf', label: 'Perf', href: '/admin/performance' },
-      { key: 'marges', label: 'Marges', href: '/admin/marges', adminOnly: true },
+      {
+        key: 'financials',
+        label: 'Financials',
+        href: '/admin/marges',
+        adminOnly: true,
+        matches: ['/admin/marges', '/admin/pnl'],
+        dropdown: [
+          { label: 'Marges', href: '/admin/marges' },
+          { label: 'P&L', href: '/admin/pnl' },
+        ],
+      },
       { key: 'achats', label: 'Achats', href: '/acheteuse/performance', adminOnly: true },
       {
         key: 'site',
@@ -73,6 +83,8 @@
     })
 
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+    const isTabActive = (tab: any) =>
+      (tab.matches as string[] | undefined)?.some(isActive) ?? isActive(tab.href)
 
     const getTabClassName = (active: boolean) =>
       active ? 'text-[#22209C] font-semibold' : 'text-gray-600 hover:text-[#22209C] no-underline'
@@ -126,7 +138,7 @@
             {/* Ligne 2 : Tabs Desktop */}
             <div className="hidden lg:flex items-center gap-x-6 border-t pt-2 pb-2">
               {visibleTabs.map((tab) => {
-                const active = isActive(tab.href)
+                const active = isTabActive(tab)
                 if (tab.dropdown) {
                   return (
                     <div key={tab.key} className="relative group">
@@ -211,7 +223,7 @@
 
               {/* Tabs Mobile */}
               {visibleTabs.map((tab) => {
-                const active = isActive(tab.href)
+                const active = isTabActive(tab)
                 if (tab.dropdown) {
                   return (
                     <div key={tab.key} className="py-1">
