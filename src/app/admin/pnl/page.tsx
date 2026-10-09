@@ -301,7 +301,7 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
           <Ligne label="Pièces vendues" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
           {mois.some(m => m.caVentes !== null) && (
             <>
-              <Ligne label="CA encaissé" valeurs={mois.map(m => m.caVentes ?? 0)} total={somme(m => m.caVentes ?? 0)} />
+              <Ligne label="Volume d'affaires" valeurs={mois.map(m => m.caVentes ?? 0)} total={somme(m => m.caVentes ?? 0)} />
               <Ligne
                 label="Panier moyen"
                 valeurs={mois.map(m => (m.pieces ? (m.caVentes ?? 0) / m.pieces : 0))}

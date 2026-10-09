@@ -1208,7 +1208,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
         : (isAdmin || chineuseTrigramme === 'NR') ? 'grid-cols-2 lg:grid-cols-4'
         : 'grid-cols-2 lg:grid-cols-3'
       } gap-3`}>
-        <KpiCard title="Chiffre d'affaires" value={formatPrix(totalCA)} unit="€ TTC" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
+        <KpiCard title="Volume d'affaires" value={formatPrix(totalCA)} unit="€ TTC" evolution={caEvolution} icon={Euro} color="bg-[#22209C]" />
         <KpiCard title="Ventes" value={totalVentes} unit="articles" evolution={ventesEvolution} icon={ShoppingBag} color="bg-emerald-500" />
         <KpiCard title="Panier moyen" value={panierMoyen} unit="€" evolution={panierEvolution} icon={TrendingUp} color="bg-amber-500" />
         {isAdmin && (
@@ -1988,7 +1988,7 @@ function PLAcheteuse({ pl }: { pl: PLData }) {
 
       <div className="mt-1.5 pt-1.5 border-t border-gray-100">
         <Ligne
-          label="Chiffre d'affaires"
+          label="Volume d'affaires"
           valeur={pl.ca}
           suffixe={`${pl.caPieces} pièce${pl.caPieces > 1 ? 's' : ''}`}
           fort
