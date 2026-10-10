@@ -531,7 +531,7 @@ console.log(`✅ checkGmailFactures terminé`)
 // Cron "5 min" mutualisé : rappels pointage + poll Gmail achats.
 //
 // - Rappels : ping /api/cron/reminders qui décide lui-même quoi envoyer selon
-//   l'heure de Paris (12h10, 12h30, 12h50/15h50/17h50, 19h55).
+//   l'heure de Paris (arrivée 11h10/14h10, restock 13h50/15h50/17h50, départ 17h55/19h55).
 // - Poll Gmail achats : mails Vinted / Chronopost / Mondial Relay / Pickup
 //   pour mettre à jour les statuts commande → expédié → livré (voir helper
 //   pollGmailAchats). No-op silencieux si les env OAuth ne sont pas posés.
@@ -626,6 +626,21 @@ exports.pingEbaySync = functions
         console.error('pingEbayWarmup failed:', err)
       }
 
+      // Vintage Therapy (SKU VT…) — file dédiée, 2/jour, indépendante de la rampe
+      // de chauffe : ce sont des sacs de marque déposés en vente ferme, on les met
+      // en ligne au compte-gouttes (jamais en masse, cf. restriction juillet 2026).
+      // Les pièces sans assez de photos sont écartées par l'endpoint et attendent
+      // leur 5e photo sans bloquer la file.
+      try {
+        const vtRes = await fetch('https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?tri=VT&max=2', {
+          headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+        })
+        const vtBody = await vtRes.text()
+        console.log(`pingEbayVT ${vtRes.status}: ${vtBody.slice(0, 300)}`)
+      } catch (err) {
+        console.error('pingEbayVT failed:', err)
+      }
+
       // Luxe — quantité dictée par la phase courante (0 tant qu'on n'y est pas)
       if (luxeToday > 0) {
         try {
@@ -652,7 +667,12 @@ exports.pingEbaySync = functions
       const parisHour = parseInt(parisFmt.find((p) => p.type === 'hour')?.value || '-1', 10)
       let igStep = null
       if (parisDay === 'Tue' && parisHour === 10) igStep = 'candidates'
-      else if (parisDay === 'Wed' && parisHour === 11) igStep = 'publish'
+      // Publish : mercredi 18h. >= 18 (pas === 18) car le cron « every 60
+      // minutes » dérive (timeout jusqu'à 9 min → espacement > 60 min) et
+      // l'heure pile peut sauter. L'étape publish est idempotente (déjà publié
+      // / non validé / skippé → skip), donc un run plus tard dans la soirée
+      // rattrape sans risque de double post.
+      else if (parisDay === 'Wed' && parisHour >= 18) igStep = 'publish'
       if (igStep) {
         const igRes = await fetch(
           `https://www.nouvellerive.eu/api/cron/instagram-weekly?step=${igStep}`,
@@ -709,6 +729,18 @@ async function pollGmailAchats() {
   const tokenJson = await tokenRes.json()
   if (!tokenJson.access_token) {
     console.error('pollGmailAchats: pas d\'access_token, réponse:', JSON.stringify(tokenJson))
+    // Échec BRUYANT : une autorisation Gmail révoquée bloque tous les imports
+    // achats. En août 2026 ça a tourné un mois en silence (23 pièces à
+    // rattraper à la main). La route throttle à 1 push/jour.
+    try {
+      await fetch(`${process.env.NR_BASE_URL || 'https://www.nouvellerive.eu'}/api/webhooks/gmail-achats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Internal-Token': internalToken },
+        body: JSON.stringify({ kind: 'alerte-token', detail: JSON.stringify(tokenJson).slice(0, 200) }),
+      })
+    } catch (err) {
+      console.error('pollGmailAchats: alerte token non envoyée:', err)
+    }
     return
   }
   const accessToken = tokenJson.access_token
@@ -774,8 +806,19 @@ async function pollGmailAchats() {
       const hookText = await hookRes.text()
       console.log(`pollGmailAchats ${m.id} → ${hookRes.status}: ${hookText.slice(0, 200)}`)
 
-      // 5. Marquer comme lu uniquement si le webhook a confirmé ok
-      if (hookRes.ok) {
+      // 5. Marquer comme lu seulement si le mail a VRAIMENT été traité.
+      //    La route répond 200 + {ok:false} quand elle ne sait pas quoi faire
+      //    (parse raté, type de mail inconnu) : sur le seul status HTTP on
+      //    perdait ces mails — non traités et plus jamais relus.
+      //    `rienAFaire` = mail d'un expéditeur suivi mais sans action possible
+      //    (évaluation, offre…) : on le marque lu, sinon il revient à chaque
+      //    passage. Un vrai échec de parsing, lui, reste non lu pour rattrapage.
+      let hookOk = false
+      try {
+        const j = JSON.parse(hookText)
+        hookOk = j?.ok === true || j?.rienAFaire === true
+      } catch { hookOk = false }
+      if (hookRes.ok && hookOk) {
         await fetch(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}/modify`,
           {

@@ -7,6 +7,10 @@
 // Auth : header `Authorization: Bearer ${CRON_SECRET}` (cron-job.org ou autre).
 // Limite par défaut 10 publish + 10 remove par invocation pour éviter les timeouts ;
 // override via ?max=N (utile en dev).
+//
+// Mode trigramme (?tri=VT) : ne publie que les pièces de ce trigramme (préfixe SKU),
+// sans passer par les règles luxe, et ne retire RIEN. Sert aux files dédiées lentes
+// (ex. Vintage Therapy, 2/jour) branchées sur le cron pingEbaySync.
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -86,6 +90,16 @@ function isVisibleOnSite(p: any, config: LuxeConfig): boolean {
   return true
 }
 
+// Garde-fou anti-contrefaçon de publishToEbay, évalué en amont pour ne pas
+// bloquer le quota `max` avec des pièces qui échoueront à tous les coups.
+function passePhotos(p: any): boolean {
+  const nbPhotos = Array.isArray(p.imageUrls) ? p.imageUrls.length : (p.imageUrl ? 1 : 0)
+  if (p.videoUrl) return true
+  if (nbPhotos < 4) return false
+  if ((p.prix || 0) > 300 && nbPhotos < 5) return false
+  return true
+}
+
 function matchesLuxeRules(p: any, config: LuxeConfig, chineuses: Chineuse[]): boolean {
   if (config.regles.length === 0) return true
   return config.regles.some(r => matchRegle(p, r, chineuses))
@@ -110,6 +124,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const max = Math.max(1, parseInt(searchParams.get('max') || '10', 10))
+  // File dédiée par trigramme : publication seule, pas de retrait.
+  const tri = (searchParams.get('tri') || '').toUpperCase().trim()
 
   const configSnap = await adminDb.collection('siteConfig').doc('luxe').get()
   const config: LuxeConfig = configSnap.exists ? { regles: [], ...configSnap.data() } as LuxeConfig : { regles: [] }
@@ -143,21 +159,29 @@ export async function GET(req: NextRequest) {
   const toPublish: any[] = []
   const toRemove: any[] = []
   const sansGenre: string[] = []
+  const sansPhotos: string[] = []
 
   for (const p of produits) {
     const isOnEbay = !!p.ebayListingId
     const visible = isVisibleOnSite(p, config)
-    const matchLuxe = visible && matchesLuxeRules(p, config, chineuses)
+    // En mode trigramme on ignore les règles luxe : le périmètre, c'est le préfixe SKU.
+    const eligible = tri
+      ? visible && (p.sku || '').toUpperCase().startsWith(tri)
+      : visible && matchesLuxeRules(p, config, chineuses)
 
     // Ne publie QUE des pièces explicitement reçues en boutique (clic « Reçu » -> recu:true).
     // `recu === true` strict : une pièce sans le champ (undefined) n'est jamais publiée.
-    if (matchLuxe && !isOnEbay && p.recu === true) {
+    if (eligible && !isOnEbay && p.recu === true) {
       // Sans genre, publishToEbay échouerait en GENDER_REQUIRED et bloquerait
       // le quota `max` à chaque passage : on les écarte pour que la file avance.
       if (!resolveGender(p)) sansGenre.push(p.sku || p.id)
+      // Idem pour le garde-fou anti-contrefaçon (4 photos, 5 au-dessus de 300 €) :
+      // ces pièces échoueraient en boucle et gèleraient le quota.
+      else if (!passePhotos(p)) sansPhotos.push(p.sku || p.id)
       else toPublish.push(p)
     }
-    else if (!matchLuxe && isOnEbay) toRemove.push(p)
+    // Mode trigramme = file de publication seule, on ne retire jamais rien.
+    else if (!tri && !eligible && isOnEbay) toRemove.push(p)
   }
 
   const publishBatch = toPublish.slice(0, max)
@@ -226,9 +250,12 @@ export async function GET(req: NextRequest) {
       publishedOk: published.filter(x => x.listingId).length,
       removedOk: removed.filter(x => x.ok).length,
       skippedSansGenre: sansGenre.length,
+      skippedSansPhotos: sansPhotos.length,
     },
+    tri: tri || null,
     published,
     removed,
     sansGenre,
+    sansPhotos,
   })
 }
