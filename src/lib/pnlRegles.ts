@@ -39,3 +39,14 @@ export function trouverRegle(regles: Regle[], label: string, montant: number): R
   }
   return null
 }
+
+// Les libellés bancaires sont illisibles (et exposent des noms de personnes).
+// On affiche un nom métier en français ; le libellé brut reste en survol.
+const LIBELLES_LISIBLES: { motif: string; lisible: string }[] = [
+  { motif: 'SQUAREUP', lisible: "Volume d'affaires" },
+]
+
+export function libelleLisible(libelleNormalise: string): string | null {
+  const l = (libelleNormalise || '').toUpperCase()
+  return LIBELLES_LISIBLES.find(x => l.includes(x.motif))?.lisible ?? null
+}

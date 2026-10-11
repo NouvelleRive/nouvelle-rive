@@ -12,8 +12,8 @@ import { formatPrix } from '@/lib/formatPrix'
 import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
-type Poste = { cle: string; label: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[] }
-type PosteSimple = { cle: string; label: string; montant: number; comptes: Compte[] }
+type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[] }
+type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[] }
 type Mois = {
   cle: string
   produits: number
@@ -166,8 +166,7 @@ export default function PnlPage() {
               <BlocPostes
                 titre="Dépôt-vente"
                 postes={data.pnl.depotVente.map(p => ({ ...p, sens: 'produit' as const }))}
-                total={(data.pnl.depotVente.find(p => p.cle === 'volume')?.montant ?? 0)
-                  - (data.pnl.depotVente.find(p => p.cle === 'reversements')?.montant ?? 0)}
+                total={null}
                 ouverts={ouverts}
                 setOuverts={setOuverts}
               />
@@ -194,7 +193,7 @@ function BlocPostes({
 }: {
   titre: string
   postes: Poste[]
-  total: number
+  total?: number | null
   ouverts: Record<string, boolean>
   setOuverts: (f: (o: Record<string, boolean>) => Record<string, boolean>) => void
 }) {
@@ -202,7 +201,7 @@ function BlocPostes({
     <div className="border-b last:border-b-0">
       <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{titre}</span>
-        <span className="text-sm font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>
+        {total != null && <span className="text-sm font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>}
       </div>
       {postes.length === 0 && <div className="px-4 py-3 text-sm text-gray-400">Aucun mouvement</div>}
       {postes.map(p => {
@@ -213,7 +212,7 @@ function BlocPostes({
               onClick={() => setOuverts(o => ({ ...o, [p.cle]: !o[p.cle] }))}
               className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50 text-left"
             >
-              <span className="flex items-center gap-1.5 text-sm">
+              <span className="flex items-center gap-1.5 text-sm" title={p.titre}>
                 <ChevronRight size={14} className={`text-gray-400 transition-transform ${ouvert ? 'rotate-90' : ''}`} />
                 {p.label}
                 <span className="text-xs text-gray-400">({p.comptes.length})</span>
@@ -247,16 +246,17 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
   const cel = 'px-3 py-1.5 text-right tabular-nums whitespace-nowrap'
   const tete = 'sticky left-0 bg-white px-3 py-1.5 text-left whitespace-nowrap z-10'
 
-  const Ligne = ({ label, valeurs, total, gras, couleur, suffixe }: {
+  const Ligne = ({ label, valeurs, total, gras, couleur, suffixe, titre }: {
     label: string
     valeurs: number[]
     total: number
     gras?: boolean
     couleur?: boolean
     suffixe?: string
+    titre?: string
   }) => (
     <tr className={`border-t ${gras ? 'font-semibold' : ''}`}>
-      <td className={`${tete} ${gras ? 'font-semibold' : ''}`}>{label}</td>
+      <td className={`${tete} ${gras ? 'font-semibold' : ''}`} title={titre}>{label}</td>
       {valeurs.map((v, i) => (
         <td key={i} className={`${cel} ${couleur && v < 0 ? 'text-red-600' : couleur && v > 0 ? 'text-green-600' : ''}`}>
           {suffixe === 'pieces' ? formatPrix(v) : `${formatPrix(v, { decimals: 0 })} €`}
@@ -287,7 +287,7 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
                 <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Dépôt-vente</td>
               </tr>
               {data.pnl.depotVente.map(p => (
-                <Ligne key={p.cle} label={p.label} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
+                <Ligne key={p.cle} label={p.label} titre={p.titre} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
               ))}
             </>
           )}

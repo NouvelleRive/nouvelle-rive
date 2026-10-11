@@ -55,8 +55,20 @@ const POSTES: { cle: string; label: string; sens: 'produit' | 'charge'; prefixes
 // dans un compte de tiers par chineuse (467xxx). Ni l'un ni l'autre n'est un
 // produit ou une charge — seule la commission (706101) est du chiffre.
 const POSTES_DEPOT_VENTE = [
-  { cle: 'volume', label: 'Volume d\'affaires encaissé', prefixes: ['5113'], sens: 'credit' as const },
-  { cle: 'reversements', label: 'Reversements chineuses', prefixes: ['467'], sens: 'debit' as const },
+  {
+    cle: 'volume',
+    label: "Volume d'affaires",
+    titre: '511301 Encaissements Square (compte de transit) — libellé bancaire : SEPA … SQUAREUP INTERNATIONAL LIMITED',
+    prefixes: ['5113'],
+    sens: 'credit' as const,
+  },
+  {
+    cle: 'reversements',
+    label: 'Reversements chineuses',
+    titre: '467xxx Reversement CA — un compte de tiers par chineuse, ni produit ni charge',
+    prefixes: ['467'],
+    sens: 'debit' as const,
+  },
 ]
 
 const num = (v: string) => Number(v) || 0
@@ -90,7 +102,7 @@ function agreger(lignes: TrialBalanceLine[]) {
         montant: p.sens === 'credit' ? num(l.credits) - num(l.debits) : num(l.debits) - num(l.credits),
       }))
       .sort((a, b) => Math.abs(b.montant) - Math.abs(a.montant))
-    return { cle: p.cle, label: p.label, montant: comptes.reduce((s, c) => s + c.montant, 0), comptes }
+    return { cle: p.cle, label: p.label, titre: p.titre, montant: comptes.reduce((s, c) => s + c.montant, 0), comptes }
   })
 
   const produits = postes.filter(p => p.sens === 'produit').reduce((s, p) => s + p.montant, 0)

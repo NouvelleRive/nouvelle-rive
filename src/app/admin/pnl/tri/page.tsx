@@ -10,7 +10,7 @@ import { auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { formatPrix } from '@/lib/formatPrix'
 import { RefreshCw, Trash2, AlertTriangle, Check } from 'lucide-react'
-import type { Regle } from '@/lib/pnlRegles'
+import { libelleLisible, type Regle } from '@/lib/pnlRegles'
 
 type Categorie = { id: number; label: string; direction: 'cash_in' | 'cash_out' }
 type Groupe = {
@@ -189,7 +189,9 @@ export default function TriPage() {
             {data.groupes.map(g => (
               <div key={g.libelle} className="flex items-center gap-3 px-4 py-2 border-b last:border-b-0 text-sm">
                 <span className="w-12 text-right tabular-nums text-gray-400 shrink-0">{g.nb}×</span>
-                <span className="flex-1 truncate" title={g.exemple}>{g.libelle || '(sans libellé)'}</span>
+                <span className="flex-1 truncate" title={g.exemple || g.libelle}>
+                  {libelleLisible(g.libelle) || g.libelle || '(sans libellé)'}
+                </span>
                 <span className={`w-28 text-right tabular-nums shrink-0 ${g.total < 0 ? 'text-gray-700' : 'text-green-600'}`}>
                   {formatPrix(g.total)} €
                 </span>
