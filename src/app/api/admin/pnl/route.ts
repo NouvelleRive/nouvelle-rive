@@ -115,6 +115,16 @@ function agreger(lignes: TrialBalanceLine[]) {
   const produits = postes.filter(p => p.sens === 'produit').reduce((s, p) => s + p.montant, 0)
   const charges = postes.filter(p => p.sens === 'charge').reduce((s, p) => s + p.montant, 0)
 
+  // Le compte de commissions est aussi débité (part commission des factures
+  // chineuses, via la règle fournisseur). On montre le brut et la déduction
+  // plutôt qu'un net qui cacherait l'écart.
+  const commissionsBrutes = lignes
+    .filter(l => l.number.startsWith('70'))
+    .reduce((s, l) => s + num(l.credits), 0)
+  const commissionsDeduites = lignes
+    .filter(l => l.number.startsWith('70'))
+    .reduce((s, l) => s + num(l.debits), 0)
+
   // Marge brute : ce qu'on garde sur ce que les clientes ont payé.
   const volumeChineuses = depotVente.find(p => p.cle === 'reversements')?.montant ?? 0
   const commission = postes.find(p => p.cle === 'ventes')?.montant ?? 0
@@ -122,7 +132,10 @@ function agreger(lignes: TrialBalanceLine[]) {
   return {
     postes: postes.filter(p => p.comptes.length > 0),
     depotVente: depotVente.filter(p => p.comptes.length > 0),
+    commissionsBrutes,
+    commissionsDeduites,
     margeBrute: volumeChineuses > 0 ? (commission / volumeChineuses) * 100 : null,
+    margeBruteBrute: volumeChineuses > 0 ? (commissionsBrutes / volumeChineuses) * 100 : null,
     produits,
     charges,
     resultat: produits - charges,

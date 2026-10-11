@@ -28,7 +28,17 @@ type Data = {
   periode: { start: string; end: string }
   exercices: { start: string; finish: string; status: string }[]
   tresorerie: { comptes: { id: number; nom: string; solde: number; devise: string; majLe: string }[]; total: number }
-  pnl: { postes: Poste[]; depotVente: PosteSimple[]; margeBrute: number | null; produits: number; charges: number; resultat: number }
+  pnl: {
+    postes: Poste[]
+    depotVente: PosteSimple[]
+    commissionsBrutes: number
+    commissionsDeduites: number
+    margeBrute: number | null
+    margeBruteBrute: number | null
+    produits: number
+    charges: number
+    resultat: number
+  }
   mois: Mois[]
 }
 
@@ -171,6 +181,18 @@ export default function PnlPage() {
                 ouverts={ouverts}
                 setOuverts={setOuverts}
               />
+              {data.pnl.commissionsDeduites > 0 && (
+                <>
+                  <div className="flex items-center justify-between px-4 py-1.5 border-b text-sm" title="Crédits des comptes 70 : les commissions facturées">
+                    <span className="pl-5 text-gray-600">Commissions brutes</span>
+                    <span className="tabular-nums text-gray-600">{formatPrix(data.pnl.commissionsBrutes)} €</span>
+                  </div>
+                  <div className="flex items-center justify-between px-4 py-1.5 border-b text-sm" title="Débits des comptes 70 : la part commission des factures chineuses, passée au débit par la règle fournisseur">
+                    <span className="pl-5 text-gray-600">dont venant en déduction</span>
+                    <span className="tabular-nums text-red-600">− {formatPrix(data.pnl.commissionsDeduites)} €</span>
+                  </div>
+                </>
+              )}
               {data.pnl.margeBrute != null && (
                 <div
                   className="flex items-center justify-between px-4 py-2 border-b bg-blue-50/40"
@@ -179,6 +201,11 @@ export default function PnlPage() {
                   <span className="text-sm font-medium">Marge brute</span>
                   <span className="text-sm font-semibold tabular-nums">
                     {data.pnl.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
+                    {data.pnl.margeBruteBrute != null && (
+                      <span className="font-normal text-gray-400 ml-2">
+                        ({data.pnl.margeBruteBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % sur les commissions brutes)
+                      </span>
+                    )}
                   </span>
                 </div>
               )}
