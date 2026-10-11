@@ -3,15 +3,22 @@
 // alors catégorie Y ». Elles vivent chez nous (Firestore siteConfig/_pnlRegles),
 // pas dans Pennylane — deux moteurs de règles finiraient par se contredire.
 
+// Une règle vise soit un compte comptable (l'affectation, ce qui compte pour le
+// P&L), soit une catégorie analytique Pennylane, soit les deux.
 export type Regle = {
   id: string
   motif: string                       // texte cherché dans le libellé, insensible à la casse
-  categorieId: number                 // catégorie Pennylane
-  categorieLabel: string              // recopié pour l'affichage, Pennylane reste la source
+  compte?: string                     // n° de compte comptable, ex. 511301
+  compteLabel?: string
+  categorieId?: number                // catégorie Pennylane
+  categorieLabel?: string
   sens: 'cash_in' | 'cash_out' | null // null = les deux
   actif: boolean
   creeLe: string
 }
+
+export const cibleDe = (r: Regle) =>
+  r.compte ? `${r.compte} ${r.compteLabel || ''}`.trim() : (r.categorieLabel || '—')
 
 // Les libellés bancaires sont bruités : retours à la ligne, préfixes SEPA,
 // références de virement. On normalise pour regrouper ce qui se ressemble.

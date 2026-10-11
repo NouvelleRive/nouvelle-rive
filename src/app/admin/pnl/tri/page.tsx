@@ -10,16 +10,18 @@ import { auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { formatPrix } from '@/lib/formatPrix'
 import { RefreshCw, Trash2, AlertTriangle, Check } from 'lucide-react'
-import { libelleLisible, type Regle } from '@/lib/pnlRegles'
+import { cibleDe, libelleLisible, type Regle } from '@/lib/pnlRegles'
 
 type Categorie = { id: number; label: string; direction: 'cash_in' | 'cash_out' }
 type Groupe = {
   libelle: string; exemple: string; nb: number; total: number
   sens: 'cash_in' | 'cash_out' | 'mixte'; regle: Regle | null
 }
+type Compte = { numero: string; label: string }
 type Data = {
   depuis: string
   categories: Categorie[]
+  comptes: Compte[]
   regles: Regle[]
   stats: { transactions: number; sansCategorie: number; couvertesParUneRegle: number; groupes: number }
   groupes: Groupe[]
@@ -58,16 +60,19 @@ export default function TriPage() {
   }, [charger])
 
   const creerRegle = async (g: Groupe) => {
-    const categorieId = Number(choix[g.libelle])
-    if (!categorieId) return
-    const cat = data?.categories.find(c => c.id === categorieId)
+    const valeur = choix[g.libelle]
+    if (!valeur) return
+    const [type, cle] = valeur.split(':')
+    const cat = data?.categories.find(c => String(c.id) === cle)
+    const compte = data?.comptes.find(c => c.numero === cle)
     setEnCours(true); setErreur(null); setMessage(null)
     try {
       await appel('POST', {
         action: 'ajouter-regle',
         motif: g.libelle,
-        categorieId,
-        categorieLabel: cat?.label || '',
+        ...(type === 'compte'
+          ? { compte: compte?.numero, compteLabel: compte?.label }
+          : { categorieId: Number(cle), categorieLabel: cat?.label || '' }),
         sens: g.sens === 'mixte' ? null : g.sens,
       })
       await charger()
@@ -171,7 +176,7 @@ export default function TriPage() {
                 <div key={r.id} className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 text-sm">
                   <span className="truncate">
                     <span className="text-gray-400">contient</span> <span className="font-medium">{r.motif}</span>
-                    <span className="text-gray-400"> → </span>{r.categorieLabel}
+                    <span className="text-gray-400"> → </span>{cibleDe(r)}
                     {r.sens && <span className="text-xs text-gray-400 ml-2">{r.sens === 'cash_in' ? 'entrées' : 'sorties'}</span>}
                   </span>
                   <button onClick={() => supprimerRegle(r.id)} className="text-gray-400 hover:text-red-600 shrink-0 ml-3" title="Supprimer">
@@ -196,7 +201,7 @@ export default function TriPage() {
                   {formatPrix(g.total)} €
                 </span>
                 {g.regle ? (
-                  <span className="w-56 text-right text-xs text-[#22209C] shrink-0">→ {g.regle.categorieLabel}</span>
+                  <span className="w-64 text-right text-xs text-[#22209C] shrink-0 truncate" title={cibleDe(g.regle)}>→ {cibleDe(g.regle)}</span>
                 ) : (
                   <span className="flex items-center gap-2 shrink-0">
                     <select
@@ -204,10 +209,17 @@ export default function TriPage() {
                       onChange={e => setChoix(c => ({ ...c, [g.libelle]: e.target.value }))}
                       className="border border-gray-300 rounded px-2 py-1 text-xs bg-white w-44"
                     >
-                      <option value="">Catégorie…</option>
-                      {data.categories
-                        .filter(c => g.sens === 'mixte' || c.direction === g.sens)
-                        .map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      <option value="">Affecter à…</option>
+                      <optgroup label="Compte comptable">
+                        {data.comptes.map(c => (
+                          <option key={c.numero} value={`compte:${c.numero}`}>{c.numero} {c.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Catégorie analytique">
+                        {data.categories
+                          .filter(c => g.sens === 'mixte' || c.direction === g.sens)
+                          .map(c => <option key={c.id} value={`categorie:${c.id}`}>{c.label}</option>)}
+                      </optgroup>
                     </select>
                     <button
                       onClick={() => creerRegle(g)}

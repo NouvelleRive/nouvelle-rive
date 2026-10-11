@@ -12,7 +12,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
-import { getCategories, getTransactions, setTransactionCategories, viderCacheTransactions } from '@/lib/pennylane'
+import { getCategories, getTransactions, setTransactionCategories, viderCacheTransactions, getTrialBalance, getFiscalYears } from '@/lib/pennylane'
 import { normaliserLibelle, sensDe, trouverRegle, type Regle } from '@/lib/pnlRegles'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -41,9 +41,18 @@ export async function GET(req: NextRequest) {
 
   try {
     const depuis = req.nextUrl.searchParams.get('depuis') || '2026-01-01'
-    const [categories, transactions, regles] = await Promise.all([
-      getCategories(), getTransactions(), lireRegles(),
+    const exercices = await getFiscalYears()
+    const debutPlan = exercices.map(e => e.start).sort()[0] || '2025-01-01'
+    const [categories, transactions, regles, balance] = await Promise.all([
+      getCategories(),
+      getTransactions(),
+      lireRegles(),
+      getTrialBalance(debutPlan, new Date().toISOString().slice(0, 10)),
     ])
+    // Le plan comptable mouvementé : c'est là-dedans qu'on choisit l'affectation.
+    const comptes = balance
+      .map(l => ({ numero: l.number, label: l.label }))
+      .sort((a, b) => a.numero.localeCompare(b.numero))
 
     const periode = transactions.filter(t => t.date >= depuis)
     const sansCategorie = periode.filter(t => !t.categories?.length)
@@ -77,6 +86,7 @@ export async function GET(req: NextRequest) {
       success: true,
       depuis,
       categories,
+      comptes,
       regles,
       stats: {
         transactions: periode.length,
@@ -100,15 +110,15 @@ export async function POST(req: NextRequest) {
     const regles = await lireRegles()
 
     if (body.action === 'ajouter-regle') {
-      const { motif, categorieId, categorieLabel, sens } = body
-      if (!motif || !categorieId) {
-        return NextResponse.json({ success: false, error: 'motif et categorieId requis' }, { status: 400 })
+      const { motif, categorieId, categorieLabel, compte, compteLabel, sens } = body
+      if (!motif || (!categorieId && !compte)) {
+        return NextResponse.json({ success: false, error: 'motif et une cible (compte ou catégorie) requis' }, { status: 400 })
       }
       const regle: Regle = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         motif: String(motif).trim(),
-        categorieId: Number(categorieId),
-        categorieLabel: String(categorieLabel || ''),
+        ...(compte ? { compte: String(compte), compteLabel: String(compteLabel || '') } : {}),
+        ...(categorieId ? { categorieId: Number(categorieId), categorieLabel: String(categorieLabel || '') } : {}),
         sens: sens === 'cash_in' || sens === 'cash_out' ? sens : null,
         actif: true,
         creeLe: new Date().toISOString(),
@@ -131,7 +141,7 @@ export async function POST(req: NextRequest) {
       const cibles = transactions
         .filter(t => t.date >= depuis && !t.categories?.length)
         .map(t => ({ t, regle: trouverRegle(regles, t.label, Number(t.amount) || 0) }))
-        .filter((x): x is { t: typeof transactions[0]; regle: Regle } => !!x.regle)
+        .filter((x): x is { t: typeof transactions[0]; regle: Regle } => !!x.regle?.categorieId)
 
       const aTraiter = limite > 0 ? cibles.slice(0, limite) : cibles
 
@@ -142,7 +152,7 @@ export async function POST(req: NextRequest) {
           nb: aTraiter.length,
           apercu: aTraiter.slice(0, 20).map(x => ({
             id: x.t.id, date: x.t.date, libelle: x.t.label, montant: Number(x.t.amount),
-            categorie: x.regle.categorieLabel,
+            categorie: x.regle.categorieLabel || '',
           })),
         })
       }
@@ -152,7 +162,7 @@ export async function POST(req: NextRequest) {
       const erreurs: { id: number; erreur: string }[] = []
       for (const x of aTraiter) {
         try {
-          await setTransactionCategories(x.t.id, [x.regle.categorieId])
+          await setTransactionCategories(x.t.id, [x.regle.categorieId!])
           ok += 1
         } catch (e: any) {
           erreurs.push({ id: x.t.id, erreur: String(e?.message || e).slice(0, 200) })
