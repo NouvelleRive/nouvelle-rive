@@ -8,7 +8,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { formatPrix } from '@/lib/formatPrix'
-import { RefreshCw, AlertTriangle, Check, ChevronRight } from 'lucide-react'
+import { RefreshCw, AlertTriangle, ChevronRight } from 'lucide-react'
 
 type Ligne = { entryId: number; lineId: number; date: string; montant: number; libelle: string; source: string }
 type Groupe = { compte: string; compteLabel: string; nb: number; total: number; lignes: Ligne[] }
@@ -24,9 +24,7 @@ type Data = {
 export default function AffectationsPage() {
   const [data, setData] = useState<Data | null>(null)
   const [loading, setLoading] = useState(true)
-  const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
   const [ouverts, setOuverts] = useState<Record<string, boolean>>({})
 
   const appel = useCallback(async (methode: 'GET' | 'POST', corps?: any) => {
@@ -53,20 +51,6 @@ export default function AffectationsPage() {
     return () => unsub()
   }, [charger])
 
-  const appliquer = async (simulation: boolean, limite = 0) => {
-    setEnCours(true); setErreur(null); setMessage(null)
-    try {
-      const r = await appel('POST', { simulation, limite })
-      if (simulation) {
-        setMessage(`${r.nb} ligne${r.nb > 1 ? 's' : ''} seraient réaffectées, ${formatPrix(r.total)} €. Rien n'a été écrit.`)
-      } else {
-        const err = r.erreurs?.length ? ` — ${r.erreurs.length} erreur(s) : ${r.erreurs[0]?.erreur}` : ''
-        setMessage(`${r.traitees} ligne${r.traitees > 1 ? 's' : ''} réaffectées dans Pennylane.${err}`)
-        await charger()
-      }
-    } catch (e: any) { setErreur(e?.message) } finally { setEnCours(false) }
-  }
-
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -78,7 +62,7 @@ export default function AffectationsPage() {
         </div>
         <button
           onClick={charger}
-          disabled={loading || enCours}
+          disabled={loading}
           className="flex items-center gap-1.5 border border-gray-300 rounded px-3 py-1.5 text-sm bg-white hover:bg-gray-50 disabled:opacity-50"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Actualiser
@@ -90,12 +74,6 @@ export default function AffectationsPage() {
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />{erreur}
         </div>
       )}
-      {message && (
-        <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded p-3 text-sm text-green-800">
-          <Check size={16} className="mt-0.5 shrink-0" />{message}
-        </div>
-      )}
-
       {loading && !data && <div className="text-sm text-gray-400">Lecture des écritures…</div>}
 
       {data && (
@@ -104,7 +82,7 @@ export default function AffectationsPage() {
             <Stat label="Lignes à réaffecter" valeur={formatPrix(data.nb)} />
             <Stat label="Montant" valeur={`${formatPrix(data.total)} €`} accent />
             <Stat label="Chineuses" valeur={formatPrix(data.groupes.length)} />
-            <Stat label="Règles actives" valeur={formatPrix(data.regles)} />
+            <Stat label="Règles à créer" valeur={formatPrix(data.groupes.length)} />
           </div>
 
           {data.comptesManquants.length > 0 && (
@@ -114,22 +92,15 @@ export default function AffectationsPage() {
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => appliquer(true)} disabled={enCours || !data.nb}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white hover:bg-gray-50 disabled:opacity-50">
-              Simuler
-            </button>
-            <button onClick={() => appliquer(false, 1)} disabled={enCours || !data.nb}
-              className="border border-[#22209C] text-[#22209C] rounded px-3 py-1.5 text-sm bg-white hover:bg-blue-50 disabled:opacity-50">
-              Réaffecter 1 ligne
-            </button>
-            <button
-              onClick={() => { if (confirm(`Réaffecter ${data.nb} lignes dans Pennylane (${formatPrix(data.total)} €) ?`)) appliquer(false) }}
-              disabled={enCours || !data.nb}
-              className="bg-[#22209C] text-white rounded px-3 py-1.5 text-sm hover:opacity-90 disabled:opacity-50">
-              Tout réaffecter
-            </button>
-            {enCours && <span className="text-sm text-gray-400">en cours…</span>}
+          <div className="bg-blue-50/60 border border-blue-200 rounded p-3 text-sm text-gray-700 space-y-1">
+            <p className="font-medium">Ce qu&apos;il faut faire dans Pennylane</p>
+            <p className="text-gray-600">
+              Centre de règles → onglet <strong>Fournisseurs</strong> → une règle par chineuse ci-dessous :
+              ses factures vont sur son compte de reversement. La règle s&apos;applique aussi aux factures déjà saisies.
+            </p>
+            <p className="text-xs text-gray-500">
+              L&apos;API ne peut pas le faire à ta place : Pennylane refuse de modifier une écriture qu&apos;il n&apos;a pas créée lui-même.
+            </p>
           </div>
 
           <section className="bg-white border rounded-lg overflow-hidden">

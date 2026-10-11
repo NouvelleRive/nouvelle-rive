@@ -146,14 +146,14 @@ export default function TriPage() {
               disabled={enCours || !data.stats.couvertesParUneRegle}
               className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white hover:bg-gray-50 disabled:opacity-50"
             >
-              Simuler
+              Vérifier sans rien écrire
             </button>
             <button
               onClick={() => appliquer(false, 3)}
               disabled={enCours || !data.stats.couvertesParUneRegle}
               className="border border-[#22209C] text-[#22209C] rounded px-3 py-1.5 text-sm bg-white hover:bg-blue-50 disabled:opacity-50"
             >
-              Appliquer sur 3 lignes
+              Tester sur 3 lignes
             </button>
             <button
               onClick={() => {
