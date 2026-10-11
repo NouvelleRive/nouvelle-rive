@@ -85,7 +85,24 @@ async function listAll<T>(path: string, params: Record<string, string> = {}): Pr
 
 export const getBankAccounts = () => listAll<BankAccount>('bank_accounts')
 export const getCategories = () => listAll<Categorie>('categories')
-export const getTransactions = () => listAll<Transaction>('transactions')
+
+// Le relevé complet représente ~25 appels paginés : on le garde en mémoire du
+// serveur quelques minutes pour qu'un aller-retour sur la page de tri ne le
+// retélécharge pas. Cache par instance, perdu au redéploiement, gratuit.
+let cacheTransactions: { le: number; items: Transaction[] } | null = null
+const TTL_TRANSACTIONS = 5 * 60 * 1000
+
+export async function getTransactions(forcer = false): Promise<Transaction[]> {
+  if (!forcer && cacheTransactions && Date.now() - cacheTransactions.le < TTL_TRANSACTIONS) {
+    return cacheTransactions.items
+  }
+  const items = await listAll<Transaction>('transactions')
+  cacheTransactions = { le: Date.now(), items }
+  return items
+}
+
+// Après une écriture, le cache ne reflète plus Pennylane.
+export const viderCacheTransactions = () => { cacheTransactions = null }
 export const getFiscalYears = () => listAll<FiscalYear>('fiscal_years')
 export const getTrialBalance = (start: string, end: string) =>
   listAll<TrialBalanceLine>('trial_balance', { period_start: start, period_end: end })

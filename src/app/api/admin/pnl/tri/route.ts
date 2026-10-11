@@ -8,11 +8,11 @@
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
-import { getCategories, getTransactions, setTransactionCategories } from '@/lib/pennylane'
+import { getCategories, getTransactions, setTransactionCategories, viderCacheTransactions } from '@/lib/pennylane'
 import { normaliserLibelle, sensDe, trouverRegle, type Regle } from '@/lib/pnlRegles'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -159,6 +159,7 @@ export async function POST(req: NextRequest) {
           if (erreurs.length >= 10) break // on s'arrête si ça part en vrille
         }
       }
+      viderCacheTransactions()
       return NextResponse.json({ success: true, simulation: false, traitees: ok, erreurs })
     }
 
