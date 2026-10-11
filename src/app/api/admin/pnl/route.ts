@@ -50,6 +50,15 @@ const POSTES: { cle: string; label: string; sens: 'produit' | 'charge'; prefixes
   { cle: 'is', label: 'Impôt sur les sociétés', sens: 'charge', prefixes: ['69'] },
 ]
 
+// Dépôt-vente, modèle du comptable (exercice 2025) : les encaissements Square
+// tombent dans un compte de transit (511301), les reversements aux chineuses
+// dans un compte de tiers par chineuse (467xxx). Ni l'un ni l'autre n'est un
+// produit ou une charge — seule la commission (706101) est du chiffre.
+const POSTES_DEPOT_VENTE = [
+  { cle: 'volume', label: 'Volume d\'affaires encaissé', prefixes: ['5113'], sens: 'credit' as const },
+  { cle: 'reversements', label: 'Reversements chineuses', prefixes: ['467'], sens: 'debit' as const },
+]
+
 const num = (v: string) => Number(v) || 0
 
 function agreger(lignes: TrialBalanceLine[]) {
@@ -71,11 +80,25 @@ function agreger(lignes: TrialBalanceLine[]) {
 
   for (const p of postes) p.comptes.sort((a, b) => Math.abs(b.montant) - Math.abs(a.montant))
 
+  // Blocs hors résultat : volume encaissé et reversements, pour la lecture.
+  const depotVente = POSTES_DEPOT_VENTE.map(p => {
+    const comptes = lignes
+      .filter(l => p.prefixes.some(pre => l.number.startsWith(pre)))
+      .map(l => ({
+        number: l.number,
+        label: l.label,
+        montant: p.sens === 'credit' ? num(l.credits) - num(l.debits) : num(l.debits) - num(l.credits),
+      }))
+      .sort((a, b) => Math.abs(b.montant) - Math.abs(a.montant))
+    return { cle: p.cle, label: p.label, montant: comptes.reduce((s, c) => s + c.montant, 0), comptes }
+  })
+
   const produits = postes.filter(p => p.sens === 'produit').reduce((s, p) => s + p.montant, 0)
   const charges = postes.filter(p => p.sens === 'charge').reduce((s, p) => s + p.montant, 0)
 
   return {
     postes: postes.filter(p => p.comptes.length > 0),
+    depotVente: depotVente.filter(p => p.comptes.length > 0),
     produits,
     charges,
     resultat: produits - charges,
@@ -180,7 +203,7 @@ export async function GET(req: NextRequest) {
           produits: a.produits,
           charges: a.charges,
           resultat: a.resultat,
-          postes: Object.fromEntries(a.postes.map(p => [p.cle, p.montant])),
+          postes: Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
           pieces: volumes[m.cle]?.pieces ?? 0,
           caVentes: volumes[m.cle]?.ca ?? null,
         }

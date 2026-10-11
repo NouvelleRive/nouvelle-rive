@@ -13,6 +13,7 @@ import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
 type Poste = { cle: string; label: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[] }
+type PosteSimple = { cle: string; label: string; montant: number; comptes: Compte[] }
 type Mois = {
   cle: string
   produits: number
@@ -26,7 +27,7 @@ type Data = {
   periode: { start: string; end: string }
   exercices: { start: string; finish: string; status: string }[]
   tresorerie: { comptes: { id: number; nom: string; solde: number; devise: string; majLe: string }[]; total: number }
-  pnl: { postes: Poste[]; produits: number; charges: number; resultat: number }
+  pnl: { postes: Poste[]; depotVente: PosteSimple[]; produits: number; charges: number; resultat: number }
   mois: Mois[]
 }
 
@@ -162,6 +163,14 @@ export default function PnlPage() {
           {/* Compte de résultat */}
           {vue === 'cumul' ? (
             <section className="bg-white border rounded-lg overflow-hidden">
+              <BlocPostes
+                titre="Dépôt-vente"
+                postes={data.pnl.depotVente.map(p => ({ ...p, sens: 'produit' as const }))}
+                total={(data.pnl.depotVente.find(p => p.cle === 'volume')?.montant ?? 0)
+                  - (data.pnl.depotVente.find(p => p.cle === 'reversements')?.montant ?? 0)}
+                ouverts={ouverts}
+                setOuverts={setOuverts}
+              />
               <BlocPostes titre="Produits" postes={produits} total={data.pnl.produits} ouverts={ouverts} setOuverts={setOuverts} />
               <BlocPostes titre="Charges" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
               <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
@@ -272,6 +281,17 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
           </tr>
         </thead>
         <tbody>
+          {data.pnl.depotVente.length > 0 && (
+            <>
+              <tr className="bg-gray-50/70">
+                <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Dépôt-vente</td>
+              </tr>
+              {data.pnl.depotVente.map(p => (
+                <Ligne key={p.cle} label={p.label} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
+              ))}
+            </>
+          )}
+
           <tr className="bg-gray-50/70">
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Produits</td>
           </tr>
