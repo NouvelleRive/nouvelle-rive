@@ -20,6 +20,7 @@ type Mois = {
   charges: number
   resultat: number
   postes: Record<string, number>
+  margeBrute: number | null
   pieces: number
   caVentes: number | null
 }
@@ -27,7 +28,7 @@ type Data = {
   periode: { start: string; end: string }
   exercices: { start: string; finish: string; status: string }[]
   tresorerie: { comptes: { id: number; nom: string; solde: number; devise: string; majLe: string }[]; total: number }
-  pnl: { postes: Poste[]; depotVente: PosteSimple[]; produits: number; charges: number; resultat: number }
+  pnl: { postes: Poste[]; depotVente: PosteSimple[]; margeBrute: number | null; produits: number; charges: number; resultat: number }
   mois: Mois[]
 }
 
@@ -170,6 +171,17 @@ export default function PnlPage() {
                 ouverts={ouverts}
                 setOuverts={setOuverts}
               />
+              {data.pnl.margeBrute != null && (
+                <div
+                  className="flex items-center justify-between px-4 py-2 border-b bg-blue-50/40"
+                  title="Commissions perçues ÷ volume chineuses TTC"
+                >
+                  <span className="text-sm font-medium">Marge brute</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {data.pnl.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
+                  </span>
+                </div>
+              )}
               <BlocPostes titre="Produits" postes={produits} total={data.pnl.produits} ouverts={ouverts} setOuverts={setOuverts} />
               <BlocPostes titre="Charges" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
               <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
@@ -289,6 +301,17 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
               {data.pnl.depotVente.map(p => (
                 <Ligne key={p.cle} label={p.label} titre={p.titre} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
               ))}
+              <tr className="border-t">
+                <td className={tete} title="Commissions perçues ÷ volume chineuses TTC">Marge brute</td>
+                {mois.map(m => (
+                  <td key={m.cle} className={cel}>
+                    {m.margeBrute == null ? '—' : `${m.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                  </td>
+                ))}
+                <td className={`${cel} bg-gray-50 font-medium`}>
+                  {data.pnl.margeBrute == null ? '—' : `${data.pnl.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                </td>
+              </tr>
             </>
           )}
 

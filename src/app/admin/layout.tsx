@@ -54,6 +54,7 @@
           { label: 'Marges', href: '/admin/marges' },
           { label: 'P&L', href: '/admin/pnl' },
           { label: 'Tri transactions', href: '/admin/pnl/tri' },
+          { label: 'Affectations', href: '/admin/pnl/affectations' },
         ],
       },
       { key: 'achats', label: 'Achats', href: '/acheteuse/performance', adminOnly: true },

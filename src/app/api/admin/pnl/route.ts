@@ -64,10 +64,17 @@ const POSTES_DEPOT_VENTE = [
   },
   {
     cle: 'reversements',
-    label: 'Reversements chineuses',
-    titre: '467xxx Reversement CA — un compte de tiers par chineuse, ni produit ni charge',
+    label: 'Reversements chineuses TTC',
+    titre: "467xxx Reversement CA — le volume vendu pour chaque chineuse, TTC. Il se partage en sa part (401), la TVA (44574) et notre commission (706101). Ni produit ni charge.",
     prefixes: ['467'],
     sens: 'debit' as const,
+  },
+  {
+    cle: 'tvaCommission',
+    label: 'TVA sur commission',
+    titre: '44574 TVA collectée sur encaissements — la TVA que nous reversons sur notre commission',
+    prefixes: ['44574'],
+    sens: 'credit' as const,
   },
 ]
 
@@ -108,9 +115,14 @@ function agreger(lignes: TrialBalanceLine[]) {
   const produits = postes.filter(p => p.sens === 'produit').reduce((s, p) => s + p.montant, 0)
   const charges = postes.filter(p => p.sens === 'charge').reduce((s, p) => s + p.montant, 0)
 
+  // Marge brute : ce qu'on garde sur ce que les clientes ont payé.
+  const volumeChineuses = depotVente.find(p => p.cle === 'reversements')?.montant ?? 0
+  const commission = postes.find(p => p.cle === 'ventes')?.montant ?? 0
+
   return {
     postes: postes.filter(p => p.comptes.length > 0),
     depotVente: depotVente.filter(p => p.comptes.length > 0),
+    margeBrute: volumeChineuses > 0 ? (commission / volumeChineuses) * 100 : null,
     produits,
     charges,
     resultat: produits - charges,
@@ -216,6 +228,7 @@ export async function GET(req: NextRequest) {
           charges: a.charges,
           resultat: a.resultat,
           postes: Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
+          margeBrute: a.margeBrute,
           pieces: volumes[m.cle]?.pieces ?? 0,
           caVentes: volumes[m.cle]?.ca ?? null,
         }

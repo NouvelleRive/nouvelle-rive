@@ -7,6 +7,11 @@
 // P&L), soit une catégorie analytique Pennylane, soit les deux.
 export type Regle = {
   id: string
+  // 'transaction' : relevé bancaire → catégorie ou compte.
+  // 'ecriture'    : facture déjà comptabilisée dont une ligne est sur le mauvais
+  //                 compte (compteSource) et doit basculer sur `compte`.
+  portee?: 'transaction' | 'ecriture'
+  compteSource?: string
   motif: string                       // texte cherché dans le libellé, insensible à la casse
   compte?: string                     // n° de compte comptable, ex. 511301
   compteLabel?: string
@@ -33,6 +38,19 @@ export function normaliserLibelle(label: string | null | undefined): string {
   return s.replace(/\s+/g, ' ').trim()
 }
 
+// Libellé d'une facture comptabilisée : pas de bruit SEPA ni de référence de
+// virement à retirer, mais des accents et des apostrophes qui empêchent un
+// motif simple de matcher (TÊTE D'ORANGE vs TETE D ORANGE).
+export function normaliserLibelleEcriture(label: string | null | undefined): string {
+  const sansAccents = (label || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return sansAccents
+    .toUpperCase()
+    .replace(/\(LABEL GENERE\)/g, '')
+    .replace(/[^A-Z0-9 .-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export const sensDe = (montant: number): 'cash_in' | 'cash_out' => (montant >= 0 ? 'cash_in' : 'cash_out')
 
 // Première règle qui matche, dans l'ordre de la liste.
@@ -41,10 +59,24 @@ export function trouverRegle(regles: Regle[], label: string, montant: number): R
   const sens = sensDe(montant)
   for (const r of regles) {
     if (!r.actif) continue
+    if ((r.portee ?? 'transaction') !== 'transaction') continue
     if (r.sens && r.sens !== sens) continue
     if (libelle.includes(r.motif.toUpperCase())) return r
   }
   return null
+}
+
+// Règles d'écriture : le libellé d'une facture déjà comptabilisée. On prend le
+// motif le plus long qui matche, pour qu'un alias précis l'emporte sur un nom
+// de marque générique.
+export function trouverRegleEcriture(regles: Regle[], label: string, compteSource: string): Regle | null {
+  const l = normaliserLibelleEcriture(label)
+  const candidates = regles.filter(r =>
+    r.actif &&
+    r.portee === 'ecriture' &&
+    (r.compteSource || '') === compteSource &&
+    l.includes(r.motif.toUpperCase()))
+  return candidates.sort((a, b) => b.motif.length - a.motif.length)[0] || null
 }
 
 // Les libellés bancaires sont illisibles (et exposent des noms de personnes).

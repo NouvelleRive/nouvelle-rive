@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { formatPrix } from '@/lib/formatPrix'
-import { RefreshCw, Trash2, AlertTriangle, Check } from 'lucide-react'
+import { RefreshCw, Trash2, AlertTriangle, Check, ChevronRight } from 'lucide-react'
 import { cibleDe, libelleLisible, type Regle } from '@/lib/pnlRegles'
 
 type Categorie = { id: number; label: string; direction: 'cash_in' | 'cash_out' }
@@ -167,25 +167,19 @@ export default function TriPage() {
             {enCours && <span className="text-sm text-gray-400">en cours…</span>}
           </div>
 
-          {data.regles.length > 0 && (
-            <section className="bg-white border rounded-lg">
-              <div className="px-4 py-2 border-b text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Règles ({data.regles.length})
-              </div>
-              {data.regles.map(r => (
-                <div key={r.id} className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 text-sm">
-                  <span className="truncate">
-                    <span className="text-gray-400">contient</span> <span className="font-medium">{r.motif}</span>
-                    <span className="text-gray-400"> → </span>{cibleDe(r)}
-                    {r.sens && <span className="text-xs text-gray-400 ml-2">{r.sens === 'cash_in' ? 'entrées' : 'sorties'}</span>}
-                  </span>
-                  <button onClick={() => supprimerRegle(r.id)} className="text-gray-400 hover:text-red-600 shrink-0 ml-3" title="Supprimer">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </section>
-          )}
+          <BlocRegles
+            titre="Règles transactions"
+            sous="relevé bancaire → compte ou catégorie"
+            regles={data.regles.filter(r => (r.portee ?? 'transaction') === 'transaction')}
+            supprimer={supprimerRegle}
+          />
+          <BlocRegles
+            titre="Règles fournisseuses"
+            sous="factures chineuses mal affectées → leur compte de reversement"
+            regles={data.regles.filter(r => r.portee === 'ecriture')}
+            supprimer={supprimerRegle}
+            replie
+          />
 
           <section className="bg-white border rounded-lg overflow-hidden">
             <div className="px-4 py-2 border-b text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -236,6 +230,43 @@ export default function TriPage() {
         </>
       )}
     </div>
+  )
+}
+
+function BlocRegles({ titre, sous, regles, supprimer, replie }: {
+  titre: string
+  sous: string
+  regles: Regle[]
+  supprimer: (id: string) => void
+  replie?: boolean
+}) {
+  const [ouvert, setOuvert] = useState(!replie)
+  if (!regles.length) return null
+  return (
+    <section className="bg-white border rounded-lg">
+      <button
+        onClick={() => setOuvert(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-2 border-b text-left hover:bg-gray-50"
+      >
+        <span className="flex items-center gap-1.5">
+          <ChevronRight size={14} className={`text-gray-400 transition-transform ${ouvert ? 'rotate-90' : ''}`} />
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{titre} ({regles.length})</span>
+          <span className="text-xs text-gray-400 normal-case">— {sous}</span>
+        </span>
+      </button>
+      {ouvert && regles.map(r => (
+        <div key={r.id} className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 text-sm">
+          <span className="truncate">
+            <span className="text-gray-400">contient</span> <span className="font-medium">{r.motif}</span>
+            <span className="text-gray-400"> → </span>{cibleDe(r)}
+            {r.sens && <span className="text-xs text-gray-400 ml-2">{r.sens === 'cash_in' ? 'entrées' : 'sorties'}</span>}
+          </span>
+          <button onClick={() => supprimer(r.id)} className="text-gray-400 hover:text-red-600 shrink-0 ml-3" title="Supprimer">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ))}
+    </section>
   )
 }
 

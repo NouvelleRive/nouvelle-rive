@@ -127,6 +127,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, regle })
     }
 
+    // Création en lot, pour rejouer un paramétrage complet d'un coup.
+    if (body.action === 'ajouter-regles') {
+      const nouvelles: Regle[] = (body.regles || []).map((r: any, i: number) => ({
+        id: `${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+        portee: (r.portee === 'ecriture' ? 'ecriture' : 'transaction') as 'ecriture' | 'transaction',
+        ...(r.compteSource ? { compteSource: String(r.compteSource) } : {}),
+        motif: String(r.motif).trim(),
+        ...(r.compte ? { compte: String(r.compte), compteLabel: String(r.compteLabel || '') } : {}),
+        ...(r.categorieId ? { categorieId: Number(r.categorieId), categorieLabel: String(r.categorieLabel || '') } : {}),
+        sens: r.sens === 'cash_in' || r.sens === 'cash_out' ? r.sens : null,
+        actif: true,
+        creeLe: new Date().toISOString(),
+      }))
+      const motifsExistants = new Set(regles.map(r => `${r.portee ?? 'transaction'}|${r.motif.toUpperCase()}`))
+      const ajoutees = nouvelles.filter(r => !motifsExistants.has(`${r.portee}|${r.motif.toUpperCase()}`))
+      await DOC().set({ regles: [...regles, ...ajoutees] }, { merge: true })
+      return NextResponse.json({ success: true, ajoutees: ajoutees.length, ignorees: nouvelles.length - ajoutees.length })
+    }
+
     if (body.action === 'supprimer-regle') {
       await DOC().set({ regles: regles.filter(r => r.id !== body.id) }, { merge: true })
       return NextResponse.json({ success: true })

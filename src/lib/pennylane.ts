@@ -37,6 +37,19 @@ export type Categorie = {
   category_group: { id: number }
 }
 
+export type LedgerAccount = { id: number; number: string; label: string }
+
+export type LedgerEntry = { id: number; label: string; date: string }
+
+export type LedgerEntryLine = {
+  id: number
+  date: string
+  debit: string
+  credit: string
+  ledger_account: { id: number; number: string } | null
+  ledger_entry: { id: number }
+}
+
 export type FiscalYear = {
   id: number
   start: string
@@ -69,7 +82,9 @@ async function appel(url: string): Promise<Response> {
 async function listAll<T>(path: string, params: Record<string, string> = {}): Promise<T[]> {
   const out: T[] = []
   let cursor: string | null = null
-  for (let page = 0; page < 50; page++) {
+  // 100 éléments par page : le grand livre d'un exercice dépasse largement 5 000
+  // lignes, un plafond trop bas tronquerait silencieusement le résultat.
+  for (let page = 0; page < 400; page++) {
     const qs = new URLSearchParams({ ...params, limit: '100' })
     if (cursor) qs.set('cursor', cursor)
     const res = await appel(`${BASE}/${path}?${qs}`)
@@ -85,6 +100,19 @@ async function listAll<T>(path: string, params: Record<string, string> = {}): Pr
 
 export const getBankAccounts = () => listAll<BankAccount>('bank_accounts')
 export const getCategories = () => listAll<Categorie>('categories')
+export const getLedgerAccounts = () => listAll<LedgerAccount>('ledger_accounts')
+
+const filtreDates = (debut: string, fin: string) => ({
+  filter: JSON.stringify([
+    { field: 'date', operator: 'gteq', value: debut },
+    { field: 'date', operator: 'lteq', value: fin },
+  ]),
+})
+
+export const getLedgerEntries = (debut: string, fin: string) =>
+  listAll<LedgerEntry>('ledger_entries', filtreDates(debut, fin))
+export const getLedgerEntryLines = (debut: string, fin: string) =>
+  listAll<LedgerEntryLine>('ledger_entry_lines', filtreDates(debut, fin))
 
 // Le relevé complet représente ~25 appels paginés : on le garde en mémoire du
 // serveur quelques minutes pour qu'un aller-retour sur la page de tri ne le
@@ -126,4 +154,21 @@ export async function setTransactionCategories(transactionId: number, categorieI
     return res.json()
   }
   throw new Error(`Pennylane PUT categories ${transactionId} : limite de débit atteinte`)
+}
+
+// Réaffecte une ligne d'écriture à un autre compte. Les montants ne bougent pas,
+// donc l'écriture reste équilibrée.
+export async function reaffecterLigne(entryId: number, lineId: number, ledgerAccountId: number) {
+  const body = JSON.stringify({ ledger_entry_lines: { update: [{ id: lineId, ledger_account_id: ledgerAccountId }] } })
+  for (let essai = 0; essai < 5; essai++) {
+    const res = await fetch(`${BASE}/ledger_entries/${entryId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token()}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+      body,
+    })
+    if (res.status === 429) { await pause(1200 * (essai + 1)); continue }
+    if (!res.ok) throw new Error(`Pennylane PUT ledger_entries/${entryId} → ${res.status} ${await res.text()}`)
+    return res.json()
+  }
+  throw new Error(`Pennylane PUT ledger_entries/${entryId} : limite de débit atteinte`)
 }
