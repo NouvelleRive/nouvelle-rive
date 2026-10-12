@@ -524,16 +524,6 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
 }
 
 console.log(`✅ checkGmailFactures terminé`)
-
-// Dans la foulée : rapprochement des factures chineuses avec leur virement.
-// Isolé dans son try/catch pour ne pas faire tomber la détection des factures.
-try {
-  const { lettrerFacturesChineuses } = require('./pennylaneLettrage')
-  await lettrerFacturesChineuses()
-} catch (err) {
-  console.error('lettrage Pennylane failed:', err)
-}
-
     return null
   })
 
