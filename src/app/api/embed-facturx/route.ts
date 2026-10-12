@@ -23,6 +23,13 @@ function generateFacturXML(d: InvoiceData): string {
   const dueStr = dueDate.toISOString().slice(0, 10).replace(/-/g, '')
   const siretClean = d.siret?.replace(/\s/g, '') || ''
   const ibanClean = d.iban?.replace(/\s/g, '') || ''
+  // Certaines fiches chineuses portent "NA" ou "test" dans le champ TVA. Émettre
+  // ça comme numéro intracommunautaire empêche Pennylane d'identifier le
+  // fournisseur à la lecture du Factur-X : la facture arrive sans fournisseur,
+  // donc sans écriture, et le virement reste en suspens. Mieux vaut omettre la
+  // balise que la remplir avec une valeur qui n'est pas un numéro.
+  const tvaClean = d.tva?.replace(/\s/g, '').toUpperCase() || ''
+  const tvaValide = /^[A-Z]{2}[0-9A-Z]{8,13}$/.test(tvaClean)
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice
@@ -98,7 +105,7 @@ function generateFacturXML(d: InvoiceData): string {
       <ram:SellerTradeParty>
         <ram:Name>${d.nom}</ram:Name>
         ${siretClean ? `<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${siretClean}</ram:ID></ram:SpecifiedLegalOrganization>` : ''}
-        ${d.tva ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${d.tva}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
+        ${tvaValide ? `<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${tvaClean}</ram:ID></ram:SpecifiedTaxRegistration>` : ''}
       </ram:SellerTradeParty>
       <ram:BuyerTradeParty>
         <ram:Name>NR1 SAS</ram:Name>
