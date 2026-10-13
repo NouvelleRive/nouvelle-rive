@@ -40,9 +40,11 @@ export async function GET(req: NextRequest) {
   if (refus) return refus
 
   try {
-    const depuis = req.nextUrl.searchParams.get('depuis') || '2026-01-01'
     const exercices = await getFiscalYears()
     const debutPlan = exercices.map(e => e.start).sort()[0] || '2025-01-01'
+    // Par défaut on remonte au premier exercice : une dépense récurrente a pu
+    // commencer avant l'exercice en cours, la cacher fausse le tri.
+    const depuis = req.nextUrl.searchParams.get('depuis') || debutPlan
     const [categories, transactions, regles, balance] = await Promise.all([
       getCategories(),
       getTransactions(),
@@ -152,7 +154,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.action === 'appliquer') {
-      const depuis = body.depuis || '2026-01-01'
+      const exercices = await getFiscalYears()
+      const depuis = body.depuis || exercices.map(e => e.start).sort()[0] || '2025-01-01'
       const limite = Number(body.limite) || 0 // 0 = tout
       const simulation = body.simulation !== false // par défaut on simule
 
