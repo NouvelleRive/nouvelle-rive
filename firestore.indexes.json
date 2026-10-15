@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "ventes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trigramme", "order": "ASCENDING" },
+        { "fieldPath": "dateVente", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

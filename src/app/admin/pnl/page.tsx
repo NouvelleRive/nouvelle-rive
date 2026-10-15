@@ -459,8 +459,12 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
               {data.pnl.depotVente.map(p => (
                 <Fragment key={p.cle}>
                   <Ligne label={p.label} titre={p.titre} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
-                  {/* En vue mois, seules les sous-lignes qui ont une valeur par mois. */}
-                  {(p.sousLignes ?? []).filter(sl => mois.some(m => m.postes[sl.cle] !== undefined)).map(sl => (
+                  {/* En vue mois : les sous-lignes qui ont une valeur par mois, et
+                      qui ne sont pas déjà une ligne du tableau. */}
+                  {(p.sousLignes ?? [])
+                    .filter(sl => mois.some(m => m.postes[sl.cle] !== undefined))
+                    .filter(sl => !data.pnl.depotVente.some(q => q.cle === sl.cle))
+                    .map(sl => (
                     <Ligne
                       key={sl.cle}
                       label={`\u00a0\u00a0\u00a0${sl.label}`}
