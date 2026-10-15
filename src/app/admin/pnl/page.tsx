@@ -39,6 +39,7 @@ type Data = {
     charges: number
     resultat: number
   }
+  parChineuse: { nom: string; trigramme: string; pieces: number; volume: number | null }[]
   mois: Mois[]
 }
 
@@ -221,9 +222,43 @@ export default function PnlPage() {
           ) : (
             <TableauMois data={data} produits={produits} charges={charges} />
           )}
+
+          <VolumeParChineuse lignes={data.parChineuse} />
         </>
       )}
     </div>
+  )
+}
+
+// Volume d'affaires par chineuse, calculé sur nos ventes Square : le trigramme
+// du SKU dit à qui appartient la pièce. Rien à voir avec les comptes 467, qui
+// ne portent que ce qui a déjà été reversé.
+function VolumeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
+  if (!lignes?.length) return null
+  const total = lignes.reduce((s, l) => s + (l.volume ?? 0), 0)
+  const pieces = lignes.reduce((s, l) => s + l.pieces, 0)
+  return (
+    <section className="bg-white border rounded-lg overflow-hidden mt-4">
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Volume d&apos;affaires par chineuse
+        </span>
+        <span className="text-sm font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>
+      </div>
+      {lignes.map(l => (
+        <div key={l.trigramme} className="flex items-center justify-between px-4 py-1.5 border-b last:border-b-0 text-sm">
+          <span className="text-gray-700">
+            {l.nom}
+            <span className="text-gray-400 ml-2">{formatPrix(l.pieces)} pièces</span>
+          </span>
+          <span className="tabular-nums">{formatPrix(l.volume ?? 0, { decimals: 0 })} €</span>
+        </div>
+      ))}
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-t text-sm">
+        <span className="text-gray-500">{formatPrix(pieces)} pièces</span>
+        <span className="font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>
+      </div>
+    </section>
   )
 }
 

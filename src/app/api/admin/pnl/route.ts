@@ -196,6 +196,40 @@ async function volumesParMois(mois: { cle: string; start: string; end: string }[
   return Object.fromEntries(res.map(r => [r.cle, { pieces: r.pieces, ca: r.ca }]))
 }
 
+// Volume d'affaires par chineuse, lu sur nos ventes Square : le SKU porte le
+// trigramme, donc la vente sait à qui elle appartient. On passe par des
+// requêtes d'agrégation (count + sum), qui ne lisent pas les documents.
+// La compta ne peut pas répondre à ça : les comptes 467 ne portent que ce qui
+// a déjà été reversé, pas le volume vendu du mois.
+async function volumesParChineuse(start: string, end: string) {
+  const debut = Timestamp.fromDate(new Date(start + 'T00:00:00'))
+  const fin = Timestamp.fromDate(new Date(end + 'T23:59:59.999'))
+
+  const chineuses = (await adminDb.collection('chineuse').select('nom', 'trigramme').get()).docs
+    .map(d => ({ nom: (d.data().nom as string) || d.id, trigramme: ((d.data().trigramme as string) || '').toUpperCase() }))
+    .filter(c => c.trigramme)
+
+  const lignes = await parPaquets(
+    chineuses.map(c => async () => {
+      const base = adminDb.collection('ventes')
+        .where('trigramme', '==', c.trigramme)
+        .where('dateVente', '>=', debut)
+        .where('dateVente', '<=', fin)
+      const [pieces, volume] = await Promise.all([
+        base.count().get().then(s => s.data().count || 0).catch(() => 0),
+        base.aggregate({ ca: AggregateField.sum('prixVenteReel') }).get()
+          .then(s => s.data().ca || 0).catch(() => null),
+      ])
+      return { ...c, pieces, volume }
+    }),
+    6,
+  )
+
+  return lignes
+    .filter(l => l.pieces > 0 || (l.volume ?? 0) > 0)
+    .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
+}
+
 export async function GET(req: NextRequest) {
   const refus = await requireAdmin(req)
   if (refus) return refus
@@ -210,11 +244,12 @@ export async function GET(req: NextRequest) {
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
       volumesParMois(mois),
+      volumesParChineuse(start, end).catch(() => []),
     ])
 
     const banques = comptes
@@ -233,6 +268,7 @@ export async function GET(req: NextRequest) {
       exercices: exercices.map(e => ({ start: e.start, finish: e.finish, status: e.status })),
       tresorerie: { comptes: banques, total: banques.reduce((s, c) => s + c.solde, 0) },
       pnl: agreger(balance),
+      parChineuse,
       mois: mois.map((m, i) => {
         const a = agreger(balancesMois[i])
         return {
