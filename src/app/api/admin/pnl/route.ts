@@ -205,8 +205,12 @@ async function volumesParChineuse(start: string, end: string) {
   const debut = Timestamp.fromDate(new Date(start + 'T00:00:00'))
   const fin = Timestamp.fromDate(new Date(end + 'T23:59:59.999'))
 
-  const chineuses = (await adminDb.collection('chineuse').select('nom', 'trigramme').get()).docs
-    .map(d => ({ nom: (d.data().nom as string) || d.id, trigramme: ((d.data().trigramme as string) || '').toUpperCase() }))
+  const chineuses = (await adminDb.collection('chineuse').select('nom', 'trigramme', 'taux').get()).docs
+    .map(d => ({
+      nom: (d.data().nom as string) || d.id,
+      trigramme: ((d.data().trigramme as string) || '').toUpperCase(),
+      taux: Number(d.data().taux ?? 40),
+    }))
     .filter(c => c.trigramme)
 
   const lignes = await parPaquets(
@@ -220,7 +224,10 @@ async function volumesParChineuse(start: string, end: string) {
         base.aggregate({ ca: AggregateField.sum('prixVenteReel') }).get()
           .then(s => s.data().ca || 0).catch(() => null),
       ])
-      return { ...c, pieces, volume }
+      // La commission revenant à NR1 : le taux de la chineuse appliqué au
+      // volume TTC, comme sur sa facture mensuelle.
+      const commission = volume != null ? (volume * c.taux) / 100 : null
+      return { ...c, pieces, volume, commission }
     }),
     6,
   )

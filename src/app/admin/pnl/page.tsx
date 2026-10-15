@@ -39,7 +39,7 @@ type Data = {
     charges: number
     resultat: number
   }
-  parChineuse: { nom: string; trigramme: string; pieces: number; volume: number | null }[]
+  parChineuse: { nom: string; trigramme: string; taux: number; pieces: number; volume: number | null; commission: number | null }[]
   mois: Mois[]
 }
 
@@ -182,6 +182,7 @@ export default function PnlPage() {
                 ouverts={ouverts}
                 setOuverts={setOuverts}
               />
+              <MargeParChineuse lignes={data.parChineuse} />
               {data.pnl.commissionsDeduites > 0 && (
                 <>
                   <div className="flex items-center justify-between px-4 py-1.5 border-b text-sm" title="Crédits des comptes 70 : les commissions facturées">
@@ -222,43 +223,62 @@ export default function PnlPage() {
           ) : (
             <TableauMois data={data} produits={produits} charges={charges} />
           )}
-
-          <VolumeParChineuse lignes={data.parChineuse} />
         </>
       )}
     </div>
   )
 }
 
-// Volume d'affaires par chineuse, calculé sur nos ventes Square : le trigramme
-// du SKU dit à qui appartient la pièce. Rien à voir avec les comptes 467, qui
-// ne portent que ce qui a déjà été reversé.
-function VolumeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
+// Marge brute moyenne sous les reversements, dépliable par chineuse. Le volume
+// vient de nos ventes Square — le trigramme du SKU dit à qui appartient la
+// pièce — et la commission applique son taux. Les comptes 467 ne pourraient pas
+// répondre : ils ne portent que ce qui a déjà été reversé.
+function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
+  const [ouvert, setOuvert] = useState(false)
   if (!lignes?.length) return null
-  const total = lignes.reduce((s, l) => s + (l.volume ?? 0), 0)
-  const pieces = lignes.reduce((s, l) => s + l.pieces, 0)
+  const volume = lignes.reduce((s, l) => s + (l.volume ?? 0), 0)
+  const commission = lignes.reduce((s, l) => s + (l.commission ?? 0), 0)
+  if (!volume) return null
+  const marge = (commission / volume) * 100
   return (
-    <section className="bg-white border rounded-lg overflow-hidden mt-4">
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Volume d&apos;affaires par chineuse
+    <>
+      <button
+        onClick={() => setOuvert(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-2 border-b bg-blue-50/40 hover:bg-blue-50 text-left"
+        title="Commissions NR ÷ volume vendu, d'après les ventes Square et le taux de chaque chineuse"
+      >
+        <span className="text-sm font-medium">
+          <span className="inline-block w-3 text-gray-400">{ouvert ? '−' : '+'}</span>
+          Marge brute moyenne
         </span>
-        <span className="text-sm font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>
-      </div>
-      {lignes.map(l => (
-        <div key={l.trigramme} className="flex items-center justify-between px-4 py-1.5 border-b last:border-b-0 text-sm">
-          <span className="text-gray-700">
-            {l.nom}
-            <span className="text-gray-400 ml-2">{formatPrix(l.pieces)} pièces</span>
+        <span className="text-sm font-semibold tabular-nums">
+          {marge.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
+          <span className="font-normal text-gray-400 ml-2">
+            {formatPrix(commission, { decimals: 0 })} € sur {formatPrix(volume, { decimals: 0 })} €
           </span>
-          <span className="tabular-nums">{formatPrix(l.volume ?? 0, { decimals: 0 })} €</span>
+        </span>
+      </button>
+      {ouvert && (
+        <div className="bg-gray-50/60 border-b">
+          <div className="flex items-center px-4 py-1 text-[11px] uppercase tracking-wide text-gray-400 border-b">
+            <span className="flex-1">Chineuse</span>
+            <span className="w-20 text-right">Pièces</span>
+            <span className="w-28 text-right">Volume</span>
+            <span className="w-28 text-right">Commission</span>
+            <span className="w-16 text-right">Marge</span>
+          </div>
+          {lignes.map(l => (
+            <div key={l.trigramme} className="flex items-center px-4 py-1.5 border-b last:border-b-0 text-sm">
+              <span className="flex-1 pl-3 text-gray-700">{l.nom}</span>
+              <span className="w-20 text-right tabular-nums text-gray-500">{formatPrix(l.pieces)}</span>
+              <span className="w-28 text-right tabular-nums">{formatPrix(l.volume ?? 0, { decimals: 0 })} €</span>
+              <span className="w-28 text-right tabular-nums">{formatPrix(l.commission ?? 0, { decimals: 0 })} €</span>
+              <span className="w-16 text-right tabular-nums text-gray-500">{l.taux} %</span>
+            </div>
+          ))}
         </div>
-      ))}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-t text-sm">
-        <span className="text-gray-500">{formatPrix(pieces)} pièces</span>
-        <span className="font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>
-      </div>
-    </section>
+      )}
+    </>
   )
 }
 
