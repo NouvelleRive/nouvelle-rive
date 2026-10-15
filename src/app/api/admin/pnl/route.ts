@@ -313,6 +313,16 @@ async function volumesParChineuse(start: string, end: string) {
 // qu'on va montrer : ~1 400 lignes sur un exercice, pas le grand livre entier.
 type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string }
 
+// NR0526-PS → 2026-05, PRI1025TDO4 → 2025-10. Les bordereaux Printemps à deux
+// chiffres (PRI30) ne sont pas des périodes : ils ne matchent pas.
+function periodeDeLaReference(libelle: string): string | null {
+  const m = libelle.toUpperCase().match(/\b(?:NR|PRI[VU]?)(\d{2})(\d{2})\b/)
+  if (!m) return null
+  const mois = Number(m[1])
+  if (mois < 1 || mois > 12) return null
+  return `20${m[2]}-${m[1]}`
+}
+
 async function detailParPoste(start: string, end: string): Promise<Record<string, SousLigne[]>> {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
@@ -358,7 +368,9 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
       label: nom,
       titre: `${l.date} — ${brut} — ${numero} ${nomDuCompte.get(numero) || ''}`,
       montant,
-      mois: (l.date || '').slice(0, 7),
+      // La période, c'est celle de la référence : NR0526 = mai 2026, même si
+      // la facture est datée du 1er juin et payée le 10.
+      mois: periodeDeLaReference(brut) || (l.date || '').slice(0, 7),
     })
   }
 
