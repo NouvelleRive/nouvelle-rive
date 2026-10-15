@@ -154,7 +154,7 @@ export default function PnlPage() {
         <div className="flex items-center gap-2">
           <label
             className="flex items-center gap-1.5 text-sm text-gray-600 select-none cursor-pointer"
-            title="Le compte PRI et les ventes du stand Printemps : trésorerie, VA Printemps et VA total"
+            title="Le compte PRI et les ventes du stand Printemps"
           >
             <input
               type="checkbox"

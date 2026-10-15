@@ -58,7 +58,7 @@ const POSTES: { cle: string; label: string; sens: 'produit' | 'charge'; prefixes
 const POSTES_DEPOT_VENTE = [
   {
     cle: 'volumePrintemps',
-    label: 'VA Printemps',
+    label: "Volume d'affaires Printemps",
     titre: 'Source : Pennylane, compte 707',
     prefixes: ['707'],
     sens: 'credit' as const,
@@ -318,10 +318,14 @@ export async function GET(req: NextRequest) {
           depotVente: [
             {
               cle: 'volume',
-              label: 'VA NR',
+              label: "Volume d'affaires NR",
               titre: 'Source : Square',
               montant: square.total,
               comptes: [],
+              // Le détail se déplie chineuse par chineuse (volume lu dans l'app).
+              sousLignes: parChineuse
+                .filter(c => (c.volume ?? 0) > 0)
+                .map(c => ({ cle: `vol-${c.trigramme}`, label: c.nom, titre: c.trigramme, montant: c.volume ?? 0 })),
             },
             ...(printemps
               ? [{
@@ -337,10 +341,14 @@ export async function GET(req: NextRequest) {
               : []),
             {
               cle: 'volumeTotal',
-              label: 'VA total',
-              titre: 'VA NR + VA Printemps',
+              label: "Volume d'affaires total",
+              titre: "Volume d'affaires NR + Printemps",
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
+              sousLignes: [
+                { cle: 'volume', label: "Volume d'affaires NR", montant: square.total },
+                ...(printemps ? [{ cle: 'volumePrintemps', label: "Volume d'affaires Printemps", montant: printemps.montant }] : []),
+              ],
             },
             ...reste,
           ],
