@@ -235,7 +235,7 @@ async function printempsParCanal(start: string, end: string) {
   const parMois: Record<string, { vintage: number; upcycling: number }> = {}
   // Chaque virement du Printemps porte ses références de bordereau (PRI26,
   // PRIV12…) : on les garde pour pouvoir déplier le détail.
-  const lignes: { cle: string; label: string; titre?: string; montant: number }[] = []
+  const lignes: { cle: string; label: string; titre?: string; montant: number; mois?: string }[] = []
 
   for (const t of tx) {
     if (!t.date || t.date < start || t.date > end) continue
@@ -250,6 +250,7 @@ async function printempsParCanal(start: string, end: string) {
       label: refs.length > 0 ? refs.join(' ') : 'Printemps',
       titre: `${t.date} — ${(t.label || '').replace(/\s+/g, ' ').trim()}`,
       montant,
+      mois: t.date.slice(0, 7),
     })
 
     const canal = /PRIV/.test(l) ? 'vintage' : /PRIU/.test(l) ? 'upcycling' : null
@@ -308,7 +309,7 @@ async function volumesParChineuse(start: string, end: string) {
 // sa facture (fournisseur + référence) ou, à défaut, par le libellé de
 // l'écriture. On ne rapatrie que les comptes affichés et que les écritures
 // qu'on va montrer : ~1 400 lignes sur un exercice, pas le grand livre entier.
-type SousLigne = { cle: string; label: string; titre?: string; montant: number }
+type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string }
 
 async function detailParPoste(start: string, end: string): Promise<Record<string, SousLigne[]>> {
   const comptes = await getLedgerAccounts()
@@ -350,13 +351,14 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
       label: nom,
       titre: `${l.date} — ${numero} ${nomDuCompte.get(numero) || ''}`,
       montant,
+      mois: (l.date || '').slice(0, 7),
     })
   }
 
   const parPoste: Record<string, SousLigne[]> = {}
   for (const v of cumul.values()) {
     if (Math.abs(v.montant) < 0.005) continue
-    ;(parPoste[v.poste] ||= []).push({ cle: v.cle, label: v.label, titre: v.titre, montant: v.montant })
+    ;(parPoste[v.poste] ||= []).push({ cle: v.cle, label: v.label, titre: v.titre, montant: v.montant, mois: v.mois })
   }
   for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => Math.abs(b.montant) - Math.abs(a.montant))
   return parPoste

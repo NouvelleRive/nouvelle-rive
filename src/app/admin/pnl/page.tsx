@@ -5,14 +5,14 @@
 // comptes bancaires qu'elle agrège. Aucune estimation maison ici : si un
 // chiffre est faux, c'est la compta qu'il faut corriger.
 
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { formatPrix } from '@/lib/formatPrix'
 import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
-type SousLigne = { cle: string; label: string; titre?: string; montant: number }
+type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string }
 type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
 type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
 type Mois = {
@@ -304,7 +304,7 @@ export default function PnlPage() {
               </div>
             </section>
           ) : (
-            <TableauMois data={data} produits={produits} charges={charges} />
+            <TableauMois data={data} produits={produits} charges={charges} ouverts={ouverts} setOuverts={setOuverts} />
           )}
         </>
       )}
@@ -430,7 +430,13 @@ function BlocPostes({
 
 // Vue mois par mois : les postes en lignes, les mois en colonnes.
 // Le tableau scrolle horizontalement, la 1re colonne reste collée.
-function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[]; charges: Poste[] }) {
+function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
+  data: Data
+  produits: Poste[]
+  charges: Poste[]
+  ouverts: Record<string, boolean>
+  setOuverts: (f: (o: Record<string, boolean>) => Record<string, boolean>) => void
+}) {
   const mois = data.mois
   const cel = 'px-3 py-1.5 text-right tabular-nums whitespace-nowrap'
   const tete = 'sticky left-0 bg-white px-3 py-1.5 text-left whitespace-nowrap z-10'
@@ -457,6 +463,56 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
     </tr>
   )
 
+  // Une ligne de poste : cliquable quand elle a du détail daté, qu'on répartit
+  // alors dans la colonne de son mois.
+  const LignePoste = ({ p, dejaAffichees }: { p: Poste | PosteSimple; dejaAffichees?: string[] }) => {
+    const sous = p.sousLignes ?? []
+    const mensuelles = sous.filter(sl => mois.some(m => m.postes[sl.cle] !== undefined))
+      .filter(sl => !(dejaAffichees ?? []).includes(sl.cle))
+    const datees = sous.filter(sl => sl.mois)
+    const ouvert = datees.length > 0 && !!ouverts[`m-${p.cle}`]
+    return (
+      <>
+        <tr className="border-t">
+          <td className={tete} title={p.titre}>
+            {datees.length > 0 ? (
+              <button
+                onClick={() => setOuverts(o => ({ ...o, [`m-${p.cle}`]: !o[`m-${p.cle}`] }))}
+                className="flex items-center gap-1 text-left hover:text-[#22209C]"
+              >
+                <ChevronRight size={12} className={`text-gray-400 transition-transform ${ouvert ? 'rotate-90' : ''}`} />
+                {p.label}
+                <span className="text-xs text-gray-400">({datees.length})</span>
+              </button>
+            ) : (
+              <span className="pl-4">{p.label}</span>
+            )}
+          </td>
+          {mois.map(m => <td key={m.cle} className={cel}>{formatPrix(m.postes[p.cle] ?? 0, { decimals: 0 })} €</td>)}
+          <td className={`${cel} bg-gray-50 font-medium`}>{formatPrix(p.montant, { decimals: 0 })} €</td>
+        </tr>
+        {mensuelles.map(sl => (
+          <Ligne
+            key={sl.cle}
+            label={`\u00a0\u00a0\u00a0${sl.label}`}
+            titre={sl.titre}
+            valeurs={mois.map(m => m.postes[sl.cle] ?? 0)}
+            total={sl.montant}
+          />
+        ))}
+        {ouvert && datees.map(sl => (
+          <tr key={sl.cle} className="bg-gray-50/50 text-xs text-gray-600">
+            <td className={`${tete} bg-gray-50/50 pl-8`} title={sl.titre}>{sl.label}</td>
+            {mois.map(m => (
+              <td key={m.cle} className={cel}>{sl.mois === m.cle ? `${formatPrix(sl.montant, { decimals: 0 })} €` : ''}</td>
+            ))}
+            <td className={`${cel} bg-gray-50`}>{formatPrix(sl.montant, { decimals: 0 })} €</td>
+          </tr>
+        ))}
+      </>
+    )
+  }
+
   const somme = (f: (m: Mois) => number) => mois.reduce((s, m) => s + f(m), 0)
 
   return (
@@ -477,23 +533,7 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
               </tr>
               <Ligne label="Pièces vendues" titre="Nos ventes, pas la compta" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
               {data.pnl.depotVente.map(p => (
-                <Fragment key={p.cle}>
-                  <Ligne label={p.label} titre={p.titre} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
-                  {/* En vue mois : les sous-lignes qui ont une valeur par mois, et
-                      qui ne sont pas déjà une ligne du tableau. */}
-                  {(p.sousLignes ?? [])
-                    .filter(sl => mois.some(m => m.postes[sl.cle] !== undefined))
-                    .filter(sl => !data.pnl.depotVente.some(q => q.cle === sl.cle))
-                    .map(sl => (
-                    <Ligne
-                      key={sl.cle}
-                      label={`\u00a0\u00a0\u00a0${sl.label}`}
-                      titre={sl.titre}
-                      valeurs={mois.map(m => m.postes[sl.cle] ?? 0)}
-                      total={sl.montant}
-                    />
-                  ))}
-                </Fragment>
+                <LignePoste key={p.cle} p={p} dejaAffichees={data.pnl.depotVente.map(q => q.cle)} />
               ))}
               <tr className="border-t">
                 <td className={tete} title="Commissions perçues ÷ volume chineuses TTC">Marge brute</td>
@@ -523,17 +563,13 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
           <tr className="bg-gray-50/70">
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Produits</td>
           </tr>
-          {produits.map(p => (
-            <Ligne key={p.cle} label={p.label} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
-          ))}
+          {produits.map(p => <LignePoste key={p.cle} p={p} />)}
           <Ligne label="Total produits" valeurs={mois.map(m => m.produits)} total={data.pnl.produits} gras />
 
           <tr className="bg-gray-50/70">
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Charges</td>
           </tr>
-          {charges.map(p => (
-            <Ligne key={p.cle} label={p.label} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
-          ))}
+          {charges.map(p => <LignePoste key={p.cle} p={p} />)}
           <Ligne label="Total charges" valeurs={mois.map(m => m.charges)} total={data.pnl.charges} gras />
 
           <tr className="bg-gray-50/70">
