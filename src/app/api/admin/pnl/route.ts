@@ -62,13 +62,6 @@ const POSTES: { cle: string; label: string; sens: 'produit' | 'charge'; prefixes
 // produit ou une charge — seule la commission (706101) est du chiffre.
 const POSTES_DEPOT_VENTE = [
   {
-    cle: 'volumePrintemps',
-    label: "Volume d'affaires Printemps",
-    titre: 'Source : Pennylane, compte 707',
-    prefixes: ['707'],
-    sens: 'credit' as const,
-  },
-  {
     cle: 'reversements',
     label: 'Reversements chineuses TTC',
     titre: 'Source : Pennylane, comptes 467xxx',
@@ -225,43 +218,52 @@ async function volumesParMois(mois: { cle: string; start: string; end: string }[
   return Object.fromEntries(res.map(r => [r.cle, { pieces: r.pieces, ca: r.ca }]))
 }
 
-// Le Printemps verse séparément le vintage et l'upcycling : les virements
-// portent PRIV ou PRIU dans leur libellé. Les deux ne couvrent pas tout ce qui
-// arrive du Printemps, donc VA Printemps reste le total du compte 707.
+// Le Printemps verse deux fois par mois sur le compte Business : le vintage,
+// qui tombe en début de mois suivant sans référence, et l'upcycling, qui se
+// balade et porte un numéro de bordereau (PRI28, PRI30 PRI33…).
+//
+// Les mêmes montants réapparaissent ensuite sur le compte PRI : ce sont des
+// virements internes, pas des recettes. On ne lit donc que le Business.
 async function printempsParCanal(start: string, end: string) {
   const tx = await getTransactions()
   const vide = () => ({ vintage: 0, upcycling: 0 })
   const total = vide()
   const parMois: Record<string, { vintage: number; upcycling: number }> = {}
-  // Chaque virement du Printemps porte ses références de bordereau (PRI26,
-  // PRIV12…) : on les garde pour pouvoir déplier le détail.
   const lignes: { cle: string; label: string; titre?: string; montant: number; mois?: string }[] = []
+  let montantTotal = 0
 
   for (const t of tx) {
     if (!t.date || t.date < start || t.date > end) continue
+    if (COMPTES_BANCAIRES_EXCLUS.includes(t.bank_account?.id)) continue
     const montant = Number(t.amount) || 0
     if (montant <= 0) continue
     const l = (t.label || '').toUpperCase()
-    if (!/PRINTEMPS/.test(l) && !/\bPRI[VU]?\d/.test(l)) continue
+    if (!/PRINTEMPS/.test(l) && !/\bPRI/.test(l)) continue
 
-    const refs = [...new Set((l.match(/\bPRI[VU]?\d+/g) || []))]
+    // Upcycling dès qu'un numéro de bordereau est présent, vintage sinon.
+    const canal: 'vintage' | 'upcycling' =
+      /PRIU/.test(l) ? 'upcycling'
+      : /PRIV/.test(l) ? 'vintage'
+      : /\bPRI\s*\d/.test(l) ? 'upcycling'
+      : 'vintage'
+
+    const refs = [...new Set(l.match(/\bPRI[VU]?\d+/g) || [])]
     lignes.push({
       cle: `pri-${t.id}`,
-      label: refs.length > 0 ? refs.join(' ') : 'Printemps',
-      titre: `${t.date} — ${(t.label || '').replace(/\s+/g, ' ').trim()}`,
+      label: refs.length > 0 ? refs.join(' ') : (canal === 'vintage' ? 'Vintage' : 'Upcycling'),
+      titre: `${t.date} — ${canal} — ${(t.label || '').replace(/\s+/g, ' ').trim()}`,
       montant,
       mois: t.date.slice(0, 7),
     })
 
-    const canal = /PRIV/.test(l) ? 'vintage' : /PRIU/.test(l) ? 'upcycling' : null
-    if (!canal) continue
     const cle = t.date.slice(0, 7)
     if (!parMois[cle]) parMois[cle] = vide()
     parMois[cle][canal] += montant
     total[canal] += montant
+    montantTotal += montant
   }
   lignes.sort((a, b) => b.montant - a.montant)
-  return { total, parMois, lignes }
+  return { total, parMois, lignes, montantTotal }
 }
 
 // Volume d'affaires par chineuse, lu sur nos ventes Square : le SKU porte le
@@ -432,8 +434,18 @@ export async function GET(req: NextRequest) {
         if (!square) return a
         // Le volume d'affaires vient de Square, pas du compte de transit :
         // les virements décalent la fin de mois sur le mois suivant.
-        const printemps = a.depotVente.find(p => p.cle === 'volumePrintemps')
-        const reste = a.depotVente.filter(p => p.cle !== 'volumePrintemps')
+        // Le Printemps ne se lit plus sur le 707 (qui porte aussi le stock
+        // propre) mais sur les encaissements reçus de Printemps SAS.
+        const printemps = canaux && canaux.montantTotal > 0
+          ? {
+              cle: 'volumePrintemps',
+              label: "Volume d'affaires Printemps",
+              titre: 'Encaissements reçus de Printemps SAS',
+              montant: canaux.montantTotal,
+              comptes: [] as { number: string; label: string; montant: number }[],
+            }
+          : null
+        const reste = a.depotVente
         return {
           ...a,
           depotVente: [
@@ -443,10 +455,9 @@ export async function GET(req: NextRequest) {
               titre: 'Source : Square',
               montant: square.total,
               comptes: [],
-              // Le détail se déplie chineuse par chineuse (volume lu dans l'app).
-              sousLignes: parChineuse
-                .filter(c => (c.volume ?? 0) > 0)
-                .map(c => ({ cle: `vol-${c.trigramme}`, label: c.nom, titre: c.trigramme, montant: c.volume ?? 0 })),
+              // Le détail, c'est la facture de chaque chineuse (NR0126-PS) :
+              // même liste que les reversements, et elle est datée.
+              sousLignes: detail['reversements'] ?? [],
             },
             ...(printemps
               ? [{
@@ -489,12 +500,14 @@ export async function GET(req: NextRequest) {
             ...(square
               ? (() => {
                   const nr = square.parMois[m.cle]?.net ?? 0
-                  const pr = a.depotVente.find(p => p.cle === 'volumePrintemps')?.montant ?? 0
+                  const v = canaux?.parMois[m.cle]?.vintage ?? 0
+                  const u = canaux?.parMois[m.cle]?.upcycling ?? 0
                   return {
                     volume: nr,
-                    volumeTotal: nr + pr,
-                    priVintage: canaux?.parMois[m.cle]?.vintage ?? 0,
-                    priUpcycling: canaux?.parMois[m.cle]?.upcycling ?? 0,
+                    volumePrintemps: v + u,
+                    volumeTotal: nr + v + u,
+                    priVintage: v,
+                    priUpcycling: u,
                   }
                 })()
               : {}),
