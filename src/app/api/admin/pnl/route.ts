@@ -14,7 +14,7 @@ import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
 import {
   getBankAccounts, getFiscalYears, getTrialBalance, getTransactions,
-  getLedgerAccounts, getLignesDeComptes, getLedgerEntriesParIds,
+  getLedgerAccounts, getLignesDeComptes, getLedgerEntriesParIds, viderCacheTransactions,
   type TrialBalanceLine,
 } from '@/lib/pennylane'
 import { ventesSquare } from '@/lib/squareVentes'
@@ -83,6 +83,12 @@ const POSTES_DEPOT_VENTE = [
     sens: 'credit' as const,
   },
 ]
+
+// Le P&L ne bouge pas d'une minute à l'autre : on garde la réponse en mémoire
+// du serveur et on ne retape Pennylane que sur demande (bouton « mettre à
+// jour », ?refresh=1). Cache par instance, perdu au redéploiement, gratuit.
+const CACHE = new Map<string, { le: number; corps: any }>()
+const TTL_PNL = 6 * 60 * 60 * 1000
 
 const num = (v: string) => Number(v) || 0
 
@@ -369,6 +375,14 @@ export async function GET(req: NextRequest) {
     const start = sp.get('start') || courant?.start || `${new Date().getFullYear()}-01-01`
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
+    const cleCache = `${start}|${end}`
+    const forcer = sp.get('refresh') === '1'
+    const enCache = CACHE.get(cleCache)
+    if (!forcer && enCache && Date.now() - enCache.le < TTL_PNL) {
+      return NextResponse.json({ ...enCache.corps, calculeLe: new Date(enCache.le).toISOString(), ducache: true })
+    }
+    if (forcer) viderCacheTransactions()
+
     const mois = moisDe(start, end)
     const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux] = await Promise.all([
       getBankAccounts(),
@@ -394,7 +408,7 @@ export async function GET(req: NextRequest) {
       pri: COMPTES_BANCAIRES_EXCLUS.includes(c.id),
     }))
 
-    return NextResponse.json({
+    const corps = {
       success: true,
       periode: { start, end },
       exercices: exercices.map(e => ({ start: e.start, finish: e.finish, status: e.status })),
@@ -490,7 +504,10 @@ export async function GET(req: NextRequest) {
           volumeSquare: square?.parMois[m.cle]?.net ?? null,
         }
       }),
-    })
+    }
+
+    CACHE.set(cleCache, { le: Date.now(), corps })
+    return NextResponse.json({ ...corps, calculeLe: new Date().toISOString(), ducache: false })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'erreur Pennylane' }, { status: 500 })
   }

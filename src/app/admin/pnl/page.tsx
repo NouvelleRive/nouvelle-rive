@@ -42,6 +42,8 @@ type Data = {
     charges: number
     resultat: number
   }
+  calculeLe?: string
+  ducache?: boolean
   parChineuse: { nom: string; trigramme: string; taux: number; pieces: number; volume: number | null; commission: number | null }[]
   mois: Mois[]
 }
@@ -113,14 +115,17 @@ export default function PnlPage() {
     try { sessionStorage.setItem(CLE_ETAT, JSON.stringify({ periode, vue, pri: inclurePri })) } catch { /* ignore */ }
   }, [periode, vue, inclurePri])
 
-  const charger = useCallback(async (p?: { start: string; end: string } | null) => {
+  const charger = useCallback(async (p?: { start: string; end: string } | null, forcer = false) => {
     setLoading(true)
     setErreur(null)
     try {
       const user = auth.currentUser
       if (!user) return
       const token = await user.getIdToken()
-      const qs = p ? `?start=${p.start}&end=${p.end}` : ''
+      const params = new URLSearchParams()
+      if (p) { params.set('start', p.start); params.set('end', p.end) }
+      if (forcer) params.set('refresh', '1')
+      const qs = params.toString() ? `?${params}` : ''
       const res = await fetch(`/api/admin/pnl${qs}`, { headers: { Authorization: `Bearer ${token}` } })
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'erreur')
@@ -200,12 +205,13 @@ export default function PnlPage() {
             </select>
           )}
           <button
-            onClick={() => charger(periode)}
+            onClick={() => charger(periode, true)}
             disabled={loading}
+            title={data?.calculeLe ? `Chiffres du ${new Date(data.calculeLe).toLocaleString('fr-FR')}` : undefined}
             className="flex items-center gap-1.5 border border-gray-300 rounded px-3 py-1.5 text-sm bg-white hover:bg-gray-50 disabled:opacity-50"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            Actualiser
+            Mettre à jour
           </button>
         </div>
       </div>
