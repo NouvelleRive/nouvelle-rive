@@ -209,12 +209,25 @@ async function printempsParCanal(start: string, end: string) {
   const vide = () => ({ vintage: 0, upcycling: 0 })
   const total = vide()
   const parMois: Record<string, { vintage: number; upcycling: number }> = {}
+  // Chaque virement du Printemps porte ses références de bordereau (PRI26,
+  // PRIV12…) : on les garde pour pouvoir déplier le détail.
+  const lignes: { cle: string; label: string; titre?: string; montant: number }[] = []
 
   for (const t of tx) {
     if (!t.date || t.date < start || t.date > end) continue
     const montant = Number(t.amount) || 0
     if (montant <= 0) continue
     const l = (t.label || '').toUpperCase()
+    if (!/PRINTEMPS/.test(l) && !/\bPRI[VU]?\d/.test(l)) continue
+
+    const refs = [...new Set((l.match(/\bPRI[VU]?\d+/g) || []))]
+    lignes.push({
+      cle: `pri-${t.id}`,
+      label: refs.length > 0 ? refs.join(' ') : 'Printemps',
+      titre: `${t.date} — ${(t.label || '').replace(/\s+/g, ' ').trim()}`,
+      montant,
+    })
+
     const canal = /PRIV/.test(l) ? 'vintage' : /PRIU/.test(l) ? 'upcycling' : null
     if (!canal) continue
     const cle = t.date.slice(0, 7)
@@ -222,7 +235,8 @@ async function printempsParCanal(start: string, end: string) {
     parMois[cle][canal] += montant
     total[canal] += montant
   }
-  return { total, parMois }
+  lignes.sort((a, b) => b.montant - a.montant)
+  return { total, parMois, lignes }
 }
 
 // Volume d'affaires par chineuse, lu sur nos ventes Square : le SKU porte le
@@ -380,6 +394,7 @@ export async function GET(req: NextRequest) {
                     ? [
                         { cle: 'priVintage', label: 'dont vintage', titre: 'Virements PRIV', montant: canaux.total.vintage },
                         { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Virements PRIU', montant: canaux.total.upcycling },
+                        ...canaux.lignes,
                       ]
                     : [],
                 }]
