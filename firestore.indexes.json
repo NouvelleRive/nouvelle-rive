@@ -4,8 +4,32 @@
       "collectionGroup": "ventes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "trigramme", "order": "ASCENDING" },
-        { "fieldPath": "dateVente", "order": "ASCENDING" }
+        {
+          "fieldPath": "trigramme",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateVente",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ventes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "trigramme",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateVente",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "prixVenteReel",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

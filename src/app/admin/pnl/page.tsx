@@ -469,6 +469,7 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
               <tr className="bg-gray-50/70">
                 <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Dépôt-vente</td>
               </tr>
+              <Ligne label="Pièces vendues" titre="Nos ventes, pas la compta" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
               {data.pnl.depotVente.map(p => (
                 <Fragment key={p.cle}>
                   <Ligne label={p.label} titre={p.titre} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
@@ -534,22 +535,6 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
           </tr>
           <Ligne label="Résultat" valeurs={mois.map(m => m.resultat)} total={data.pnl.resultat} gras couleur />
 
-          <tr className="bg-gray-50/70">
-            <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>
-              Volumes <span className="normal-case tracking-normal text-gray-400">— nos ventes, pas la compta</span>
-            </td>
-          </tr>
-          <Ligne label="Pièces vendues" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
-          {mois.some(m => m.caVentes !== null) && (
-            <>
-              <Ligne label="Volume d'affaires" valeurs={mois.map(m => m.caVentes ?? 0)} total={somme(m => m.caVentes ?? 0)} />
-              <Ligne
-                label="Panier moyen"
-                valeurs={mois.map(m => (m.pieces ? (m.caVentes ?? 0) / m.pieces : 0))}
-                total={somme(m => m.pieces) ? somme(m => m.caVentes ?? 0) / somme(m => m.pieces) : 0}
-              />
-            </>
-          )}
         </tbody>
       </table>
     </section>
