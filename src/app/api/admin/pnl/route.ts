@@ -323,12 +323,17 @@ export async function GET(req: NextRequest) {
               montant: square.total,
               comptes: [],
             },
-            ...(printemps ? [printemps] : []),
-            ...(canaux
-              ? [
-                  { cle: 'priVintage', label: 'dont vintage', titre: 'Virements PRIV', montant: canaux.total.vintage, comptes: [] },
-                  { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Virements PRIU', montant: canaux.total.upcycling, comptes: [] },
-                ]
+            ...(printemps
+              ? [{
+                  ...printemps,
+                  // Le détail vintage / upcycling se déplie sous VA Printemps.
+                  sousLignes: canaux
+                    ? [
+                        { cle: 'priVintage', label: 'dont vintage', titre: 'Virements PRIV', montant: canaux.total.vintage },
+                        { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Virements PRIU', montant: canaux.total.upcycling },
+                      ]
+                    : [],
+                }]
               : []),
             {
               cle: 'volumeTotal',

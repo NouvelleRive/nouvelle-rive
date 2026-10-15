@@ -5,15 +5,16 @@
 // comptes bancaires qu'elle agrège. Aucune estimation maison ici : si un
 // chiffre est faux, c'est la compta qu'il faut corriger.
 
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { formatPrix } from '@/lib/formatPrix'
 import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
-type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[] }
-type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[] }
+type SousLigne = { cle: string; label: string; titre?: string; montant: number }
+type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
+type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
 type Mois = {
   cle: string
   produits: number
@@ -362,22 +363,33 @@ function BlocPostes({
       </div>
       {postes.length === 0 && <div className="px-4 py-3 text-sm text-gray-400">Aucun mouvement</div>}
       {postes.map(p => {
-        const ouvert = !!ouverts[p.cle]
+        const sous = p.sousLignes ?? []
+        const depliable = p.comptes.length > 0 || sous.length > 0
+        const ouvert = depliable && !!ouverts[p.cle]
         return (
           <div key={p.cle}>
             <button
-              onClick={() => setOuverts(o => ({ ...o, [p.cle]: !o[p.cle] }))}
-              className="w-full flex items-center justify-between px-4 py-2 hover:bg-gray-50 text-left"
+              onClick={() => depliable && setOuverts(o => ({ ...o, [p.cle]: !o[p.cle] }))}
+              className={`w-full flex items-center justify-between px-4 py-2 text-left ${depliable ? 'hover:bg-gray-50' : 'cursor-default'}`}
             >
               <span className="flex items-center gap-1.5 text-sm" title={p.titre}>
-                <ChevronRight size={14} className={`text-gray-400 transition-transform ${ouvert ? 'rotate-90' : ''}`} />
+                <ChevronRight
+                  size={14}
+                  className={`transition-transform ${ouvert ? 'rotate-90' : ''} ${depliable ? 'text-gray-400' : 'text-transparent'}`}
+                />
                 {p.label}
-                <span className="text-xs text-gray-400">({p.comptes.length})</span>
+                {depliable && <span className="text-xs text-gray-400">({p.comptes.length || sous.length})</span>}
               </span>
               <span className="text-sm tabular-nums">{formatPrix(p.montant, { decimals: 0 })} €</span>
             </button>
             {ouvert && (
               <div className="bg-gray-50/50">
+                {sous.map(sl => (
+                  <div key={sl.cle} className="flex items-center justify-between pl-11 pr-4 py-1.5 text-xs text-gray-600">
+                    <span className="truncate" title={sl.titre}>{sl.label}</span>
+                    <span className="tabular-nums shrink-0 ml-3">{formatPrix(sl.montant, { decimals: 0 })} €</span>
+                  </div>
+                ))}
                 {p.comptes.map(c => (
                   <div key={c.number} className="flex items-center justify-between pl-11 pr-4 py-1.5 text-xs text-gray-600">
                     <span className="truncate" title={`${c.number} — ${c.label}`}>
@@ -444,7 +456,18 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
                 <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Dépôt-vente</td>
               </tr>
               {data.pnl.depotVente.map(p => (
-                <Ligne key={p.cle} label={p.label} titre={p.titre} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
+                <Fragment key={p.cle}>
+                  <Ligne label={p.label} titre={p.titre} valeurs={mois.map(m => m.postes[p.cle] ?? 0)} total={p.montant} />
+                  {(p.sousLignes ?? []).map(sl => (
+                    <Ligne
+                      key={sl.cle}
+                      label={`\u00a0\u00a0\u00a0${sl.label}`}
+                      titre={sl.titre}
+                      valeurs={mois.map(m => m.postes[sl.cle] ?? 0)}
+                      total={sl.montant}
+                    />
+                  ))}
+                </Fragment>
               ))}
               <tr className="border-t">
                 <td className={tete} title="Commissions perçues ÷ volume chineuses TTC">Marge brute</td>
