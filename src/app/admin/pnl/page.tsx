@@ -502,15 +502,26 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
             total={sl.montant}
           />
         ))}
-        {ouvert && datees.map(sl => (
-          <tr key={sl.cle} className="bg-gray-50/50 text-xs text-gray-600">
-            <td className={`${tete} bg-gray-50/50 pl-8`} title={sl.titre}>{sl.label}</td>
-            {mois.map(m => (
-              <td key={m.cle} className={cel}>{sl.mois === m.cle ? `${formatPrix(sl.montant, { decimals: 0 })} €` : ''}</td>
-            ))}
-            <td className={`${cel} bg-gray-50`}>{formatPrix(sl.montant, { decimals: 0 })} €</td>
+        {/* Le détail se lit en colonne : sous mars, les pièces de mars. */}
+        {ouvert && (
+          <tr className="bg-gray-50/50 text-[11px] text-gray-600 align-top">
+            <td className={`${tete} bg-gray-50/50 pl-6 text-gray-400`}>Détail</td>
+            {mois.map(m => {
+              const duMois = datees.filter(sl => sl.mois === m.cle)
+              return (
+                <td key={m.cle} className="px-2 sm:px-3 py-1.5 text-right align-top">
+                  {duMois.length === 0 ? '' : duMois.map(sl => (
+                    <div key={sl.cle} className="mb-1.5 last:mb-0 whitespace-nowrap" title={sl.titre}>
+                      <div className="text-gray-500">{sl.label}</div>
+                      <div className="tabular-nums text-gray-700">{formatPrix(sl.montant, { decimals: 0 })} €</div>
+                    </div>
+                  ))}
+                </td>
+              )
+            })}
+            <td className={`${cel} bg-gray-50 align-top`}>{datees.length} lignes</td>
           </tr>
-        ))}
+        )}
       </>
     )
   }
