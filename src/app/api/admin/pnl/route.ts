@@ -7,13 +7,14 @@
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
 import {
   getBankAccounts, getFiscalYears, getTrialBalance, getTransactions,
-  getLedgerAccounts, getLignesDeComptes, getSupplierInvoices, getSuppliers, getLedgerEntriesParIds,
+  getLedgerAccounts, getLignesDeComptes, getLedgerEntriesParIds,
   type TrialBalanceLine,
 } from '@/lib/pennylane'
 import { ventesSquare } from '@/lib/squareVentes'
@@ -312,22 +313,13 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
   const ecritures = [...new Set(lignes.map(l => l.ledger_entry?.id).filter(Boolean))] as number[]
 
-  const [factures, fournisseurs, entetes] = await Promise.all([
-    getSupplierInvoices(start, end).catch(() => []),
-    getSuppliers().catch(() => []),
-    getLedgerEntriesParIds(ecritures).catch(() => []),
-  ])
-  const nomFournisseur = new Map(fournisseurs.map(f => [f.id, f.name]))
-  const refDeLEcriture = new Map(
-    factures
-      .filter(f => f.ledger_entry)
-      .map(f => {
-        const nom = f.supplier ? nomFournisseur.get(f.supplier.id) : undefined
-        const ref = f.invoice_number || ''
-        return [f.ledger_entry!.id, [nom, ref].filter(Boolean).join(' — ')] as [number, string]
-      }),
+  // Le libellé de l'écriture porte déjà « Facture BUNNY - INV123 » : inutile
+  // d'aller chercher les factures et les fournisseurs, ce sont 7 appels de
+  // moins et Pennylane limite le débit.
+  const entetes = await getLedgerEntriesParIds(ecritures)
+  const labelDeLEcriture = new Map(
+    entetes.map(e => [e.id, (e.label || '').replace(/\(label généré\)/g, '').replace(/\s+/g, ' ').trim()]),
   )
-  const labelDeLEcriture = new Map(entetes.map(e => [e.id, (e.label || '').replace(/\s+/g, ' ').trim()]))
 
   // On agrège par (poste, écriture) : une facture fournisseuse ventilée sur
   // deux comptes du même poste ne doit faire qu'une ligne.
@@ -345,7 +337,7 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     const cle = `${poste.cle}|${idEcriture}`
     const deja = cumul.get(cle)
     if (deja) { deja.montant += montant; continue }
-    const nom = refDeLEcriture.get(idEcriture) || labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
+    const nom = labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
     cumul.set(cle, {
       poste: poste.cle,
       cle: `d-${poste.cle}-${idEcriture}`,
@@ -378,7 +370,7 @@ export async function GET(req: NextRequest) {
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, detail] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
@@ -386,8 +378,10 @@ export async function GET(req: NextRequest) {
       volumesParChineuse(start, end).catch(() => []),
       ventesSquare(start, end).catch(() => null),
       printempsParCanal(start, end).catch(() => null),
-      detailParPoste(start, end).catch(() => ({} as Record<string, SousLigne[]>)),
     ])
+
+    // Après les autres appels : lancé en même temps, Pennylane répond 429.
+    const detail = await detailParPoste(start, end).catch(() => ({} as Record<string, SousLigne[]>))
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
