@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
 import { getBankAccounts, getFiscalYears, getTrialBalance, type TrialBalanceLine } from '@/lib/pennylane'
+import { ventesSquare } from '@/lib/squareVentes'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -56,23 +57,16 @@ const POSTES: { cle: string; label: string; sens: 'produit' | 'charge'; prefixes
 // produit ou une charge — seule la commission (706101) est du chiffre.
 const POSTES_DEPOT_VENTE = [
   {
-    cle: 'volume',
-    label: "Volume d'affaires",
-    titre: '511301 Encaissements Square (compte de transit) — libellé bancaire : SEPA … SQUAREUP INTERNATIONAL LIMITED',
-    prefixes: ['5113'],
-    sens: 'credit' as const,
-  },
-  {
     cle: 'reversements',
     label: 'Reversements chineuses TTC',
-    titre: "467xxx Reversement CA — le volume vendu pour chaque chineuse, TTC. Il se partage en sa part (401), la TVA (44574) et notre commission (706101). Ni produit ni charge.",
+    titre: "Source : balance Pennylane, comptes 467xxx Reversement CA — le volume déjà reversé à chaque chineuse, TTC. Il se partage en sa part (401), la TVA (44574) et notre commission (706101). Ni produit ni charge.",
     prefixes: ['467'],
     sens: 'debit' as const,
   },
   {
     cle: 'tvaCommission',
     label: 'TVA sur commission',
-    titre: '44574 TVA collectée sur encaissements — la TVA que nous reversons sur notre commission',
+    titre: 'Source : balance Pennylane, compte 44574 TVA collectée sur encaissements — la TVA que nous reversons sur notre commission',
     prefixes: ['44574'],
     sens: 'credit' as const,
   },
@@ -251,12 +245,13 @@ export async function GET(req: NextRequest) {
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
       volumesParMois(mois),
       volumesParChineuse(start, end).catch(() => []),
+      ventesSquare(start, end).catch(() => null),
     ])
 
     const banques = comptes
@@ -274,7 +269,25 @@ export async function GET(req: NextRequest) {
       periode: { start, end },
       exercices: exercices.map(e => ({ start: e.start, finish: e.finish, status: e.status })),
       tresorerie: { comptes: banques, total: banques.reduce((s, c) => s + c.solde, 0) },
-      pnl: agreger(balance),
+      pnl: (() => {
+        const a = agreger(balance)
+        if (!square) return a
+        // Le volume d'affaires vient de Square, pas du compte de transit :
+        // les virements décalent la fin de mois sur le mois suivant.
+        return {
+          ...a,
+          depotVente: [
+            {
+              cle: 'volume',
+              label: "Volume d'affaires",
+              titre: `Source : API Square, ventes nettes des commandes encaissées sur la période (${square.commandes} commandes, remboursements déduits). Pas le compte 511301, qui porte les virements Square et décale la fin de mois.`,
+              montant: square.total,
+              comptes: [],
+            },
+            ...a.depotVente,
+          ],
+        }
+      })(),
       parChineuse,
       mois: mois.map((m, i) => {
         const a = agreger(balancesMois[i])
@@ -283,10 +296,14 @@ export async function GET(req: NextRequest) {
           produits: a.produits,
           charges: a.charges,
           resultat: a.resultat,
-          postes: Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
+          postes: {
+            ...Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
+            ...(square ? { volume: square.parMois[m.cle]?.net ?? 0 } : {}),
+          },
           margeBrute: a.margeBrute,
           pieces: volumes[m.cle]?.pieces ?? 0,
           caVentes: volumes[m.cle]?.ca ?? null,
+          volumeSquare: square?.parMois[m.cle]?.net ?? null,
         }
       }),
     })

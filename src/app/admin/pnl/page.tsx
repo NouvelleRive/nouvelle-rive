@@ -245,7 +245,7 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
       <button
         onClick={() => setOuvert(o => !o)}
         className="w-full flex items-center justify-between px-4 py-2 border-b bg-blue-50/40 hover:bg-blue-50 text-left"
-        title="Commissions NR ÷ volume vendu, d'après les ventes Square et le taux de chaque chineuse"
+        title="Source : nos ventes Square regroupées par trigramme de SKU, commission au taux de chaque fiche chineuse. Marge = commissions ÷ volume vendu."
       >
         <span className="text-sm font-medium">
           <span className="inline-block w-3 text-gray-400">{ouvert ? '−' : '+'}</span>
