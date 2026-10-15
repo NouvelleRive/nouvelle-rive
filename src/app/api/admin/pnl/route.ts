@@ -13,7 +13,7 @@ import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
 import {
   getBankAccounts, getFiscalYears, getTrialBalance, getTransactions,
-  getLedgerAccounts, getLignesDeComptes, getSupplierInvoices,
+  getLedgerAccounts, getLignesDeComptes, getSupplierInvoices, getSuppliers, getLedgerEntriesParIds,
   type TrialBalanceLine,
 } from '@/lib/pennylane'
 import { ventesSquare } from '@/lib/squareVentes'
@@ -76,7 +76,7 @@ const POSTES_DEPOT_VENTE = [
   },
   {
     cle: 'tvaCommission',
-    label: 'TVA sur commission',
+    label: 'dont TVA sur commission',
     titre: 'Source : Pennylane, compte 44574',
     prefixes: ['44574'],
     sens: 'credit' as const,
@@ -84,6 +84,16 @@ const POSTES_DEPOT_VENTE = [
 ]
 
 const num = (v: string) => Number(v) || 0
+
+// À quel poste appartient un compte : d'abord le dépôt-vente (467, 44574, 707
+// hors ventes), puis le compte de résultat.
+function posteDuCompte(n: string): { cle: string; sens: 'produit' | 'charge' | 'credit' | 'debit' } | null {
+  const dv = POSTES_DEPOT_VENTE.find(p => p.prefixes.some(pre => n.startsWith(pre)))
+  if (dv) return { cle: dv.cle, sens: dv.sens }
+  if (n[0] !== '6' && n[0] !== '7') return null
+  const p = POSTES.find(q => q.prefixes.some(pre => n.startsWith(pre)))
+  return p ? { cle: p.cle, sens: p.sens } : null
+}
 
 function agreger(lignes: TrialBalanceLine[]) {
   const postes = POSTES.map(p => ({ ...p, montant: 0, comptes: [] as { number: string; label: string; montant: number }[] }))
@@ -134,6 +144,12 @@ function agreger(lignes: TrialBalanceLine[]) {
   const volumeChineuses = depotVente.find(p => p.cle === 'reversements')?.montant ?? 0
   const commission = postes.find(p => p.cle === 'ventes')?.montant ?? 0
 
+  // Taux de commission réel : le seul 706101 rapporté au volume chineuses,
+  // sans les ventes de stock propre ni le Printemps qui gonflent le 70.
+  const commissions706 = lignes
+    .filter(l => l.number.startsWith('706'))
+    .reduce((s, l) => s + num(l.credits) - num(l.debits), 0)
+
   return {
     postes: postes.filter(p => p.comptes.length > 0),
     depotVente: depotVente.filter(p => p.comptes.length > 0),
@@ -141,6 +157,7 @@ function agreger(lignes: TrialBalanceLine[]) {
     commissionsDeduites,
     margeBrute: volumeChineuses > 0 ? (commission / volumeChineuses) * 100 : null,
     margeBruteBrute: volumeChineuses > 0 ? (commissionsBrutes / volumeChineuses) * 100 : null,
+    tauxCommission: volumeChineuses > 0 ? (commissions706 / volumeChineuses) * 100 : null,
     produits,
     charges,
     resultat: produits - charges,
@@ -280,37 +297,71 @@ async function volumesParChineuse(start: string, end: string) {
     .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
 }
 
-// Détail des reversements chineuses : une ligne par facture, avec sa référence
-// (NR0725-TDO). On ne rapatrie que les lignes des comptes 467xxx.
-async function reversementsParFacture(start: string, end: string) {
-  const comptes467 = (await getLedgerAccounts()).filter(c => c.number.startsWith('467'))
-  if (comptes467.length === 0) return []
-  const [lignes, factures] = await Promise.all([
-    getLignesDeComptes(comptes467.map(c => c.id), start, end),
-    getSupplierInvoices(start, end),
-  ])
-  const refs = new Map(factures.filter(f => f.ledger_entry).map(f => [f.ledger_entry!.id, f.invoice_number || '']))
-  const nomDuCompte = new Map(comptes467.map(c => [c.number, c.label]))
+// Détail à la ligne de chaque poste : une sous-ligne par écriture, nommée par
+// sa facture (fournisseur + référence) ou, à défaut, par le libellé de
+// l'écriture. On ne rapatrie que les comptes affichés et que les écritures
+// qu'on va montrer : ~1 400 lignes sur un exercice, pas le grand livre entier.
+type SousLigne = { cle: string; label: string; titre?: string; montant: number }
 
-  const parEcriture = new Map<number, { ref: string; compte: string; montant: number }>()
+async function detailParPoste(start: string, end: string): Promise<Record<string, SousLigne[]>> {
+  const comptes = await getLedgerAccounts()
+  const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
+  if (suivis.length === 0) return {}
+  const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
+
+  const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
+  const ecritures = [...new Set(lignes.map(l => l.ledger_entry?.id).filter(Boolean))] as number[]
+
+  const [factures, fournisseurs, entetes] = await Promise.all([
+    getSupplierInvoices(start, end).catch(() => []),
+    getSuppliers().catch(() => []),
+    getLedgerEntriesParIds(ecritures).catch(() => []),
+  ])
+  const nomFournisseur = new Map(fournisseurs.map(f => [f.id, f.name]))
+  const refDeLEcriture = new Map(
+    factures
+      .filter(f => f.ledger_entry)
+      .map(f => {
+        const nom = f.supplier ? nomFournisseur.get(f.supplier.id) : undefined
+        const ref = f.invoice_number || ''
+        return [f.ledger_entry!.id, [nom, ref].filter(Boolean).join(' — ')] as [number, string]
+      }),
+  )
+  const labelDeLEcriture = new Map(entetes.map(e => [e.id, (e.label || '').replace(/\s+/g, ' ').trim()]))
+
+  // On agrège par (poste, écriture) : une facture fournisseuse ventilée sur
+  // deux comptes du même poste ne doit faire qu'une ligne.
+  const cumul = new Map<string, SousLigne & { poste: string }>()
   for (const l of lignes) {
-    const id = l.ledger_entry?.id
-    if (!id) continue
-    const montant = num(l.debit) - num(l.credit)
-    const cour = parEcriture.get(id)
-    if (cour) cour.montant += montant
-    else parEcriture.set(id, { ref: refs.get(id) || '', compte: l.ledger_account?.number || '', montant })
+    const numero = l.ledger_account?.number
+    const idEcriture = l.ledger_entry?.id
+    if (!numero || !idEcriture) continue
+    const poste = posteDuCompte(numero)
+    if (!poste) continue
+    const montant = poste.sens === 'produit' || poste.sens === 'credit'
+      ? num(l.credit) - num(l.debit)
+      : num(l.debit) - num(l.credit)
+
+    const cle = `${poste.cle}|${idEcriture}`
+    const deja = cumul.get(cle)
+    if (deja) { deja.montant += montant; continue }
+    const nom = refDeLEcriture.get(idEcriture) || labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
+    cumul.set(cle, {
+      poste: poste.cle,
+      cle: `d-${poste.cle}-${idEcriture}`,
+      label: nom,
+      titre: `${l.date} — ${numero} ${nomDuCompte.get(numero) || ''}`,
+      montant,
+    })
   }
 
-  return [...parEcriture.entries()]
-    .filter(([, v]) => Math.abs(v.montant) >= 0.005)
-    .map(([id, v]) => ({
-      cle: `rev-${id}`,
-      label: v.ref || nomDuCompte.get(v.compte) || v.compte,
-      titre: v.ref ? `${v.compte} — ${nomDuCompte.get(v.compte) || ''}` : v.compte,
-      montant: v.montant,
-    }))
-    .sort((a, b) => b.montant - a.montant)
+  const parPoste: Record<string, SousLigne[]> = {}
+  for (const v of cumul.values()) {
+    if (Math.abs(v.montant) < 0.005) continue
+    ;(parPoste[v.poste] ||= []).push({ cle: v.cle, label: v.label, titre: v.titre, montant: v.montant })
+  }
+  for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => Math.abs(b.montant) - Math.abs(a.montant))
+  return parPoste
 }
 
 export async function GET(req: NextRequest) {
@@ -327,7 +378,7 @@ export async function GET(req: NextRequest) {
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, revDetail] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, detail] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
@@ -335,7 +386,7 @@ export async function GET(req: NextRequest) {
       volumesParChineuse(start, end).catch(() => []),
       ventesSquare(start, end).catch(() => null),
       printempsParCanal(start, end).catch(() => null),
-      reversementsParFacture(start, end).catch(() => []),
+      detailParPoste(start, end).catch(() => ({} as Record<string, SousLigne[]>)),
     ])
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
@@ -360,12 +411,13 @@ export async function GET(req: NextRequest) {
       },
       pnl: (() => {
         const brut = agreger(balance)
-        // Les reversements se déplient facture par facture (NR0725-TDO).
+        // Chaque poste se déplie à la ligne : facture, salaire, virement…
+        const avecDetail = <T extends { cle: string }>(p: T) =>
+          detail[p.cle]?.length ? { ...p, sousLignes: detail[p.cle] } : p
         const a = {
           ...brut,
-          depotVente: brut.depotVente.map(p =>
-            p.cle === 'reversements' && revDetail.length > 0 ? { ...p, sousLignes: revDetail } : p,
-          ),
+          postes: brut.postes.map(avecDetail),
+          depotVente: brut.depotVente.map(avecDetail),
         }
         if (!square) return a
         // Le volume d'affaires vient de Square, pas du compte de transit :
@@ -438,6 +490,7 @@ export async function GET(req: NextRequest) {
               : {}),
           },
           margeBrute: a.margeBrute,
+          tauxCommission: a.tauxCommission,
           pieces: volumes[m.cle]?.pieces ?? 0,
           caVentes: volumes[m.cle]?.ca ?? null,
           volumeSquare: square?.parMois[m.cle]?.net ?? null,

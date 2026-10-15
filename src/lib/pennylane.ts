@@ -114,6 +114,7 @@ export type SupplierInvoice = {
   invoice_number: string | null
   date: string
   ledger_entry: { id: number } | null
+  supplier: { id: number } | null
 }
 
 // Lignes d'un lot de comptes sur une période. Filtrer côté Pennylane évite de
@@ -129,6 +130,22 @@ export const getLignesDeComptes = (comptesIds: number[], debut: string, fin: str
 
 export const getSupplierInvoices = (debut: string, fin: string) =>
   listAll<SupplierInvoice>('supplier_invoices', filtreDates(debut, fin))
+
+export type Supplier = { id: number; name: string }
+export const getSuppliers = () => listAll<Supplier>('suppliers')
+
+// Libellés d'un lot d'écritures. On interroge par identifiants plutôt que par
+// dates : seules les écritures qu'on affiche sont rapatriées.
+export async function getLedgerEntriesParIds(ids: number[]): Promise<LedgerEntry[]> {
+  const out: LedgerEntry[] = []
+  for (let i = 0; i < ids.length; i += 100) {
+    const lot = ids.slice(i, i + 100)
+    out.push(...await listAll<LedgerEntry>('ledger_entries', {
+      filter: JSON.stringify([{ field: 'id', operator: 'in', value: lot }]),
+    }))
+  }
+  return out
+}
 
 export const getLedgerEntries = (debut: string, fin: string) =>
   listAll<LedgerEntry>('ledger_entries', filtreDates(debut, fin))

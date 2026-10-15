@@ -22,6 +22,7 @@ type Mois = {
   resultat: number
   postes: Record<string, number>
   margeBrute: number | null
+  tauxCommission: number | null
   pieces: number
   caVentes: number | null
 }
@@ -36,6 +37,7 @@ type Data = {
     commissionsDeduites: number
     margeBrute: number | null
     margeBruteBrute: number | null
+    tauxCommission: number | null
     produits: number
     charges: number
     resultat: number
@@ -275,6 +277,17 @@ export default function PnlPage() {
                   </span>
                 </div>
               )}
+              {data.pnl.tauxCommission != null && (
+                <div
+                  className="flex items-center justify-between px-4 py-2 border-b bg-blue-50/40"
+                  title="706101 seul ÷ volume chineuses TTC"
+                >
+                  <span className="text-sm font-medium">Taux de commission réel</span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {data.pnl.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
+                  </span>
+                </div>
+              )}
               <BlocPostes titre="Produits" postes={produits} total={data.pnl.produits} ouverts={ouverts} setOuverts={setOuverts} />
               <BlocPostes titre="Charges" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
               <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
@@ -484,6 +497,17 @@ function TableauMois({ data, produits, charges }: { data: Data; produits: Poste[
                 ))}
                 <td className={`${cel} bg-gray-50 font-medium`}>
                   {data.pnl.margeBrute == null ? '—' : `${data.pnl.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                </td>
+              </tr>
+              <tr className="border-t">
+                <td className={tete} title="706101 seul ÷ volume chineuses TTC">Taux de commission réel</td>
+                {mois.map(m => (
+                  <td key={m.cle} className={cel}>
+                    {m.tauxCommission == null ? '—' : `${m.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                  </td>
+                ))}
+                <td className={`${cel} bg-gray-50 font-medium`}>
+                  {data.pnl.tauxCommission == null ? '—' : `${data.pnl.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
                 </td>
               </tr>
             </>
