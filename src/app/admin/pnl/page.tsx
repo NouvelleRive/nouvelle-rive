@@ -153,14 +153,14 @@ export default function PnlPage() {
   const charges = data?.pnl.postes.filter(p => p.sens === 'charge') || []
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-semibold text-[#22209C]">P&amp;L</h1>
+          <h1 className="text-lg sm:text-xl font-semibold text-[#22209C]">P&amp;L</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <label
-            className="flex items-center gap-1.5 text-sm text-gray-600 select-none cursor-pointer"
+            className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 select-none cursor-pointer"
             title="Le compte PRI et les ventes du stand Printemps"
           >
             <input
@@ -171,12 +171,12 @@ export default function PnlPage() {
             />
             Inclure le Printemps
           </label>
-          <div className="flex rounded border border-gray-300 overflow-hidden text-sm">
+          <div className="flex rounded border border-gray-300 overflow-hidden text-xs sm:text-sm">
             {(['cumul', 'mois'] as const).map(v => (
               <button
                 key={v}
                 onClick={() => setVue(v)}
-                className={`px-3 py-1.5 ${vue === v ? 'bg-[#22209C] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 ${vue === v ? 'bg-[#22209C] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
               >
                 {v === 'cumul' ? 'Cumul' : 'Par mois'}
               </button>
@@ -190,7 +190,7 @@ export default function PnlPage() {
                 setPeriode({ start, end })
                 charger({ start, end })
               }}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm bg-white"
+              className="border border-gray-300 rounded px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-white"
             >
               {periode && !data.exercices.some(e => e.start === periode.start && e.finish === periode.end) && (
                 <option value={`${periode.start}|${periode.end}`}>
@@ -208,7 +208,7 @@ export default function PnlPage() {
             onClick={() => charger(periode, true)}
             disabled={loading}
             title={data?.calculeLe ? `Chiffres du ${new Date(data.calculeLe).toLocaleString('fr-FR')}` : undefined}
-            className="flex items-center gap-1.5 border border-gray-300 rounded px-3 py-1.5 text-sm bg-white hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center gap-1.5 border border-gray-300 rounded px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-white hover:bg-gray-50 disabled:opacity-50"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Mettre à jour
@@ -232,14 +232,14 @@ export default function PnlPage() {
             <h2 className="text-sm font-semibold text-gray-700 mb-2">Trésorerie</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {data.tresorerie.comptes.filter(c => inclurePri || !c.pri).map(c => (
-                <div key={c.id} className="bg-white border rounded-lg p-3">
+                <div key={c.id} className="bg-white border rounded-lg p-2.5 sm:p-3">
                   <div className="text-xs text-gray-500 truncate" title={c.nom}>{c.nom}</div>
-                  <div className="text-lg font-semibold tabular-nums">{formatPrix(c.solde, { decimals: 0 })} €</div>
+                  <div className="text-base sm:text-lg font-semibold tabular-nums">{formatPrix(c.solde, { decimals: 0 })} €</div>
                 </div>
               ))}
-              <div className="bg-[#22209C] text-white rounded-lg p-3">
+              <div className="bg-[#22209C] text-white rounded-lg p-2.5 sm:p-3">
                 <div className="text-xs opacity-80">Total</div>
-                <div className="text-lg font-semibold tabular-nums">{formatPrix(inclurePri ? data.tresorerie.totalAvecPri : data.tresorerie.total, { decimals: 0 })} €</div>
+                <div className="text-base sm:text-lg font-semibold tabular-nums">{formatPrix(inclurePri ? data.tresorerie.totalAvecPri : data.tresorerie.total, { decimals: 0 })} €</div>
               </div>
             </div>
           </section>
@@ -257,11 +257,11 @@ export default function PnlPage() {
               <MargeParChineuse lignes={data.parChineuse} />
               {data.pnl.commissionsDeduites > 0 && (
                 <>
-                  <div className="flex items-center justify-between px-4 py-1.5 border-b text-sm" title="Crédits des comptes 70 : les commissions facturées">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 border-b text-xs sm:text-sm" title="Crédits des comptes 70 : les commissions facturées">
                     <span className="pl-5 text-gray-600">Commissions brutes</span>
                     <span className="tabular-nums text-gray-600">{formatPrix(data.pnl.commissionsBrutes)} €</span>
                   </div>
-                  <div className="flex items-center justify-between px-4 py-1.5 border-b text-sm" title="Débits des comptes 70 : la part commission des factures chineuses, passée au débit par la règle fournisseur">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 border-b text-xs sm:text-sm" title="Débits des comptes 70 : la part commission des factures chineuses, passée au débit par la règle fournisseur">
                     <span className="pl-5 text-gray-600">dont venant en déduction</span>
                     <span className="tabular-nums text-red-600">− {formatPrix(data.pnl.commissionsDeduites)} €</span>
                   </div>
@@ -269,11 +269,11 @@ export default function PnlPage() {
               )}
               {data.pnl.margeBrute != null && (
                 <div
-                  className="flex items-center justify-between px-4 py-2 border-b bg-blue-50/40"
+                  className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
                   title="Commissions perçues ÷ volume chineuses TTC"
                 >
-                  <span className="text-sm font-medium">Marge brute</span>
-                  <span className="text-sm font-semibold tabular-nums">
+                  <span className="text-xs sm:text-sm font-medium">Marge brute</span>
+                  <span className="text-xs sm:text-sm font-semibold tabular-nums">
                     {data.pnl.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
                     {data.pnl.margeBruteBrute != null && (
                       <span className="font-normal text-gray-400 ml-2">
@@ -285,11 +285,11 @@ export default function PnlPage() {
               )}
               {data.pnl.tauxCommission != null && (
                 <div
-                  className="flex items-center justify-between px-4 py-2 border-b bg-blue-50/40"
+                  className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
                   title="706101 seul ÷ volume chineuses TTC"
                 >
-                  <span className="text-sm font-medium">Taux de commission réel</span>
-                  <span className="text-sm font-semibold tabular-nums">
+                  <span className="text-xs sm:text-sm font-medium">Taux de commission réel</span>
+                  <span className="text-xs sm:text-sm font-semibold tabular-nums">
                     {data.pnl.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
                   </span>
                 </div>
@@ -327,14 +327,14 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
     <>
       <button
         onClick={() => setOuvert(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-2 border-b bg-blue-50/40 hover:bg-blue-50 text-left"
+        className="w-full flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40 hover:bg-blue-50 text-left"
         title="Source : Square, par trigramme de SKU"
       >
-        <span className="text-sm font-medium">
+        <span className="text-xs sm:text-sm font-medium">
           <span className="inline-block w-3 text-gray-400">{ouvert ? '−' : '+'}</span>
           Marge brute moyenne
         </span>
-        <span className="text-sm font-semibold tabular-nums">
+        <span className="text-xs sm:text-sm font-semibold tabular-nums">
           {marge.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
           <span className="font-normal text-gray-400 ml-2">
             {formatPrix(commission, { decimals: 0 })} € sur {formatPrix(volume, { decimals: 0 })} €
@@ -343,20 +343,20 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
       </button>
       {ouvert && (
         <div className="bg-gray-50/60 border-b">
-          <div className="flex items-center px-4 py-1 text-[11px] uppercase tracking-wide text-gray-400 border-b">
+          <div className="flex items-center px-3 sm:px-4 py-1 text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-400 border-b">
             <span className="flex-1">Chineuse</span>
-            <span className="w-20 text-right">Pièces</span>
-            <span className="w-28 text-right">Volume</span>
-            <span className="w-28 text-right">Commission</span>
-            <span className="w-16 text-right">Marge</span>
+            <span className="w-12 sm:w-20 text-right">Pièces</span>
+            <span className="w-20 sm:w-28 text-right">Volume</span>
+            <span className="w-20 sm:w-28 text-right hidden sm:block">Commission</span>
+            <span className="w-12 sm:w-16 text-right">Marge</span>
           </div>
           {lignes.map(l => (
-            <div key={l.trigramme} className="flex items-center px-4 py-1.5 border-b last:border-b-0 text-sm">
-              <span className="flex-1 pl-3 text-gray-700">{l.nom}</span>
-              <span className="w-20 text-right tabular-nums text-gray-500">{formatPrix(l.pieces)}</span>
-              <span className="w-28 text-right tabular-nums">{formatPrix(l.volume ?? 0, { decimals: 0 })} €</span>
-              <span className="w-28 text-right tabular-nums">{formatPrix(l.commission ?? 0, { decimals: 0 })} €</span>
-              <span className="w-16 text-right tabular-nums text-gray-500">{l.taux} %</span>
+            <div key={l.trigramme} className="flex items-center px-3 sm:px-4 py-1 sm:py-1.5 border-b last:border-b-0 text-xs sm:text-sm">
+              <span className="flex-1 pl-1 sm:pl-3 text-gray-700 truncate">{l.nom}</span>
+              <span className="w-12 sm:w-20 text-right tabular-nums text-gray-500">{formatPrix(l.pieces)}</span>
+              <span className="w-20 sm:w-28 text-right tabular-nums">{formatPrix(l.volume ?? 0, { decimals: 0 })} €</span>
+              <span className="w-20 sm:w-28 text-right tabular-nums hidden sm:block">{formatPrix(l.commission ?? 0, { decimals: 0 })} €</span>
+              <span className="w-12 sm:w-16 text-right tabular-nums text-gray-500">{l.taux} %</span>
             </div>
           ))}
         </div>
@@ -376,11 +376,11 @@ function BlocPostes({
 }) {
   return (
     <div className="border-b last:border-b-0">
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{titre}</span>
-        {total != null && <span className="text-sm font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>}
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-gray-50 border-b">
+        <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500">{titre}</span>
+        {total != null && <span className="text-xs sm:text-sm font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>}
       </div>
-      {postes.length === 0 && <div className="px-4 py-3 text-sm text-gray-400">Aucun mouvement</div>}
+      {postes.length === 0 && <div className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-gray-400">Aucun mouvement</div>}
       {postes.map(p => {
         const sous = p.sousLignes ?? []
         const depliable = p.comptes.length > 0 || sous.length > 0
@@ -389,29 +389,29 @@ function BlocPostes({
           <div key={p.cle}>
             <button
               onClick={() => depliable && setOuverts(o => ({ ...o, [p.cle]: !o[p.cle] }))}
-              className={`w-full flex items-center justify-between px-4 py-2 text-left ${depliable ? 'hover:bg-gray-50' : 'cursor-default'}`}
+              className={`w-full flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 text-left ${depliable ? 'hover:bg-gray-50' : 'cursor-default'}`}
             >
-              <span className="flex items-center gap-1.5 text-sm" title={p.titre}>
+              <span className="flex items-center gap-1.5 text-xs sm:text-sm min-w-0" title={p.titre}>
                 <ChevronRight
                   size={14}
                   className={`transition-transform ${ouvert ? 'rotate-90' : ''} ${depliable ? 'text-gray-400' : 'text-transparent'}`}
                 />
-                {p.label}
-                {depliable && <span className="text-xs text-gray-400">({p.comptes.length || sous.length})</span>}
+                <span className="truncate">{p.label}</span>
+                {depliable && <span className="text-[11px] text-gray-400 shrink-0">({p.comptes.length || sous.length})</span>}
               </span>
-              <span className="text-sm tabular-nums">{formatPrix(p.montant, { decimals: 0 })} €</span>
+              <span className="text-xs sm:text-sm tabular-nums shrink-0 ml-2">{formatPrix(p.montant, { decimals: 0 })} €</span>
             </button>
             {ouvert && (
               <div className={`bg-gray-50/50 ${sous.length > 20 ? 'max-h-80 overflow-y-auto' : ''}`}>
                 {sous.map(sl => (
-                  <div key={sl.cle} className="flex items-center justify-between pl-11 pr-4 py-1.5 text-xs text-gray-600">
+                  <div key={sl.cle} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
                     <span className="truncate" title={sl.titre}>{sl.label}</span>
                     <span className="tabular-nums shrink-0 ml-3">{formatPrix(sl.montant, { decimals: 0 })} €</span>
                   </div>
                 ))}
                 {/* Les sous-lignes remplacent le détail par compte quand il y en a. */}
                 {sous.length === 0 && p.comptes.map(c => (
-                  <div key={c.number} className="flex items-center justify-between pl-11 pr-4 py-1.5 text-xs text-gray-600">
+                  <div key={c.number} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
                     <span className="truncate" title={`${c.number} — ${c.label}`}>
                       <span className="text-gray-400 mr-2 tabular-nums">{c.number}</span>
                       {c.label}
@@ -438,8 +438,8 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
   setOuverts: (f: (o: Record<string, boolean>) => Record<string, boolean>) => void
 }) {
   const mois = data.mois
-  const cel = 'px-3 py-1.5 text-right tabular-nums whitespace-nowrap'
-  const tete = 'sticky left-0 bg-white px-3 py-1.5 text-left whitespace-nowrap z-10'
+  const cel = 'px-2 sm:px-3 py-1 sm:py-1.5 text-right tabular-nums whitespace-nowrap'
+  const tete = 'sticky left-0 bg-white px-2 sm:px-3 py-1 sm:py-1.5 text-left whitespace-nowrap z-10'
 
   const Ligne = ({ label, valeurs, total, gras, couleur, suffixe, titre }: {
     label: string
@@ -517,7 +517,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
 
   return (
     <section className="bg-white border rounded-lg overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-[11px] sm:text-sm">
         <thead>
           <tr className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <th className={`${tete} bg-gray-50 font-semibold`}>&nbsp;</th>
