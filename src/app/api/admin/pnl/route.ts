@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
-import { getBankAccounts, getFiscalYears, getTrialBalance, type TrialBalanceLine } from '@/lib/pennylane'
+import { getBankAccounts, getFiscalYears, getTrialBalance, getTransactions, type TrialBalanceLine } from '@/lib/pennylane'
 import { ventesSquare } from '@/lib/squareVentes'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -197,6 +197,30 @@ async function volumesParMois(mois: { cle: string; start: string; end: string }[
   return Object.fromEntries(res.map(r => [r.cle, { pieces: r.pieces, ca: r.ca }]))
 }
 
+// Le Printemps verse séparément le vintage et l'upcycling : les virements
+// portent PRIV ou PRIU dans leur libellé. Les deux ne couvrent pas tout ce qui
+// arrive du Printemps, donc VA Printemps reste le total du compte 707.
+async function printempsParCanal(start: string, end: string) {
+  const tx = await getTransactions()
+  const vide = () => ({ vintage: 0, upcycling: 0 })
+  const total = vide()
+  const parMois: Record<string, { vintage: number; upcycling: number }> = {}
+
+  for (const t of tx) {
+    if (!t.date || t.date < start || t.date > end) continue
+    const montant = Number(t.amount) || 0
+    if (montant <= 0) continue
+    const l = (t.label || '').toUpperCase()
+    const canal = /PRIV/.test(l) ? 'vintage' : /PRIU/.test(l) ? 'upcycling' : null
+    if (!canal) continue
+    const cle = t.date.slice(0, 7)
+    if (!parMois[cle]) parMois[cle] = vide()
+    parMois[cle][canal] += montant
+    total[canal] += montant
+  }
+  return { total, parMois }
+}
+
 // Volume d'affaires par chineuse, lu sur nos ventes Square : le SKU porte le
 // trigramme, donc la vente sait à qui elle appartient. On passe par des
 // requêtes d'agrégation (count + sum), qui ne lisent pas les documents.
@@ -252,13 +276,14 @@ export async function GET(req: NextRequest) {
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse, square] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
       volumesParMois(mois),
       volumesParChineuse(start, end).catch(() => []),
       ventesSquare(start, end).catch(() => null),
+      printempsParCanal(start, end).catch(() => null),
     ])
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
@@ -299,6 +324,12 @@ export async function GET(req: NextRequest) {
               comptes: [],
             },
             ...(printemps ? [printemps] : []),
+            ...(canaux
+              ? [
+                  { cle: 'priVintage', label: 'dont vintage', titre: 'Virements PRIV', montant: canaux.total.vintage, comptes: [] },
+                  { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Virements PRIU', montant: canaux.total.upcycling, comptes: [] },
+                ]
+              : []),
             {
               cle: 'volumeTotal',
               label: 'VA total',
@@ -324,7 +355,12 @@ export async function GET(req: NextRequest) {
               ? (() => {
                   const nr = square.parMois[m.cle]?.net ?? 0
                   const pr = a.depotVente.find(p => p.cle === 'volumePrintemps')?.montant ?? 0
-                  return { volume: nr, volumeTotal: nr + pr }
+                  return {
+                    volume: nr,
+                    volumeTotal: nr + pr,
+                    priVintage: canaux?.parMois[m.cle]?.vintage ?? 0,
+                    priUpcycling: canaux?.parMois[m.cle]?.upcycling ?? 0,
+                  }
                 })()
               : {}),
           },
