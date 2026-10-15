@@ -57,6 +57,13 @@ const POSTES: { cle: string; label: string; sens: 'produit' | 'charge'; prefixes
 // produit ou une charge — seule la commission (706101) est du chiffre.
 const POSTES_DEPOT_VENTE = [
   {
+    cle: 'volumePrintemps',
+    label: 'VA Printemps',
+    titre: "Source : balance Pennylane, compte 707 Ventes de marchandises — ce que le Printemps nous verse, volet vintage et concession GIGI PARIS confondus. Ce n'est pas le ticket de caisse du stand : sur la concession, le Printemps déduit 26 % avant de verser. Déjà compté dans Ventes & commissions.",
+    prefixes: ['707'],
+    sens: 'credit' as const,
+  },
+  {
     cle: 'reversements',
     label: 'Reversements chineuses TTC',
     titre: "Source : balance Pennylane, comptes 467xxx Reversement CA — le volume déjà reversé à chaque chineuse, TTC. Il se partage en sa part (401), la TVA (44574) et notre commission (706101). Ni produit ni charge.",
@@ -279,8 +286,8 @@ export async function GET(req: NextRequest) {
           depotVente: [
             {
               cle: 'volume',
-              label: "Volume d'affaires",
-              titre: `Source : API Square, ventes nettes des commandes encaissées sur la période (${square.commandes} commandes, remboursements déduits). Pas le compte 511301, qui porte les virements Square et décale la fin de mois.`,
+              label: 'VA NR',
+              titre: `Source : API Square, ventes nettes encaissées en boutique sur la période (${square.commandes} commandes, remboursements déduits). Pas le compte 511301, qui porte les virements Square et décale la fin de mois.`,
               montant: square.total,
               comptes: [],
             },
