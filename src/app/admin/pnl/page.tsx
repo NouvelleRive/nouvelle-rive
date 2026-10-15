@@ -383,14 +383,15 @@ function BlocPostes({
               <span className="text-sm tabular-nums">{formatPrix(p.montant, { decimals: 0 })} €</span>
             </button>
             {ouvert && (
-              <div className="bg-gray-50/50">
+              <div className={`bg-gray-50/50 ${sous.length > 20 ? 'max-h-80 overflow-y-auto' : ''}`}>
                 {sous.map(sl => (
                   <div key={sl.cle} className="flex items-center justify-between pl-11 pr-4 py-1.5 text-xs text-gray-600">
                     <span className="truncate" title={sl.titre}>{sl.label}</span>
                     <span className="tabular-nums shrink-0 ml-3">{formatPrix(sl.montant, { decimals: 0 })} €</span>
                   </div>
                 ))}
-                {p.comptes.map(c => (
+                {/* Les sous-lignes remplacent le détail par compte quand il y en a. */}
+                {sous.length === 0 && p.comptes.map(c => (
                   <div key={c.number} className="flex items-center justify-between pl-11 pr-4 py-1.5 text-xs text-gray-600">
                     <span className="truncate" title={`${c.number} — ${c.label}`}>
                       <span className="text-gray-400 mr-2 tabular-nums">{c.number}</span>

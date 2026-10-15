@@ -109,6 +109,27 @@ const filtreDates = (debut: string, fin: string) => ({
   ]),
 })
 
+export type SupplierInvoice = {
+  id: number
+  invoice_number: string | null
+  date: string
+  ledger_entry: { id: number } | null
+}
+
+// Lignes d'un lot de comptes sur une période. Filtrer côté Pennylane évite de
+// rapatrier tout le grand livre : 272 lignes au lieu de 10 000 sur un exercice.
+export const getLignesDeComptes = (comptesIds: number[], debut: string, fin: string) =>
+  listAll<LedgerEntryLine>('ledger_entry_lines', {
+    filter: JSON.stringify([
+      { field: 'ledger_account_id', operator: 'in', value: comptesIds },
+      { field: 'date', operator: 'gteq', value: debut },
+      { field: 'date', operator: 'lteq', value: fin },
+    ]),
+  })
+
+export const getSupplierInvoices = (debut: string, fin: string) =>
+  listAll<SupplierInvoice>('supplier_invoices', filtreDates(debut, fin))
+
 export const getLedgerEntries = (debut: string, fin: string) =>
   listAll<LedgerEntry>('ledger_entries', filtreDates(debut, fin))
 export const getLedgerEntryLines = (debut: string, fin: string) =>

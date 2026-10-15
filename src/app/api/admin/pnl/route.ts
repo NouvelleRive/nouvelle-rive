@@ -11,7 +11,11 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
-import { getBankAccounts, getFiscalYears, getTrialBalance, getTransactions, type TrialBalanceLine } from '@/lib/pennylane'
+import {
+  getBankAccounts, getFiscalYears, getTrialBalance, getTransactions,
+  getLedgerAccounts, getLignesDeComptes, getSupplierInvoices,
+  type TrialBalanceLine,
+} from '@/lib/pennylane'
 import { ventesSquare } from '@/lib/squareVentes'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -262,6 +266,39 @@ async function volumesParChineuse(start: string, end: string) {
     .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
 }
 
+// Détail des reversements chineuses : une ligne par facture, avec sa référence
+// (NR0725-TDO). On ne rapatrie que les lignes des comptes 467xxx.
+async function reversementsParFacture(start: string, end: string) {
+  const comptes467 = (await getLedgerAccounts()).filter(c => c.number.startsWith('467'))
+  if (comptes467.length === 0) return []
+  const [lignes, factures] = await Promise.all([
+    getLignesDeComptes(comptes467.map(c => c.id), start, end),
+    getSupplierInvoices(start, end),
+  ])
+  const refs = new Map(factures.filter(f => f.ledger_entry).map(f => [f.ledger_entry!.id, f.invoice_number || '']))
+  const nomDuCompte = new Map(comptes467.map(c => [c.number, c.label]))
+
+  const parEcriture = new Map<number, { ref: string; compte: string; montant: number }>()
+  for (const l of lignes) {
+    const id = l.ledger_entry?.id
+    if (!id) continue
+    const montant = num(l.debit) - num(l.credit)
+    const cour = parEcriture.get(id)
+    if (cour) cour.montant += montant
+    else parEcriture.set(id, { ref: refs.get(id) || '', compte: l.ledger_account?.number || '', montant })
+  }
+
+  return [...parEcriture.entries()]
+    .filter(([, v]) => Math.abs(v.montant) >= 0.005)
+    .map(([id, v]) => ({
+      cle: `rev-${id}`,
+      label: v.ref || nomDuCompte.get(v.compte) || v.compte,
+      titre: v.ref ? `${v.compte} — ${nomDuCompte.get(v.compte) || ''}` : v.compte,
+      montant: v.montant,
+    }))
+    .sort((a, b) => b.montant - a.montant)
+}
+
 export async function GET(req: NextRequest) {
   const refus = await requireAdmin(req)
   if (refus) return refus
@@ -276,7 +313,7 @@ export async function GET(req: NextRequest) {
     const end = sp.get('end') || (courant && courant.finish < aujourdhui ? courant.finish : aujourdhui)
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, revDetail] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
@@ -284,6 +321,7 @@ export async function GET(req: NextRequest) {
       volumesParChineuse(start, end).catch(() => []),
       ventesSquare(start, end).catch(() => null),
       printempsParCanal(start, end).catch(() => null),
+      reversementsParFacture(start, end).catch(() => []),
     ])
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
@@ -307,7 +345,14 @@ export async function GET(req: NextRequest) {
         totalAvecPri: banques.reduce((s, c) => s + c.solde, 0),
       },
       pnl: (() => {
-        const a = agreger(balance)
+        const brut = agreger(balance)
+        // Les reversements se déplient facture par facture (NR0725-TDO).
+        const a = {
+          ...brut,
+          depotVente: brut.depotVente.map(p =>
+            p.cle === 'reversements' && revDetail.length > 0 ? { ...p, sousLignes: revDetail } : p,
+          ),
+        }
         if (!square) return a
         // Le volume d'affaires vient de Square, pas du compte de transit :
         // les virements décalent la fin de mois sur le mois suivant.
