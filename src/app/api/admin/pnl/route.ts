@@ -88,7 +88,7 @@ const POSTES_DEPOT_VENTE = [
 // du serveur et on ne retape Pennylane que sur demande (bouton « mettre à
 // jour », ?refresh=1). Cache par instance, perdu au redéploiement, gratuit.
 const CACHE = new Map<string, { le: number; corps: any }>()
-const TTL_PNL = 6 * 60 * 60 * 1000
+const TTL_PNL = 30 * 24 * 60 * 60 * 1000
 
 const num = (v: string) => Number(v) || 0
 
