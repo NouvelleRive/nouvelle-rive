@@ -27,7 +27,7 @@ type Mois = {
 type Data = {
   periode: { start: string; end: string }
   exercices: { start: string; finish: string; status: string }[]
-  tresorerie: { comptes: { id: number; nom: string; solde: number; devise: string; majLe: string }[]; total: number }
+  tresorerie: { comptes: { id: number; nom: string; solde: number; devise: string; majLe: string; pri: boolean }[]; total: number; totalAvecPri: number }
   pnl: {
     postes: Poste[]
     depotVente: PosteSimple[]
@@ -53,17 +53,40 @@ const libelleMois = (cle: string) => {
   return `${nom.replace('.', '')} ${an.slice(2)}`
 }
 
-// Exercice et vue vivent dans l'URL : un rafraîchissement les retrouve, et le
-// lien reste partageable. Rien n'est stocké côté serveur, donc rien à payer.
-function etatUrl() {
-  if (typeof window === 'undefined') return { periode: null, vue: 'cumul' as const }
+// Exercice, vue et case Printemps survivent au rafraîchissement. On les écrit
+// dans l'URL — le lien reste partageable — et dans sessionStorage, qui prend le
+// relais si la navigation Next remet l'URL à nu. Rien côté serveur, donc rien
+// à payer.
+const CLE_ETAT = 'nr-pnl-filtres'
+
+type EtatPnl = { periode: { start: string; end: string } | null; vue: 'cumul' | 'mois'; pri: boolean }
+
+function etatUrl(): EtatPnl {
+  const vide: EtatPnl = { periode: null, vue: 'cumul', pri: false }
+  if (typeof window === 'undefined') return vide
+
   const p = new URLSearchParams(window.location.search)
   const start = p.get('start')
   const end = p.get('end')
-  return {
-    periode: start && end ? { start, end } : null,
-    vue: p.get('vue') === 'mois' ? ('mois' as const) : ('cumul' as const),
+  if (start && end) {
+    return {
+      periode: { start, end },
+      vue: p.get('vue') === 'mois' ? 'mois' : 'cumul',
+      pri: p.get('pri') === '1',
+    }
   }
+
+  try {
+    const brut = sessionStorage.getItem(CLE_ETAT)
+    if (brut) {
+      const e = JSON.parse(brut) as EtatPnl
+      if (e?.periode?.start && e?.periode?.end) {
+        return { periode: e.periode, vue: e.vue === 'mois' ? 'mois' : 'cumul', pri: !!e.pri }
+      }
+    }
+  } catch { /* sessionStorage indisponible */ }
+
+  return vide
 }
 
 export default function PnlPage() {
@@ -74,15 +97,18 @@ export default function PnlPage() {
   const [periode, setPeriode] = useState<{ start: string; end: string } | null>(initial.periode)
   const [ouverts, setOuverts] = useState<Record<string, boolean>>({})
   const [vue, setVue] = useState<'cumul' | 'mois'>(initial.vue)
+  const [inclurePri, setInclurePri] = useState(initial.pri)
 
   // Reflète l'état courant dans l'URL sans recharger la page.
   useEffect(() => {
     const p = new URLSearchParams()
     if (periode) { p.set('start', periode.start); p.set('end', periode.end) }
     if (vue === 'mois') p.set('vue', 'mois')
+    if (inclurePri) p.set('pri', '1')
     const qs = p.toString()
     window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
-  }, [periode, vue])
+    try { sessionStorage.setItem(CLE_ETAT, JSON.stringify({ periode, vue, pri: inclurePri })) } catch { /* ignore */ }
+  }, [periode, vue, inclurePri])
 
   const charger = useCallback(async (p?: { start: string; end: string } | null) => {
     setLoading(true)
@@ -105,7 +131,13 @@ export default function PnlPage() {
   }, [])
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => { if (u) charger(etatUrl().periode) })
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!u) return
+      const e = etatUrl()
+      setVue(e.vue)
+      setInclurePri(e.pri)
+      charger(e.periode)
+    })
     return () => unsub()
   }, [charger])
 
@@ -123,6 +155,18 @@ export default function PnlPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <label
+            className="flex items-center gap-1.5 text-sm text-gray-600 select-none cursor-pointer"
+            title="Le compte PRI et les ventes du stand Printemps : trésorerie, VA Printemps et VA total"
+          >
+            <input
+              type="checkbox"
+              checked={inclurePri}
+              onChange={(e) => setInclurePri(e.target.checked)}
+              className="accent-[#22209C]"
+            />
+            Inclure le Printemps
+          </label>
           <div className="flex rounded border border-gray-300 overflow-hidden text-sm">
             {(['cumul', 'mois'] as const).map(v => (
               <button
@@ -182,7 +226,7 @@ export default function PnlPage() {
           <section>
             <h2 className="text-sm font-semibold text-gray-700 mb-2">Trésorerie</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {data.tresorerie.comptes.map(c => (
+              {data.tresorerie.comptes.filter(c => inclurePri || !c.pri).map(c => (
                 <div key={c.id} className="bg-white border rounded-lg p-3">
                   <div className="text-xs text-gray-500 truncate" title={c.nom}>{c.nom}</div>
                   <div className="text-lg font-semibold tabular-nums">{formatPrix(c.solde, { decimals: 0 })} €</div>
@@ -190,7 +234,7 @@ export default function PnlPage() {
               ))}
               <div className="bg-[#22209C] text-white rounded-lg p-3">
                 <div className="text-xs opacity-80">Total</div>
-                <div className="text-lg font-semibold tabular-nums">{formatPrix(data.tresorerie.total, { decimals: 0 })} €</div>
+                <div className="text-lg font-semibold tabular-nums">{formatPrix(inclurePri ? data.tresorerie.totalAvecPri : data.tresorerie.total, { decimals: 0 })} €</div>
               </div>
             </div>
           </section>
@@ -268,7 +312,7 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
       <button
         onClick={() => setOuvert(o => !o)}
         className="w-full flex items-center justify-between px-4 py-2 border-b bg-blue-50/40 hover:bg-blue-50 text-left"
-        title="Source : nos ventes Square regroupées par trigramme de SKU, commission au taux de chaque fiche chineuse. Marge = commissions ÷ volume vendu."
+        title="Source : Square, par trigramme de SKU"
       >
         <span className="text-sm font-medium">
           <span className="inline-block w-3 text-gray-400">{ouvert ? '−' : '+'}</span>

@@ -59,21 +59,21 @@ const POSTES_DEPOT_VENTE = [
   {
     cle: 'volumePrintemps',
     label: 'VA Printemps',
-    titre: "Source : balance Pennylane, compte 707 Ventes de marchandises — ce que le Printemps nous verse, volet vintage et concession GIGI PARIS confondus. Ce n'est pas le ticket de caisse du stand : sur la concession, le Printemps déduit 26 % avant de verser. Déjà compté dans Ventes & commissions.",
+    titre: 'Source : Pennylane, compte 707',
     prefixes: ['707'],
     sens: 'credit' as const,
   },
   {
     cle: 'reversements',
     label: 'Reversements chineuses TTC',
-    titre: "Source : balance Pennylane, comptes 467xxx Reversement CA — le volume déjà reversé à chaque chineuse, TTC. Il se partage en sa part (401), la TVA (44574) et notre commission (706101). Ni produit ni charge.",
+    titre: 'Source : Pennylane, comptes 467xxx',
     prefixes: ['467'],
     sens: 'debit' as const,
   },
   {
     cle: 'tvaCommission',
     label: 'TVA sur commission',
-    titre: 'Source : balance Pennylane, compte 44574 TVA collectée sur encaissements — la TVA que nous reversons sur notre commission',
+    titre: 'Source : Pennylane, compte 44574',
     prefixes: ['44574'],
     sens: 'credit' as const,
   },
@@ -261,21 +261,26 @@ export async function GET(req: NextRequest) {
       ventesSquare(start, end).catch(() => null),
     ])
 
-    const banques = comptes
-      .filter(c => !COMPTES_BANCAIRES_EXCLUS.includes(c.id))
-      .map(c => ({
-        id: c.id,
-        nom: c.name,
-        solde: num(c.balance),
-        devise: c.currency,
-        majLe: c.updated_at,
-      }))
+    // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
+    // laisse choisir si on l'inclut ou non.
+    const banques = comptes.map(c => ({
+      id: c.id,
+      nom: c.name,
+      solde: num(c.balance),
+      devise: c.currency,
+      majLe: c.updated_at,
+      pri: COMPTES_BANCAIRES_EXCLUS.includes(c.id),
+    }))
 
     return NextResponse.json({
       success: true,
       periode: { start, end },
       exercices: exercices.map(e => ({ start: e.start, finish: e.finish, status: e.status })),
-      tresorerie: { comptes: banques, total: banques.reduce((s, c) => s + c.solde, 0) },
+      tresorerie: {
+        comptes: banques,
+        total: banques.filter(c => !c.pri).reduce((s, c) => s + c.solde, 0),
+        totalAvecPri: banques.reduce((s, c) => s + c.solde, 0),
+      },
       pnl: (() => {
         const a = agreger(balance)
         if (!square) return a
@@ -289,7 +294,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'volume',
               label: 'VA NR',
-              titre: `Source : API Square, ventes nettes encaissées en boutique sur la période (${square.commandes} commandes, remboursements déduits). Pas le compte 511301, qui porte les virements Square et décale la fin de mois.`,
+              titre: 'Source : Square',
               montant: square.total,
               comptes: [],
             },
@@ -297,7 +302,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'volumeTotal',
               label: 'VA total',
-              titre: 'VA NR plus VA Printemps : tout ce qui a été vendu sur la période, boutique et stand confondus.',
+              titre: 'VA NR + VA Printemps',
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
             },
