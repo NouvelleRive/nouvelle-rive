@@ -346,12 +346,17 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     const cle = `${poste.cle}|${idEcriture}`
     const deja = cumul.get(cle)
     if (deja) { deja.montant += montant; continue }
-    const nom = labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
+    // « Facture MAKI CORP - OCULUS - NR0526-MAK » → « NR0526-MAK », le
+    // fournisseur passe en info-bulle.
+    const brut = labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
+    const bouts = brut.split(' - ')
+    const estFacture = /^Facture\s/i.test(brut) && bouts.length > 1
+    const nom = estFacture ? bouts[bouts.length - 1] : brut
     cumul.set(cle, {
       poste: poste.cle,
       cle: `d-${poste.cle}-${idEcriture}`,
       label: nom,
-      titre: `${l.date} — ${numero} ${nomDuCompte.get(numero) || ''}`,
+      titre: `${l.date} — ${brut} — ${numero} ${nomDuCompte.get(numero) || ''}`,
       montant,
       mois: (l.date || '').slice(0, 7),
     })
