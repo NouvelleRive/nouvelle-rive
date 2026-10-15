@@ -149,10 +149,6 @@ export default function PnlPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold text-[#22209C]">P&amp;L</h1>
-          <p className="text-sm text-gray-500">
-            Compta Pennylane
-            {data && <> — du {moisFr(data.periode.start)} au {moisFr(data.periode.end)}</>}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <label
