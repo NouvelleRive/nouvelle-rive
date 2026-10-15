@@ -281,6 +281,8 @@ export async function GET(req: NextRequest) {
         if (!square) return a
         // Le volume d'affaires vient de Square, pas du compte de transit :
         // les virements décalent la fin de mois sur le mois suivant.
+        const printemps = a.depotVente.find(p => p.cle === 'volumePrintemps')
+        const reste = a.depotVente.filter(p => p.cle !== 'volumePrintemps')
         return {
           ...a,
           depotVente: [
@@ -291,7 +293,15 @@ export async function GET(req: NextRequest) {
               montant: square.total,
               comptes: [],
             },
-            ...a.depotVente,
+            ...(printemps ? [printemps] : []),
+            {
+              cle: 'volumeTotal',
+              label: 'VA total',
+              titre: 'VA NR plus VA Printemps : tout ce qui a été vendu sur la période, boutique et stand confondus.',
+              montant: square.total + (printemps?.montant ?? 0),
+              comptes: [],
+            },
+            ...reste,
           ],
         }
       })(),
@@ -305,7 +315,13 @@ export async function GET(req: NextRequest) {
           resultat: a.resultat,
           postes: {
             ...Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
-            ...(square ? { volume: square.parMois[m.cle]?.net ?? 0 } : {}),
+            ...(square
+              ? (() => {
+                  const nr = square.parMois[m.cle]?.net ?? 0
+                  const pr = a.depotVente.find(p => p.cle === 'volumePrintemps')?.montant ?? 0
+                  return { volume: nr, volumeTotal: nr + pr }
+                })()
+              : {}),
           },
           margeBrute: a.margeBrute,
           pieces: volumes[m.cle]?.pieces ?? 0,
