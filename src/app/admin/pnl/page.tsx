@@ -246,7 +246,8 @@ export default function PnlPage() {
 
           {/* Compte de résultat */}
           {vue === 'cumul' ? (
-            <section className="bg-white border rounded-lg overflow-hidden">
+            <section className="bg-white border rounded-lg overflow-x-auto">
+              <div className="min-w-[620px]">
               <BlocPostes
                 titre="Dépôt-vente"
                 postes={data.pnl.depotVente.map(p => ({ ...p, sens: 'produit' as const }))}
@@ -296,11 +297,12 @@ export default function PnlPage() {
               )}
               <BlocPostes titre="Produits" postes={produits} total={data.pnl.produits} ouverts={ouverts} setOuverts={setOuverts} />
               <BlocPostes titre="Charges" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
+              <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-t">
                 <span className="font-semibold">Résultat</span>
                 <span className={`text-lg font-semibold tabular-nums ${data.pnl.resultat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatPrix(data.pnl.resultat, { decimals: 0 })} €
                 </span>
+              </div>
               </div>
             </section>
           ) : (
@@ -352,7 +354,7 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
           </div>
           {lignes.map(l => (
             <div key={l.trigramme} className="flex items-center px-3 sm:px-4 py-1 sm:py-1.5 border-b last:border-b-0 text-xs sm:text-sm">
-              <span className="flex-1 pl-1 sm:pl-3 text-gray-700 truncate">{l.nom}</span>
+              <span className="flex-1 pl-1 sm:pl-3 text-gray-700 whitespace-nowrap">{l.nom}</span>
               <span className="w-12 sm:w-20 text-right tabular-nums text-gray-500">{formatPrix(l.pieces)}</span>
               <span className="w-20 sm:w-28 text-right tabular-nums">{formatPrix(l.volume ?? 0, { decimals: 0 })} €</span>
               <span className="w-20 sm:w-28 text-right tabular-nums hidden sm:block">{formatPrix(l.commission ?? 0, { decimals: 0 })} €</span>
@@ -396,7 +398,7 @@ function BlocPostes({
                   size={14}
                   className={`transition-transform ${ouvert ? 'rotate-90' : ''} ${depliable ? 'text-gray-400' : 'text-transparent'}`}
                 />
-                <span className="truncate">{p.label}</span>
+                <span className="whitespace-nowrap">{p.label}</span>
                 {depliable && <span className="text-[11px] text-gray-400 shrink-0">({p.comptes.length || sous.length})</span>}
               </span>
               <span className="text-xs sm:text-sm tabular-nums shrink-0 ml-2">{formatPrix(p.montant, { decimals: 0 })} €</span>
@@ -405,14 +407,14 @@ function BlocPostes({
               <div className={`bg-gray-50/50 ${sous.length > 20 ? 'max-h-80 overflow-y-auto' : ''}`}>
                 {sous.map(sl => (
                   <div key={sl.cle} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
-                    <span className="truncate" title={sl.titre}>{sl.label}</span>
+                    <span className="whitespace-nowrap" title={sl.titre}>{sl.label}</span>
                     <span className="tabular-nums shrink-0 ml-3">{formatPrix(sl.montant, { decimals: 0 })} €</span>
                   </div>
                 ))}
                 {/* Les sous-lignes remplacent le détail par compte quand il y en a. */}
                 {sous.length === 0 && p.comptes.map(c => (
                   <div key={c.number} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
-                    <span className="truncate" title={`${c.number} — ${c.label}`}>
+                    <span className="whitespace-nowrap" title={`${c.number} — ${c.label}`}>
                       <span className="text-gray-400 mr-2 tabular-nums">{c.number}</span>
                       {c.label}
                     </span>
