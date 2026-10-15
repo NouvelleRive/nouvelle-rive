@@ -53,13 +53,36 @@ const libelleMois = (cle: string) => {
   return `${nom.replace('.', '')} ${an.slice(2)}`
 }
 
+// Exercice et vue vivent dans l'URL : un rafraîchissement les retrouve, et le
+// lien reste partageable. Rien n'est stocké côté serveur, donc rien à payer.
+function etatUrl() {
+  if (typeof window === 'undefined') return { periode: null, vue: 'cumul' as const }
+  const p = new URLSearchParams(window.location.search)
+  const start = p.get('start')
+  const end = p.get('end')
+  return {
+    periode: start && end ? { start, end } : null,
+    vue: p.get('vue') === 'mois' ? ('mois' as const) : ('cumul' as const),
+  }
+}
+
 export default function PnlPage() {
+  const initial = etatUrl()
   const [data, setData] = useState<Data | null>(null)
   const [loading, setLoading] = useState(true)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [periode, setPeriode] = useState<{ start: string; end: string } | null>(null)
+  const [periode, setPeriode] = useState<{ start: string; end: string } | null>(initial.periode)
   const [ouverts, setOuverts] = useState<Record<string, boolean>>({})
-  const [vue, setVue] = useState<'cumul' | 'mois'>('cumul')
+  const [vue, setVue] = useState<'cumul' | 'mois'>(initial.vue)
+
+  // Reflète l'état courant dans l'URL sans recharger la page.
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (periode) { p.set('start', periode.start); p.set('end', periode.end) }
+    if (vue === 'mois') p.set('vue', 'mois')
+    const qs = p.toString()
+    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+  }, [periode, vue])
 
   const charger = useCallback(async (p?: { start: string; end: string } | null) => {
     setLoading(true)
@@ -82,7 +105,7 @@ export default function PnlPage() {
   }, [])
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => { if (u) charger(null) })
+    const unsub = onAuthStateChanged(auth, (u) => { if (u) charger(etatUrl().periode) })
     return () => unsub()
   }, [charger])
 
