@@ -23,6 +23,7 @@ type Mois = {
   postes: Record<string, number>
   margeBrute: number | null
   tauxCommission: number | null
+  resultatPrintemps: number
   pieces: number
   caVentes: number | null
 }
@@ -42,6 +43,7 @@ type Data = {
     charges: number
     resultat: number
   }
+  resultatPrintemps?: number
   calculeLe?: string
   ducache?: boolean
   parChineuse: { nom: string; trigramme: string; taux: number; pieces: number; volume: number | null; commission: number | null }[]
@@ -299,10 +301,22 @@ export default function PnlPage() {
               <BlocPostes titre="Charges" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
               <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-t">
                 <span className="font-semibold">Résultat</span>
-                <span className={`text-lg font-semibold tabular-nums ${data.pnl.resultat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-base sm:text-lg font-semibold tabular-nums ${data.pnl.resultat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatPrix(data.pnl.resultat, { decimals: 0 })} €
                 </span>
               </div>
+              {data.resultatPrintemps != null && (
+                <>
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Encaissements du Printemps moins ce qu'on reverse à ses chineuses">
+                    <span className="pl-4 text-gray-600">dont Printemps</span>
+                    <span className="tabular-nums text-gray-700">{formatPrix(data.resultatPrintemps, { decimals: 0 })} €</span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Le résultat moins celui du Printemps">
+                    <span className="pl-4 text-gray-600">dont NR</span>
+                    <span className="tabular-nums text-gray-700">{formatPrix(data.pnl.resultat - data.resultatPrintemps, { decimals: 0 })} €</span>
+                  </div>
+                </>
+              )}
               </div>
             </section>
           ) : (
@@ -592,6 +606,20 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Résultat</td>
           </tr>
           <Ligne label="Résultat" valeurs={mois.map(m => m.resultat)} total={data.pnl.resultat} gras couleur />
+          <Ligne
+            label="dont Printemps"
+            titre="Encaissements du Printemps moins ce qu'on reverse à ses chineuses"
+            valeurs={mois.map(m => m.resultatPrintemps ?? 0)}
+            total={data.resultatPrintemps ?? 0}
+            couleur
+          />
+          <Ligne
+            label="dont NR"
+            titre="Le résultat moins celui du Printemps"
+            valeurs={mois.map(m => m.resultat - (m.resultatPrintemps ?? 0))}
+            total={data.pnl.resultat - (data.resultatPrintemps ?? 0)}
+            couleur
+          />
 
         </tbody>
       </table>

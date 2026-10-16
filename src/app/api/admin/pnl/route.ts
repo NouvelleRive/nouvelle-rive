@@ -351,10 +351,10 @@ function periodeDuLibelle(libelle: string, date: string): string | null {
   return null
 }
 
-async function detailParPoste(start: string, end: string): Promise<Record<string, SousLigne[]>> {
+async function detailParPoste(start: string, end: string) {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
-  if (suivis.length === 0) return {}
+  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number> }
   const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
 
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
@@ -371,6 +371,9 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
   // On agrège par (poste, écriture) : une facture fournisseuse ventilée sur
   // deux comptes du même poste ne doit faire qu'une ligne.
   const cumul = new Map<string, SousLigne & { poste: string; horsNR?: boolean }>()
+  // Ce que NR reverse aux chineuses du Printemps : leur volume moins la
+  // commission et sa TVA. Rangé au mois de la période de la facture.
+  const reversePrintemps: Record<string, number> = {}
   for (const l of lignes) {
     const numero = l.ledger_account?.number
     const idEcriture = l.ledger_entry?.id
@@ -381,9 +384,6 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
       ? num(l.credit) - num(l.debit)
       : num(l.debit) - num(l.credit)
 
-    const cle = `${poste.cle}|${idEcriture}`
-    const deja = cumul.get(cle)
-    if (deja) { deja.montant += montant; continue }
     // « Facture MAKI CORP - OCULUS - NR0526-MAK » → « NR0526-MAK », le
     // fournisseur passe en info-bulle.
     const brut = labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
@@ -397,8 +397,7 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
       ? (refLisible ? dernier : brut.replace(/^Facture\s+/i, ''))
       : brut
     // Une référence au format NRmmaa est boutique, point final : NR0226-PRI,
-    // c'est PRISTINI, pas le stand du Printemps. Tout le reste qui porte une
-    // référence PRI ou une avance sort du volume boutique.
+    // c'est PRISTINI, pas le stand du Printemps.
     const refNR = /^NR\d{4}/i.test(nom)
     // « 2025 / 13 » : la numérotation de TÊTE D'ORANGE pour son stand. Les huit
     // factures de cette série sont payées par un virement PRImmaaTDO.
@@ -406,18 +405,28 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     const horsNR = !refNR && (
       serieAnnuelle || /\bPRI\d{4}/i.test(brut) || /\bPRI[A-Z]{3}/i.test(brut) || /avance/i.test(brut)
     )
+    const periode = periodeDeLaReference(brut)
+      || periodeMoisAnnee(dernier)
+      || periodeDuLibelle(brut, l.date || '')
+      || (l.date || '').slice(0, 7)
+
+    if (horsNR) {
+      const v = numero.startsWith('467')
+        ? num(l.debit) - num(l.credit)
+        : -(num(l.credit) - num(l.debit))
+      reversePrintemps[periode] = (reversePrintemps[periode] || 0) + v
+    }
+
+    const cle = `${poste.cle}|${idEcriture}`
+    const deja = cumul.get(cle)
+    if (deja) { deja.montant += montant; continue }
     cumul.set(cle, {
       poste: poste.cle,
       cle: `d-${poste.cle}-${idEcriture}`,
       label: nom,
       titre: `${l.date} — ${brut} — ${numero} ${nomDuCompte.get(numero) || ''}`,
       montant,
-      // La période, c'est celle de la référence : NR0526 = mai 2026, même si
-      // la facture est datée du 1er juin et payée le 10.
-      mois: periodeDeLaReference(brut)
-        || periodeMoisAnnee(dernier)
-        || periodeDuLibelle(brut, l.date || '')
-        || (l.date || '').slice(0, 7),
+      mois: periode,
       horsNR,
     })
   }
@@ -430,7 +439,7 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
   }
   // Ordre alphabétique : on repère tout de suite la chineuse qui manque.
   for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
-  return parPoste
+  return { parPoste, reversePrintemps }
 }
 
 export async function GET(req: NextRequest) {
@@ -466,7 +475,10 @@ export async function GET(req: NextRequest) {
     ])
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
-    const detail = await detailParPoste(start, end).catch(() => ({} as Record<string, SousLigne[]>))
+    const brutDetail = await detailParPoste(start, end)
+      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number> }))
+    const detail = brutDetail.parPoste
+    const reversePrintemps = brutDetail.reversePrintemps
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
@@ -562,6 +574,10 @@ export async function GET(req: NextRequest) {
         }
       })(),
       parChineuse,
+      // Printemps : ce qu'il nous verse moins ce qu'on reverse à ses chineuses.
+      // Le reste du résultat est celui de la boutique.
+      resultatPrintemps: (canaux?.montantTotal ?? 0)
+        - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
       mois: mois.map((m, i) => {
         const a = agreger(balancesMois[i])
         return {
@@ -588,6 +604,9 @@ export async function GET(req: NextRequest) {
           },
           margeBrute: a.margeBrute,
           tauxCommission: a.tauxCommission,
+          resultatPrintemps:
+            ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
+            - (reversePrintemps[m.cle] ?? 0),
           pieces: volumes[m.cle]?.pieces ?? 0,
           caVentes: volumes[m.cle]?.ca ?? null,
           volumeSquare: square?.parMois[m.cle]?.net ?? null,
