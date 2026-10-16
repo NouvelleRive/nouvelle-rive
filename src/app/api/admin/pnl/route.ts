@@ -362,9 +362,11 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     const bouts = brut.split(' - ')
     const estFacture = /^Facture\s/i.test(brut) && bouts.length > 1
     const nom = estFacture ? bouts[bouts.length - 1] : brut
-    // PRI1125TDO5, PRITDO Avance décembre… : du Printemps ou une avance, donc
-    // hors volume boutique. Attention, NR0226-PRI est PRISTINI, pas le stand.
-    const horsNR = /\bPRI\d{4}/i.test(brut) || /\bPRI[A-Z]{3}/i.test(brut) || /avance/i.test(brut)
+    // Une référence au format NRmmaa est boutique, point final : NR0226-PRI,
+    // c'est PRISTINI, pas le stand du Printemps. Tout le reste qui porte une
+    // référence PRI ou une avance sort du volume boutique.
+    const refNR = /^NR\d{4}/i.test(nom)
+    const horsNR = !refNR && (/\bPRI\d{4}/i.test(brut) || /\bPRI[A-Z]{3}/i.test(brut) || /avance/i.test(brut))
     cumul.set(cle, {
       poste: poste.cle,
       cle: `d-${poste.cle}-${idEcriture}`,
