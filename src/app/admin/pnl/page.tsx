@@ -12,7 +12,7 @@ import { formatPrix } from '@/lib/formatPrix'
 import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
-type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string }
+type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
 type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
 type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
 type Mois = {
@@ -511,9 +511,9 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
               return (
                 <td key={m.cle} className="px-2 sm:px-3 py-1.5 text-right align-top">
                   {duMois.length === 0 ? '' : duMois.map(sl => (
-                    <div key={sl.cle} className="mb-1.5 last:mb-0 whitespace-nowrap" title={sl.titre}>
-                      <div className="text-gray-500">{sl.label}</div>
-                      <div className="tabular-nums text-gray-700">{formatPrix(sl.montant, { decimals: 0 })} €</div>
+                    <div key={sl.cle} className="flex items-baseline justify-between gap-3 whitespace-nowrap" title={sl.titre}>
+                      <span className="text-gray-500">{sl.label}</span>
+                      <span className="tabular-nums text-gray-700">{formatPrix(sl.montant, { decimals: 0 })} €</span>
                     </div>
                   ))}
                 </td>
@@ -534,7 +534,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
         <thead>
           <tr className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <th className={`${tete} bg-gray-50 font-semibold`}>&nbsp;</th>
-            {mois.map(m => <th key={m.cle} className={`${cel} font-semibold`}>{libelleMois(m.cle)}</th>)}
+            {mois.map(m => <th key={m.cle} className={`${cel} font-semibold min-w-[160px]`}>{libelleMois(m.cle)}</th>)}
             <th className={`${cel} font-semibold bg-gray-100`}>Total</th>
           </tr>
         </thead>

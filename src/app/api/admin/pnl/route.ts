@@ -311,7 +311,7 @@ async function volumesParChineuse(start: string, end: string) {
 // sa facture (fournisseur + référence) ou, à défaut, par le libellé de
 // l'écriture. On ne rapatrie que les comptes affichés et que les écritures
 // qu'on va montrer : ~1 400 lignes sur un exercice, pas le grand livre entier.
-type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string }
+type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
 
 // NR0526-PS → 2026-05, PRI1025TDO4 → 2025-10. Les bordereaux Printemps à deux
 // chiffres (PRI30) ne sont pas des périodes : ils ne matchent pas.
@@ -342,7 +342,7 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
 
   // On agrège par (poste, écriture) : une facture fournisseuse ventilée sur
   // deux comptes du même poste ne doit faire qu'une ligne.
-  const cumul = new Map<string, SousLigne & { poste: string }>()
+  const cumul = new Map<string, SousLigne & { poste: string; horsNR?: boolean }>()
   for (const l of lignes) {
     const numero = l.ledger_account?.number
     const idEcriture = l.ledger_entry?.id
@@ -362,6 +362,9 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     const bouts = brut.split(' - ')
     const estFacture = /^Facture\s/i.test(brut) && bouts.length > 1
     const nom = estFacture ? bouts[bouts.length - 1] : brut
+    // PRI1125TDO5, PRITDO Avance décembre… : du Printemps ou une avance, donc
+    // hors volume boutique. Attention, NR0226-PRI est PRISTINI, pas le stand.
+    const horsNR = /\bPRI\d{4}/i.test(brut) || /\bPRI[A-Z]{3}/i.test(brut) || /avance/i.test(brut)
     cumul.set(cle, {
       poste: poste.cle,
       cle: `d-${poste.cle}-${idEcriture}`,
@@ -371,13 +374,15 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
       // La période, c'est celle de la référence : NR0526 = mai 2026, même si
       // la facture est datée du 1er juin et payée le 10.
       mois: periodeDeLaReference(brut) || (l.date || '').slice(0, 7),
+      horsNR,
     })
   }
 
   const parPoste: Record<string, SousLigne[]> = {}
   for (const v of cumul.values()) {
-    if (Math.abs(v.montant) < 0.005) continue
-    ;(parPoste[v.poste] ||= []).push({ cle: v.cle, label: v.label, titre: v.titre, montant: v.montant, mois: v.mois })
+    // Sous 1 €, ce sont des erratums et des frais bancaires : du bruit.
+    if (Math.abs(v.montant) < 1) continue
+    ;(parPoste[v.poste] ||= []).push({ cle: v.cle, label: v.label, titre: v.titre, montant: v.montant, mois: v.mois, horsNR: v.horsNR })
   }
   for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => Math.abs(b.montant) - Math.abs(a.montant))
   return parPoste
@@ -451,6 +456,9 @@ export async function GET(req: NextRequest) {
         if (!square) return a
         // Le volume d'affaires vient de Square, pas du compte de transit :
         // les virements décalent la fin de mois sur le mois suivant.
+        // Les factures PRI et les avances sortent du volume boutique.
+        const reversementsNR = (detail['reversements'] ?? []).filter(d => !d.horsNR)
+
         // Le Printemps ne se lit plus sur le 707 (qui porte aussi le stock
         // propre) mais sur les encaissements reçus de Printemps SAS.
         const printemps = canaux && canaux.montantTotal > 0
@@ -462,7 +470,11 @@ export async function GET(req: NextRequest) {
               comptes: [] as { number: string; label: string; montant: number }[],
             }
           : null
-        const reste = a.depotVente
+        const reste = a.depotVente.map(p =>
+          p.cle === 'reversements' && reversementsNR.length > 0
+            ? { ...p, montant: reversementsNR.reduce((s2, d) => s2 + d.montant, 0), sousLignes: reversementsNR }
+            : p,
+        )
         return {
           ...a,
           depotVente: [
@@ -474,7 +486,7 @@ export async function GET(req: NextRequest) {
               comptes: [],
               // Le détail, c'est la facture de chaque chineuse (NR0126-PS) :
               // même liste que les reversements, et elle est datée.
-              sousLignes: detail['reversements'] ?? [],
+              sousLignes: reversementsNR,
             },
             ...(printemps
               ? [{
