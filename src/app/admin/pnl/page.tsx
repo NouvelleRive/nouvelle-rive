@@ -264,12 +264,12 @@ export default function PnlPage() {
           {vue === 'cumul' ? (
             <section className="bg-white border rounded-lg overflow-x-auto">
               <div className="min-w-[620px]">
-              {[...new Set(data.pnl.depotVente.map(p => p.bloc || 'Dépôt-vente'))].map(bloc => (
+              {[...new Set(data.pnl.depotVente.map(p => p.bloc || 'Charges variables'))].map(bloc => (
                 <BlocPostes
                   key={bloc}
                   titre={bloc}
                   postes={data.pnl.depotVente
-                    .filter(p => (p.bloc || 'Dépôt-vente') === bloc)
+                    .filter(p => (p.bloc || 'Charges variables') === bloc)
                     .map(p => ({ ...p, sens: 'produit' as const }))}
                   total={null}
                   ouverts={ouverts}
@@ -584,12 +584,12 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
           {data.pnl.depotVente.length > 0 && (
             <>
               <tr className="bg-gray-50/70">
-                <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>{data.pnl.depotVente[0]?.bloc || 'Dépôt-vente'}</td>
+                <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>{data.pnl.depotVente[0]?.bloc || "Volume d'affaires"}</td>
               </tr>
               <Ligne label="Pièces vendues" titre="Source : APP NR" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
               {data.pnl.depotVente.map((p, i) => {
-                const bloc = p.bloc || 'Dépôt-vente'
-                const nouveau = i > 0 && bloc !== (data.pnl.depotVente[i - 1].bloc || 'Dépôt-vente')
+                const bloc = p.bloc || 'Charges variables'
+                const nouveau = i > 0 && bloc !== (data.pnl.depotVente[i - 1].bloc || 'Charges variables')
                 return (
                   <Fragment key={p.cle}>
                     {nouveau && (

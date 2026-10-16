@@ -796,13 +796,6 @@ export async function GET(req: NextRequest) {
               indent: true,
               alerte: true,
             },
-            ...(recu ? [{
-              cle: 'recuBanque',
-              label: "Volume d'affaires reçu en banque",
-              titre: 'Source : SHINE — virements reçus de Square',
-              montant: recu.total,
-              comptes: [] as { number: string; label: string; montant: number }[],
-            }] : []),
             {
               cle: 'volumeMarchandises',
               label: 'dont ventes de marchandises (NR + NR achats)',
@@ -826,6 +819,13 @@ export async function GET(req: NextRequest) {
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
             },
+            ...(recu ? [{
+              cle: 'recuBanque',
+              label: "Volume d'affaires reçu en banque",
+              titre: 'Source : SHINE — virements reçus de Square',
+              montant: recu.total,
+              comptes: [] as { number: string; label: string; montant: number }[],
+            }] : []),
             ...reste,
             {
               cle: 'achatsMarchandises',
@@ -842,7 +842,7 @@ export async function GET(req: NextRequest) {
                    'volumePrintemps', 'priVintage', 'priUpcycling',
                    'volumeTotal', 'recuBanque'].includes(p.cle)
               ? "Volume d'affaires"
-              : 'Dépôt-vente',
+              : 'Charges variables',
           })),
         }
       })(),
