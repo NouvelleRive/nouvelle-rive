@@ -600,7 +600,7 @@ export async function GET(req: NextRequest) {
                 {
                   ...p,
                   label: 'Reversements chineuses',
-                  titre: 'Source : PENNYLANE — factures chineuses, volume moins commission et TVA',
+                  titre: 'Source : PENNYLANE — Reversement CA − Commissions perçues − TVA',
                   montant: sommeL(netsFactures),
                   comptes: vide,
                   sousLignes: netsFactures,
