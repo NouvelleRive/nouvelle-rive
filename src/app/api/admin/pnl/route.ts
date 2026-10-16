@@ -448,7 +448,7 @@ function periodeDuLibelle(libelle: string, date: string): string | null {
 async function detailParPoste(start: string, end: string) {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
-  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[] }
+  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[], tva: [] as SousLigne[] }
   const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
 
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
@@ -588,6 +588,16 @@ async function detailParPoste(start: string, end: string) {
     .filter(r => Math.abs(r.montant) >= 1)
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
 
+  // La TVA facturée à la chineuse, sans les écritures « Récup. TVA sur
+  // encaissements » : celles-ci portent le même compte mais au débit, et les
+  // mélanger donnerait des mois négatifs alors qu'on facture tous les mois.
+  const tvaFacturee = new Map<number, SousLigne>()
+  for (const [id, v] of tvaNR) {
+    const ref = reverseNR.get(id)
+    if (!ref || v <= 0) continue
+    tvaFacturee.set(id, { ...ref, cle: `tva-${id}`, montant: v })
+  }
+
   // Ce que la chineuse touche vraiment : son volume moins notre commission
   // et la TVA dessus.
   const nets = new Map<number, SousLigne>()
@@ -597,7 +607,7 @@ async function detailParPoste(start: string, end: string) {
   return {
     parPoste, reversePrintemps,
     volumes: trier(reverseNR), commissions: trier(commissionsNR), nets: trier(nets),
-    marchandises: trier(marchandises), achats: trier(achats),
+    marchandises: trier(marchandises), achats: trier(achats), tva: trier(tvaFacturee),
   }
 }
 
@@ -636,7 +646,7 @@ export async function GET(req: NextRequest) {
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
     const brutDetail = await detailParPoste(start, end)
-      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[] }))
+      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[], tva: [] as SousLigne[] }))
     const detail = brutDetail.parPoste
     const reversePrintemps = brutDetail.reversePrintemps
     const volumesFactures = brutDetail.volumes
@@ -644,6 +654,7 @@ export async function GET(req: NextRequest) {
     const netsFactures = brutDetail.nets
     const marchandisesFactures = brutDetail.marchandises
     const achatsMarchandises = brutDetail.achats
+    const tvaFactures = brutDetail.tva
 
     // Les factures qui manquent face à Square, chineuse par chineuse.
     const recu = await recuEnBanque(start, end).catch(() => null)
@@ -703,6 +714,13 @@ export async function GET(req: NextRequest) {
         const sommeL = (l: typeof volumesFactures) => l.reduce((s2, d) => s2 + d.montant, 0)
         const vide = [] as { number: string; label: string; montant: number }[]
         const reste = a.depotVente.flatMap(p =>
+          p.cle === 'tvaCommission' && tvaFactures.length > 0
+            ? [{
+                ...p,
+                montant: sommeL(tvaFactures),
+                comptes: vide,
+                sousLignes: tvaFactures,
+              }] :
           p.cle === 'reversements' && commissionsFactures.length > 0
             ? [
                 {
@@ -862,6 +880,7 @@ export async function GET(req: NextRequest) {
                     priUpcycling: u,
                     reversements: somme(netsFactures),
                     commissions: somme(commissionsFactures),
+                    tvaCommission: somme(tvaFactures),
                   }
                 })()
               : {}),
