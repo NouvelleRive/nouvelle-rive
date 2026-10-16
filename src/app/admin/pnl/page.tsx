@@ -13,8 +13,8 @@ import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
 type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
-type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean }
-type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean }
+type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean; info?: string }
+type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean; info?: string }
 type Mois = {
   cle: string
   produits: number
@@ -433,6 +433,7 @@ function BlocPostes({
                 />
                 <span className={`whitespace-nowrap ${p.indent ? 'pl-4 text-gray-600' : ''} ${p.gras ? 'font-semibold' : ''}`}>{p.label}</span>
                 {depliable && <span className="text-[11px] text-gray-400 shrink-0">({p.comptes.length || sous.length})</span>}
+                {p.info && <span className="text-[11px] text-gray-400 shrink-0">{p.info}</span>}
               </span>
               <span className={`text-xs sm:text-sm tabular-nums shrink-0 ml-2 ${p.alerte ? 'text-red-600 font-medium' : ''} ${p.gras ? 'font-semibold' : ''}`}>{formatPrix(p.montant, { decimals: 0 })} €</span>
             </button>

@@ -821,6 +821,16 @@ export async function GET(req: NextRequest) {
               comptes: [],
               gras: true,
             },
+            ...(frais && square.total > 0 ? [{
+              cle: 'fraisSquareVolume',
+              label: 'Écart frais bancaires',
+              titre: 'Source : SQUARE — commissions de paiement prélevées avant virement',
+              montant: -frais.total,
+              comptes: [] as { number: string; label: string; montant: number }[],
+              indent: true,
+              alerte: true,
+              info: `${((frais.total / square.total) * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`,
+            }] : []),
             ...(recu ? [{
               cle: 'recuBanque',
               label: "Volume d'affaires reçu en banque",
@@ -858,7 +868,7 @@ export async function GET(req: NextRequest) {
             // Deux blocs de lecture : ce qui a été vendu, puis ce qu'on en garde.
             bloc: ['volume', 'volumeFacture', 'ecart', 'volumeMarchandises',
                    'volumePrintemps', 'priVintage', 'priUpcycling',
-                   'volumeTotal', 'recuBanque'].includes(p.cle)
+                   'volumeTotal', 'recuBanque', 'fraisSquareVolume'].includes(p.cle)
               ? "Volume d'affaires"
               : ['commissions', 'tvaCommission', 'caMarchandises', 'caTotal'].includes(p.cle)
                 ? "Chiffre d'affaires"
@@ -895,6 +905,7 @@ export async function GET(req: NextRequest) {
                     volumeMarchandises: somme(marchandisesFactures),
                     ecart: (square.parMois[m.cle]?.net ?? 0) - nr - somme(marchandisesFactures),
                     fraisSquare: frais?.parMois[m.cle] ?? 0,
+                    fraisSquareVolume: -(frais?.parMois[m.cle] ?? 0),
                     recuBanque: recu?.parMois[m.cle] ?? 0,
                     volumePrintemps: v + u,
                     volumeTotal: (square.parMois[m.cle]?.net ?? 0) + v + u,
