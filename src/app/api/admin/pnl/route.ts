@@ -262,7 +262,7 @@ async function printempsParCanal(start: string, end: string) {
     total[canal] += montant
     montantTotal += montant
   }
-  lignes.sort((a, b) => b.montant - a.montant)
+  lignes.sort((a, b) => a.label.localeCompare(b.label, 'fr'))
   return { total, parMois, lignes, montantTotal }
 }
 
@@ -384,7 +384,8 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     if (Math.abs(v.montant) < 1) continue
     ;(parPoste[v.poste] ||= []).push({ cle: v.cle, label: v.label, titre: v.titre, montant: v.montant, mois: v.mois, horsNR: v.horsNR })
   }
-  for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => Math.abs(b.montant) - Math.abs(a.montant))
+  // Ordre alphabétique : on repère tout de suite la chineuse qui manque.
+  for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
   return parPoste
 }
 

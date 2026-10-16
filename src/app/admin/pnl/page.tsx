@@ -510,7 +510,10 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
               const duMois = datees.filter(sl => sl.mois === m.cle)
               return (
                 <td key={m.cle} className="px-2 sm:px-3 py-1.5 text-right align-top">
-                  {duMois.length === 0 ? '' : duMois.map(sl => (
+                  {duMois.length === 0 ? '' : (
+                    <div className="text-gray-400 mb-1">{duMois.length} ligne{duMois.length > 1 ? 's' : ''}</div>
+                  )}
+                  {duMois.map(sl => (
                     <div key={sl.cle} className="flex items-baseline justify-between gap-3 whitespace-nowrap" title={sl.titre}>
                       <span className="text-gray-500">{sl.label}</span>
                       <span className="tabular-nums text-gray-700">{formatPrix(sl.montant, { decimals: 0 })} €</span>
