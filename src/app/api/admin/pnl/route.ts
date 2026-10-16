@@ -316,11 +316,30 @@ type SousLigne = { cle: string; label: string; titre?: string; montant: number; 
 // NR0526-PS → 2026-05, PRI1025TDO4 → 2025-10. Les bordereaux Printemps à deux
 // chiffres (PRI30) ne sont pas des périodes : ils ne matchent pas.
 function periodeDeLaReference(libelle: string): string | null {
-  const m = libelle.toUpperCase().match(/\b(?:NR|PRI[VU]?)(\d{2})(\d{2})\b/)
+  // Pas de \b après les chiffres : NR0825C141 colle son suffixe à la période.
+  const m = libelle.toUpperCase().match(/\b(?:NR|PRI[VU]?)(\d{2})(\d{2})/)
   if (!m) return null
   const mois = Number(m[1])
   if (mois < 1 || mois > 12) return null
   return `20${m[2]}-${m[1]}`
+}
+
+const MOIS_FR: Record<string, string> = {
+  janvier: '01', février: '02', fevrier: '02', mars: '03', avril: '04', mai: '05',
+  juin: '06', juillet: '07', août: '08', aout: '08', septembre: '09',
+  octobre: '10', novembre: '11', décembre: '12', decembre: '12',
+}
+
+// « erreur avril - MLE INES PINEAU » : le mois est écrit en toutes lettres.
+// L'année est celle de l'écriture, sauf si le mois lui est postérieur.
+function periodeDuLibelle(libelle: string, date: string): string | null {
+  const l = libelle.toLowerCase()
+  for (const [nom, mm] of Object.entries(MOIS_FR)) {
+    if (!new RegExp(`\\b${nom}\\b`).test(l)) continue
+    const an = Number(date.slice(0, 4))
+    return `${mm > date.slice(5, 7) ? an - 1 : an}-${mm}`
+  }
+  return null
 }
 
 async function detailParPoste(start: string, end: string): Promise<Record<string, SousLigne[]>> {
@@ -386,7 +405,7 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
       montant,
       // La période, c'est celle de la référence : NR0526 = mai 2026, même si
       // la facture est datée du 1er juin et payée le 10.
-      mois: periodeDeLaReference(brut) || (l.date || '').slice(0, 7),
+      mois: periodeDeLaReference(brut) || periodeDuLibelle(brut, l.date || '') || (l.date || '').slice(0, 7),
       horsNR,
     })
   }
