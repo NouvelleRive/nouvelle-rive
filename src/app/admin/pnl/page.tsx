@@ -262,20 +262,24 @@ export default function PnlPage() {
 
           {/* Compte de résultat */}
           {vue === 'cumul' ? (
-            <section className="bg-white border rounded-lg overflow-x-auto">
-              <div className="min-w-[620px]">
+            // Un seul défilement horizontal, mais chaque bloc dans son cadre.
+            <section className="overflow-x-auto">
+              <div className="min-w-[620px] space-y-4">
               {[...new Set(data.pnl.depotVente.map(p => p.bloc || 'Charges variables'))].map(bloc => (
-                <BlocPostes
-                  key={bloc}
-                  titre={bloc}
-                  postes={data.pnl.depotVente
-                    .filter(p => (p.bloc || 'Charges variables') === bloc)
-                    .map(p => ({ ...p, sens: 'produit' as const }))}
-                  total={null}
-                  ouverts={ouverts}
-                  setOuverts={setOuverts}
-                />
+                <div key={bloc} className="bg-white border rounded-lg overflow-hidden">
+                  <BlocPostes
+                    titre={bloc}
+                    postes={data.pnl.depotVente
+                      .filter(p => (p.bloc || 'Charges variables') === bloc)
+                      .map(p => ({ ...p, sens: 'produit' as const }))}
+                    total={null}
+                    ouverts={ouverts}
+                    setOuverts={setOuverts}
+                  />
+                </div>
               ))}
+
+              <div className="bg-white border rounded-lg overflow-hidden">
               <MargeParChineuse lignes={data.parChineuse} />
               {data.pnl.commissionsDeduites > 0 && (
                 <>
@@ -331,6 +335,7 @@ export default function PnlPage() {
                   </div>
                 </>
               )}
+              </div>
               </div>
             </section>
           ) : (
