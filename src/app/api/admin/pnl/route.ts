@@ -419,8 +419,11 @@ async function detailParPoste(start: string, end: string) {
     const net = numero.startsWith('467')
       ? num(l.debit) - num(l.credit)
       : -(num(l.credit) - num(l.debit))
+    // Uniquement les comptes d'une facture chineuse : le 707 porte les
+    // encaissements du Printemps, pas un reversement.
+    const compteFacture = numero.startsWith('467') || numero.startsWith('706') || numero === '44574'
     if (horsNR) {
-      reversePrintemps[periode] = (reversePrintemps[periode] || 0) + net
+      if (compteFacture) reversePrintemps[periode] = (reversePrintemps[periode] || 0) + net
     } else if (numero.startsWith('467')) {
       const deja = reverseNR.get(idEcriture)
       if (deja) deja.montant += net
