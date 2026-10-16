@@ -361,7 +361,13 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     const brut = labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
     const bouts = brut.split(' - ')
     const estFacture = /^Facture\s/i.test(brut) && bouts.length > 1
-    const nom = estFacture ? bouts[bouts.length - 1] : brut
+    const dernier = bouts[bouts.length - 1]
+    // On ne garde le dernier morceau que s'il ressemble à une référence.
+    // « Facture CAMELEON - 7 » doit rester « CAMELEON - 7 », pas « 7 ».
+    const refLisible = /[A-Za-z]/.test(dernier) && /\d/.test(dernier) && dernier.length >= 5
+    const nom = estFacture
+      ? (refLisible ? dernier : brut.replace(/^Facture\s+/i, ''))
+      : brut
     // Une référence au format NRmmaa est boutique, point final : NR0226-PRI,
     // c'est PRISTINI, pas le stand du Printemps. Tout le reste qui porte une
     // référence PRI ou une avance sort du volume boutique.
