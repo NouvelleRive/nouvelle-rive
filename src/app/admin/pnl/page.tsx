@@ -488,7 +488,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
   const tete = 'sticky left-0 bg-white px-2 sm:px-3 py-1 sm:py-1.5 text-left whitespace-nowrap z-10'
 
   const Ligne = ({ label, valeurs, total, gras, couleur, suffixe, titre }: {
-    label: string
+    label: React.ReactNode
     valeurs: number[]
     total: number
     gras?: boolean
@@ -591,7 +591,13 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
               <tr className="bg-gray-50/70">
                 <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>{data.pnl.depotVente[0]?.bloc || "Volume d'affaires"}</td>
               </tr>
-              <Ligne label="Pièces vendues" titre="Source : APP NR" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
+              <Ligne
+                label={<span className="pl-4">Nombre de pièces vendues</span>}
+                titre="Source : APP NR"
+                valeurs={mois.map(m => m.pieces)}
+                total={somme(m => m.pieces)}
+                suffixe="pieces"
+              />
               {data.pnl.depotVente.map((p, i) => {
                 const bloc = p.bloc || 'Charges variables'
                 const nouveau = i > 0 && bloc !== (data.pnl.depotVente[i - 1].bloc || 'Charges variables')
