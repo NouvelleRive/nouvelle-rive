@@ -21,8 +21,8 @@ type Mois = {
   charges: number
   resultat: number
   postes: Record<string, number>
-  margeBrute: number | null
-  tauxCommission: number | null
+  margeChineuses: number | null
+  margeAchat: number | null
   resultatPrintemps: number
   pieces: number
   caVentes: number | null
@@ -39,6 +39,8 @@ type Data = {
     margeBrute: number | null
     margeBruteBrute: number | null
     tauxCommission: number | null
+    margeChineuses: number | null
+    margeAchat: number | null
     produits: number
     charges: number
     resultat: number
@@ -282,30 +284,25 @@ export default function PnlPage() {
                   </div>
                 </>
               )}
-              {data.pnl.margeBrute != null && (
+              {data.pnl.margeChineuses != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="Source : PENNYLANE (commissions perçues) ÷ SQUARE (volume d'affaires NR)"
+                  title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA"
                 >
-                  <span className="text-xs sm:text-sm font-medium">Marge brute NR</span>
+                  <span className="text-xs sm:text-sm font-medium">Marge NR sur chineuses</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
-                    {data.pnl.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
-                    {data.pnl.margeBruteBrute != null && (
-                      <span className="font-normal text-gray-400 ml-2">
-                        ({data.pnl.margeBruteBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % sur les commissions brutes)
-                      </span>
-                    )}
+                    {data.pnl.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
                   </span>
                 </div>
               )}
-              {data.pnl.tauxCommission != null && (
+              {data.pnl.margeAchat != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="Source : PENNYLANE — 706101 seul ÷ volume chineuses TTC"
+                  title="Source : PENNYLANE — (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises"
                 >
-                  <span className="text-xs sm:text-sm font-medium">Taux de commission réel</span>
+                  <span className="text-xs sm:text-sm font-medium">Marge NR sur l'achat</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
-                    {data.pnl.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
+                    {data.pnl.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
                   </span>
                 </div>
               )}
@@ -360,7 +357,7 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
       >
         <span className="text-xs sm:text-sm font-medium">
           <span className="inline-block w-3 text-gray-400">{ouvert ? '−' : '+'}</span>
-          Marge brute moyenne
+          Marge moyenne par chineuse (APP NR)
         </span>
         <span className="text-xs sm:text-sm font-semibold tabular-nums">
           {marge.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
@@ -589,25 +586,25 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 <LignePoste key={p.cle} p={p} dejaAffichees={data.pnl.depotVente.map(q => q.cle)} />
               ))}
               <tr className="border-t">
-                <td className={tete} title="Source : PENNYLANE (commissions perçues) ÷ SQUARE (volume d'affaires NR)">Marge brute NR</td>
+                <td className={tete} title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA">Marge NR sur chineuses</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
-                    {m.margeBrute == null ? '—' : `${m.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                    {m.margeChineuses == null ? '—' : `${m.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
                   </td>
                 ))}
                 <td className={`${cel} bg-gray-50 font-medium`}>
-                  {data.pnl.margeBrute == null ? '—' : `${data.pnl.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                  {data.pnl.margeChineuses == null ? '—' : `${data.pnl.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
                 </td>
               </tr>
               <tr className="border-t">
-                <td className={tete} title="Source : PENNYLANE — 706101 seul ÷ volume chineuses TTC">Taux de commission réel</td>
+                <td className={tete} title="Source : PENNYLANE — (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises">Marge NR sur l&apos;achat</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
-                    {m.tauxCommission == null ? '—' : `${m.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                    {m.margeAchat == null ? '—' : `${m.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
                   </td>
                 ))}
                 <td className={`${cel} bg-gray-50 font-medium`}>
-                  {data.pnl.tauxCommission == null ? '—' : `${data.pnl.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                  {data.pnl.margeAchat == null ? '—' : `${data.pnl.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
                 </td>
               </tr>
             </>

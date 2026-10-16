@@ -360,7 +360,7 @@ function periodeDuLibelle(libelle: string, date: string): string | null {
 async function detailParPoste(start: string, end: string) {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
-  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[] }
+  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[] }
   const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
 
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
@@ -388,6 +388,8 @@ async function detailParPoste(start: string, end: string) {
   const tvaNR = new Map<number, number>()
   // Nos propres ventes : les écritures « Ventes stock maison NR / NR ACHATS ».
   const marchandises = new Map<number, SousLigne>()
+  // Ce qu'on achète pour revendre : Fleek, Vinted, Whatnot… (compte 607).
+  const achats = new Map<number, SousLigne>()
   for (const l of lignes) {
     const numero = l.ledger_account?.number
     const idEcriture = l.ledger_entry?.id
@@ -449,6 +451,16 @@ async function detailParPoste(start: string, end: string) {
       tvaNR.set(idEcriture, (tvaNR.get(idEcriture) || 0) + num(l.credit) - num(l.debit))
     }
 
+    if (numero.startsWith('607')) {
+      const v = num(l.debit) - num(l.credit)
+      const deja = achats.get(idEcriture)
+      if (deja) deja.montant += v
+      else achats.set(idEcriture, {
+        cle: `ach-${idEcriture}`, label: nom, titre: `${l.date} — ${brut}`, montant: v,
+        mois: (l.date || '').slice(0, 7),
+      })
+    }
+
     if (numero.startsWith('707') && /stock maison/i.test(brut)) {
       const c = num(l.credit) - num(l.debit)
       const deja = marchandises.get(idEcriture)
@@ -497,7 +509,7 @@ async function detailParPoste(start: string, end: string) {
   return {
     parPoste, reversePrintemps,
     volumes: trier(reverseNR), commissions: trier(commissionsNR), nets: trier(nets),
-    marchandises: trier(marchandises),
+    marchandises: trier(marchandises), achats: trier(achats),
   }
 }
 
@@ -535,13 +547,14 @@ export async function GET(req: NextRequest) {
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
     const brutDetail = await detailParPoste(start, end)
-      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[] }))
+      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[] }))
     const detail = brutDetail.parPoste
     const reversePrintemps = brutDetail.reversePrintemps
     const volumesFactures = brutDetail.volumes
     const commissionsFactures = brutDetail.commissions
     const netsFactures = brutDetail.nets
     const marchandisesFactures = brutDetail.marchandises
+    const achatsMarchandises = brutDetail.achats
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
@@ -618,8 +631,14 @@ export async function GET(req: NextRequest) {
         )
         return {
           ...a,
-          // Marge brute NR : ce qu'on garde sur ce que les clientes ont payé.
-          margeBrute: square.total > 0 ? (sommeL(commissionsFactures) / square.total) * 100 : null,
+          // Sur les chineuses : notre commission rapportée à leur volume.
+          margeChineuses: sommeL(volumesFactures) > 0
+            ? (sommeL(commissionsFactures) / sommeL(volumesFactures)) * 100
+            : null,
+          // Sur notre propre stock : ce qu'il reste une fois l'achat déduit.
+          margeAchat: sommeL(marchandisesFactures) > 0
+            ? ((sommeL(marchandisesFactures) - sommeL(achatsMarchandises)) / sommeL(marchandisesFactures)) * 100
+            : null,
           depotVente: [
             {
               cle: 'volume',
@@ -663,6 +682,14 @@ export async function GET(req: NextRequest) {
               comptes: [],
             },
             ...reste,
+            {
+              cle: 'achatsMarchandises',
+              label: 'Achats de marchandises',
+              titre: 'Source : PENNYLANE — compte 607',
+              montant: sommeL(achatsMarchandises),
+              comptes: [],
+              sousLignes: achatsMarchandises,
+            },
           ],
         }
       })(),
@@ -701,11 +728,17 @@ export async function GET(req: NextRequest) {
                 })()
               : {}),
           },
-          margeBrute: square && (square.parMois[m.cle]?.net ?? 0) > 0
-            ? (commissionsFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
-                / (square.parMois[m.cle]?.net ?? 1)) * 100
-            : null,
-          tauxCommission: a.tauxCommission,
+          margeChineuses: (() => {
+            const v = volumesFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+            const c = commissionsFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+            return v > 0 ? (c / v) * 100 : null
+          })(),
+          margeAchat: (() => {
+            const v = marchandisesFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+            const a2 = achatsMarchandises.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+            return v > 0 ? ((v - a2) / v) * 100 : null
+          })(),
+          achatsMarchandises: achatsMarchandises.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0),
           resultatPrintemps:
             ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
             - (reversePrintemps[m.cle] ?? 0),
