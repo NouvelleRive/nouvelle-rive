@@ -277,6 +277,31 @@ export default function AdminPaiementsPage() {
     link.download = `virements_${moisSelectionne}.xml`
     link.click()
     URL.revokeObjectURL(link.href)
+
+    // Nos ventes de stock propre n'ont pas de facture chineuse : sans écriture,
+    // elles restent sur le compte de transit et ne deviennent jamais du chiffre.
+    if (confirm(`Souhaitez-vous générer les écritures Pennylane pour NR et NR ACH sur ${moisLabel} ?`)) {
+      genererEcrituresNr()
+    }
+  }
+
+  const genererEcrituresNr = async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/admin/pennylane/ecritures-nr', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mois: moisSelectionne }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'erreur')
+      alert(
+        `Écritures Pennylane — ${json.mois}\n\n` +
+        json.resultats.map((r: any) => `${r.nom} : ${formatPrix(r.montant, { decimals: 0 })} € — ${r.etat}`).join('\n'),
+      )
+    } catch (e: any) {
+      alert(`Erreur : ${e?.message || e}`)
+    }
   }
 
   const marquerPaye = async (chineuseId: string, montant: number) => {
