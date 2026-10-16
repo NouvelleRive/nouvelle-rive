@@ -13,8 +13,8 @@ import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
 type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
-type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean }
-type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean }
+type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean }
+type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean }
 type Mois = {
   cle: string
   produits: number
@@ -48,6 +48,18 @@ type Data = {
   ducache?: boolean
   parChineuse: { nom: string; trigramme: string; taux: number; pieces: number; volume: number | null; commission: number | null }[]
   mois: Mois[]
+}
+
+// Les sous-lignes datées se lisent mois par mois ; les autres restent en bloc.
+function grouperParMois(sous: SousLigne[]): [string, SousLigne[]][] {
+  const par = new Map<string, SousLigne[]>()
+  for (const sl of sous) {
+    const k = sl.mois || '—'
+    const l = par.get(k)
+    if (l) l.push(sl)
+    else par.set(k, [sl])
+  }
+  return [...par.entries()].sort((a, b) => a[0].localeCompare(b[0]))
 }
 
 const moisFr = (d: string) =>
@@ -412,17 +424,28 @@ function BlocPostes({
                   size={14}
                   className={`transition-transform ${ouvert ? 'rotate-90' : ''} ${depliable ? 'text-gray-400' : 'text-transparent'}`}
                 />
-                <span className="whitespace-nowrap">{p.label}</span>
+                <span className={`whitespace-nowrap ${p.indent ? 'pl-4 text-gray-600' : ''}`}>{p.label}</span>
                 {depliable && <span className="text-[11px] text-gray-400 shrink-0">({p.comptes.length || sous.length})</span>}
               </span>
               <span className={`text-xs sm:text-sm tabular-nums shrink-0 ml-2 ${p.alerte ? 'text-red-600 font-medium' : ''}`}>{formatPrix(p.montant, { decimals: 0 })} €</span>
             </button>
             {ouvert && (
-              <div className={`bg-gray-50/50 ${sous.length > 20 ? 'max-h-80 overflow-y-auto' : ''}`}>
-                {sous.map(sl => (
-                  <div key={sl.cle} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
-                    <span className="whitespace-nowrap" title={sl.titre}>{sl.label}</span>
-                    <span className="tabular-nums shrink-0 ml-3">{formatPrix(sl.montant, { decimals: 0 })} €</span>
+              <div className={`bg-gray-50/50 ${sous.length > 20 ? 'max-h-96 overflow-y-auto' : ''}`}>
+                {/* Groupé par mois pour se lire comme la vue mois par mois. */}
+                {grouperParMois(sous).map(([mois, lignes]) => (
+                  <div key={mois}>
+                    {mois !== '—' && (
+                      <div className="pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 text-[10px] uppercase tracking-wide text-gray-400 bg-gray-100/60 flex items-center justify-between">
+                        <span>{libelleMois(mois)}</span>
+                        <span className="tabular-nums">{formatPrix(lignes.reduce((t, x) => t + x.montant, 0), { decimals: 0 })} €</span>
+                      </div>
+                    )}
+                    {lignes.map(sl => (
+                      <div key={sl.cle} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
+                        <span className="whitespace-nowrap" title={sl.titre}>{sl.label}</span>
+                        <span className="tabular-nums shrink-0 ml-3">{formatPrix(sl.montant, { decimals: 0 })} €</span>
+                      </div>
+                    ))}
                   </div>
                 ))}
                 {/* Les sous-lignes remplacent le détail par compte quand il y en a. */}

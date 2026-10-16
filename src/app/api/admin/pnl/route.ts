@@ -354,7 +354,7 @@ function periodeDuLibelle(libelle: string, date: string): string | null {
 async function detailParPoste(start: string, end: string) {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
-  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[] }
+  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[] }
   const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
 
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
@@ -380,6 +380,8 @@ async function detailParPoste(start: string, end: string) {
   // Les lignes « Commissions perçues » (706101) de ces mêmes factures.
   const commissionsNR = new Map<number, SousLigne>()
   const tvaNR = new Map<number, number>()
+  // Nos propres ventes : les écritures « Ventes stock maison NR / NR ACHATS ».
+  const marchandises = new Map<number, SousLigne>()
   for (const l of lignes) {
     const numero = l.ledger_account?.number
     const idEcriture = l.ledger_entry?.id
@@ -441,6 +443,19 @@ async function detailParPoste(start: string, end: string) {
       tvaNR.set(idEcriture, (tvaNR.get(idEcriture) || 0) + num(l.credit) - num(l.debit))
     }
 
+    if (numero.startsWith('707') && /stock maison/i.test(brut)) {
+      const c = num(l.credit) - num(l.debit)
+      const deja = marchandises.get(idEcriture)
+      if (deja) deja.montant += c
+      else marchandises.set(idEcriture, {
+        cle: `mar-${idEcriture}`,
+        label: brut.replace(/^Ventes stock maison\s*/i, ''),
+        titre: `${l.date} — ${brut}`,
+        montant: c,
+        mois: (l.date || '').slice(0, 7),
+      })
+    }
+
     const cle = `${poste.cle}|${idEcriture}`
     const deja = cumul.get(cle)
     if (deja) { deja.montant += montant; continue }
@@ -476,6 +491,7 @@ async function detailParPoste(start: string, end: string) {
   return {
     parPoste, reversePrintemps,
     volumes: trier(reverseNR), commissions: trier(commissionsNR), nets: trier(nets),
+    marchandises: trier(marchandises),
   }
 }
 
@@ -513,12 +529,13 @@ export async function GET(req: NextRequest) {
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
     const brutDetail = await detailParPoste(start, end)
-      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[] }))
+      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[] }))
     const detail = brutDetail.parPoste
     const reversePrintemps = brutDetail.reversePrintemps
     const volumesFactures = brutDetail.volumes
     const commissionsFactures = brutDetail.commissions
     const netsFactures = brutDetail.nets
+    const marchandisesFactures = brutDetail.marchandises
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
@@ -568,7 +585,7 @@ export async function GET(req: NextRequest) {
         // Le bloc se lit sur les factures chineuses : les lignes Reversement
         // CA donnent le volume, les 706101 la commission, et la différence
         // ce que la chineuse touche.
-        const somme = (l: typeof volumesFactures) => l.reduce((s2, d) => s2 + d.montant, 0)
+        const sommeL = (l: typeof volumesFactures) => l.reduce((s2, d) => s2 + d.montant, 0)
         const vide = [] as { number: string; label: string; montant: number }[]
         const reste = a.depotVente.flatMap(p =>
           p.cle === 'reversements' && commissionsFactures.length > 0
@@ -577,7 +594,7 @@ export async function GET(req: NextRequest) {
                   ...p,
                   label: 'Reversements chineuses',
                   titre: 'Source : factures chineuses, volume moins commission et TVA',
-                  montant: somme(netsFactures),
+                  montant: sommeL(netsFactures),
                   comptes: vide,
                   sousLignes: netsFactures,
                 },
@@ -585,7 +602,7 @@ export async function GET(req: NextRequest) {
                   cle: 'commissions',
                   label: 'Commissions perçues',
                   titre: 'Source : lignes 706101 des factures chineuses',
-                  montant: somme(commissionsFactures),
+                  montant: sommeL(commissionsFactures),
                   comptes: vide,
                   sousLignes: commissionsFactures,
                 },
@@ -606,24 +623,28 @@ export async function GET(req: NextRequest) {
               cle: 'volumeFacture',
               label: 'dont facturé aux chineuses',
               titre: 'Source : lignes Reversement CA des factures chineuses',
-              montant: volumesFactures.reduce((s2, d) => s2 + d.montant, 0),
+              montant: sommeL(volumesFactures),
               comptes: [],
               sousLignes: volumesFactures,
+              indent: true,
               // En rouge quand Square et Pennylane ne disent pas la même chose.
-              alerte: Math.abs(square.total - volumesFactures.reduce((s2, d) => s2 + d.montant, 0)) >= 1,
+              alerte: Math.abs(square.total - sommeL(volumesFactures) - sommeL(marchandisesFactures)) >= 1,
             },
-            ...(printemps
-              ? [{
-                  ...printemps,
-                  // Le détail vintage / upcycling se déplie sous VA Printemps.
-                  sousLignes: canaux
-                    ? [
-                        { cle: 'priVintage', label: 'dont vintage', titre: 'Virements PRIV', montant: canaux.total.vintage },
-                        { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Virements PRIU', montant: canaux.total.upcycling },
-                        ...canaux.lignes,
-                      ]
-                    : [],
-                }]
+            {
+              cle: 'volumeMarchandises',
+              label: 'dont ventes de marchandises (NR + NR achats)',
+              titre: 'Source : écritures Ventes stock maison, compte 707',
+              montant: sommeL(marchandisesFactures),
+              comptes: [],
+              sousLignes: marchandisesFactures,
+              indent: true,
+            },
+            ...(printemps ? [printemps] : []),
+            ...(canaux
+              ? [
+                  { cle: 'priVintage', label: 'dont vintage', titre: 'Source : virements PRIV', montant: canaux.total.vintage, comptes: [], indent: true },
+                  { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Source : virements PRIU et bordereaux numérotés', montant: canaux.total.upcycling, comptes: [], indent: true },
+                ]
               : []),
             {
               cle: 'volumeTotal',
@@ -631,10 +652,6 @@ export async function GET(req: NextRequest) {
               titre: "Source : volume d'affaires NR + Printemps",
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
-              sousLignes: [
-                { cle: 'volume', label: "Volume d'affaires NR", montant: square.total },
-                ...(printemps ? [{ cle: 'volumePrintemps', label: "Volume d'affaires Printemps", montant: printemps.montant }] : []),
-              ],
             },
             ...reste,
           ],
@@ -664,6 +681,7 @@ export async function GET(req: NextRequest) {
                   return {
                     volume: square.parMois[m.cle]?.net ?? 0,
                     volumeFacture: nr,
+                    volumeMarchandises: somme(marchandisesFactures),
                     volumePrintemps: v + u,
                     volumeTotal: (square.parMois[m.cle]?.net ?? 0) + v + u,
                     priVintage: v,
