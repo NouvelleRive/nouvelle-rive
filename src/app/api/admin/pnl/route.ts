@@ -656,7 +656,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'volumeTotal',
               label: "Volume d'affaires total",
-              titre: "Source : SQUARE + PENNYLANE",
+              titre: "Source : SQUARE (NR) + PENNYLANE (PRI)",
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
             },
