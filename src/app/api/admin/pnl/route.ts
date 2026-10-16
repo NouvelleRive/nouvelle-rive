@@ -580,6 +580,7 @@ export async function GET(req: NextRequest) {
               titre: 'Source : encaissements reçus de Printemps SAS',
               montant: canaux.montantTotal,
               comptes: [] as { number: string; label: string; montant: number }[],
+              sousLignes: canaux.lignes,
             }
           : null
         // Le bloc se lit sur les factures chineuses : les lignes Reversement
