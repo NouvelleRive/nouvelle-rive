@@ -13,8 +13,8 @@ import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
 type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
-type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
-type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[] }
+type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean }
+type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean }
 type Mois = {
   cle: string
   produits: number
@@ -415,7 +415,7 @@ function BlocPostes({
                 <span className="whitespace-nowrap">{p.label}</span>
                 {depliable && <span className="text-[11px] text-gray-400 shrink-0">({p.comptes.length || sous.length})</span>}
               </span>
-              <span className="text-xs sm:text-sm tabular-nums shrink-0 ml-2">{formatPrix(p.montant, { decimals: 0 })} €</span>
+              <span className={`text-xs sm:text-sm tabular-nums shrink-0 ml-2 ${p.alerte ? 'text-red-600 font-medium' : ''}`}>{formatPrix(p.montant, { decimals: 0 })} €</span>
             </button>
             {ouvert && (
               <div className={`bg-gray-50/50 ${sous.length > 20 ? 'max-h-80 overflow-y-auto' : ''}`}>
@@ -504,8 +504,8 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
               <span className="pl-4">{p.label}</span>
             )}
           </td>
-          {mois.map(m => <td key={m.cle} className={cel}>{formatPrix(m.postes[p.cle] ?? 0, { decimals: 0 })} €</td>)}
-          <td className={`${cel} bg-gray-50 font-medium`}>{formatPrix(p.montant, { decimals: 0 })} €</td>
+          {mois.map(m => <td key={m.cle} className={`${cel} ${p.alerte ? 'text-red-600' : ''}`}>{formatPrix(m.postes[p.cle] ?? 0, { decimals: 0 })} €</td>)}
+          <td className={`${cel} bg-gray-50 font-medium ${p.alerte ? 'text-red-600' : ''}`}>{formatPrix(p.montant, { decimals: 0 })} €</td>
         </tr>
         {mensuelles.map(sl => (
           <Ligne

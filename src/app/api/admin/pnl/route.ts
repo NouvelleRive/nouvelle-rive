@@ -71,7 +71,7 @@ const POSTES_DEPOT_VENTE = [
   {
     cle: 'tvaCommission',
     label: 'dont TVA sur commission',
-    titre: 'Source : Pennylane, compte 44574',
+    titre: 'Source : compte 44574 des factures chineuses',
     prefixes: ['44574'],
     sens: 'credit' as const,
   },
@@ -354,7 +354,7 @@ function periodeDuLibelle(libelle: string, date: string): string | null {
 async function detailParPoste(start: string, end: string) {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
-  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, reversements: [] as SousLigne[] }
+  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[] }
   const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
 
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
@@ -377,6 +377,9 @@ async function detailParPoste(start: string, end: string) {
   // Ce qu'on reverse vraiment aux chineuses de la boutique, écriture par
   // écriture : leur volume moins notre commission et sa TVA.
   const reverseNR = new Map<number, SousLigne>()
+  // Les lignes « Commissions perçues » (706101) de ces mêmes factures.
+  const commissionsNR = new Map<number, SousLigne>()
+  const tvaNR = new Map<number, number>()
   for (const l of lignes) {
     const numero = l.ledger_account?.number
     const idEcriture = l.ledger_entry?.id
@@ -418,16 +421,21 @@ async function detailParPoste(start: string, end: string) {
       : -(num(l.credit) - num(l.debit))
     if (horsNR) {
       reversePrintemps[periode] = (reversePrintemps[periode] || 0) + net
-    } else if (numero.startsWith('467') || numero.startsWith('706') || numero === '44574') {
+    } else if (numero.startsWith('467')) {
       const deja = reverseNR.get(idEcriture)
       if (deja) deja.montant += net
       else reverseNR.set(idEcriture, {
-        cle: `rev-${idEcriture}`,
-        label: nom,
-        titre: `${l.date} — ${brut}`,
-        montant: net,
-        mois: periode,
+        cle: `vol-${idEcriture}`, label: nom, titre: `${l.date} — ${brut}`, montant: net, mois: periode,
       })
+    } else if (numero.startsWith('706')) {
+      const c = num(l.credit) - num(l.debit)
+      const deja = commissionsNR.get(idEcriture)
+      if (deja) deja.montant += c
+      else commissionsNR.set(idEcriture, {
+        cle: `com-${idEcriture}`, label: nom, titre: `${l.date} — ${brut}`, montant: c, mois: periode,
+      })
+    } else if (numero === '44574') {
+      tvaNR.set(idEcriture, (tvaNR.get(idEcriture) || 0) + num(l.credit) - num(l.debit))
     }
 
     const cle = `${poste.cle}|${idEcriture}`
@@ -452,10 +460,20 @@ async function detailParPoste(start: string, end: string) {
   }
   // Ordre alphabétique : on repère tout de suite la chineuse qui manque.
   for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
-  const reversements = [...reverseNR.values()]
+  const trier = (m: Map<number, SousLigne>) => [...m.values()]
     .filter(r => Math.abs(r.montant) >= 1)
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
-  return { parPoste, reversePrintemps, reversements }
+
+  // Ce que la chineuse touche vraiment : son volume moins notre commission
+  // et la TVA dessus.
+  const nets = new Map<number, SousLigne>()
+  for (const [id, v] of reverseNR) {
+    nets.set(id, { ...v, cle: `net-${id}`, montant: v.montant - (commissionsNR.get(id)?.montant ?? 0) - (tvaNR.get(id) ?? 0) })
+  }
+  return {
+    parPoste, reversePrintemps,
+    volumes: trier(reverseNR), commissions: trier(commissionsNR), nets: trier(nets),
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -492,10 +510,12 @@ export async function GET(req: NextRequest) {
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
     const brutDetail = await detailParPoste(start, end)
-      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, reversements: [] as SousLigne[] }))
+      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[] }))
     const detail = brutDetail.parPoste
     const reversePrintemps = brutDetail.reversePrintemps
-    const reversements = brutDetail.reversements
+    const volumesFactures = brutDetail.volumes
+    const commissionsFactures = brutDetail.commissions
+    const netsFactures = brutDetail.nets
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
@@ -531,29 +551,43 @@ export async function GET(req: NextRequest) {
         // Le volume d'affaires vient de Square, pas du compte de transit :
         // les virements décalent la fin de mois sur le mois suivant.
         // Les factures PRI et les avances sortent du volume boutique.
-        const reversementsNR = (detail['reversements'] ?? []).filter(d => !d.horsNR)
-
         // Le Printemps ne se lit plus sur le 707 (qui porte aussi le stock
         // propre) mais sur les encaissements reçus de Printemps SAS.
         const printemps = canaux && canaux.montantTotal > 0
           ? {
               cle: 'volumePrintemps',
               label: "Volume d'affaires Printemps",
-              titre: 'Encaissements reçus de Printemps SAS',
+              titre: 'Source : encaissements reçus de Printemps SAS',
               montant: canaux.montantTotal,
               comptes: [] as { number: string; label: string; montant: number }[],
             }
           : null
-        const reste = a.depotVente.map(p =>
-          p.cle === 'reversements' && reversements.length > 0
-            ? {
-                ...p,
-                label: 'Reversements chineuses',
-                titre: 'Volume des factures moins notre commission et sa TVA',
-                montant: reversements.reduce((s2, d) => s2 + d.montant, 0),
-                sousLignes: reversements,
-              }
-            : p,
+        // Le bloc se lit sur les factures chineuses : les lignes Reversement
+        // CA donnent le volume, les 706101 la commission, et la différence
+        // ce que la chineuse touche.
+        const somme = (l: typeof volumesFactures) => l.reduce((s2, d) => s2 + d.montant, 0)
+        const vide = [] as { number: string; label: string; montant: number }[]
+        const reste = a.depotVente.flatMap(p =>
+          p.cle === 'reversements' && commissionsFactures.length > 0
+            ? [
+                {
+                  ...p,
+                  label: 'Reversements chineuses',
+                  titre: 'Source : factures chineuses, volume moins commission et TVA',
+                  montant: somme(netsFactures),
+                  comptes: vide,
+                  sousLignes: netsFactures,
+                },
+                {
+                  cle: 'commissions',
+                  label: 'Commissions perçues',
+                  titre: 'Source : lignes 706101 des factures chineuses',
+                  montant: somme(commissionsFactures),
+                  comptes: vide,
+                  sousLignes: commissionsFactures,
+                },
+              ]
+            : [p],
         )
         return {
           ...a,
@@ -564,9 +598,16 @@ export async function GET(req: NextRequest) {
               titre: 'Source : Square',
               montant: square.total,
               comptes: [],
-              // Le détail, c'est la facture de chaque chineuse (NR0126-PS) :
-              // même liste que les reversements, et elle est datée.
-              sousLignes: reversementsNR,
+            },
+            {
+              cle: 'volumeFacture',
+              label: 'dont facturé aux chineuses',
+              titre: 'Source : lignes Reversement CA des factures chineuses',
+              montant: volumesFactures.reduce((s2, d) => s2 + d.montant, 0),
+              comptes: [],
+              sousLignes: volumesFactures,
+              // En rouge quand Square et Pennylane ne disent pas la même chose.
+              alerte: Math.abs(square.total - volumesFactures.reduce((s2, d) => s2 + d.montant, 0)) >= 1,
             },
             ...(printemps
               ? [{
@@ -584,7 +625,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'volumeTotal',
               label: "Volume d'affaires total",
-              titre: "Volume d'affaires NR + Printemps",
+              titre: "Source : volume d'affaires NR + Printemps",
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
               sousLignes: [
@@ -612,19 +653,20 @@ export async function GET(req: NextRequest) {
             ...Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
             ...(square
               ? (() => {
-                  const nr = square.parMois[m.cle]?.net ?? 0
+                  const somme = (l: typeof volumesFactures) =>
+                    l.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+                  const nr = somme(volumesFactures)
                   const v = canaux?.parMois[m.cle]?.vintage ?? 0
                   const u = canaux?.parMois[m.cle]?.upcycling ?? 0
                   return {
-                    volume: nr,
+                    volume: square.parMois[m.cle]?.net ?? 0,
+                    volumeFacture: nr,
                     volumePrintemps: v + u,
-                    volumeTotal: nr + v + u,
+                    volumeTotal: (square.parMois[m.cle]?.net ?? 0) + v + u,
                     priVintage: v,
                     priUpcycling: u,
-                    // Le net reversé, rangé sur la période de la facture.
-                    reversements: reversements
-                      .filter(r => r.mois === m.cle)
-                      .reduce((s2, r) => s2 + r.montant, 0),
+                    reversements: somme(netsFactures),
+                    commissions: somme(commissionsFactures),
                   }
                 })()
               : {}),
