@@ -618,6 +618,8 @@ export async function GET(req: NextRequest) {
         )
         return {
           ...a,
+          // Marge brute NR : ce qu'on garde sur ce que les clientes ont payé.
+          margeBrute: square.total > 0 ? (sommeL(commissionsFactures) / square.total) * 100 : null,
           depotVente: [
             {
               cle: 'volume',
@@ -699,7 +701,10 @@ export async function GET(req: NextRequest) {
                 })()
               : {}),
           },
-          margeBrute: a.margeBrute,
+          margeBrute: square && (square.parMois[m.cle]?.net ?? 0) > 0
+            ? (commissionsFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+                / (square.parMois[m.cle]?.net ?? 1)) * 100
+            : null,
           tauxCommission: a.tauxCommission,
           resultatPrintemps:
             ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
