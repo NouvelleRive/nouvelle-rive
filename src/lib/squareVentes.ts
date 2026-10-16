@@ -81,3 +81,47 @@ export async function ventesSquare(start: string, end: string): Promise<VentesSq
 
   return { total, commandes, parMois, lignes }
 }
+
+// Frais de traitement prélevés par Square : ils sont déduits avant le
+// virement, donc ce qui arrive en banque est toujours inférieur aux ventes.
+// Seule l'API Payments les porte, l'API Orders ne les expose pas.
+export async function fraisSquare(start: string, end: string) {
+  const token = process.env.SQUARE_ACCESS_TOKEN
+  const location = process.env.SQUARE_LOCATION_ID
+  if (!token || !location) return null
+
+  const parMois: Record<string, number> = {}
+  let total = 0
+  let cursor: string | undefined
+
+  for (let page = 0; page < 120; page++) {
+    const u = new URL(`${BASE}/v2/payments`)
+    u.searchParams.set('begin_time', `${start}T00:00:00Z`)
+    u.searchParams.set('end_time', `${end}T23:59:59Z`)
+    u.searchParams.set('limit', '100')
+    u.searchParams.set('location_id', location)
+    if (cursor) u.searchParams.set('cursor', cursor)
+
+    const res = await fetch(u, {
+      headers: { Authorization: `Bearer ${token}`, 'Square-Version': '2024-10-17' },
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    const json = await res.json()
+
+    for (const p of json.payments || []) {
+      if (p.status !== 'COMPLETED') continue
+      const frais = (p.processing_fee || [])
+        .reduce((s: number, f: any) => s + Number(f.amount_money?.amount || 0) / 100, 0)
+      if (!frais) continue
+      const cle = String(p.created_at || '').slice(0, 7)
+      parMois[cle] = (parMois[cle] || 0) + frais
+      total += frais
+    }
+
+    cursor = json.cursor
+    if (!cursor) break
+  }
+
+  return { total, parMois }
+}

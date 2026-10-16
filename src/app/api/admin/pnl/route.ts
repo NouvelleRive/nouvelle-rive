@@ -17,7 +17,7 @@ import {
   getLedgerAccounts, getLignesDeComptes, getLedgerEntriesParIds, viderCacheTransactions,
   type TrialBalanceLine,
 } from '@/lib/pennylane'
-import { ventesSquare } from '@/lib/squareVentes'
+import { ventesSquare, fraisSquare } from '@/lib/squareVentes'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -313,6 +313,23 @@ async function volumesParChineuse(start: string, end: string) {
     .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
 }
 
+// Ce que Square a réellement viré sur le compte : les ventes moins ses frais,
+// avec un décalage de règlement de un à deux jours.
+async function recuEnBanque(start: string, end: string) {
+  const tx = await getTransactions()
+  const parMois: Record<string, number> = {}
+  let total = 0
+  for (const t of tx) {
+    if (!t.date || t.date < start || t.date > end) continue
+    const montant = Number(t.amount) || 0
+    if (montant <= 0) continue
+    if (!/SQUARE/i.test(t.label || '')) continue
+    parMois[t.date.slice(0, 7)] = (parMois[t.date.slice(0, 7)] || 0) + montant
+    total += montant
+  }
+  return { total, parMois }
+}
+
 // Ce que Square a encaissé pour une chineuse et qu'aucune facture ne couvre.
 // Le SKU est dans le nom de l'article ; quand son préfixe ne correspond à
 // aucun trigramme connu (ANAW, CJ, NP…), on va lire le trigramme du produit
@@ -604,7 +621,7 @@ export async function GET(req: NextRequest) {
     if (forcer) viderCacheTransactions()
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, frais] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
@@ -612,6 +629,7 @@ export async function GET(req: NextRequest) {
       volumesParChineuse(start, end).catch(() => []),
       ventesSquare(start, end).catch(() => null),
       printempsParCanal(start, end).catch(() => null),
+      fraisSquare(start, end).catch(() => null),
     ])
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
@@ -626,6 +644,7 @@ export async function GET(req: NextRequest) {
     const achatsMarchandises = brutDetail.achats
 
     // Les factures qui manquent face à Square, chineuse par chineuse.
+    const recu = await recuEnBanque(start, end).catch(() => null)
     const ecarts = square
       ? await ecartParFacture(square.lignes, brutDetail.volumes).catch(() => [] as SousLigne[])
       : ([] as SousLigne[])
@@ -742,6 +761,21 @@ export async function GET(req: NextRequest) {
               indent: true,
               alerte: true,
             },
+            ...(frais ? [{
+              cle: 'fraisSquare',
+              label: 'Frais Square',
+              titre: 'Source : SQUARE — commissions de paiement, déduites avant virement',
+              montant: -frais.total,
+              comptes: [] as { number: string; label: string; montant: number }[],
+              indent: true,
+            }] : []),
+            ...(recu ? [{
+              cle: 'recuBanque',
+              label: "Volume d'affaires reçu en banque",
+              titre: 'Source : SHINE — virements reçus de Square',
+              montant: recu.total,
+              comptes: [] as { number: string; label: string; montant: number }[],
+            }] : []),
             {
               cle: 'volumeMarchandises',
               label: 'dont ventes de marchandises (NR + NR achats)',
@@ -803,6 +837,8 @@ export async function GET(req: NextRequest) {
                     volumeFacture: nr,
                     volumeMarchandises: somme(marchandisesFactures),
                     ecart: (square.parMois[m.cle]?.net ?? 0) - nr - somme(marchandisesFactures),
+                    fraisSquare: -(frais?.parMois[m.cle] ?? 0),
+                    recuBanque: recu?.parMois[m.cle] ?? 0,
                     volumePrintemps: v + u,
                     volumeTotal: (square.parMois[m.cle]?.net ?? 0) + v + u,
                     priVintage: v,
