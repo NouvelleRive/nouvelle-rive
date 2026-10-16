@@ -828,6 +828,21 @@ export async function GET(req: NextRequest) {
             }] : []),
             ...reste,
             {
+              cle: 'caMarchandises',
+              label: 'Ventes de marchandises',
+              titre: 'Source : PENNYLANE — écritures Ventes stock maison, compte 707',
+              montant: sommeL(marchandisesFactures),
+              comptes: [] as { number: string; label: string; montant: number }[],
+              sousLignes: marchandisesFactures,
+            },
+            {
+              cle: 'caTotal',
+              label: "Chiffre d'affaires",
+              titre: 'Source : commissions perçues + ventes de marchandises',
+              montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures),
+              comptes: [] as { number: string; label: string; montant: number }[],
+            },
+            {
               cle: 'achatsMarchandises',
               label: 'Achats de marchandises',
               titre: 'Source : PENNYLANE — compte 607',
@@ -842,7 +857,9 @@ export async function GET(req: NextRequest) {
                    'volumePrintemps', 'priVintage', 'priUpcycling',
                    'volumeTotal', 'recuBanque'].includes(p.cle)
               ? "Volume d'affaires"
-              : 'Charges variables',
+              : ['commissions', 'tvaCommission', 'caMarchandises', 'caTotal'].includes(p.cle)
+                ? "Chiffre d'affaires"
+                : 'Charges variables',
           })),
         }
       })(),
@@ -881,6 +898,8 @@ export async function GET(req: NextRequest) {
                     reversements: somme(netsFactures),
                     commissions: somme(commissionsFactures),
                     tvaCommission: somme(tvaFactures),
+                    caMarchandises: somme(marchandisesFactures),
+                    caTotal: somme(commissionsFactures) + somme(marchandisesFactures),
                   }
                 })()
               : {}),
