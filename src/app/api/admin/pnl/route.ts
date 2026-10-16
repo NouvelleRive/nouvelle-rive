@@ -386,6 +386,8 @@ async function ecartParFacture(
   const out: SousLigne[] = []
   for (const [cle, v] of Object.entries(square)) {
     const [t, mois] = cle.split('|')
+    // NR et ACH sont notre propre stock : ils ont leur ligne, pas de facture.
+    if (t === 'NR' || t === 'ACH') continue
     const manque = v - (factures[cle] || 0)
     if (manque < 10) continue
     out.push({
@@ -732,6 +734,20 @@ export async function GET(req: NextRequest) {
           margeAchat: sommeL(marchandisesFactures) > 0
             ? ((sommeL(marchandisesFactures) - sommeL(achatsMarchandises)) / sommeL(marchandisesFactures)) * 100
             : null,
+          postes: [
+            ...a.postes,
+            ...(frais && frais.total > 0 ? [{
+              cle: 'fraisSquare',
+              label: 'Frais Square',
+              titre: 'Source : SQUARE — commissions de paiement, déduites avant virement',
+              sens: 'charge' as const,
+              prefixes: [] as string[],
+              montant: frais.total,
+              comptes: [] as { number: string; label: string; montant: number }[],
+            }] : []),
+          ],
+          charges: a.charges + (frais?.total ?? 0),
+          resultat: a.resultat - (frais?.total ?? 0),
           depotVente: [
             {
               cle: 'volume',
@@ -761,14 +777,6 @@ export async function GET(req: NextRequest) {
               indent: true,
               alerte: true,
             },
-            ...(frais ? [{
-              cle: 'fraisSquare',
-              label: 'Frais Square',
-              titre: 'Source : SQUARE — commissions de paiement, déduites avant virement',
-              montant: -frais.total,
-              comptes: [] as { number: string; label: string; montant: number }[],
-              indent: true,
-            }] : []),
             ...(recu ? [{
               cle: 'recuBanque',
               label: "Volume d'affaires reçu en banque",
@@ -821,8 +829,8 @@ export async function GET(req: NextRequest) {
         return {
           cle: m.cle,
           produits: a.produits,
-          charges: a.charges,
-          resultat: a.resultat,
+          charges: a.charges + (frais?.parMois[m.cle] ?? 0),
+          resultat: a.resultat - (frais?.parMois[m.cle] ?? 0),
           postes: {
             ...Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
             ...(square
@@ -837,7 +845,7 @@ export async function GET(req: NextRequest) {
                     volumeFacture: nr,
                     volumeMarchandises: somme(marchandisesFactures),
                     ecart: (square.parMois[m.cle]?.net ?? 0) - nr - somme(marchandisesFactures),
-                    fraisSquare: -(frais?.parMois[m.cle] ?? 0),
+                    fraisSquare: frais?.parMois[m.cle] ?? 0,
                     recuBanque: recu?.parMois[m.cle] ?? 0,
                     volumePrintemps: v + u,
                     volumeTotal: (square.parMois[m.cle]?.net ?? 0) + v + u,
