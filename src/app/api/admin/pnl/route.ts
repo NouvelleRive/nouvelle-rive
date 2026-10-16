@@ -313,6 +313,75 @@ async function volumesParChineuse(start: string, end: string) {
     .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
 }
 
+// Ce que Square a encaissé pour une chineuse et qu'aucune facture ne couvre.
+// Le SKU est dans le nom de l'article ; quand son préfixe ne correspond à
+// aucun trigramme connu (ANAW, CJ, NP…), on va lire le trigramme du produit
+// dans l'app, qui lui est toujours juste.
+async function ecartParFacture(
+  lignesSquare: { mois: string; nom: string; montant: number }[],
+  facturé: SousLigne[],
+): Promise<SousLigne[]> {
+  const chineuses = (await adminDb.collection('chineuse').select('trigramme').get()).docs
+    .map(d => ((d.data().trigramme as string) || '').toUpperCase().trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+
+  const prefixe = (nom: string) => nom.match(/^([A-Za-z]+)\d/)?.[1]?.toUpperCase() || null
+  const exact = new Set(chineuses)
+  const inconnus = new Map<string, string>()   // SKU -> trigramme, lu dans l'app
+
+  const aChercher = new Set<string>()
+  for (const l of lignesSquare) {
+    const p = prefixe(l.nom)
+    if (!p || exact.has(p)) continue
+    const sku = l.nom.match(/^([A-Za-z0-9]+)\s*-/)?.[1]
+    if (sku) aChercher.add(sku)
+  }
+  // Une centaine de lectures au plus, et seulement quand on rafraîchit.
+  for (const sku of [...aChercher].slice(0, 400)) {
+    const snap = await adminDb.collection('produits').where('sku', '==', sku).limit(1).get().catch(() => null)
+    if (snap && !snap.empty) {
+      const t = ((snap.docs[0].data().trigramme as string) || '').toUpperCase().trim()
+      if (t) inconnus.set(sku, t)
+    }
+  }
+
+  const square: Record<string, number> = {}
+  for (const l of lignesSquare) {
+    const p = prefixe(l.nom)
+    let t = p && exact.has(p) ? p : null
+    if (!t) {
+      const sku = l.nom.match(/^([A-Za-z0-9]+)\s*-/)?.[1]
+      t = (sku && inconnus.get(sku)) || null
+    }
+    if (!t) continue
+    square[`${t}|${l.mois}`] = (square[`${t}|${l.mois}`] || 0) + l.montant
+  }
+
+  // Ce qui est déjà facturé, lu sur la référence NRmmaa-TRI.
+  const factures: Record<string, number> = {}
+  for (const f of facturé) {
+    const m = f.label.toUpperCase().match(/\bNR(\d{2})(\d{2})-?([A-Z0-9]{1,6})/)
+    if (!m) continue
+    factures[`${m[3]}|20${m[2]}-${m[1]}`] = (factures[`${m[3]}|20${m[2]}-${m[1]}`] || 0) + f.montant
+  }
+
+  const out: SousLigne[] = []
+  for (const [cle, v] of Object.entries(square)) {
+    const [t, mois] = cle.split('|')
+    const manque = v - (factures[cle] || 0)
+    if (manque < 10) continue
+    out.push({
+      cle: `ec-${cle}`,
+      label: `NR${mois.slice(5)}${mois.slice(2, 4)}-${t}`,
+      titre: `Source : SQUARE — ${v.toFixed(2)} € vendus, ${(factures[cle] || 0).toFixed(2)} € facturés`,
+      montant: manque,
+      mois,
+    })
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+}
+
 // Détail à la ligne de chaque poste : une sous-ligne par écriture, nommée par
 // sa facture (fournisseur + référence) ou, à défaut, par le libellé de
 // l'écriture. On ne rapatrie que les comptes affichés et que les écritures
@@ -556,6 +625,11 @@ export async function GET(req: NextRequest) {
     const marchandisesFactures = brutDetail.marchandises
     const achatsMarchandises = brutDetail.achats
 
+    // Les factures qui manquent face à Square, chineuse par chineuse.
+    const ecarts = square
+      ? await ecartParFacture(square.lignes, brutDetail.volumes).catch(() => [] as SousLigne[])
+      : ([] as SousLigne[])
+
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
     const banques = comptes.map(c => ({
@@ -659,6 +733,16 @@ export async function GET(req: NextRequest) {
               alerte: Math.abs(square.total - sommeL(volumesFactures) - sommeL(marchandisesFactures)) >= 1,
             },
             {
+              cle: 'ecart',
+              label: 'Écart non facturé',
+              titre: 'Source : SQUARE moins PENNYLANE — encaissé sans facture chineuse',
+              montant: square.total - sommeL(volumesFactures) - sommeL(marchandisesFactures),
+              comptes: [],
+              sousLignes: ecarts,
+              indent: true,
+              alerte: true,
+            },
+            {
               cle: 'volumeMarchandises',
               label: 'dont ventes de marchandises (NR + NR achats)',
               titre: 'Source : PENNYLANE — écritures Ventes stock maison, compte 707',
@@ -718,6 +802,7 @@ export async function GET(req: NextRequest) {
                     volume: square.parMois[m.cle]?.net ?? 0,
                     volumeFacture: nr,
                     volumeMarchandises: somme(marchandisesFactures),
+                    ecart: (square.parMois[m.cle]?.net ?? 0) - nr - somme(marchandisesFactures),
                     volumePrintemps: v + u,
                     volumeTotal: (square.parMois[m.cle]?.net ?? 0) + v + u,
                     priVintage: v,

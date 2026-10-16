@@ -16,6 +16,8 @@ export type VentesSquare = {
   total: number
   commandes: number
   parMois: Record<string, { net: number; commandes: number }>
+  // Une entrée par article vendu : le nom porte le SKU, donc la chineuse.
+  lignes: { mois: string; nom: string; montant: number }[]
 }
 
 export async function ventesSquare(start: string, end: string): Promise<VentesSquare | null> {
@@ -24,6 +26,7 @@ export async function ventesSquare(start: string, end: string): Promise<VentesSq
   if (!token || !location) return null
 
   const parMois: Record<string, { net: number; commandes: number }> = {}
+  const lignes: VentesSquare['lignes'] = []
   let total = 0
   let commandes = 0
   let cursor: string | undefined
@@ -65,11 +68,16 @@ export async function ventesSquare(start: string, end: string): Promise<VentesSq
       parMois[cle].commandes += 1
       total += net
       commandes += 1
+
+      for (const li of o.line_items || []) {
+        const m = Number(li.total_money?.amount || 0) / 100
+        if (m) lignes.push({ mois: cle, nom: String(li.name || ''), montant: m })
+      }
     }
 
     cursor = json.cursor
     if (!cursor) break
   }
 
-  return { total, commandes, parMois }
+  return { total, commandes, parMois, lignes }
 }
