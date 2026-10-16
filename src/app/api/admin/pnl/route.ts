@@ -324,6 +324,15 @@ function periodeDeLaReference(libelle: string): string | null {
   return `20${m[2]}-${m[1]}`
 }
 
+// CHINEUZ2BLING numérote « 08-26 » : mois-année.
+function periodeMoisAnnee(ref: string): string | null {
+  const m = ref.match(/^(\d{1,2})-(\d{2})$/)
+  if (!m) return null
+  const mois = Number(m[1])
+  if (mois < 1 || mois > 12) return null
+  return `20${m[2]}-${String(mois).padStart(2, '0')}`
+}
+
 const MOIS_FR: Record<string, string> = {
   janvier: '01', février: '02', fevrier: '02', mars: '03', avril: '04', mai: '05',
   juin: '06', juillet: '07', août: '08', aout: '08', septembre: '09',
@@ -405,7 +414,10 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
       montant,
       // La période, c'est celle de la référence : NR0526 = mai 2026, même si
       // la facture est datée du 1er juin et payée le 10.
-      mois: periodeDeLaReference(brut) || periodeDuLibelle(brut, l.date || '') || (l.date || '').slice(0, 7),
+      mois: periodeDeLaReference(brut)
+        || periodeMoisAnnee(dernier)
+        || periodeDuLibelle(brut, l.date || '')
+        || (l.date || '').slice(0, 7),
       horsNR,
     })
   }
