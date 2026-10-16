@@ -354,7 +354,7 @@ function periodeDuLibelle(libelle: string, date: string): string | null {
 async function detailParPoste(start: string, end: string) {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
-  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number> }
+  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, reversements: [] as SousLigne[] }
   const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
 
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
@@ -374,6 +374,9 @@ async function detailParPoste(start: string, end: string) {
   // Ce que NR reverse aux chineuses du Printemps : leur volume moins la
   // commission et sa TVA. Rangé au mois de la période de la facture.
   const reversePrintemps: Record<string, number> = {}
+  // Ce qu'on reverse vraiment aux chineuses de la boutique, écriture par
+  // écriture : leur volume moins notre commission et sa TVA.
+  const reverseNR = new Map<number, SousLigne>()
   for (const l of lignes) {
     const numero = l.ledger_account?.number
     const idEcriture = l.ledger_entry?.id
@@ -410,11 +413,21 @@ async function detailParPoste(start: string, end: string) {
       || periodeDuLibelle(brut, l.date || '')
       || (l.date || '').slice(0, 7)
 
+    const net = numero.startsWith('467')
+      ? num(l.debit) - num(l.credit)
+      : -(num(l.credit) - num(l.debit))
     if (horsNR) {
-      const v = numero.startsWith('467')
-        ? num(l.debit) - num(l.credit)
-        : -(num(l.credit) - num(l.debit))
-      reversePrintemps[periode] = (reversePrintemps[periode] || 0) + v
+      reversePrintemps[periode] = (reversePrintemps[periode] || 0) + net
+    } else if (numero.startsWith('467') || numero.startsWith('706') || numero === '44574') {
+      const deja = reverseNR.get(idEcriture)
+      if (deja) deja.montant += net
+      else reverseNR.set(idEcriture, {
+        cle: `rev-${idEcriture}`,
+        label: nom,
+        titre: `${l.date} — ${brut}`,
+        montant: net,
+        mois: periode,
+      })
     }
 
     const cle = `${poste.cle}|${idEcriture}`
@@ -439,7 +452,10 @@ async function detailParPoste(start: string, end: string) {
   }
   // Ordre alphabétique : on repère tout de suite la chineuse qui manque.
   for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
-  return { parPoste, reversePrintemps }
+  const reversements = [...reverseNR.values()]
+    .filter(r => Math.abs(r.montant) >= 1)
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+  return { parPoste, reversePrintemps, reversements }
 }
 
 export async function GET(req: NextRequest) {
@@ -476,9 +492,10 @@ export async function GET(req: NextRequest) {
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
     const brutDetail = await detailParPoste(start, end)
-      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number> }))
+      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, reversements: [] as SousLigne[] }))
     const detail = brutDetail.parPoste
     const reversePrintemps = brutDetail.reversePrintemps
+    const reversements = brutDetail.reversements
 
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
@@ -528,8 +545,14 @@ export async function GET(req: NextRequest) {
             }
           : null
         const reste = a.depotVente.map(p =>
-          p.cle === 'reversements' && reversementsNR.length > 0
-            ? { ...p, montant: reversementsNR.reduce((s2, d) => s2 + d.montant, 0), sousLignes: reversementsNR }
+          p.cle === 'reversements' && reversements.length > 0
+            ? {
+                ...p,
+                label: 'Reversements chineuses',
+                titre: 'Volume des factures moins notre commission et sa TVA',
+                montant: reversements.reduce((s2, d) => s2 + d.montant, 0),
+                sousLignes: reversements,
+              }
             : p,
         )
         return {
@@ -598,6 +621,10 @@ export async function GET(req: NextRequest) {
                     volumeTotal: nr + v + u,
                     priVintage: v,
                     priUpcycling: u,
+                    // Le net reversé, rangé sur la période de la facture.
+                    reversements: reversements
+                      .filter(r => r.mois === m.cle)
+                      .reduce((s2, r) => s2 + r.montant, 0),
                   }
                 })()
               : {}),
