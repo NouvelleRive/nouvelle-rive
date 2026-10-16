@@ -748,7 +748,8 @@ export async function GET(req: NextRequest) {
           ],
           charges: a.charges + (frais?.total ?? 0),
           resultat: a.resultat - (frais?.total ?? 0),
-          depotVente: [
+          depotVente: ([
+
             {
               cle: 'volume',
               label: "Volume d'affaires NR",
@@ -816,7 +817,15 @@ export async function GET(req: NextRequest) {
               comptes: [],
               sousLignes: achatsMarchandises,
             },
-          ],
+          ] as any[]).map(p => ({
+            ...p,
+            // Deux blocs de lecture : ce qui a été vendu, puis ce qu'on en garde.
+            bloc: ['volume', 'volumeFacture', 'ecart', 'volumeMarchandises',
+                   'volumePrintemps', 'priVintage', 'priUpcycling',
+                   'volumeTotal', 'recuBanque'].includes(p.cle)
+              ? "Volume d'affaires"
+              : 'Dépôt-vente',
+          })),
         }
       })(),
       parChineuse,

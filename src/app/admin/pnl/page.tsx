@@ -5,7 +5,7 @@
 // comptes bancaires qu'elle agrège. Aucune estimation maison ici : si un
 // chiffre est faux, c'est la compta qu'il faut corriger.
 
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
 import { onAuthStateChanged } from 'firebase/auth'
 import { formatPrix } from '@/lib/formatPrix'
@@ -13,8 +13,8 @@ import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
 type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
-type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean }
-type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean }
+type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string }
+type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string }
 type Mois = {
   cle: string
   produits: number
@@ -264,13 +264,18 @@ export default function PnlPage() {
           {vue === 'cumul' ? (
             <section className="bg-white border rounded-lg overflow-x-auto">
               <div className="min-w-[620px]">
-              <BlocPostes
-                titre="Dépôt-vente"
-                postes={data.pnl.depotVente.map(p => ({ ...p, sens: 'produit' as const }))}
-                total={null}
-                ouverts={ouverts}
-                setOuverts={setOuverts}
-              />
+              {[...new Set(data.pnl.depotVente.map(p => p.bloc || 'Dépôt-vente'))].map(bloc => (
+                <BlocPostes
+                  key={bloc}
+                  titre={bloc}
+                  postes={data.pnl.depotVente
+                    .filter(p => (p.bloc || 'Dépôt-vente') === bloc)
+                    .map(p => ({ ...p, sens: 'produit' as const }))}
+                  total={null}
+                  ouverts={ouverts}
+                  setOuverts={setOuverts}
+                />
+              ))}
               <MargeParChineuse lignes={data.parChineuse} />
               {data.pnl.commissionsDeduites > 0 && (
                 <>
@@ -579,12 +584,23 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
           {data.pnl.depotVente.length > 0 && (
             <>
               <tr className="bg-gray-50/70">
-                <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Dépôt-vente</td>
+                <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>{data.pnl.depotVente[0]?.bloc || 'Dépôt-vente'}</td>
               </tr>
               <Ligne label="Pièces vendues" titre="Source : APP NR" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
-              {data.pnl.depotVente.map(p => (
-                <LignePoste key={p.cle} p={p} dejaAffichees={data.pnl.depotVente.map(q => q.cle)} />
-              ))}
+              {data.pnl.depotVente.map((p, i) => {
+                const bloc = p.bloc || 'Dépôt-vente'
+                const nouveau = i > 0 && bloc !== (data.pnl.depotVente[i - 1].bloc || 'Dépôt-vente')
+                return (
+                  <Fragment key={p.cle}>
+                    {nouveau && (
+                      <tr className="bg-gray-50/70">
+                        <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>{bloc}</td>
+                      </tr>
+                    )}
+                    <LignePoste p={p} dejaAffichees={data.pnl.depotVente.map(q => q.cle)} />
+                  </Fragment>
+                )
+              })}
               <tr className="border-t">
                 <td className={tete} title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA">Marge NR sur chineuses</td>
                 {mois.map(m => (
