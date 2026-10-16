@@ -175,7 +175,7 @@ export default function PnlPage() {
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <label
             className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 select-none cursor-pointer"
-            title="Le compte PRI et les ventes du stand Printemps"
+            title="Source : PENNYLANE — compte PRI et ventes du stand Printemps"
           >
             <input
               type="checkbox"
@@ -272,11 +272,11 @@ export default function PnlPage() {
               <MargeParChineuse lignes={data.parChineuse} />
               {data.pnl.commissionsDeduites > 0 && (
                 <>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 border-b text-xs sm:text-sm" title="Crédits des comptes 70 : les commissions facturées">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 border-b text-xs sm:text-sm" title="Source : PENNYLANE — crédits des comptes 70">
                     <span className="pl-5 text-gray-600">Commissions brutes</span>
                     <span className="tabular-nums text-gray-600">{formatPrix(data.pnl.commissionsBrutes)} €</span>
                   </div>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 border-b text-xs sm:text-sm" title="Débits des comptes 70 : la part commission des factures chineuses, passée au débit par la règle fournisseur">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 border-b text-xs sm:text-sm" title="Source : PENNYLANE — débits des comptes 70">
                     <span className="pl-5 text-gray-600">dont venant en déduction</span>
                     <span className="tabular-nums text-red-600">− {formatPrix(data.pnl.commissionsDeduites)} €</span>
                   </div>
@@ -285,7 +285,7 @@ export default function PnlPage() {
               {data.pnl.margeBrute != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="Commissions perçues ÷ volume chineuses TTC"
+                  title="Source : PENNYLANE — commissions perçues ÷ volume chineuses TTC"
                 >
                   <span className="text-xs sm:text-sm font-medium">Marge brute</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
@@ -301,7 +301,7 @@ export default function PnlPage() {
               {data.pnl.tauxCommission != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="706101 seul ÷ volume chineuses TTC"
+                  title="Source : PENNYLANE — 706101 seul ÷ volume chineuses TTC"
                 >
                   <span className="text-xs sm:text-sm font-medium">Taux de commission réel</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
@@ -319,11 +319,11 @@ export default function PnlPage() {
               </div>
               {data.resultatPrintemps != null && (
                 <>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Encaissements du Printemps moins ce qu'on reverse à ses chineuses">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Source : PENNYLANE — encaissements Printemps moins les reversements à ses chineuses">
                     <span className="pl-4 text-gray-600">dont Printemps</span>
                     <span className="tabular-nums text-gray-700">{formatPrix(data.resultatPrintemps, { decimals: 0 })} €</span>
                   </div>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Le résultat moins celui du Printemps">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Source : PENNYLANE — le résultat moins celui du Printemps">
                     <span className="pl-4 text-gray-600">dont NR</span>
                     <span className="tabular-nums text-gray-700">{formatPrix(data.pnl.resultat - data.resultatPrintemps, { decimals: 0 })} €</span>
                   </div>
@@ -356,7 +356,7 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
       <button
         onClick={() => setOuvert(o => !o)}
         className="w-full flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40 hover:bg-blue-50 text-left"
-        title="Source : Square, par trigramme de SKU"
+        title="Source : APP NR, par trigramme de SKU"
       >
         <span className="text-xs sm:text-sm font-medium">
           <span className="inline-block w-3 text-gray-400">{ouvert ? '−' : '+'}</span>
@@ -451,7 +451,7 @@ function BlocPostes({
                 {/* Les sous-lignes remplacent le détail par compte quand il y en a. */}
                 {sous.length === 0 && p.comptes.map(c => (
                   <div key={c.number} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
-                    <span className="whitespace-nowrap" title={`${c.number} — ${c.label}`}>
+                    <span className="whitespace-nowrap" title={`Source : PENNYLANE — ${c.number} ${c.label}`}>
                       <span className="text-gray-400 mr-2 tabular-nums">{c.number}</span>
                       {c.label}
                     </span>
@@ -584,12 +584,12 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
               <tr className="bg-gray-50/70">
                 <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Dépôt-vente</td>
               </tr>
-              <Ligne label="Pièces vendues" titre="Nos ventes, pas la compta" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
+              <Ligne label="Pièces vendues" titre="Source : APP NR" valeurs={mois.map(m => m.pieces)} total={somme(m => m.pieces)} suffixe="pieces" />
               {data.pnl.depotVente.map(p => (
                 <LignePoste key={p.cle} p={p} dejaAffichees={data.pnl.depotVente.map(q => q.cle)} />
               ))}
               <tr className="border-t">
-                <td className={tete} title="Commissions perçues ÷ volume chineuses TTC">Marge brute</td>
+                <td className={tete} title="Source : PENNYLANE — commissions perçues ÷ volume chineuses TTC">Marge brute</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.margeBrute == null ? '—' : `${m.margeBrute.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
@@ -600,7 +600,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 </td>
               </tr>
               <tr className="border-t">
-                <td className={tete} title="706101 seul ÷ volume chineuses TTC">Taux de commission réel</td>
+                <td className={tete} title="Source : PENNYLANE — 706101 seul ÷ volume chineuses TTC">Taux de commission réel</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.tauxCommission == null ? '—' : `${m.tauxCommission.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
@@ -631,14 +631,14 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
           <Ligne label="Résultat" valeurs={mois.map(m => m.resultat)} total={data.pnl.resultat} gras couleur />
           <Ligne
             label="dont Printemps"
-            titre="Encaissements du Printemps moins ce qu'on reverse à ses chineuses"
+            titre="Source : PENNYLANE — encaissements Printemps moins les reversements à ses chineuses"
             valeurs={mois.map(m => m.resultatPrintemps ?? 0)}
             total={data.resultatPrintemps ?? 0}
             couleur
           />
           <Ligne
             label="dont NR"
-            titre="Le résultat moins celui du Printemps"
+            titre="Source : PENNYLANE — le résultat moins celui du Printemps"
             valeurs={mois.map(m => m.resultat - (m.resultatPrintemps ?? 0))}
             total={data.pnl.resultat - (data.resultatPrintemps ?? 0)}
             couleur

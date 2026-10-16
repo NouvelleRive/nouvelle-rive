@@ -39,7 +39,7 @@ async function requireAdmin(req: NextRequest) {
 
 // Postes du compte de résultat (plan comptable général), dans l'ordre de lecture.
 // Un compte est rattaché au premier préfixe qui matche.
-const POSTES: { cle: string; label: string; sens: 'produit' | 'charge'; prefixes: string[] }[] = [
+const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; prefixes: string[] }[] = [
   { cle: 'ventes', label: 'Ventes & commissions', sens: 'produit', prefixes: ['70'] },
   { cle: 'autresProduits', label: 'Autres produits', sens: 'produit', prefixes: ['71', '72', '74', '75', '78', '79'] },
   { cle: 'produitsFin', label: 'Produits financiers', sens: 'produit', prefixes: ['76'] },
@@ -64,14 +64,14 @@ const POSTES_DEPOT_VENTE = [
   {
     cle: 'reversements',
     label: 'Reversements chineuses TTC',
-    titre: 'Source : Pennylane, comptes 467xxx',
+    titre: 'Source : PENNYLANE — comptes 467xxx',
     prefixes: ['467'],
     sens: 'debit' as const,
   },
   {
     cle: 'tvaCommission',
     label: 'dont TVA sur commission',
-    titre: 'Source : compte 44574 des factures chineuses',
+    titre: 'Source : PENNYLANE — compte 44574 des factures chineuses',
     prefixes: ['44574'],
     sens: 'credit' as const,
   },
@@ -96,7 +96,13 @@ function posteDuCompte(n: string): { cle: string; sens: 'produit' | 'charge' | '
 }
 
 function agreger(lignes: TrialBalanceLine[]) {
-  const postes = POSTES.map(p => ({ ...p, montant: 0, comptes: [] as { number: string; label: string; montant: number }[] }))
+  const postes = POSTES.map(p => ({
+    ...p,
+    // Tous les postes du compte de résultat viennent de la balance Pennylane.
+    titre: `Source : PENNYLANE — comptes ${p.prefixes.join(', ')}`,
+    montant: 0,
+    comptes: [] as { number: string; label: string; montant: number }[],
+  }))
 
   for (const l of lignes) {
     const n = l.number
@@ -577,7 +583,7 @@ export async function GET(req: NextRequest) {
           ? {
               cle: 'volumePrintemps',
               label: "Volume d'affaires Printemps",
-              titre: 'Source : encaissements reçus de Printemps SAS',
+              titre: 'Source : PENNYLANE — encaissements reçus de Printemps SAS',
               montant: canaux.montantTotal,
               comptes: [] as { number: string; label: string; montant: number }[],
               sousLignes: canaux.lignes,
@@ -594,7 +600,7 @@ export async function GET(req: NextRequest) {
                 {
                   ...p,
                   label: 'Reversements chineuses',
-                  titre: 'Source : factures chineuses, volume moins commission et TVA',
+                  titre: 'Source : PENNYLANE — factures chineuses, volume moins commission et TVA',
                   montant: sommeL(netsFactures),
                   comptes: vide,
                   sousLignes: netsFactures,
@@ -602,7 +608,7 @@ export async function GET(req: NextRequest) {
                 {
                   cle: 'commissions',
                   label: 'Commissions perçues',
-                  titre: 'Source : lignes 706101 des factures chineuses',
+                  titre: 'Source : PENNYLANE — lignes 706101 des factures chineuses',
                   montant: sommeL(commissionsFactures),
                   comptes: vide,
                   sousLignes: commissionsFactures,
@@ -616,14 +622,14 @@ export async function GET(req: NextRequest) {
             {
               cle: 'volume',
               label: "Volume d'affaires NR",
-              titre: 'Source : Square',
+              titre: 'Source : SQUARE',
               montant: square.total,
               comptes: [],
             },
             {
               cle: 'volumeFacture',
               label: 'dont facturé aux chineuses',
-              titre: 'Source : lignes Reversement CA des factures chineuses',
+              titre: 'Source : PENNYLANE — lignes Reversement CA des factures chineuses',
               montant: sommeL(volumesFactures),
               comptes: [],
               sousLignes: volumesFactures,
@@ -634,7 +640,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'volumeMarchandises',
               label: 'dont ventes de marchandises (NR + NR achats)',
-              titre: 'Source : écritures Ventes stock maison, compte 707',
+              titre: 'Source : PENNYLANE — écritures Ventes stock maison, compte 707',
               montant: sommeL(marchandisesFactures),
               comptes: [],
               sousLignes: marchandisesFactures,
@@ -643,14 +649,14 @@ export async function GET(req: NextRequest) {
             ...(printemps ? [printemps] : []),
             ...(canaux
               ? [
-                  { cle: 'priVintage', label: 'dont vintage', titre: 'Source : virements PRIV', montant: canaux.total.vintage, comptes: [], indent: true },
-                  { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Source : virements PRIU et bordereaux numérotés', montant: canaux.total.upcycling, comptes: [], indent: true },
+                  { cle: 'priVintage', label: 'dont vintage', titre: 'Source : PENNYLANE — virements PRIV', montant: canaux.total.vintage, comptes: [], indent: true },
+                  { cle: 'priUpcycling', label: 'dont upcycling', titre: 'Source : PENNYLANE — virements PRIU et bordereaux numérotés', montant: canaux.total.upcycling, comptes: [], indent: true },
                 ]
               : []),
             {
               cle: 'volumeTotal',
               label: "Volume d'affaires total",
-              titre: "Source : volume d'affaires NR + Printemps",
+              titre: "Source : SQUARE + PENNYLANE",
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
             },
