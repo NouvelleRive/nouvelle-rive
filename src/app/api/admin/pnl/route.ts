@@ -83,6 +83,8 @@ const POSTES_DEPOT_VENTE = [
 const CACHE = new Map<string, { le: number; corps: any }>()
 const TTL_PNL = 30 * 24 * 60 * 60 * 1000
 
+const ORDRE_BLOCS = ["Volume d'affaires", "Chiffre d'affaires", 'Charges variables']
+
 const num = (v: string) => Number(v) || 0
 
 // À quel poste appartient un compte : d'abord le dépôt-vente (467, 44574, 707
@@ -860,7 +862,9 @@ export async function GET(req: NextRequest) {
               : ['commissions', 'tvaCommission', 'caMarchandises', 'caTotal'].includes(p.cle)
                 ? "Chiffre d'affaires"
                 : 'Charges variables',
-          })),
+          }))
+            // Les blocs doivent se suivre, pas s'entrelacer.
+            .sort((a, b) => ORDRE_BLOCS.indexOf(a.bloc) - ORDRE_BLOCS.indexOf(b.bloc)),
         }
       })(),
       parChineuse,
