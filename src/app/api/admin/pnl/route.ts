@@ -70,8 +70,8 @@ const POSTES_DEPOT_VENTE = [
   },
   {
     cle: 'tvaCommission',
-    label: 'dont TVA sur commission',
-    titre: 'Source : PENNYLANE — compte 44574 des factures chineuses',
+    label: 'dont TVA collectée sur la commission',
+    titre: 'Source : PENNYLANE — compte 44574. Supportée par la chineuse, reversée à l’État par NR',
     prefixes: ['44574'],
     sens: 'credit' as const,
   },
