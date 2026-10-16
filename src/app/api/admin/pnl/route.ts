@@ -905,6 +905,7 @@ export async function GET(req: NextRequest) {
                     tvaCommission: somme(tvaFactures),
                     caMarchandises: somme(marchandisesFactures),
                     caTotal: somme(commissionsFactures) + somme(marchandisesFactures),
+                    achatsMarchandises: somme(achatsMarchandises),
                   }
                 })()
               : {}),
@@ -919,7 +920,6 @@ export async function GET(req: NextRequest) {
             const a2 = achatsMarchandises.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
             return v > 0 ? ((v - a2) / v) * 100 : null
           })(),
-          achatsMarchandises: achatsMarchandises.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0),
           resultatPrintemps:
             ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
             - (reversePrintemps[m.cle] ?? 0),
