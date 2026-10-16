@@ -776,6 +776,7 @@ export async function GET(req: NextRequest) {
               titre: 'Source : SQUARE',
               montant: square.total,
               comptes: [],
+              gras: true,
             },
             {
               cle: 'volumeFacture',
@@ -785,8 +786,6 @@ export async function GET(req: NextRequest) {
               comptes: [],
               sousLignes: volumesFactures,
               indent: true,
-              // En rouge quand Square et Pennylane ne disent pas la même chose.
-              alerte: Math.abs(square.total - sommeL(volumesFactures) - sommeL(marchandisesFactures)) >= 1,
             },
             {
               cle: 'ecart',
@@ -820,6 +819,7 @@ export async function GET(req: NextRequest) {
               titre: "Source : SQUARE (NR) + PENNYLANE (PRI)",
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
+              gras: true,
             },
             ...(recu ? [{
               cle: 'recuBanque',
@@ -843,6 +843,7 @@ export async function GET(req: NextRequest) {
               titre: 'Source : commissions perçues + ventes de marchandises',
               montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures),
               comptes: [] as { number: string; label: string; montant: number }[],
+              gras: true,
             },
             {
               cle: 'achatsMarchandises',

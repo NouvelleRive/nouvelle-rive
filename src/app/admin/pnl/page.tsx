@@ -13,8 +13,8 @@ import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
 type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
-type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string }
-type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string }
+type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean }
+type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean }
 type Mois = {
   cle: string
   produits: number
@@ -294,7 +294,7 @@ export default function PnlPage() {
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
                   title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA"
                 >
-                  <span className="text-xs sm:text-sm font-medium">Marge NR sur chineuses</span>
+                  <span className="text-xs sm:text-sm font-semibold">Marge NR sur chineuses</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
                     {data.pnl.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
                   </span>
@@ -426,10 +426,10 @@ function BlocPostes({
                   size={14}
                   className={`transition-transform ${ouvert ? 'rotate-90' : ''} ${depliable ? 'text-gray-400' : 'text-transparent'}`}
                 />
-                <span className={`whitespace-nowrap ${p.indent ? 'pl-4 text-gray-600' : ''}`}>{p.label}</span>
+                <span className={`whitespace-nowrap ${p.indent ? 'pl-4 text-gray-600' : ''} ${p.gras ? 'font-semibold' : ''}`}>{p.label}</span>
                 {depliable && <span className="text-[11px] text-gray-400 shrink-0">({p.comptes.length || sous.length})</span>}
               </span>
-              <span className={`text-xs sm:text-sm tabular-nums shrink-0 ml-2 ${p.alerte ? 'text-red-600 font-medium' : ''}`}>{formatPrix(p.montant, { decimals: 0 })} €</span>
+              <span className={`text-xs sm:text-sm tabular-nums shrink-0 ml-2 ${p.alerte ? 'text-red-600 font-medium' : ''} ${p.gras ? 'font-semibold' : ''}`}>{formatPrix(p.montant, { decimals: 0 })} €</span>
             </button>
             {ouvert && (
               <div className={`bg-gray-50/50 ${sous.length > 20 ? 'max-h-96 overflow-y-auto' : ''}`}>
@@ -514,8 +514,8 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
     const ouvert = datees.length > 0 && !!ouverts[`m-${p.cle}`]
     return (
       <>
-        <tr className="border-t">
-          <td className={tete} title={p.titre}>
+        <tr className={`border-t ${p.gras ? 'font-semibold' : ''}`}>
+          <td className={`${tete} ${p.gras ? 'font-semibold' : ''}`} title={p.titre}>
             {datees.length > 0 ? (
               <button
                 onClick={() => setOuverts(o => ({ ...o, [`m-${p.cle}`]: !o[`m-${p.cle}`] }))}
@@ -602,7 +602,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 )
               })}
               <tr className="border-t">
-                <td className={tete} title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA">Marge NR sur chineuses</td>
+                <td className={tete} title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA" style={{fontWeight:600}}>Marge NR sur chineuses</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.margeChineuses == null ? '—' : `${m.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
@@ -613,7 +613,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 </td>
               </tr>
               <tr className="border-t">
-                <td className={tete} title="Source : PENNYLANE — (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises">Marge NR sur l&apos;achat</td>
+                <td className={tete} title="Source : PENNYLANE — (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises" style={{fontWeight:600}}>Marge NR sur l&apos;achat</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.margeAchat == null ? '—' : `${m.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
