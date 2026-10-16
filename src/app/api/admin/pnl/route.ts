@@ -372,7 +372,12 @@ async function detailParPoste(start: string, end: string): Promise<Record<string
     // c'est PRISTINI, pas le stand du Printemps. Tout le reste qui porte une
     // référence PRI ou une avance sort du volume boutique.
     const refNR = /^NR\d{4}/i.test(nom)
-    const horsNR = !refNR && (/\bPRI\d{4}/i.test(brut) || /\bPRI[A-Z]{3}/i.test(brut) || /avance/i.test(brut))
+    // « 2025 / 13 » : la numérotation de TÊTE D'ORANGE pour son stand. Les huit
+    // factures de cette série sont payées par un virement PRImmaaTDO.
+    const serieAnnuelle = /^\d{4}\s*\/\s*\d+$/.test(dernier)
+    const horsNR = !refNR && (
+      serieAnnuelle || /\bPRI\d{4}/i.test(brut) || /\bPRI[A-Z]{3}/i.test(brut) || /avance/i.test(brut)
+    )
     cumul.set(cle, {
       poste: poste.cle,
       cle: `d-${poste.cle}-${idEcriture}`,
