@@ -602,6 +602,9 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 return (
                   <Fragment key={p.cle}>
                     {nouveau && (
+                      <tr aria-hidden><td colSpan={mois.length + 2} className="h-4" /></tr>
+                    )}
+                    {nouveau && (
                       <tr className="bg-gray-50/70">
                         <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>{bloc}</td>
                       </tr>
