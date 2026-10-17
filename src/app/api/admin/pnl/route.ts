@@ -1024,9 +1024,11 @@ export async function GET(req: NextRequest) {
             const c = commissionsFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
             return v > 0 ? (c / v) * 100 : null
           })(),
-          // Un achat de janvier se revend en mars : la marge sur l'achat n'a
-          // de sens qu'en cumul, pas mois par mois.
-          margeAchat: null,
+          margeAchat: (() => {
+            const v = marchandisesFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+            const a2 = achatsMarchandises.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+            return v > 0 ? ((v - a2) / v) * 100 : null
+          })(),
           resultatPrintemps:
             ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
             - (reversePrintemps[m.cle] ?? 0),
