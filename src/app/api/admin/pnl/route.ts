@@ -811,9 +811,24 @@ export async function GET(req: NextRequest) {
         // Chaque poste se déplie à la ligne : facture, salaire, virement…
         const avecDetail = <T extends { cle: string }>(p: T) =>
           detail[p.cle]?.length ? { ...p, sousLignes: detail[p.cle] } : p
+
+        // Le loyer du corner Printemps (Ihsane Naanani) se lit à part du bail
+        // de la boutique.
+        const estPrintemps = (l: SousLigne) => /IHSANE|NAANANI/i.test(l.label) || /IHSANE|NAANANI/i.test(l.titre || '')
+        const loyers = detail['loyer'] ?? []
+        const loyerPri = loyers.filter(estPrintemps)
+        const loyerNr = loyers.filter(l => !estPrintemps(l))
+        const sommeS = (l: SousLigne[]) => l.reduce((t, x) => t + x.montant, 0)
         const a = {
           ...brut,
-          postes: brut.postes.map(avecDetail),
+          postes: brut.postes.flatMap(p =>
+            p.cle === 'loyer' && loyerPri.length > 0
+              ? [
+                  { ...p, label: 'Loyer NR', montant: sommeS(loyerNr), comptes: [], sousLignes: loyerNr },
+                  { ...p, cle: 'loyerPri', label: 'Loyer Printemps', montant: sommeS(loyerPri), comptes: [], sousLignes: loyerPri },
+                ]
+              : [avecDetail(p)],
+          ),
           depotVente: brut.depotVente.map(avecDetail),
         }
         if (!square) return a
@@ -1096,6 +1111,15 @@ export async function GET(req: NextRequest) {
           resultat: a.resultat - (frais?.parMois[m.cle] ?? 0),
           postes: {
             ...Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
+            ...(() => {
+              const l = (detail['loyer'] ?? []).filter(x => x.mois === m.cle)
+              const pri = l.filter(x => /IHSANE|NAANANI/i.test(x.label) || /IHSANE|NAANANI/i.test(x.titre || ''))
+              const nr = l.filter(x => !(/IHSANE|NAANANI/i.test(x.label) || /IHSANE|NAANANI/i.test(x.titre || '')))
+              return {
+                loyer: nr.reduce((t, x) => t + x.montant, 0),
+                loyerPri: pri.reduce((t, x) => t + x.montant, 0),
+              }
+            })(),
             ...(square
               ? (() => {
                   const somme = (l: typeof volumesFactures) =>
