@@ -485,6 +485,11 @@ function periodeMoisAnnee(ref: string): string | null {
   return `20${m[2]}-${String(mois).padStart(2, '0')}`
 }
 
+function moisPrecedent(cle: string): string {
+  const [an, mo] = cle.split('-').map(Number)
+  return mo === 1 ? `${an - 1}-12` : `${an}-${String(mo - 1).padStart(2, '0')}`
+}
+
 const MOIS_FR: Record<string, string> = {
   janvier: '01', février: '02', fevrier: '02', mars: '03', avril: '04', mai: '05',
   juin: '06', juillet: '07', août: '08', aout: '08', septembre: '09',
@@ -580,16 +585,15 @@ async function detailParPoste(start: string, end: string) {
       || /\bPRI[A-Z]{2,5}\d{2,4}/i.test(brut)
       || /avance/i.test(brut)
     )
-    // La période d'une facture chineuse se lit dans sa référence ; une charge,
-    // elle, appartient au mois de son écriture. « Salaire Janvier » payé le
-    // 1er février est une charge de février.
-    const compteChineuse = numero.startsWith('467') || numero.startsWith('706') || numero === '44574'
-    const periode = compteChineuse
-      ? (periodeDeLaReference(brut)
-        || periodeMoisAnnee(dernier)
-        || periodeDuLibelle(brut, l.date || '')
-        || (l.date || '').slice(0, 7))
-      : (l.date || '').slice(0, 7)
+    // La période vient de ce que dit la pièce : la référence d'une facture
+    // chineuse, ou le mois écrit dans le libellé d'un salaire. Un versement du
+    // début de mois sans mois annoncé paie le mois précédent.
+    const periode = periodeDeLaReference(brut)
+      || periodeMoisAnnee(dernier)
+      || periodeDuLibelle(brut, l.date || '')
+      || (Number((l.date || '').slice(8)) <= 10 && /^64/.test(numero)
+        ? moisPrecedent((l.date || '').slice(0, 7))
+        : (l.date || '').slice(0, 7))
 
     const net = numero.startsWith('467')
       ? num(l.debit) - num(l.credit)
