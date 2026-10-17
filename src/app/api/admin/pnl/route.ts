@@ -836,7 +836,7 @@ export async function GET(req: NextRequest) {
         // Les abonnements récurrents, sortis des services extérieurs.
         const estAbonnement = (l: SousLigne) => {
           const t = `${l.label} ${l.titre || ''}`
-          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|SHINE|BUNNY|VERCEL|SFR/i.test(t)
+          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(t)
         }
         const externes = detail['externes'] ?? []
         const abonnements = externes.filter(estAbonnement)
@@ -1151,7 +1151,7 @@ export async function GET(req: NextRequest) {
                 loyerPri: pri.reduce((t, x) => t + x.montant, 0),
                 ...(() => {
                   const e = (detail['externes'] ?? []).filter(x => x.mois === m.cle)
-                  const ab = e.filter(x => /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|SHINE|BUNNY|VERCEL|SFR/i.test(`${x.label} ${x.titre || ''}`))
+                  const ab = e.filter(x => /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(`${x.label} ${x.titre || ''}`))
                   return {
                     abonnements: ab.reduce((t, x) => t + x.montant, 0),
                     externes: e.filter(x => !ab.includes(x)).reduce((t, x) => t + x.montant, 0),
