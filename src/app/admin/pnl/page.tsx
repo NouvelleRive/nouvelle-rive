@@ -293,23 +293,12 @@ export default function PnlPage() {
                   </div>
                 </>
               )}
-              {data.pnl.margeChineuses != null && (
-                <div
-                  className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="Calcul : Commissions perçues ÷ Reversement CA, deux lignes Pennylane"
-                >
-                  <span className="text-xs sm:text-sm font-semibold">Marge NR sur chineuses</span>
-                  <span className="text-xs sm:text-sm font-semibold tabular-nums">
-                    {data.pnl.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
-                  </span>
-                </div>
-              )}
               {data.pnl.margeAchat != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
                   title="Calcul : marge brute HT ÷ ventes TTC, comme sur la page acheteuse"
                 >
-                  <span className="text-xs sm:text-sm font-medium">Marge NR sur l'achat</span>
+                  <span className="text-xs sm:text-sm font-semibold">Marge NR sur marchandises</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
                     {data.pnl.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %
                   </span>
@@ -620,18 +609,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 )
               })}
               <tr className="border-t">
-                <td className={tete} title="Calcul : Commissions perçues ÷ Reversement CA, deux lignes Pennylane" style={{fontWeight:600}}>Marge NR sur chineuses</td>
-                {mois.map(m => (
-                  <td key={m.cle} className={cel}>
-                    {m.margeChineuses == null ? '—' : `${m.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
-                  </td>
-                ))}
-                <td className={`${cel} bg-gray-50 font-medium`}>
-                  {data.pnl.margeChineuses == null ? '—' : `${data.pnl.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
-                </td>
-              </tr>
-              <tr className="border-t">
-                <td className={tete} title="Calcul : marge brute HT ÷ ventes TTC, comme sur la page acheteuse" style={{fontWeight:600}}>Taux de marge marchandises</td>
+                <td className={tete} title="Calcul : marge brute HT ÷ ventes TTC, comme sur la page acheteuse" style={{fontWeight:600}}>Marge NR sur marchandises</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.margeAchat == null ? '—' : `${m.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
