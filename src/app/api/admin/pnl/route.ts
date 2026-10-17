@@ -580,10 +580,16 @@ async function detailParPoste(start: string, end: string) {
       || /\bPRI[A-Z]{2,5}\d{2,4}/i.test(brut)
       || /avance/i.test(brut)
     )
-    const periode = periodeDeLaReference(brut)
-      || periodeMoisAnnee(dernier)
-      || periodeDuLibelle(brut, l.date || '')
-      || (l.date || '').slice(0, 7)
+    // La période d'une facture chineuse se lit dans sa référence ; une charge,
+    // elle, appartient au mois de son écriture. « Salaire Janvier » payé le
+    // 1er février est une charge de février.
+    const compteChineuse = numero.startsWith('467') || numero.startsWith('706') || numero === '44574'
+    const periode = compteChineuse
+      ? (periodeDeLaReference(brut)
+        || periodeMoisAnnee(dernier)
+        || periodeDuLibelle(brut, l.date || '')
+        || (l.date || '').slice(0, 7))
+      : (l.date || '').slice(0, 7)
 
     const net = numero.startsWith('467')
       ? num(l.debit) - num(l.credit)
