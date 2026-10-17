@@ -18,6 +18,7 @@ import {
   type TrialBalanceLine,
 } from '@/lib/pennylane'
 import { ventesSquare, fraisSquare } from '@/lib/squareVentes'
+import { calcMargeNette } from '@/lib/marge'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -303,21 +304,24 @@ async function margeStockPropre(start: string, end: string) {
     }
   }
 
-  const parMois: Record<string, { ventes: number; achats: number }> = {}
+  // On réutilise le calcul de marge de l'app (TVA sur marge, art. 297 A),
+  // pas une formule refaite ici.
+  const parMois: Record<string, { ventes: number; marge: number }> = {}
   let ventes = 0
-  let achats = 0
+  let marge = 0
   for (const d of snap.docs) {
     const v = d.data()
     const cle = v.dateVente.toDate().toISOString().slice(0, 7)
     const pv = Number(v.prixVenteReel || 0)
-    const pa = achat.get(v.produitId) || 0
-    if (!parMois[cle]) parMois[cle] = { ventes: 0, achats: 0 }
+    const m = calcMargeNette(pv, achat.get(v.produitId))
+    if (m === null) continue
+    if (!parMois[cle]) parMois[cle] = { ventes: 0, marge: 0 }
     parMois[cle].ventes += pv
-    parMois[cle].achats += pa
+    parMois[cle].marge += m
     ventes += pv
-    achats += pa
+    marge += m
   }
-  return { parMois, ventes, achats }
+  return { parMois, ventes, marge }
 }
 
 // Volume d'affaires par chineuse, lu sur nos ventes Square : le SKU porte le
@@ -851,7 +855,7 @@ export async function GET(req: NextRequest) {
           // Sur notre propre stock : pièce par pièce, prix de vente contre
           // prix d'achat, pas le compte 607 du mois.
           margeAchat: stockPropre && stockPropre.ventes > 0
-            ? ((stockPropre.ventes - stockPropre.achats) / stockPropre.ventes) * 100
+            ? (stockPropre.marge / stockPropre.ventes) * 100
             : null,
           postes: [
             ...a.postes,
@@ -1064,7 +1068,7 @@ export async function GET(req: NextRequest) {
           })(),
           margeAchat: (() => {
             const x = stockPropre?.parMois[m.cle]
-            return x && x.ventes > 0 ? ((x.ventes - x.achats) / x.ventes) * 100 : null
+            return x && x.ventes > 0 ? (x.marge / x.ventes) * 100 : null
           })(),
           resultatPrintemps:
             ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))

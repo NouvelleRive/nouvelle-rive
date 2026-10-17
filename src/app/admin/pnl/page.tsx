@@ -307,7 +307,7 @@ export default function PnlPage() {
               {data.pnl.margeAchat != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="Calcul : APP NR, pièce par pièce — (prix de vente − prix d'achat) ÷ prix de vente"
+                  title="Source : APP NR — marge nette HT de l'app (TVA sur marge), rapportée au prix de vente"
                 >
                   <span className="text-xs sm:text-sm font-medium">Marge NR sur l'achat</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
@@ -631,7 +631,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 </td>
               </tr>
               <tr className="border-t">
-                <td className={tete} title="Calcul : APP NR, pièce par pièce — (prix de vente − prix d'achat) ÷ prix de vente" style={{fontWeight:600}}>Marge NR sur l&apos;achat</td>
+                <td className={tete} title="Source : APP NR — marge nette HT de l'app (TVA sur marge), rapportée au prix de vente" style={{fontWeight:600}}>Marge NR sur l&apos;achat</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.margeAchat == null ? '—' : `${m.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
