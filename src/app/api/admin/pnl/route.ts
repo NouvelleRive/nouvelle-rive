@@ -569,8 +569,12 @@ async function detailParPoste(start: string, end: string) {
     // PRI suivi d'une période (PRI0725BLI1) ou d'un trigramme puis d'une
     // période (PRITDO0726). Surtout pas « PRISTINI », qui est une chineuse
     // de la boutique dont le trigramme commence par PRI.
+    // « 5-26 », « 08-26 » : la numérotation mois-année de CHINEUZ2BLING, qui
+    // n'est pas de la boutique.
+    const refMoisAnnee = /^\d{1,2}-\d{2}$/.test(dernier)
     const horsNR = !refNR && (
       serieAnnuelle
+      || refMoisAnnee
       || /\bPRI\d{4}/i.test(brut)
       || /\bPRI[A-Z]{2,5}\d{2,4}/i.test(brut)
       || /avance/i.test(brut)
