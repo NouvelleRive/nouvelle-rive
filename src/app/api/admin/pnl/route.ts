@@ -284,6 +284,42 @@ async function printempsParCanal(start: string, end: string) {
   return { total, parMois, lignes, montantTotal }
 }
 
+// Marge sur notre propre stock, pièce par pièce : le prix de vente est sur la
+// vente, le prix d'achat sur la fiche produit. Le compte 607 ne peut pas
+// répondre, un lot acheté en janvier se revend sur plusieurs mois.
+async function margeStockPropre(start: string, end: string) {
+  const snap = await adminDb.collection('ventes')
+    .where('trigramme', 'in', ['NR', 'ACH'])
+    .where('dateVente', '>=', Timestamp.fromDate(new Date(start + 'T00:00:00')))
+    .where('dateVente', '<=', Timestamp.fromDate(new Date(end + 'T23:59:59.999')))
+    .get()
+
+  const ids = [...new Set(snap.docs.map(d => d.data().produitId as string).filter(Boolean))]
+  const achat = new Map<string, number>()
+  for (let i = 0; i < ids.length; i += 300) {
+    const refs = ids.slice(i, i + 300).map(id => adminDb.collection('produits').doc(id))
+    for (const d of await adminDb.getAll(...refs)) {
+      if (d.exists) achat.set(d.id, Number(d.data()?.prixAchat || 0))
+    }
+  }
+
+  const parMois: Record<string, { ventes: number; achats: number }> = {}
+  let ventes = 0
+  let achats = 0
+  for (const d of snap.docs) {
+    const v = d.data()
+    const cle = v.dateVente.toDate().toISOString().slice(0, 7)
+    const pv = Number(v.prixVenteReel || 0)
+    const pa = achat.get(v.produitId) || 0
+    if (!parMois[cle]) parMois[cle] = { ventes: 0, achats: 0 }
+    parMois[cle].ventes += pv
+    parMois[cle].achats += pa
+    ventes += pv
+    achats += pa
+  }
+  return { parMois, ventes, achats }
+}
+
 // Volume d'affaires par chineuse, lu sur nos ventes Square : le SKU porte le
 // trigramme, donc la vente sait à qui elle appartient. On passe par des
 // requêtes d'agrégation (count + sum), qui ne lisent pas les documents.
@@ -675,7 +711,7 @@ export async function GET(req: NextRequest) {
     if (forcer) viderCacheTransactions()
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, frais] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, frais, stockPropre] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
@@ -684,6 +720,7 @@ export async function GET(req: NextRequest) {
       ventesSquare(start, end).catch(() => null),
       printempsParCanal(start, end).catch(() => null),
       fraisSquare(start, end).catch(() => null),
+      margeStockPropre(start, end).catch(() => null),
     ])
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
@@ -811,9 +848,10 @@ export async function GET(req: NextRequest) {
           margeChineuses: sommeL(volumesFactures) > 0
             ? (sommeL(commissionsFactures) / sommeL(volumesFactures)) * 100
             : null,
-          // Sur notre propre stock : ce qu'il reste une fois l'achat déduit.
-          margeAchat: sommeL(marchandisesFactures) > 0
-            ? ((sommeL(marchandisesFactures) - sommeL(achatsMarchandises)) / sommeL(marchandisesFactures)) * 100
+          // Sur notre propre stock : pièce par pièce, prix de vente contre
+          // prix d'achat, pas le compte 607 du mois.
+          margeAchat: stockPropre && stockPropre.ventes > 0
+            ? ((stockPropre.ventes - stockPropre.achats) / stockPropre.ventes) * 100
             : null,
           postes: [
             ...a.postes,
@@ -1025,9 +1063,8 @@ export async function GET(req: NextRequest) {
             return v > 0 ? (c / v) * 100 : null
           })(),
           margeAchat: (() => {
-            const v = marchandisesFactures.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
-            const a2 = achatsMarchandises.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
-            return v > 0 ? ((v - a2) / v) * 100 : null
+            const x = stockPropre?.parMois[m.cle]
+            return x && x.ventes > 0 ? ((x.ventes - x.achats) / x.ventes) * 100 : null
           })(),
           resultatPrintemps:
             ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
