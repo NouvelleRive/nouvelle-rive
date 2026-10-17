@@ -760,6 +760,23 @@ export async function GET(req: NextRequest) {
     const tvaFactures = brutDetail.tva
     const servicesPrintemps = brutDetail.services
 
+    // Deux loyers payés le même jour et le mois suivant vide : c'est une
+    // avance, on la remet sur le mois qu'elle couvre.
+    const loyersRanges: SousLigne[] = [...(detail['loyer'] ?? [])]
+    {
+      const parMoisLoyer: Record<string, SousLigne[]> = {}
+      for (const x of loyersRanges) (parMoisLoyer[x.mois || ''] ||= []).push(x)
+      for (const [mo, lignes] of Object.entries(parMoisLoyer)) {
+        if (lignes.length < 2 || !mo) continue
+        const [an, nb] = mo.split('-').map(Number)
+        const suivant = nb === 12 ? `${an + 1}-01` : `${an}-${String(nb + 1).padStart(2, '0')}`
+        if ((parMoisLoyer[suivant] ?? []).length > 0) continue
+        const paires = lignes.filter(x => lignes.filter(y => y.montant === x.montant).length > 1)
+        if (paires.length < 2) continue
+        paires[1].mois = suivant
+      }
+    }
+
     // Les factures qui manquent face à Square, chineuse par chineuse.
     const recu = await recuEnBanque(start, end).catch(() => null)
     const ecarts = square
@@ -815,7 +832,7 @@ export async function GET(req: NextRequest) {
         // Le loyer du corner Printemps (Ihsane Naanani) se lit à part du bail
         // de la boutique.
         const estPrintemps = (l: SousLigne) => /IHSANE|NAANANI/i.test(l.label) || /IHSANE|NAANANI/i.test(l.titre || '')
-        const loyers = detail['loyer'] ?? []
+        const loyers = loyersRanges
         const loyerPri = loyers.filter(estPrintemps)
         const loyerNr = loyers.filter(l => !estPrintemps(l))
         const sommeS = (l: SousLigne[]) => l.reduce((t, x) => t + x.montant, 0)
@@ -1112,7 +1129,7 @@ export async function GET(req: NextRequest) {
           postes: {
             ...Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
             ...(() => {
-              const l = (detail['loyer'] ?? []).filter(x => x.mois === m.cle)
+              const l = loyersRanges.filter(x => x.mois === m.cle)
               const pri = l.filter(x => /IHSANE|NAANANI/i.test(x.label) || /IHSANE|NAANANI/i.test(x.titre || ''))
               const nr = l.filter(x => !(/IHSANE|NAANANI/i.test(x.label) || /IHSANE|NAANANI/i.test(x.titre || '')))
               return {
