@@ -94,7 +94,7 @@ const ORDRE_LIGNES = [
   'commissions', 'tvaCommission', 'caMarchandises', 'caTotal',
   'caPrintemps', 'servicesPrintemps', 'caGlobal',
   'reversements', 'margeChineusesLigne', 'achatsMarchandises', 'coutVendu',
-  'margeMarchandises', 'tvaSurMarge', 'margeMarchandisesHt',
+  'margeMarchandises', 'tvaSurMarge', 'margeMarchandisesHt', 'margeGlobale',
 ]
 
 const num = (v: string) => Number(v) || 0
@@ -1034,6 +1034,15 @@ export async function GET(req: NextRequest) {
                 gras: true,
               },
             ] : []),
+            ...(stockPropre ? [{
+              cle: 'margeGlobale',
+              label: 'Marge brute NR + PRI',
+              titre: 'Calcul : commissions NR + marge HT sur marchandises + Printemps + gestion du corner',
+              montant: sommeL(commissionsFactures) + stockPropre.marge + sommeL(servicesPrintemps)
+                + (printemps ? printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0) : 0),
+              comptes: [] as { number: string; label: string; montant: number }[],
+              gras: true,
+            }] : []),
             {
               cle: 'achatsMarchandises',
               label: 'Achats de marchandises ce mois',
@@ -1111,6 +1120,10 @@ export async function GET(req: NextRequest) {
                     coutVendu: stockPropre?.parMois[m.cle]?.cout ?? 0,
                     margeMarchandises: (stockPropre?.parMois[m.cle]?.ventes ?? 0) - (stockPropre?.parMois[m.cle]?.cout ?? 0),
                     margeMarchandisesHt: stockPropre?.parMois[m.cle]?.marge ?? 0,
+                    margeGlobale: somme(commissionsFactures) + (stockPropre?.parMois[m.cle]?.marge ?? 0)
+                      + somme(servicesPrintemps)
+                      + ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
+                      - (reversePrintemps[m.cle] ?? 0),
                     tvaSurMarge: -(((stockPropre?.parMois[m.cle]?.ventes ?? 0) - (stockPropre?.parMois[m.cle]?.cout ?? 0))
                       - (stockPropre?.parMois[m.cle]?.marge ?? 0)),
                   }
