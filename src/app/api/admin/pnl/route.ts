@@ -670,6 +670,25 @@ export async function GET(req: NextRequest) {
       ? await ecartParFacture(square.lignes, brutDetail.volumes).catch(() => [] as SousLigne[])
       : ([] as SousLigne[])
 
+    // L'écart, c'est Square moins ce qui est facturé. Les factures manquantes
+    // en expliquent une partie ; le reste s'affiche tel quel, sans l'habiller.
+    if (square) {
+      for (const m of mois) {
+        const vendu = square.parMois[m.cle]?.net ?? 0
+        const facture = brutDetail.volumes.filter(v => v.mois === m.cle).reduce((s2, v) => s2 + v.montant, 0)
+        const explique = ecarts.filter(e => e.mois === m.cle).reduce((s2, e) => s2 + e.montant, 0)
+        const reste = Math.round((vendu - facture - explique) * 100) / 100
+        if (Math.abs(reste) < 1) continue
+        ecarts.push({
+          cle: `nonexp-${m.cle}`,
+          label: 'Non expliqué',
+          titre: `Source : SQUARE ${vendu.toFixed(2)} € − PENNYLANE ${facture.toFixed(2)} €, dont ${explique.toFixed(2)} € de factures identifiées`,
+          montant: reste,
+          mois: m.cle,
+        })
+      }
+    }
+
     // Le compte PRI (stand Printemps) est marqué plutôt qu'exclu : la page
     // laisse choisir si on l'inclut ou non.
     const banques = comptes.map(c => ({
@@ -799,7 +818,7 @@ export async function GET(req: NextRequest) {
               titre: 'Source : SQUARE moins PENNYLANE — encaissé sans facture chineuse',
               // Le total, c'est la somme des lignes : une facture de rattrapage
               // qui couvre plusieurs mois ne doit pas créer un écart négatif.
-              montant: sommeL(ecarts),
+              montant: square.total - sommeL(volumesFactures),
               comptes: [],
               sousLignes: ecarts,
               indent: true,
@@ -911,7 +930,7 @@ export async function GET(req: NextRequest) {
                     volume: square.parMois[m.cle]?.net ?? 0,
                     volumeFacture: nr,
                     volumeMarchandises: somme(marchandisesFactures),
-                    ecart: somme(ecarts),
+                    ecart: (square.parMois[m.cle]?.net ?? 0) - nr,
                     fraisSquare: frais?.parMois[m.cle] ?? 0,
                     fraisSquareVolume: -(frais?.parMois[m.cle] ?? 0),
                     recuBanque: recu?.parMois[m.cle] ?? 0,
