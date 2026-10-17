@@ -51,6 +51,8 @@ const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'c
   { cle: 'personnel', label: 'Charges de personnel', sens: 'charge', prefixes: ['64'] },
   { cle: 'autresCharges', label: 'Autres charges', sens: 'charge', prefixes: ['65'] },
   { cle: 'chargesFin', label: 'Charges financières', sens: 'charge', prefixes: ['66'] },
+  // Les vols remboursés aux chineuses ont leur propre ligne.
+  { cle: 'vols', label: 'Vols remboursés', sens: 'charge', prefixes: ['6718'] },
   { cle: 'chargesExc', label: 'Charges exceptionnelles', sens: 'charge', prefixes: ['67'] },
   { cle: 'amortissements', label: 'Amortissements & provisions', sens: 'charge', prefixes: ['68'] },
   { cle: 'is', label: 'Impôt sur les sociétés', sens: 'charge', prefixes: ['69'] },
