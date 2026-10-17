@@ -86,6 +86,14 @@ const CACHE = new Map<string, { le: number; corps: any }>()
 const TTL_PNL = 30 * 24 * 60 * 60 * 1000
 
 const ORDRE_BLOCS = ["Volume d'affaires", "Chiffre d'affaires", 'Charges variables']
+const ORDRE_LIGNES = [
+  'volume', 'volumeFacture', 'volumeMarchandises', 'ecart',
+  'volumePrintemps', 'priVintage', 'priUpcycling',
+  'volumeTotal', 'fraisSquareVolume', 'recuBanque',
+  'commissions', 'tvaCommission', 'caMarchandises', 'caTotal',
+  'caPrintemps', 'servicesPrintemps', 'caGlobal',
+  'reversements', 'achatsMarchandises',
+]
 
 const num = (v: string) => Number(v) || 0
 
@@ -452,7 +460,7 @@ function periodeDuLibelle(libelle: string, date: string): string | null {
 async function detailParPoste(start: string, end: string) {
   const comptes = await getLedgerAccounts()
   const suivis = comptes.filter(c => posteDuCompte(c.number) !== null)
-  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[], tva: [] as SousLigne[] }
+  if (suivis.length === 0) return { parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[], tva: [] as SousLigne[], services: [] as SousLigne[] }
   const nomDuCompte = new Map(suivis.map(c => [c.number, c.label]))
 
   const lignes = await getLignesDeComptes(suivis.map(c => c.id), start, end)
@@ -478,6 +486,9 @@ async function detailParPoste(start: string, end: string) {
   // Les lignes « Commissions perçues » (706101) de ces mêmes factures.
   const commissionsNR = new Map<number, SousLigne>()
   const tvaNR = new Map<number, number>()
+  // Un crédit 706 sans aucune ligne 467 n'est pas une commission sur ventes :
+  // c'est ce que les chineuses du Printemps versent pour la gestion du corner.
+  const aVolume = new Set<number>()
   // Nos propres ventes : les écritures « Ventes stock maison NR / NR ACHATS ».
   const marchandises = new Map<number, SousLigne>()
   // Ce qu'on achète pour revendre : Fleek, Vinted, Whatnot… (compte 607).
@@ -537,6 +548,7 @@ async function detailParPoste(start: string, end: string) {
       // le virement qui part à la chineuse, pas une vente.
       const vol = num(l.debit)
       if (!vol) continue
+      aVolume.add(idEcriture)
       const deja = reverseNR.get(idEcriture)
       if (deja) deja.montant += vol
       else reverseNR.set(idEcriture, {
@@ -604,6 +616,15 @@ async function detailParPoste(start: string, end: string) {
     if (vol > 0) c.info = `${((c.montant / vol) * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
   }
 
+  // On sort du poste commissions tout ce qui n'a pas de volume en face.
+  const services = new Map<number, SousLigne>()
+  for (const [id, c] of commissionsNR) {
+    if (aVolume.has(id)) continue
+    services.set(id, { ...c, cle: `srv-${id}` })
+    commissionsNR.delete(id)
+    tvaNR.delete(id)
+  }
+
   const trier = (m: Map<number, SousLigne>) => [...m.values()]
     .filter(r => Math.abs(r.montant) >= 1)
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
@@ -628,6 +649,7 @@ async function detailParPoste(start: string, end: string) {
     parPoste, reversePrintemps,
     volumes: trier(reverseNR), commissions: trier(commissionsNR), nets: trier(nets),
     marchandises: trier(marchandises), achats: trier(achats), tva: trier(tvaFacturee),
+    services: trier(services),
   }
 }
 
@@ -666,7 +688,7 @@ export async function GET(req: NextRequest) {
 
     // Après les autres appels : lancé en même temps, Pennylane répond 429.
     const brutDetail = await detailParPoste(start, end)
-      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[], tva: [] as SousLigne[] }))
+      .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[], tva: [] as SousLigne[], services: [] as SousLigne[] }))
     const detail = brutDetail.parPoste
     const reversePrintemps = brutDetail.reversePrintemps
     const volumesFactures = brutDetail.volumes
@@ -675,6 +697,7 @@ export async function GET(req: NextRequest) {
     const marchandisesFactures = brutDetail.marchandises
     const achatsMarchandises = brutDetail.achats
     const tvaFactures = brutDetail.tva
+    const servicesPrintemps = brutDetail.services
 
     // Les factures qui manquent face à Square, chineuse par chineuse.
     const recu = await recuEnBanque(start, end).catch(() => null)
@@ -894,6 +917,14 @@ export async function GET(req: NextRequest) {
               montant: printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
               comptes: [] as { number: string; label: string; montant: number }[],
             }] : []),
+            ...(servicesPrintemps.length > 0 ? [{
+              cle: 'servicesPrintemps',
+              label: 'Rémunération de gestion du corner',
+              titre: 'Source : PENNYLANE — versements des chineuses du Printemps, 706 sans volume',
+              montant: sommeL(servicesPrintemps),
+              comptes: [] as { number: string; label: string; montant: number }[],
+              sousLignes: servicesPrintemps,
+            }] : []),
             {
               cle: 'caTotal',
               label: "Chiffre d'affaires NR",
@@ -906,7 +937,7 @@ export async function GET(req: NextRequest) {
               cle: 'caGlobal',
               label: "Chiffre d'affaires total",
               titre: "Source : chiffre d'affaires NR + Printemps",
-              montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures)
+              montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures) + sommeL(servicesPrintemps)
                 + printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
               comptes: [] as { number: string; label: string; montant: number }[],
               gras: true,
@@ -926,12 +957,17 @@ export async function GET(req: NextRequest) {
                    'volumePrintemps', 'priVintage', 'priUpcycling',
                    'volumeTotal', 'recuBanque', 'fraisSquareVolume'].includes(p.cle)
               ? "Volume d'affaires"
-              : ['commissions', 'tvaCommission', 'caMarchandises', 'caTotal', 'caPrintemps', 'caGlobal'].includes(p.cle)
+              : ['commissions', 'tvaCommission', 'caMarchandises', 'caTotal', 'caPrintemps', 'servicesPrintemps', 'caGlobal'].includes(p.cle)
                 ? "Chiffre d'affaires"
                 : 'Charges variables',
           }))
-            // Les blocs doivent se suivre, pas s'entrelacer.
-            .sort((a, b) => ORDRE_BLOCS.indexOf(a.bloc) - ORDRE_BLOCS.indexOf(b.bloc)),
+            // Les blocs se suivent, et les lignes gardent un ordre de lecture fixe.
+            .sort((a, b) => {
+              const bloc = ORDRE_BLOCS.indexOf(a.bloc) - ORDRE_BLOCS.indexOf(b.bloc)
+              if (bloc !== 0) return bloc
+              const i = ORDRE_LIGNES.indexOf(a.cle), j = ORDRE_LIGNES.indexOf(b.cle)
+              return (i === -1 ? 99 : i) - (j === -1 ? 99 : j)
+            }),
         }
       })(),
       parChineuse,
@@ -974,7 +1010,8 @@ export async function GET(req: NextRequest) {
                     caTotal: somme(commissionsFactures) + somme(marchandisesFactures),
                     caPrintemps: ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
                       - (reversePrintemps[m.cle] ?? 0),
-                    caGlobal: somme(commissionsFactures) + somme(marchandisesFactures)
+                    servicesPrintemps: somme(servicesPrintemps),
+                    caGlobal: somme(commissionsFactures) + somme(marchandisesFactures) + somme(servicesPrintemps)
                       + ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
                       - (reversePrintemps[m.cle] ?? 0),
                     achatsMarchandises: somme(achatsMarchandises),
