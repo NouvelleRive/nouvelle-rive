@@ -839,7 +839,7 @@ export async function GET(req: NextRequest) {
         // Les abonnements récurrents, sortis des services extérieurs.
         const estAbonnement = (l: SousLigne) => {
           const t = `${l.label} ${l.titre || ''}`
-          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(t)
+          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ORUS|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(t)
         }
         // Pressing et laverie : de l'entretien, pas un service général.
         const estEntretien = (l: SousLigne) =>
@@ -1158,7 +1158,7 @@ export async function GET(req: NextRequest) {
                 ...(() => {
                   const e = (detail['externes'] ?? []).filter(x => x.mois === m.cle)
                   const en = e.filter(x => /5 ?A ?SEC|5ASEC|LAVERIE|PRESSING|BLANCHISSERIE/i.test(`${x.label} ${x.titre || ''}`))
-                  const ab = e.filter(x => !en.includes(x) && /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(`${x.label} ${x.titre || ''}`))
+                  const ab = e.filter(x => !en.includes(x) && /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ORUS|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(`${x.label} ${x.titre || ''}`))
                   return {
                     abonnements: ab.reduce((t, x) => t + x.montant, 0),
                     entretien: en.reduce((t, x) => t + x.montant, 0),
