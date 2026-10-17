@@ -1003,21 +1003,21 @@ export async function GET(req: NextRequest) {
             ...(stockPropre && stockPropre.ventes > 0 ? [
               {
                 cle: 'margeMarchandises',
-                label: 'Marge brute TTC',
-                titre: 'Calcul : ventes − achats, hors transport',
+                label: 'Marge brute TTC sur ventes de marchandises',
+                titre: 'Calcul : ventes de marchandises − prix d’achat des pièces vendues, hors transport',
                 montant: stockPropre.ventes - stockPropre.cout,
                 comptes: [] as { number: string; label: string; montant: number }[],
               },
               {
                 cle: 'tvaSurMarge',
                 label: 'TVA sur marge',
-                titre: 'Calcul : marge brute TTC × 20/120 (régime de la TVA sur marge)',
+                titre: 'Calcul : marge brute TTC × 20/120 (régime de la TVA sur marge, art. 297 A)',
                 montant: -((stockPropre.ventes - stockPropre.cout) - stockPropre.marge),
                 comptes: [] as { number: string; label: string; montant: number }[],
               },
               {
                 cle: 'margeMarchandisesHt',
-                label: 'Marge brute HT',
+                label: 'Marge brute HT sur ventes de marchandises',
                 titre: 'Calcul : marge brute TTC − TVA sur marge',
                 montant: stockPropre.marge,
                 comptes: [] as { number: string; label: string; montant: number }[],
