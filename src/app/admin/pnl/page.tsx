@@ -12,7 +12,7 @@ import { formatPrix } from '@/lib/formatPrix'
 import { RefreshCw, ChevronRight, AlertTriangle } from 'lucide-react'
 
 type Compte = { number: string; label: string; montant: number }
-type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
+type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean; info?: string }
 type Poste = { cle: string; label: string; titre?: string; sens: 'produit' | 'charge'; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean; info?: string }
 type PosteSimple = { cle: string; label: string; titre?: string; montant: number; comptes: Compte[]; sousLignes?: SousLigne[]; alerte?: boolean; indent?: boolean; bloc?: string; gras?: boolean; info?: string }
 type Mois = {
@@ -450,7 +450,10 @@ function BlocPostes({
                     )}
                     {lignes.map(sl => (
                       <div key={sl.cle} className="flex items-center justify-between pl-8 sm:pl-11 pr-3 sm:pr-4 py-1 sm:py-1.5 text-[11px] sm:text-xs text-gray-600">
-                        <span className="whitespace-nowrap" title={sl.titre}>{sl.label}</span>
+                        <span className="whitespace-nowrap" title={sl.titre}>
+                          {sl.label}
+                          {sl.info && <span className="text-gray-400 ml-2">{sl.info}</span>}
+                        </span>
                         <span className="tabular-nums shrink-0 ml-3">{formatPrix(sl.montant, { decimals: 0 })} €</span>
                       </div>
                     ))}
@@ -557,7 +560,10 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 <td key={m.cle} className="px-2 sm:px-3 py-1.5 text-right align-top">
                   {duMois.map(sl => (
                     <div key={sl.cle} className="flex items-baseline justify-between gap-3 whitespace-nowrap" title={sl.titre}>
-                      <span className="text-gray-500">{sl.label}</span>
+                      <span className="text-gray-500">
+                        {sl.label}
+                        {sl.info && <span className="text-gray-400 ml-1.5">{sl.info}</span>}
+                      </span>
                       <span className="tabular-nums text-gray-700">{formatPrix(sl.montant, { decimals: 0 })} €</span>
                     </div>
                   ))}

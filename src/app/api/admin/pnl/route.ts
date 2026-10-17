@@ -409,7 +409,7 @@ async function ecartParFacture(
 // sa facture (fournisseur + référence) ou, à défaut, par le libellé de
 // l'écriture. On ne rapatrie que les comptes affichés et que les écritures
 // qu'on va montrer : ~1 400 lignes sur un exercice, pas le grand livre entier.
-type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean }
+type SousLigne = { cle: string; label: string; titre?: string; montant: number; mois?: string; horsNR?: boolean; info?: string }
 
 // NR0526-PS → 2026-05, PRI1025TDO4 → 2025-10. Les bordereaux Printemps à deux
 // chiffres (PRI30) ne sont pas des périodes : ils ne matchent pas.
@@ -592,6 +592,12 @@ async function detailParPoste(start: string, end: string) {
   }
   // Ordre alphabétique : on repère tout de suite la chineuse qui manque.
   for (const k of Object.keys(parPoste)) parPoste[k].sort((a, b) => a.label.localeCompare(b.label, 'fr'))
+  // Le taux de chaque facture, pour l'afficher à côté de sa commission.
+  for (const [id, c] of commissionsNR) {
+    const vol = reverseNR.get(id)?.montant ?? 0
+    if (vol > 0) c.info = `${((c.montant / vol) * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
+  }
+
   const trier = (m: Map<number, SousLigne>) => [...m.values()]
     .filter(r => Math.abs(r.montant) >= 1)
     .sort((a, b) => a.label.localeCompare(b.label, 'fr'))
