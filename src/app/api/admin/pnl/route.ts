@@ -95,7 +95,7 @@ const ORDRE_LIGNES = [
   'volumeTotal', 'fraisSquareVolume', 'recuBanque',
   'commissions', 'tvaCommission', 'caMarchandises', 'caTotal',
   'caPrintemps', 'servicesPrintemps', 'caGlobal',
-  'reversements', 'margeChineusesLigne', 'achatsMarchandises', 'coutVendu',
+  'reversements', 'achatsMarchandises', 'coutVendu',
   'margeMarchandises', 'tvaSurMarge', 'margeMarchandisesHt', 'margeGlobale',
 ]
 
@@ -903,16 +903,6 @@ export async function GET(req: NextRequest) {
                   sousLignes: netsFactures,
                 },
                 {
-                  cle: 'margeChineusesLigne',
-                  label: 'Marge NR sur chineuses',
-                  titre: 'Calcul : Commissions perçues ÷ Reversement CA',
-                  montant: 0,
-                  pct: sommeL(volumesFactures) > 0
-                    ? (sommeL(commissionsFactures) / sommeL(volumesFactures)) * 100
-                    : null,
-                  comptes: vide,
-                },
-                {
                   cle: 'commissions',
                   label: 'Commissions perçues NR',
                   titre: 'Source : PENNYLANE — lignes 706101 des factures chineuses',
@@ -1180,7 +1170,6 @@ export async function GET(req: NextRequest) {
                     priVintage: v,
                     priUpcycling: u,
                     reversements: somme(netsFactures),
-                    margeChineusesLigne: 0,
                     commissions: somme(commissionsFactures),
                     tvaCommission: somme(tvaFactures),
                     caMarchandises: somme(marchandisesFactures),
