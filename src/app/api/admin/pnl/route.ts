@@ -93,7 +93,7 @@ const ORDRE_LIGNES = [
   'volumeTotal', 'fraisSquareVolume', 'recuBanque',
   'commissions', 'tvaCommission', 'caMarchandises', 'caTotal',
   'caPrintemps', 'servicesPrintemps', 'caGlobal',
-  'reversements', 'achatsMarchandises', 'coutVendu',
+  'reversements', 'achatsMarchandises', 'coutVendu', 'margeMarchandises', 'margeMarchandisesHt',
 ]
 
 const num = (v: string) => Number(v) || 0
@@ -995,6 +995,22 @@ export async function GET(req: NextRequest) {
               montant: stockPropre.cout,
               comptes: [] as { number: string; label: string; montant: number }[],
             }] : []),
+            ...(stockPropre && stockPropre.ventes > 0 ? [
+              {
+                cle: 'margeMarchandises',
+                label: 'Marge sur marchandises',
+                titre: "Calcul : prix de vente − prix d'achat, TVA comprise",
+                montant: stockPropre.ventes - stockPropre.cout,
+                comptes: [] as { number: string; label: string; montant: number }[],
+              },
+              {
+                cle: 'margeMarchandisesHt',
+                label: 'Marge sur marchandises HT',
+                titre: 'Source : APP NR — marge nette HT, TVA sur marge déduite (art. 297 A)',
+                montant: stockPropre.marge,
+                comptes: [] as { number: string; label: string; montant: number }[],
+              },
+            ] : []),
             {
               cle: 'achatsMarchandises',
               label: 'Achats de marchandises ce mois',
@@ -1069,6 +1085,8 @@ export async function GET(req: NextRequest) {
                       - (reversePrintemps[m.cle] ?? 0),
                     achatsMarchandises: somme(achatsMarchandises),
                     coutVendu: stockPropre?.parMois[m.cle]?.cout ?? 0,
+                    margeMarchandises: (stockPropre?.parMois[m.cle]?.ventes ?? 0) - (stockPropre?.parMois[m.cle]?.cout ?? 0),
+                    margeMarchandisesHt: stockPropre?.parMois[m.cle]?.marge ?? 0,
                   }
                 })()
               : {}),
