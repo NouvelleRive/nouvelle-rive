@@ -525,10 +525,14 @@ async function detailParPoste(start: string, end: string) {
     if (horsNR) {
       if (compteFacture) reversePrintemps[periode] = (reversePrintemps[periode] || 0) + net
     } else if (numero.startsWith('467')) {
+      // Seuls les débits sont du volume : un crédit sur un compte 467, c'est
+      // le virement qui part à la chineuse, pas une vente.
+      const vol = num(l.debit)
+      if (!vol) continue
       const deja = reverseNR.get(idEcriture)
-      if (deja) deja.montant += net
+      if (deja) deja.montant += vol
       else reverseNR.set(idEcriture, {
-        cle: `vol-${idEcriture}`, label: nom, titre: `${l.date} — ${brut}`, montant: net, mois: periode,
+        cle: `vol-${idEcriture}`, label: nom, titre: `${l.date} — ${brut}`, montant: vol, mois: periode,
       })
     } else if (numero.startsWith('706')) {
       const c = num(l.credit) - num(l.debit)
