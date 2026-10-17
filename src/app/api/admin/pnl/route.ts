@@ -676,13 +676,14 @@ export async function GET(req: NextRequest) {
       for (const m of mois) {
         const vendu = square.parMois[m.cle]?.net ?? 0
         const facture = brutDetail.volumes.filter(v => v.mois === m.cle).reduce((s2, v) => s2 + v.montant, 0)
+        const propre = brutDetail.marchandises.filter(v => v.mois === m.cle).reduce((s2, v) => s2 + v.montant, 0)
         const explique = ecarts.filter(e => e.mois === m.cle).reduce((s2, e) => s2 + e.montant, 0)
-        const reste = Math.round((vendu - facture - explique) * 100) / 100
+        const reste = Math.round((vendu - facture - propre - explique) * 100) / 100
         if (Math.abs(reste) < 1) continue
         ecarts.push({
           cle: `nonexp-${m.cle}`,
           label: 'Non expliqué',
-          titre: `Source : SQUARE ${vendu.toFixed(2)} € − PENNYLANE ${facture.toFixed(2)} €, dont ${explique.toFixed(2)} € de factures identifiées`,
+          titre: `Source : SQUARE ${vendu.toFixed(2)} € − factures ${facture.toFixed(2)} € − marchandises ${propre.toFixed(2)} €, dont ${explique.toFixed(2)} € identifiés`,
           montant: reste,
           mois: m.cle,
         })
@@ -813,18 +814,6 @@ export async function GET(req: NextRequest) {
               indent: true,
             },
             {
-              cle: 'ecart',
-              label: 'Écart non facturé',
-              titre: 'Source : SQUARE moins PENNYLANE — encaissé sans facture chineuse',
-              // Le total, c'est la somme des lignes : une facture de rattrapage
-              // qui couvre plusieurs mois ne doit pas créer un écart négatif.
-              montant: square.total - sommeL(volumesFactures),
-              comptes: [],
-              sousLignes: ecarts,
-              indent: true,
-              alerte: true,
-            },
-            {
               cle: 'volumeMarchandises',
               label: 'dont ventes de marchandises (NR + NR achats)',
               titre: 'Source : PENNYLANE — écritures Ventes stock maison, compte 707',
@@ -847,6 +836,18 @@ export async function GET(req: NextRequest) {
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
               gras: true,
+            },
+            {
+              cle: 'ecart',
+              label: 'Écart non facturé',
+              titre: 'Source : SQUARE moins PENNYLANE — encaissé sans facture chineuse',
+              // Le total, c'est la somme des lignes : une facture de rattrapage
+              // qui couvre plusieurs mois ne doit pas créer un écart négatif.
+              montant: square.total - sommeL(volumesFactures) - sommeL(marchandisesFactures),
+              comptes: [],
+              sousLignes: ecarts,
+              indent: true,
+              alerte: true,
             },
             ...(frais && square.total > 0 ? [{
               cle: 'fraisSquareVolume',
@@ -930,7 +931,7 @@ export async function GET(req: NextRequest) {
                     volume: square.parMois[m.cle]?.net ?? 0,
                     volumeFacture: nr,
                     volumeMarchandises: somme(marchandisesFactures),
-                    ecart: (square.parMois[m.cle]?.net ?? 0) - nr,
+                    ecart: (square.parMois[m.cle]?.net ?? 0) - nr - somme(marchandisesFactures),
                     fraisSquare: frais?.parMois[m.cle] ?? 0,
                     fraisSquareVolume: -(frais?.parMois[m.cle] ?? 0),
                     recuBanque: recu?.parMois[m.cle] ?? 0,
