@@ -296,7 +296,7 @@ export default function PnlPage() {
               {data.pnl.margeChineuses != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA"
+                  title="Calcul : Commissions perçues ÷ Reversement CA, deux lignes Pennylane"
                 >
                   <span className="text-xs sm:text-sm font-semibold">Marge NR sur chineuses</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
@@ -307,7 +307,7 @@ export default function PnlPage() {
               {data.pnl.margeAchat != null && (
                 <div
                   className="flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40"
-                  title="Source : PENNYLANE — (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises"
+                  title="Calcul : (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises"
                 >
                   <span className="text-xs sm:text-sm font-medium">Marge NR sur l'achat</span>
                   <span className="text-xs sm:text-sm font-semibold tabular-nums">
@@ -325,11 +325,11 @@ export default function PnlPage() {
               </div>
               {data.resultatPrintemps != null && (
                 <>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Source : PENNYLANE — encaissements Printemps moins les reversements à ses chineuses">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Calcul : encaissements Printemps − reversements à ses chineuses">
                     <span className="pl-4 text-gray-600">dont Printemps</span>
                     <span className="tabular-nums text-gray-700">{formatPrix(data.resultatPrintemps, { decimals: 0 })} €</span>
                   </div>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Source : PENNYLANE — le résultat moins celui du Printemps">
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Calcul : le résultat moins celui du Printemps">
                     <span className="pl-4 text-gray-600">dont NR</span>
                     <span className="tabular-nums text-gray-700">{formatPrix(data.pnl.resultat - data.resultatPrintemps, { decimals: 0 })} €</span>
                   </div>
@@ -363,7 +363,7 @@ function MargeParChineuse({ lignes }: { lignes: Data['parChineuse'] }) {
       <button
         onClick={() => setOuvert(o => !o)}
         className="w-full flex items-center justify-between px-3 sm:px-4 py-1.5 sm:py-2 border-b bg-blue-50/40 hover:bg-blue-50 text-left"
-        title="Source : APP NR, par trigramme de SKU"
+        title="Calcul : commission ÷ volume, par trigramme de SKU (APP NR)"
       >
         <span className="text-xs sm:text-sm font-medium">
           <span className="inline-block w-3 text-gray-400">{ouvert ? '−' : '+'}</span>
@@ -620,7 +620,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 )
               })}
               <tr className="border-t">
-                <td className={tete} title="Source : PENNYLANE — Commissions perçues ÷ Reversement CA" style={{fontWeight:600}}>Marge NR sur chineuses</td>
+                <td className={tete} title="Calcul : Commissions perçues ÷ Reversement CA, deux lignes Pennylane" style={{fontWeight:600}}>Marge NR sur chineuses</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.margeChineuses == null ? '—' : `${m.margeChineuses.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
@@ -631,7 +631,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
                 </td>
               </tr>
               <tr className="border-t">
-                <td className={tete} title="Source : PENNYLANE — (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises" style={{fontWeight:600}}>Marge NR sur l&apos;achat</td>
+                <td className={tete} title="Calcul : (Ventes de marchandises − Achats de marchandises) ÷ Ventes de marchandises" style={{fontWeight:600}}>Marge NR sur l&apos;achat</td>
                 {mois.map(m => (
                   <td key={m.cle} className={cel}>
                     {m.margeAchat == null ? '—' : `${m.margeAchat.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
@@ -662,14 +662,14 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
           <Ligne label="Résultat" valeurs={mois.map(m => m.resultat)} total={data.pnl.resultat} gras couleur />
           <Ligne
             label="dont Printemps"
-            titre="Source : PENNYLANE — encaissements Printemps moins les reversements à ses chineuses"
+            titre="Calcul : encaissements Printemps − reversements à ses chineuses"
             valeurs={mois.map(m => m.resultatPrintemps ?? 0)}
             total={data.resultatPrintemps ?? 0}
             couleur
           />
           <Ligne
             label="dont NR"
-            titre="Source : PENNYLANE — le résultat moins celui du Printemps"
+            titre="Calcul : le résultat moins celui du Printemps"
             valeurs={mois.map(m => m.resultat - (m.resultatPrintemps ?? 0))}
             total={data.pnl.resultat - (data.resultatPrintemps ?? 0)}
             couleur

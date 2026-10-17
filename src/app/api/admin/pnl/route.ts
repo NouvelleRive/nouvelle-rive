@@ -789,7 +789,7 @@ export async function GET(req: NextRequest) {
                 {
                   ...p,
                   label: 'Reversements chineuses',
-                  titre: 'Source : PENNYLANE — Reversement CA − Commissions perçues − TVA',
+                  titre: 'Calcul : Reversement CA − Commissions perçues − TVA',
                   montant: sommeL(netsFactures),
                   comptes: vide,
                   sousLignes: netsFactures,
@@ -867,7 +867,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'volumeTotal',
               label: "Volume d'affaires total",
-              titre: "Source : SQUARE (NR) + PENNYLANE (PRI)",
+              titre: "Calcul : volume d'affaires NR + Printemps",
               montant: square.total + (printemps?.montant ?? 0),
               comptes: [],
               gras: true,
@@ -875,7 +875,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'ecart',
               label: 'Écart non facturé',
-              titre: 'Source : SQUARE moins PENNYLANE — encaissé sans facture chineuse',
+              titre: 'Calcul : SQUARE − factures chineuses − ventes de marchandises',
               // Le total, c'est la somme des lignes : une facture de rattrapage
               // qui couvre plusieurs mois ne doit pas créer un écart négatif.
               montant: square.total - sommeL(volumesFactures) - sommeL(marchandisesFactures),
@@ -913,7 +913,7 @@ export async function GET(req: NextRequest) {
             ...(printemps ? [{
               cle: 'caPrintemps',
               label: "Chiffre d'affaires Printemps",
-              titre: 'Source : encaissements Printemps − reversements à ses chineuses',
+              titre: 'Calcul : encaissements Printemps − reversements à ses chineuses',
               montant: printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
               comptes: [] as { number: string; label: string; montant: number }[],
             }] : []),
@@ -928,7 +928,7 @@ export async function GET(req: NextRequest) {
             {
               cle: 'caTotal',
               label: "Chiffre d'affaires NR",
-              titre: 'Source : commissions perçues + ventes de marchandises',
+              titre: 'Calcul : commissions perçues + ventes de marchandises',
               montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures),
               comptes: [] as { number: string; label: string; montant: number }[],
               gras: true,
@@ -936,7 +936,7 @@ export async function GET(req: NextRequest) {
             ...(printemps ? [{
               cle: 'caGlobal',
               label: "Chiffre d'affaires total",
-              titre: "Source : chiffre d'affaires NR + Printemps",
+              titre: "Calcul : chiffre d'affaires NR + Printemps + gestion du corner",
               montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures) + sommeL(servicesPrintemps)
                 + printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
               comptes: [] as { number: string; label: string; montant: number }[],
