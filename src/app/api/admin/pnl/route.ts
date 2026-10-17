@@ -48,7 +48,8 @@ const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'c
 
   { cle: 'loyer', label: 'Loyer et charges locatives', sens: 'charge', prefixes: ['6132', '6135'] },
   { cle: 'energie', label: 'Énergie', sens: 'charge', prefixes: ['6061'] },
-  { cle: 'deplacements', label: 'Déplacements', sens: 'charge', prefixes: ['6251', '6242', '625'] },
+  { cle: 'deplacements', label: 'Déplacements', sens: 'charge', prefixes: ['6251', '625'] },
+  { cle: 'transportVentes', label: 'Transport sur ventes', sens: 'charge', prefixes: ['6242'] },
   { cle: 'marchandises', label: 'Achats de marchandises', sens: 'charge', prefixes: ['60'] },
   { cle: 'externes', label: 'Services extérieurs', sens: 'charge', prefixes: ['61', '62'] },
   { cle: 'impots', label: 'Impôts & taxes', sens: 'charge', prefixes: ['63'] },
@@ -96,7 +97,7 @@ const ORDRE_LIGNES = [
   'volumeTotal', 'fraisSquareVolume', 'recuBanque',
   'commissions', 'tvaCommission', 'caMarchandises', 'caTotal',
   'caPrintemps', 'servicesPrintemps', 'caGlobal',
-  'reversements', 'achatsMarchandises', 'coutVendu',
+  'reversements', 'transportVentes', 'achatsMarchandises', 'coutVendu',
   'margeMarchandises', 'tvaSurMarge', 'margeMarchandisesHt', 'margeGlobale',
 ]
 
@@ -853,7 +854,7 @@ export async function GET(req: NextRequest) {
         const sommeS = (l: SousLigne[]) => l.reduce((t, x) => t + x.montant, 0)
         const a = {
           ...brut,
-          postes: brut.postes.flatMap(p =>
+          postes: brut.postes.filter(p => p.cle !== 'transportVentes').flatMap(p =>
             p.cle === 'loyer' && loyerPri.length > 0
               ? [
                   { ...p, label: 'Loyer NR', montant: sommeS(loyerNr), comptes: [], sousLignes: loyerNr },
@@ -1099,6 +1100,12 @@ export async function GET(req: NextRequest) {
               comptes: [] as { number: string; label: string; montant: number }[],
               gras: true,
             }] : []),
+            ...(brut.postes.find(p => p.cle === 'transportVentes')
+              ? [{
+                  ...brut.postes.find(p => p.cle === 'transportVentes')!,
+                  sousLignes: detail['transportVentes'] ?? [],
+                }]
+              : []),
             {
               cle: 'achatsMarchandises',
               label: 'Achats de marchandises ce mois',
