@@ -93,7 +93,7 @@ const ORDRE_LIGNES = [
   'volumeTotal', 'fraisSquareVolume', 'recuBanque',
   'commissions', 'tvaCommission', 'caMarchandises', 'caTotal',
   'caPrintemps', 'servicesPrintemps', 'caGlobal',
-  'reversements', 'achatsMarchandises',
+  'reversements', 'achatsMarchandises', 'coutVendu',
 ]
 
 const num = (v: string) => Number(v) || 0
@@ -306,22 +306,26 @@ async function margeStockPropre(start: string, end: string) {
 
   // On réutilise le calcul de marge de l'app (TVA sur marge, art. 297 A),
   // pas une formule refaite ici.
-  const parMois: Record<string, { ventes: number; marge: number }> = {}
+  const parMois: Record<string, { ventes: number; marge: number; cout: number }> = {}
   let ventes = 0
   let marge = 0
+  let cout = 0
   for (const d of snap.docs) {
     const v = d.data()
     const cle = v.dateVente.toDate().toISOString().slice(0, 7)
     const pv = Number(v.prixVenteReel || 0)
     const m = calcMargeNette(pv, achat.get(v.produitId))
     if (m === null) continue
-    if (!parMois[cle]) parMois[cle] = { ventes: 0, marge: 0 }
+    const pa = achat.get(v.produitId) || 0
+    if (!parMois[cle]) parMois[cle] = { ventes: 0, marge: 0, cout: 0 }
     parMois[cle].ventes += pv
     parMois[cle].marge += m
+    parMois[cle].cout += pa
     ventes += pv
     marge += m
+    cout += pa
   }
-  return { parMois, ventes, marge }
+  return { parMois, ventes, marge, cout }
 }
 
 // Volume d'affaires par chineuse, lu sur nos ventes Square : le SKU porte le
@@ -984,9 +988,16 @@ export async function GET(req: NextRequest) {
               comptes: [] as { number: string; label: string; montant: number }[],
               gras: true,
             }] : []),
+            ...(stockPropre && stockPropre.cout > 0 ? [{
+              cle: 'coutVendu',
+              label: 'Coût des marchandises vendues ce mois',
+              titre: "Source : APP NR — prix d'achat des pièces vendues dans le mois",
+              montant: stockPropre.cout,
+              comptes: [] as { number: string; label: string; montant: number }[],
+            }] : []),
             {
               cle: 'achatsMarchandises',
-              label: 'Achats de marchandises',
+              label: 'Achats de marchandises ce mois',
               titre: 'Source : PENNYLANE — compte 607',
               montant: sommeL(achatsMarchandises),
               comptes: [],
@@ -1057,6 +1068,7 @@ export async function GET(req: NextRequest) {
                       + ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
                       - (reversePrintemps[m.cle] ?? 0),
                     achatsMarchandises: somme(achatsMarchandises),
+                    coutVendu: stockPropre?.parMois[m.cle]?.cout ?? 0,
                   }
                 })()
               : {}),
