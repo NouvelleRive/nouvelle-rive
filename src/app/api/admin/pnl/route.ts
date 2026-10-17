@@ -93,7 +93,8 @@ const ORDRE_LIGNES = [
   'volumeTotal', 'fraisSquareVolume', 'recuBanque',
   'commissions', 'tvaCommission', 'caMarchandises', 'caTotal',
   'caPrintemps', 'servicesPrintemps', 'caGlobal',
-  'reversements', 'achatsMarchandises', 'coutVendu', 'margeMarchandises', 'margeMarchandisesHt',
+  'reversements', 'achatsMarchandises', 'coutVendu',
+  'margeMarchandises', 'tvaSurMarge', 'margeMarchandisesHt',
 ]
 
 const num = (v: string) => Number(v) || 0
@@ -998,17 +999,25 @@ export async function GET(req: NextRequest) {
             ...(stockPropre && stockPropre.ventes > 0 ? [
               {
                 cle: 'margeMarchandises',
-                label: 'Marge sur marchandises',
-                titre: "Calcul : prix de vente − prix d'achat, TVA comprise",
+                label: 'Marge brute TTC',
+                titre: 'Calcul : ventes − achats, hors transport',
                 montant: stockPropre.ventes - stockPropre.cout,
                 comptes: [] as { number: string; label: string; montant: number }[],
               },
               {
+                cle: 'tvaSurMarge',
+                label: 'TVA sur marge',
+                titre: 'Calcul : marge brute TTC × 20/120 (régime de la TVA sur marge)',
+                montant: -((stockPropre.ventes - stockPropre.cout) - stockPropre.marge),
+                comptes: [] as { number: string; label: string; montant: number }[],
+              },
+              {
                 cle: 'margeMarchandisesHt',
-                label: 'Marge sur marchandises HT',
-                titre: 'Source : APP NR — marge nette HT, TVA sur marge déduite (art. 297 A)',
+                label: 'Marge brute HT',
+                titre: 'Calcul : marge brute TTC − TVA sur marge',
                 montant: stockPropre.marge,
                 comptes: [] as { number: string; label: string; montant: number }[],
+                gras: true,
               },
             ] : []),
             {
@@ -1087,6 +1096,8 @@ export async function GET(req: NextRequest) {
                     coutVendu: stockPropre?.parMois[m.cle]?.cout ?? 0,
                     margeMarchandises: (stockPropre?.parMois[m.cle]?.ventes ?? 0) - (stockPropre?.parMois[m.cle]?.cout ?? 0),
                     margeMarchandisesHt: stockPropre?.parMois[m.cle]?.marge ?? 0,
+                    tvaSurMarge: -(((stockPropre?.parMois[m.cle]?.ventes ?? 0) - (stockPropre?.parMois[m.cle]?.cout ?? 0))
+                      - (stockPropre?.parMois[m.cle]?.marge ?? 0)),
                   }
                 })()
               : {}),
