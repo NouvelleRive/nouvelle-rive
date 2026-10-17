@@ -883,7 +883,7 @@ export async function GET(req: NextRequest) {
             },
             {
               cle: 'caTotal',
-              label: "Chiffre d'affaires",
+              label: "Chiffre d'affaires NR",
               titre: 'Source : commissions perçues + ventes de marchandises',
               montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures),
               comptes: [] as { number: string; label: string; montant: number }[],
