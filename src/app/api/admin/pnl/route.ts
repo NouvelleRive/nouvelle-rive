@@ -832,6 +832,15 @@ export async function GET(req: NextRequest) {
         // Le loyer du corner Printemps (Ihsane Naanani) se lit à part du bail
         // de la boutique.
         const estPrintemps = (l: SousLigne) => /IHSANE|NAANANI/i.test(l.label) || /IHSANE|NAANANI/i.test(l.titre || '')
+
+        // Les abonnements récurrents, sortis des services extérieurs.
+        const estAbonnement = (l: SousLigne) => {
+          const t = `${l.label} ${l.titre || ''}`
+          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|SHINE|BUNNY|VERCEL|SFR/i.test(t)
+        }
+        const externes = detail['externes'] ?? []
+        const abonnements = externes.filter(estAbonnement)
+        const autresExternes = externes.filter(l => !estAbonnement(l))
         const loyers = loyersRanges
         const loyerPri = loyers.filter(estPrintemps)
         const loyerNr = loyers.filter(l => !estPrintemps(l))
@@ -844,7 +853,12 @@ export async function GET(req: NextRequest) {
                   { ...p, label: 'Loyer NR', montant: sommeS(loyerNr), comptes: [], sousLignes: loyerNr },
                   { ...p, cle: 'loyerPri', label: 'Loyer Printemps', montant: sommeS(loyerPri), comptes: [], sousLignes: loyerPri },
                 ]
-              : [avecDetail(p)],
+              : p.cle === 'externes' && abonnements.length > 0
+                ? [
+                    { ...p, cle: 'abonnements', label: 'Abonnements', montant: sommeS(abonnements), comptes: [], sousLignes: abonnements },
+                    { ...p, montant: sommeS(autresExternes), comptes: [], sousLignes: autresExternes },
+                  ]
+                : [avecDetail(p)],
           ),
           depotVente: brut.depotVente.map(avecDetail),
         }
@@ -1135,6 +1149,14 @@ export async function GET(req: NextRequest) {
               return {
                 loyer: nr.reduce((t, x) => t + x.montant, 0),
                 loyerPri: pri.reduce((t, x) => t + x.montant, 0),
+                ...(() => {
+                  const e = (detail['externes'] ?? []).filter(x => x.mois === m.cle)
+                  const ab = e.filter(x => /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|SHINE|BUNNY|VERCEL|SFR/i.test(`${x.label} ${x.titre || ''}`))
+                  return {
+                    abonnements: ab.reduce((t, x) => t + x.montant, 0),
+                    externes: e.filter(x => !ab.includes(x)).reduce((t, x) => t + x.montant, 0),
+                  }
+                })(),
               }
             })(),
             ...(square
