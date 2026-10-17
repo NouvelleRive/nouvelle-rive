@@ -72,7 +72,7 @@ const POSTES_DEPOT_VENTE = [
   },
   {
     cle: 'tvaCommission',
-    label: 'TVA collectée en plus de la commission',
+    label: 'TVA collectée NR, en plus de la commission',
     titre: 'Source : PENNYLANE — compte 44574. Supportée par la chineuse, reversée à l’État par NR',
     prefixes: ['44574'],
     sens: 'credit' as const,
@@ -767,7 +767,7 @@ export async function GET(req: NextRequest) {
                 },
                 {
                   cle: 'commissions',
-                  label: 'Commissions perçues',
+                  label: 'Commissions perçues NR',
                   titre: 'Source : PENNYLANE — lignes 706101 des factures chineuses',
                   montant: sommeL(commissionsFactures),
                   comptes: vide,
@@ -875,12 +875,19 @@ export async function GET(req: NextRequest) {
             ...reste,
             {
               cle: 'caMarchandises',
-              label: 'Ventes de marchandises',
+              label: 'Ventes de marchandises NR',
               titre: 'Source : PENNYLANE — écritures Ventes stock maison, compte 707',
               montant: sommeL(marchandisesFactures),
               comptes: [] as { number: string; label: string; montant: number }[],
               sousLignes: marchandisesFactures,
             },
+            ...(printemps ? [{
+              cle: 'caPrintemps',
+              label: "Chiffre d'affaires Printemps",
+              titre: 'Source : encaissements Printemps − reversements à ses chineuses',
+              montant: printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
+              comptes: [] as { number: string; label: string; montant: number }[],
+            }] : []),
             {
               cle: 'caTotal',
               label: "Chiffre d'affaires NR",
@@ -889,6 +896,15 @@ export async function GET(req: NextRequest) {
               comptes: [] as { number: string; label: string; montant: number }[],
               gras: true,
             },
+            ...(printemps ? [{
+              cle: 'caGlobal',
+              label: "Chiffre d'affaires total",
+              titre: "Source : chiffre d'affaires NR + Printemps",
+              montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures)
+                + printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
+              comptes: [] as { number: string; label: string; montant: number }[],
+              gras: true,
+            }] : []),
             {
               cle: 'achatsMarchandises',
               label: 'Achats de marchandises',
@@ -904,7 +920,7 @@ export async function GET(req: NextRequest) {
                    'volumePrintemps', 'priVintage', 'priUpcycling',
                    'volumeTotal', 'recuBanque', 'fraisSquareVolume'].includes(p.cle)
               ? "Volume d'affaires"
-              : ['commissions', 'tvaCommission', 'caMarchandises', 'caTotal'].includes(p.cle)
+              : ['commissions', 'tvaCommission', 'caMarchandises', 'caTotal', 'caPrintemps', 'caGlobal'].includes(p.cle)
                 ? "Chiffre d'affaires"
                 : 'Charges variables',
           }))
@@ -950,6 +966,11 @@ export async function GET(req: NextRequest) {
                     tvaCommission: somme(tvaFactures),
                     caMarchandises: somme(marchandisesFactures),
                     caTotal: somme(commissionsFactures) + somme(marchandisesFactures),
+                    caPrintemps: ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
+                      - (reversePrintemps[m.cle] ?? 0),
+                    caGlobal: somme(commissionsFactures) + somme(marchandisesFactures)
+                      + ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
+                      - (reversePrintemps[m.cle] ?? 0),
                     achatsMarchandises: somme(achatsMarchandises),
                   }
                 })()
