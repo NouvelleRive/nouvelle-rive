@@ -46,6 +46,7 @@ const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'c
   { cle: 'produitsFin', label: 'Produits financiers', sens: 'produit', prefixes: ['76'] },
   { cle: 'produitsExc', label: 'Produits exceptionnels', sens: 'produit', prefixes: ['77'] },
 
+  { cle: 'loyer', label: 'Loyer et charges locatives', sens: 'charge', prefixes: ['6132', '6135'] },
   { cle: 'marchandises', label: 'Achats de marchandises', sens: 'charge', prefixes: ['60'] },
   { cle: 'externes', label: 'Services extérieurs', sens: 'charge', prefixes: ['61', '62'] },
   { cle: 'impots', label: 'Impôts & taxes', sens: 'charge', prefixes: ['63'] },
