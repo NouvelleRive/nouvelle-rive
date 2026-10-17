@@ -837,11 +837,15 @@ export async function GET(req: NextRequest) {
         // Les abonnements récurrents, sortis des services extérieurs.
         const estAbonnement = (l: SousLigne) => {
           const t = `${l.label} ${l.titre || ''}`
-          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(t)
+          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(t)
         }
+        // Pressing et laverie : de l'entretien, pas un service général.
+        const estEntretien = (l: SousLigne) =>
+          /5 ?A ?SEC|5ASEC|LAVERIE|PRESSING|BLANCHISSERIE/i.test(`${l.label} ${l.titre || ''}`)
         const externes = detail['externes'] ?? []
-        const abonnements = externes.filter(estAbonnement)
-        const autresExternes = externes.filter(l => !estAbonnement(l))
+        const entretien = externes.filter(estEntretien)
+        const abonnements = externes.filter(l => !estEntretien(l) && estAbonnement(l))
+        const autresExternes = externes.filter(l => !estEntretien(l) && !estAbonnement(l))
         const loyers = loyersRanges
         const loyerPri = loyers.filter(estPrintemps)
         const loyerNr = loyers.filter(l => !estPrintemps(l))
@@ -857,6 +861,9 @@ export async function GET(req: NextRequest) {
               : p.cle === 'externes' && abonnements.length > 0
                 ? [
                     { ...p, cle: 'abonnements', label: 'Abonnements', montant: sommeS(abonnements), comptes: [], sousLignes: abonnements },
+                    ...(entretien.length > 0
+                      ? [{ ...p, cle: 'entretien', label: 'Entretien', montant: sommeS(entretien), comptes: [], sousLignes: entretien }]
+                      : []),
                     { ...p, montant: sommeS(autresExternes), comptes: [], sousLignes: autresExternes },
                   ]
                 : [avecDetail(p)],
@@ -1142,10 +1149,12 @@ export async function GET(req: NextRequest) {
                 loyerPri: pri.reduce((t, x) => t + x.montant, 0),
                 ...(() => {
                   const e = (detail['externes'] ?? []).filter(x => x.mois === m.cle)
-                  const ab = e.filter(x => /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(`${x.label} ${x.titre || ''}`))
+                  const en = e.filter(x => /5 ?A ?SEC|5ASEC|LAVERIE|PRESSING|BLANCHISSERIE/i.test(`${x.label} ${x.titre || ''}`))
+                  const ab = e.filter(x => !en.includes(x) && /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(`${x.label} ${x.titre || ''}`))
                   return {
                     abonnements: ab.reduce((t, x) => t + x.montant, 0),
-                    externes: e.filter(x => !ab.includes(x)).reduce((t, x) => t + x.montant, 0),
+                    entretien: en.reduce((t, x) => t + x.montant, 0),
+                    externes: e.filter(x => !ab.includes(x) && !en.includes(x)).reduce((t, x) => t + x.montant, 0),
                   }
                 })(),
               }
