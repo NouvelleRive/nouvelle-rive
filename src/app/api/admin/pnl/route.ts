@@ -510,8 +510,14 @@ async function detailParPoste(start: string, end: string) {
     // « 2025 / 13 » : la numérotation de TÊTE D'ORANGE pour son stand. Les huit
     // factures de cette série sont payées par un virement PRImmaaTDO.
     const serieAnnuelle = /^\d{4}\s*\/\s*\d+$/.test(dernier)
+    // PRI suivi d'une période (PRI0725BLI1) ou d'un trigramme puis d'une
+    // période (PRITDO0726). Surtout pas « PRISTINI », qui est une chineuse
+    // de la boutique dont le trigramme commence par PRI.
     const horsNR = !refNR && (
-      serieAnnuelle || /\bPRI\d{4}/i.test(brut) || /\bPRI[A-Z]{3}/i.test(brut) || /avance/i.test(brut)
+      serieAnnuelle
+      || /\bPRI\d{4}/i.test(brut)
+      || /\bPRI[A-Z]{2,5}\d{2,4}/i.test(brut)
+      || /avance/i.test(brut)
     )
     const periode = periodeDeLaReference(brut)
       || periodeMoisAnnee(dernier)
