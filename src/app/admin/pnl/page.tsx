@@ -304,7 +304,6 @@ export default function PnlPage() {
                   </span>
                 </div>
               )}
-              <BlocPostes titre="Produits" postes={produits} total={data.pnl.produits} ouverts={ouverts} setOuverts={setOuverts} />
               <BlocPostes titre="Charges fixes" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
               <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-t">
                 <span className="font-semibold">Résultat</span>
@@ -621,12 +620,6 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
               </tr>
             </>
           )}
-
-          <tr className="bg-gray-50/70">
-            <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Produits</td>
-          </tr>
-          {produits.map(p => <LignePoste key={p.cle} p={p} />)}
-          <Ligne label="Total produits" valeurs={mois.map(m => m.produits)} total={data.pnl.produits} gras />
 
           <tr className="bg-gray-50/70">
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Charges fixes</td>
