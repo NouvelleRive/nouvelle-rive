@@ -41,7 +41,7 @@ function ensureFonts() {
 // Compose une story 1080×1920 : photo carrée en haut, fond blanc dessous,
 // « NEW IN FAV » + infos boutique. Upload sur Bunny → renvoie l'URL publique
 // (l'API STORIES exige une image_url 9:16 accessible publiquement). Gratuit.
-async function buildStoryImage(imageUrl: string): Promise<{ url: string | null; reason?: string }> {
+async function buildStoryImage(imageUrl: string, titre: string): Promise<{ url: string | null; reason?: string }> {
   try {
     ensureFonts()
     const res = await fetch(imageUrl)
@@ -54,16 +54,21 @@ async function buildStoryImage(imageUrl: string): Promise<{ url: string | null; 
       .toBuffer()
 
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Titre de la pièce (marque · nom) juste sous « NEW IN FAV ». Tout le reste
+    // du texte est descendu d'un cran en taille pour lui laisser la place.
+    const titreCourt = titre.length > 40 ? `${titre.slice(0, 39).trimEnd()}…` : titre
     const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
       <style>
-        .title { font-family: 'DejaVu Sans'; font-weight: 700; font-size: 130px; letter-spacing: 6px; fill: #111; }
-        .sub   { font-family: 'DejaVu Sans'; font-weight: 400; font-size: 44px; fill: #222; }
-        .addr  { font-family: 'DejaVu Sans'; font-weight: 400; font-size: 38px; fill: #666; letter-spacing: 1px; }
+        .title { font-family: 'DejaVu Sans'; font-weight: 700; font-size: 100px; letter-spacing: 5px; fill: #111; }
+        .piece { font-family: 'DejaVu Sans'; font-weight: 400; font-size: 46px; letter-spacing: 1px; fill: #111; }
+        .sub   { font-family: 'DejaVu Sans'; font-weight: 400; font-size: 36px; fill: #222; }
+        .addr  { font-family: 'DejaVu Sans'; font-weight: 400; font-size: 31px; fill: #666; letter-spacing: 1px; }
       </style>
-      <text x="540" y="1340" text-anchor="middle" class="title">NEW IN FAV</text>
-      <text x="540" y="1470" text-anchor="middle" class="sub">available online and in store</text>
-      <text x="540" y="1545" text-anchor="middle" class="sub">www.nouvellerive.eu</text>
-      <text x="540" y="1615" text-anchor="middle" class="addr">${esc('8 rue des Écouffes · Paris · Le Marais')}</text>
+      <text x="540" y="1300" text-anchor="middle" class="title">NEW IN FAV</text>
+      ${titreCourt ? `<text x="540" y="1395" text-anchor="middle" class="piece">${esc(titreCourt)}</text>` : ''}
+      <text x="540" y="1500" text-anchor="middle" class="sub">available online and in store</text>
+      <text x="540" y="1562" text-anchor="middle" class="sub">www.nouvellerive.eu</text>
+      <text x="540" y="1625" text-anchor="middle" class="addr">${esc('8 rue des Écouffes · Paris · Le Marais')}</text>
     </svg>`
 
     const composed = await sharp({
@@ -119,7 +124,10 @@ export async function POST(req: NextRequest) {
 
     // 0) Composer l'image story 9:16 (photo + « NEW IN FAV » + infos boutique).
     // Si la compo échoue, on retombe sur la photo brute (mieux que rien).
-    const built = await buildStoryImage(imageUrl)
+    // Titre = marque · nom (le nom porte parfois le préfixe « SKU - », on l'enlève)
+    const nomPropre = String(p.nom || '').replace(`${p.sku || ''} - `, '').trim()
+    const titre = [p.marque, nomPropre].filter(Boolean).join(' · ')
+    const built = await buildStoryImage(imageUrl, titre)
     const storyUrl = built.url || imageUrl
     const composed = !!built.url
 
