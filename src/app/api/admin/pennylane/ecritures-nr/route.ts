@@ -14,12 +14,15 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
+import { getLedgerAccounts, getLignesDeComptes } from '@/lib/pennylane'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const BASE = 'https://app.pennylane.com/api/external/v2'
 const JOURNAL_OD = 7154078
 const COMPTE_TRANSIT = 11652336320512   // 511301 ENCAISSEMENTS SQUARE
 const COMPTE_VENTES = 16755240902656    // 707 Ventes de marchandises
+const COMPTE_STOCK = 1233901388         // 370 Stocks de marchandises
+const COMPTE_VARIATION = 1233901803     // 6037 Variation des stocks de marchandises
 
 const LIBELLES: { trigramme: string; nom: string }[] = [
   { trigramme: 'NR', nom: 'NR' },
@@ -102,6 +105,68 @@ export async function POST(req: NextRequest) {
       })
       resultats.push({ nom, montant, etat: res.ok ? 'créée' : `erreur ${res.status} ${(await res.text()).slice(0, 120)}` })
     }
+
+    // Le stock : les achats du mois y entrent, le prix d'achat des pièces
+    // vendues en sort. Sans ça, une pièce achetée en janvier et vendue en mars
+    // plombe janvier et gonfle mars.
+    const passer = async (label: string, debit: number, credit: number, montant: number) => {
+      if (montant <= 0) return 'rien à passer'
+      if (labelsExistants.includes(label)) return 'déjà passée'
+      const res = await penny('/ledger_entries', {
+        method: 'POST',
+        body: JSON.stringify({
+          date: dateEcriture,
+          label,
+          journal_id: JOURNAL_OD,
+          ledger_entry_lines: [
+            { ledger_account_id: debit, debit: montant.toFixed(2), credit: '0.00' },
+            { ledger_account_id: credit, debit: '0.00', credit: montant.toFixed(2) },
+          ],
+        }),
+      })
+      return res.ok ? 'créée' : `erreur ${res.status}`
+    }
+
+    // Les achats du mois, lus sur le compte 607.
+    const comptes607 = (await getLedgerAccounts()).filter(c => c.number.startsWith('607'))
+    const lignes607 = comptes607.length
+      ? await getLignesDeComptes(comptes607.map(c => c.id), `${an}-${m[1]}-01`, dateEcriture)
+      : []
+    const achats = Math.round(
+      lignes607.reduce((s2, l) => s2 + (Number(l.debit) || 0) - (Number(l.credit) || 0), 0) * 100,
+    ) / 100
+
+    // Le prix d'achat des pièces vendues dans le mois.
+    const ventesPropres = await adminDb.collection('ventes')
+      .where('trigramme', 'in', ['NR', 'ACH'])
+      .where('dateVente', '>=', Timestamp.fromDate(debut))
+      .where('dateVente', '<=', Timestamp.fromDate(fin))
+      .get()
+      .catch(() => null)
+    let coutVendu = 0
+    if (ventesPropres) {
+      const ids = [...new Set(ventesPropres.docs.map(d => d.data().produitId as string).filter(Boolean))]
+      for (let i = 0; i < ids.length; i += 300) {
+        const refs = ids.slice(i, i + 300).map(id => adminDb.collection('produits').doc(id))
+        for (const d of await adminDb.getAll(...refs)) {
+          if (!d.exists) continue
+          const n = ventesPropres.docs.filter(v => v.data().produitId === d.id).length
+          coutVendu += Number(d.data()?.prixAchat || 0) * n
+        }
+      }
+      coutVendu = Math.round(coutVendu * 100) / 100
+    }
+
+    resultats.push({
+      nom: 'Entrée en stock des achats',
+      montant: achats,
+      etat: await passer(`Entrée en stock des achats - ${libelleMois}`, COMPTE_STOCK, COMPTE_VARIATION, achats),
+    })
+    resultats.push({
+      nom: 'Coût des marchandises vendues',
+      montant: coutVendu,
+      etat: await passer(`Coût des marchandises vendues - ${libelleMois}`, COMPTE_VARIATION, COMPTE_STOCK, coutVendu),
+    })
 
     return NextResponse.json({ success: true, mois: libelleMois, date: dateEcriture, resultats })
   } catch (e: any) {
