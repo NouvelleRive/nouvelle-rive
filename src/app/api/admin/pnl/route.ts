@@ -565,6 +565,11 @@ async function detailParPoste(start: string, end: string) {
     // « Facture MAKI CORP - OCULUS - NR0526-MAK » → « NR0526-MAK », le
     // fournisseur passe en info-bulle.
     const brut = labelDeLEcriture.get(idEcriture) || nomDuCompte.get(numero) || numero
+    // « Part chineuses Printemps », et son annulation quand le montant a été
+    // corrigé : ces écritures déplacent la part des chineuses du Printemps du
+    // 707 vers leur compte de tiers. Ni vente, ni facture, ni encaissement —
+    // le Printemps se lit dans les virements et les factures PRI.
+    if (/Part chineuses Printemps/i.test(brut)) continue
     const bouts = brut.split(' - ')
     const estFacture = /^Facture\s/i.test(brut) && bouts.length > 1
     const dernier = bouts[bouts.length - 1]
