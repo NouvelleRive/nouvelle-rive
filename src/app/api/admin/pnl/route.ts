@@ -1094,8 +1094,10 @@ export async function GET(req: NextRequest) {
             ...(stockPropre ? [{
               cle: 'margeGlobale',
               label: 'Marge brute NR + PRI',
-              titre: 'Calcul : commissions NR + marge HT sur marchandises + Printemps + gestion du corner',
-              montant: sommeL(commissionsFactures) + stockPropre.marge + sommeL(servicesPrintemps)
+              // Les marchandises comptent en brut : leur coût est une charge,
+              // il ne vient pas en déduction du chiffre d'affaires.
+              titre: 'Calcul : commissions NR + ventes de marchandises + Printemps + gestion du corner',
+              montant: sommeL(commissionsFactures) + sommeL(marchandisesFactures) + sommeL(servicesPrintemps)
                 + (printemps ? printemps.montant - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0) : 0),
               comptes: [] as { number: string; label: string; montant: number }[],
               gras: true,
@@ -1201,7 +1203,7 @@ export async function GET(req: NextRequest) {
                     coutVendu: stockPropre?.parMois[m.cle]?.cout ?? 0,
                     margeMarchandises: (stockPropre?.parMois[m.cle]?.ventes ?? 0) - (stockPropre?.parMois[m.cle]?.cout ?? 0),
                     margeMarchandisesHt: stockPropre?.parMois[m.cle]?.marge ?? 0,
-                    margeGlobale: somme(commissionsFactures) + (stockPropre?.parMois[m.cle]?.marge ?? 0)
+                    margeGlobale: somme(commissionsFactures) + somme(marchandisesFactures)
                       + somme(servicesPrintemps)
                       + ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
                       - (reversePrintemps[m.cle] ?? 0),
