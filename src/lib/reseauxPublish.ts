@@ -1,7 +1,7 @@
 import { adminDb, adminStorage } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { publishCarousel, createReelContainer, finalizePublish } from '@/lib/igWeekly'
-import { publishTikTokDraft, publishTikTokPhotos } from '@/lib/tiktokPublish'
+import { publishTikTokVideo, publishTikTokPhotos } from '@/lib/tiktokPublish'
 
 // Supprime le fichier vidéo une fois publié sur IG (il y vit désormais).
 // Gère Firebase Storage et Bunny. Non bloquant : un échec n'annule pas la publi.
@@ -84,20 +84,20 @@ export async function publishDueReseaux(dryRun = false): Promise<any> {
   return doPublish(ref, p, chronique)
 }
 
-// Dépose le même contenu en BROUILLON sur TikTok, au moment où il part sur IG.
-// Best effort : TikTok n'accepte que le brouillon (video.upload), et un échec
-// ici ne doit jamais faire rater la publication Instagram. À appeler AVANT la
-// purge des médias, sinon le fichier n'existe plus.
+// Envoie le même contenu sur TikTok au moment où il part sur IG (publication
+// directe si le scope video.publish est accordé, sinon brouillon).
+// Best effort : un échec ici ne doit jamais faire rater la publication
+// Instagram. À appeler AVANT la purge des médias, sinon le fichier n'existe plus.
 async function postTikTokDraft(p: any): Promise<void> {
   try {
     if (p.format === 'publi') {
       const urls = (p.medias || []).map((m: any) => m?.url).filter(Boolean)
       if (urls.length) await publishTikTokPhotos(urls, p.caption || '')
     } else if (p.videoUrl) {
-      await publishTikTokDraft(p.videoUrl)
+      await publishTikTokVideo(p.videoUrl, p.caption || '')
     }
   } catch (e: any) {
-    console.error('[RESEAUX] brouillon TikTok échoué:', e?.message || e)
+    console.error('[RESEAUX] publication TikTok échouée:', e?.message || e)
   }
 }
 

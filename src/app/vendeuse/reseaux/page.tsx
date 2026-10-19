@@ -480,15 +480,16 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
     }
   }
 
-  // Dépose en brouillon sur TikTok (vidéo → reel, images → carrousel photo).
+  // Envoie sur TikTok (vidéo → reel, images → carrousel photo). Publication
+  // directe si l'app a le scope video.publish, sinon brouillon à finaliser.
   const postTikTok = async () => {
     const video = p.videoUrl || p.medias?.find((m) => m.type === 'video')?.url || ''
     const images = (p.medias || []).filter((m) => m.type === 'image').map((m) => m.url)
     const body: any = (p.format === 'publi' && images.length)
       ? { imageUrls: images, caption: p.caption }
-      : video ? { videoUrl: video } : null
+      : video ? { videoUrl: video, caption: p.caption } : null
     if (!body) { alert('Rien à envoyer sur TikTok') ; return }
-    if (!confirm('Envoyer en brouillon sur TikTok ?')) return
+    if (!confirm('Envoyer sur TikTok ?')) return
     // Copie la caption pour la coller dans l'éditeur TikTok (le brouillon ne la
     // préremplit pas via l'API ; auto après audit Direct Post).
     try { await navigator.clipboard?.writeText(p.caption || '') } catch {}
@@ -501,9 +502,13 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'échec')
-      alert('Envoyé sur TikTok ✅ — caption copiée. J\'ouvre TikTok : va dans tes notifs, colle la caption et publie.')
-      // Ouvre l'app TikTok (deep link). Si pas installée, ne fait rien (on reste sur la page).
-      window.location.href = 'tiktok://'
+      if (data.mode === 'direct') {
+        alert('Publié sur TikTok ✅ (publication directe, caption incluse)')
+      } else {
+        alert('Envoyé sur TikTok ✅ — caption copiée. J\'ouvre TikTok : va dans tes notifs, colle la caption et publie.')
+        // Ouvre l'app TikTok (deep link). Si pas installée, ne fait rien (on reste sur la page).
+        window.location.href = 'tiktok://'
+      }
     } catch (e: any) {
       alert(e?.message || 'Erreur TikTok')
     } finally {

@@ -8,13 +8,19 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const CLIENT_KEY = process.env.TIKTOK_CLIENT_KEY
 const REDIRECT_URI = 'https://www.nouvellerive.eu/api/tiktok/callback'
-// video.publish (Direct Post) est refusé tant que l'app n'est pas auditée →
-// on ne demande que ce qui marche maintenant. On le rajoutera après l'audit.
+// video.publish (Direct Post) : TikTok refuse l'autorisation ENTIÈRE tant que
+// le produit « Direct Post » n'est pas coché + audité sur l'app (erreur
+// « Something went wrong … scope »). Dès que l'audit est passé : mettre
+// TIKTOK_DIRECT_POST=1 dans Vercel et recliquer « Connecter TikTok » → le
+// scope est demandé, stocké, et la publication devient directe (lib
+// tiktokPublish lit le scope du token).
 // video.list (lecture des vidéos du compte, pour l'aperçu Feed → onglet
 // TikTok) exige le produit « Display API » : tant qu'il n'est pas ajouté à
-// l'app dans le portail développeur, TikTok refuse l'autorisation entière
-// avec « Something went wrong … scope ». À remettre une fois le produit actif.
-const DEFAULT_SCOPES = 'user.info.basic,video.upload'
+// l'app dans le portail développeur, même refus. À remettre une fois actif.
+const DIRECT_POST = process.env.TIKTOK_DIRECT_POST === '1'
+const DEFAULT_SCOPES = DIRECT_POST
+  ? 'user.info.basic,video.upload,video.publish'
+  : 'user.info.basic,video.upload'
 
 export async function GET(req: NextRequest) {
   if (!CLIENT_KEY) {

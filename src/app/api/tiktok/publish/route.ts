@@ -1,12 +1,13 @@
 // app/api/tiktok/publish/route.ts
-// Dépose la vidéo d'une prod en brouillon sur TikTok (Content Posting API).
+// Envoie la vidéo/les photos d'une prod sur TikTok (Content Posting API).
+// Publication directe si le scope video.publish est accordé, sinon brouillon.
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { publishTikTokDraft, publishTikTokPhotos } from '@/lib/tiktokPublish'
+import { publishTikTokVideo, publishTikTokPhotos } from '@/lib/tiktokPublish'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     // Vidéo directe fournie → reel
     if (videoUrl) {
-      const r = await publishTikTokDraft(videoUrl)
+      const r = await publishTikTokVideo(videoUrl, caption || '')
       return NextResponse.json({ success: true, ...r })
     }
     // Images fournies → carrousel photo
@@ -38,14 +39,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, type: 'photo', ...r })
       }
       if (firstVideo) {
-        const r = await publishTikTokDraft(firstVideo)
+        const r = await publishTikTokVideo(firstVideo, docCaption)
         return NextResponse.json({ success: true, ...r })
       }
       return NextResponse.json({ success: false, error: 'aucun média' }, { status: 400 })
     }
 
     if (!p.videoUrl) return NextResponse.json({ success: false, error: 'aucune vidéo' }, { status: 400 })
-    const r = await publishTikTokDraft(p.videoUrl)
+    const r = await publishTikTokVideo(p.videoUrl, docCaption)
     return NextResponse.json({ success: true, ...r })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'Erreur' }, { status: 500 })
