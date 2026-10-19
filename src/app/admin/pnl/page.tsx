@@ -401,7 +401,14 @@ function BlocPostes({
     <div className="border-b last:border-b-0">
       <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-gray-50 border-b">
         <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-gray-500">{titre}</span>
-        {total != null && <span className="text-xs sm:text-sm font-semibold tabular-nums">{formatPrix(total, { decimals: 0 })} €</span>}
+        {total != null && (
+          <span
+            className="text-xs sm:text-sm font-semibold tabular-nums"
+            title="Calcul : somme des lignes du bloc"
+          >
+            {formatPrix(total, { decimals: 0 })} €
+          </span>
+        )}
       </div>
       {postes.length === 0 && <div className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-gray-400">Aucun mouvement</div>}
       {postes.map(p => {
@@ -625,7 +632,13 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Charges fixes</td>
           </tr>
           {charges.map(p => <LignePoste key={p.cle} p={p} />)}
-          <Ligne label="Total charges fixes" valeurs={mois.map(m => m.charges)} total={data.pnl.charges} gras />
+          <Ligne
+            label="Total charges fixes"
+            titre="Calcul : somme des lignes ci-dessus (PENNYLANE) + frais SQUARE"
+            valeurs={mois.map(m => m.charges)}
+            total={data.pnl.charges}
+            gras
+          />
 
           <tr className="bg-gray-50/70">
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Résultat</td>

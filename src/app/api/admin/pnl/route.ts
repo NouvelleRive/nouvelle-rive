@@ -860,20 +860,20 @@ export async function GET(req: NextRequest) {
           postes: brut.postes.filter(p => p.cle !== 'transportVentes').flatMap(p =>
             p.cle === 'loyer' && loyerPri.length > 0
               ? [
-                  { ...p, label: 'Loyer NR', montant: sommeS(loyerNr), comptes: [], sousLignes: loyerNr },
-                  { ...p, cle: 'loyerPri', label: 'Loyer Printemps', montant: sommeS(loyerPri), comptes: [], sousLignes: loyerPri },
+                  { ...p, label: 'Loyer NR', titre: 'Source : PENNYLANE — comptes 6132, 6135, hors part Printemps', montant: sommeS(loyerNr), comptes: [], sousLignes: loyerNr },
+                  { ...p, cle: 'loyerPri', label: 'Loyer Printemps', titre: 'Source : PENNYLANE — comptes 6132, 6135, part du stand Printemps', montant: sommeS(loyerPri), comptes: [], sousLignes: loyerPri },
                 ]
               : p.cle === 'marchandises' && entretien.length > 0
                 ? [
                     avecDetail(p),
-                    { ...p, cle: 'entretien', label: 'Entretien', montant: sommeS(entretien), comptes: [], sousLignes: entretien },
+                    { ...p, cle: 'entretien', label: 'Entretien', titre: 'Source : PENNYLANE — comptes 61, 62, pressing et laverie', montant: sommeS(entretien), comptes: [], sousLignes: entretien },
                   ]
                 : p.cle === 'externes' && (abonnements.length > 0 || entretien.length > 0)
                   ? [
                       ...(abonnements.length > 0
-                        ? [{ ...p, cle: 'abonnements', label: 'Abonnements', montant: sommeS(abonnements), comptes: [], sousLignes: abonnements }]
+                        ? [{ ...p, cle: 'abonnements', label: 'Abonnements', titre: 'Source : PENNYLANE — comptes 61, 62, abonnements récurrents', montant: sommeS(abonnements), comptes: [], sousLignes: abonnements }]
                         : []),
-                      { ...p, montant: sommeS(autresExternes), comptes: [], sousLignes: autresExternes },
+                      { ...p, titre: 'Source : PENNYLANE — comptes 61, 62, hors abonnements et entretien', montant: sommeS(autresExternes), comptes: [], sousLignes: autresExternes },
                     ]
                   : [avecDetail(p)],
           ),
