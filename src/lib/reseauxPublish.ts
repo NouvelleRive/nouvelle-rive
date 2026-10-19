@@ -31,15 +31,17 @@ async function deletePublishedVideo(url: string): Promise<void> {
 
 const COLL = 'reseauxContenu'
 
-// weekday getDay() → chronique (aligné avec /vendeuse/reseaux)
-const DAY_TO_CHRONIQUE: Record<number, string> = {
-  0: 'infinite-slider',
-  1: 'compo-de-lo',
-  2: 'book-olga',
-  3: 'couleurs-celeste',
-  4: 'microboutique-hina',
-  5: 'shabbat-quote',
-  6: 'energies-sarah',
+// weekday getDay() → chroniques du jour (aligné avec /vendeuse/reseaux).
+// Plusieurs chroniques peuvent tomber le même jour (jeudi : Hina + WEEK FAV),
+// chacune avec sa propre heure de post → on les regarde toutes.
+const DAY_TO_CHRONIQUES: Record<number, string[]> = {
+  0: ['infinite-slider'],
+  1: ['compo-de-lo'],
+  2: ['book-olga'],
+  3: ['couleurs-celeste'],
+  4: ['microboutique-hina', 'fond-blanc'],
+  5: ['shabbat-quote'],
+  6: ['energies-sarah'],
 }
 
 // Date/heure locales Paris (les heures de post sont saisies en heure de Paris).
@@ -59,29 +61,53 @@ function parisNow() {
 
 export async function publishDueReseaux(dryRun = false): Promise<any> {
   const { iso, hhmm, dow } = parisNow()
-  const chronique = DAY_TO_CHRONIQUE[dow]
-  if (!chronique) return { skipped: 'no chronique today' }
+  const chroniques = DAY_TO_CHRONIQUES[dow]
+  if (!chroniques?.length) return { skipped: 'no chronique today' }
 
-  // Chronique mise en pause manuellement (bouton pause) → pas d'auto-publish.
+  // Pauses manuelles (bouton pause) : 1 seul doc lu pour tout le jour.
   const susp = await adminDb.collection('reseauxConfig').doc('suspended').get()
-  if (susp.exists && (susp.data() as any)?.[chronique] === true) return { skipped: 'suspended', chronique }
+  const suspData = (susp.exists ? susp.data() : {}) as any
 
-  const ref = adminDb.collection(COLL).doc(`${chronique}_${iso}`)
-  const snap = await ref.get()
-  if (!snap.exists) return { skipped: 'no production today', chronique, iso }
+  // On publie la première chronique du jour qui est due ; les autres seront
+  // reprises au passage horaire suivant (publication idempotente).
+  const skips: any[] = []
+  for (const chronique of chroniques) {
+    if (suspData?.[chronique] === true) {
+      skips.push({ skipped: 'suspended', chronique })
+      continue
+    }
 
-  const p = snap.data() as any
-  if (p.publishedAt) return { skipped: 'already published', chronique }
-  const hasMedia = p.format === 'publi' ? (Array.isArray(p.medias) && p.medias.length > 0) : !!p.videoUrl
-  if (!hasMedia) return { skipped: 'no media', chronique }
-  const heure = p.heurePost || '00:00'
-  if (hhmm < heure) return { skipped: 'too early', chronique, heure, now: hhmm }
+    const ref = adminDb.collection(COLL).doc(`${chronique}_${iso}`)
+    const snap = await ref.get()
+    if (!snap.exists) {
+      skips.push({ skipped: 'no production today', chronique, iso })
+      continue
+    }
 
-  const collaborators = String(p.collab || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+    const p = snap.data() as any
+    if (p.publishedAt) {
+      skips.push({ skipped: 'already published', chronique })
+      continue
+    }
+    const hasMedia = p.format === 'publi' ? (Array.isArray(p.medias) && p.medias.length > 0) : !!p.videoUrl
+    if (!hasMedia) {
+      skips.push({ skipped: 'no media', chronique })
+      continue
+    }
+    const heure = p.heurePost || '00:00'
+    if (hhmm < heure) {
+      skips.push({ skipped: 'too early', chronique, heure, now: hhmm })
+      continue
+    }
 
-  if (dryRun) return { dryRun: true, chronique, iso, heure, format: p.format || 'reel', collaborators }
+    const collaborators = String(p.collab || '').split(',').map((s: string) => s.trim()).filter(Boolean)
 
-  return doPublish(ref, p, chronique)
+    if (dryRun) return { dryRun: true, chronique, iso, heure, format: p.format || 'reel', collaborators }
+
+    return doPublish(ref, p, chronique)
+  }
+
+  return skips.length === 1 ? skips[0] : { skipped: 'rien à publier', iso, details: skips }
 }
 
 // Envoie le même contenu sur TikTok au moment où il part sur IG (publication
