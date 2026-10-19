@@ -524,6 +524,22 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
 }
 
 console.log(`✅ checkGmailFactures terminé`)
+
+    // Dernier jour du mois : contrôle des doublons de ventes avant les
+    // reversements. Greffé ici pour rester dans les 3 crons gratuits.
+    const demain = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    if (demain.getMonth() !== now.getMonth()) {
+      try {
+        const fetch = require('node-fetch')
+        const secret = process.env.CRON_SECRET || ''
+        const res = await fetch('https://www.nouvellerive.eu/api/cron/doublons-ventes', {
+          headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+        })
+        console.log(`doublons-ventes ${res.status}: ${(await res.text()).slice(0, 200)}`)
+      } catch (err) {
+        console.error('doublons-ventes failed:', err)
+      }
+    }
     return null
   })
 
