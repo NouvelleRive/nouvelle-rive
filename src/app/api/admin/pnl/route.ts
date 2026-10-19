@@ -56,6 +56,7 @@ const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'c
   { cle: 'receptions', label: 'Réceptions', sens: 'charge', prefixes: ['6257'] },
   { cle: 'publicite', label: 'Publicité', sens: 'charge', prefixes: ['623'] },
   { cle: 'marchandises', label: 'Achats de marchandises', sens: 'charge', prefixes: ['60'] },
+  { cle: 'fraisBancaires', label: 'Frais bancaires', sens: 'charge', prefixes: ['627'] },
   { cle: 'externes', label: 'Services extérieurs', sens: 'charge', prefixes: ['61', '62'] },
   { cle: 'impots', label: 'Impôts & taxes', sens: 'charge', prefixes: ['63'] },
   { cle: 'autresCharges', label: 'Autres charges', sens: 'charge', prefixes: ['65'] },
@@ -836,7 +837,7 @@ export async function GET(req: NextRequest) {
       - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0)
     const margeAppTotal = sommeTotale(commissionsFactures) + sommeTotale(marchandisesFactures)
       + sommeTotale(servicesPrintemps) + resultatPrintempsTotal
-    const chargesTotal = agreger(balance).charges + (frais?.total ?? 0)
+    const chargesTotal = agreger(balance).charges
     const resultatAppTotal = margeAppTotal - chargesTotal
 
     const corps = {
@@ -959,20 +960,12 @@ export async function GET(req: NextRequest) {
           margeAchat: stockPropre && stockPropre.ventes > 0
             ? (stockPropre.marge / stockPropre.ventes) * 100
             : null,
-          postes: [
-            ...a.postes,
-            ...(frais && frais.total > 0 ? [{
-              cle: 'fraisSquare',
-              label: 'Frais Square',
-              titre: 'Source : SQUARE — commissions de paiement, déduites avant virement',
-              sens: 'charge' as const,
-              prefixes: [] as string[],
-              montant: frais.total,
-              comptes: [] as { number: string; label: string; montant: number }[],
-            }] : []),
-          ],
-          charges: a.charges + (frais?.total ?? 0),
-          resultat: a.resultat - (frais?.total ?? 0),
+          // Les commissions de paiement Square sont désormais saisies dans
+          // Pennylane (compte 627), mois par mois : l'app les lit là, elle ne
+          // les ajoute plus depuis l'API, sinon elles compteraient deux fois.
+          postes: a.postes,
+          charges: a.charges,
+          resultat: a.resultat,
           depotVente: ([
 
             {
@@ -1172,8 +1165,8 @@ export async function GET(req: NextRequest) {
         return {
           cle: m.cle,
           produits: a.produits,
-          charges: a.charges + (frais?.parMois[m.cle] ?? 0),
-          resultat: a.resultat - (frais?.parMois[m.cle] ?? 0),
+          charges: a.charges,
+          resultat: a.resultat,
           postes: {
             ...Object.fromEntries([...a.postes, ...a.depotVente].map(p => [p.cle, p.montant])),
             ...(() => {
@@ -1207,7 +1200,6 @@ export async function GET(req: NextRequest) {
                     volumeFacture: nr,
                     volumeMarchandises: somme(marchandisesFactures),
                     ecart: (square.parMois[m.cle]?.net ?? 0) - nr - somme(marchandisesFactures),
-                    fraisSquare: frais?.parMois[m.cle] ?? 0,
                     fraisSquareVolume: -(frais?.parMois[m.cle] ?? 0),
                     recuBanque: recu?.parMois[m.cle] ?? 0,
                     volumePrintemps: v + u,
@@ -1256,7 +1248,7 @@ export async function GET(req: NextRequest) {
             const pri = ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
               - (reversePrintemps[m.cle] ?? 0)
             const marge = somme2(commissionsFactures) + somme2(marchandisesFactures) + somme2(servicesPrintemps) + pri
-            return marge - (a.charges + (frais?.parMois[m.cle] ?? 0))
+            return marge - a.charges
           })(),
           pieces: volumes[m.cle]?.pieces ?? 0,
           caVentes: volumes[m.cle]?.ca ?? null,
