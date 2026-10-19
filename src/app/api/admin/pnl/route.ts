@@ -863,15 +863,19 @@ export async function GET(req: NextRequest) {
                   { ...p, label: 'Loyer NR', montant: sommeS(loyerNr), comptes: [], sousLignes: loyerNr },
                   { ...p, cle: 'loyerPri', label: 'Loyer Printemps', montant: sommeS(loyerPri), comptes: [], sousLignes: loyerPri },
                 ]
-              : p.cle === 'externes' && abonnements.length > 0
+              : p.cle === 'marchandises' && entretien.length > 0
                 ? [
-                    { ...p, cle: 'abonnements', label: 'Abonnements', montant: sommeS(abonnements), comptes: [], sousLignes: abonnements },
-                    ...(entretien.length > 0
-                      ? [{ ...p, cle: 'entretien', label: 'Entretien', montant: sommeS(entretien), comptes: [], sousLignes: entretien }]
-                      : []),
-                    { ...p, montant: sommeS(autresExternes), comptes: [], sousLignes: autresExternes },
+                    avecDetail(p),
+                    { ...p, cle: 'entretien', label: 'Entretien', montant: sommeS(entretien), comptes: [], sousLignes: entretien },
                   ]
-                : [avecDetail(p)],
+                : p.cle === 'externes' && (abonnements.length > 0 || entretien.length > 0)
+                  ? [
+                      ...(abonnements.length > 0
+                        ? [{ ...p, cle: 'abonnements', label: 'Abonnements', montant: sommeS(abonnements), comptes: [], sousLignes: abonnements }]
+                        : []),
+                      { ...p, montant: sommeS(autresExternes), comptes: [], sousLignes: autresExternes },
+                    ]
+                  : [avecDetail(p)],
           ),
           depotVente: brut.depotVente.map(avecDetail),
         }
