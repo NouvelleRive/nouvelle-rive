@@ -44,6 +44,19 @@ async function getAccessToken(): Promise<string> {
   return data.access_token
 }
 
+// Réglages imposés par TikTok pour un Direct Post : ils viennent de l'écran de
+// confirmation (confidentialité choisie par l'utilisateur, interactions,
+// déclaration de contenu commercial). Absents (publication auto) → valeurs du
+// compte renvoyées par creator_info.
+export type TikTokPostOptions = {
+  privacyLevel?: string
+  disableComment?: boolean
+  disableDuet?: boolean
+  disableStitch?: boolean
+  brandOrganic?: boolean  // « Votre marque » (contenu promotionnel propre)
+  brandContent?: boolean  // « Contenu de marque » (partenariat rémunéré)
+}
+
 // Le token autorise-t-il la publication directe ? (scope accordé à la connexion)
 export async function canDirectPost(): Promise<boolean> {
   const snap = await DOC().get()
@@ -87,7 +100,7 @@ async function fetchStatus(token: string, publishId: string): Promise<string> {
 
 // Envoie une vidéo sur le TikTok connecté : publication directe si le scope
 // video.publish est accordé, sinon brouillon dans l'inbox de la créatrice.
-export async function publishTikTokVideo(videoUrl: string, caption = ''): Promise<{ publishId: string; status: string; mode: 'direct' | 'draft' }> {
+export async function publishTikTokVideo(videoUrl: string, caption = '', opts: TikTokPostOptions = {}): Promise<{ publishId: string; status: string; mode: 'direct' | 'draft' }> {
   const token = await getAccessToken()
   const direct = await canDirectPost()
 
@@ -109,10 +122,13 @@ export async function publishTikTokVideo(videoUrl: string, caption = ''): Promis
     body = {
       post_info: {
         title: (caption || '').slice(0, 2200),
-        privacy_level: pickPrivacy(info),
-        disable_comment: !!info.comment_disabled,
-        disable_duet: !!info.duet_disabled,
-        disable_stitch: !!info.stitch_disabled,
+        privacy_level: opts.privacyLevel || pickPrivacy(info),
+        // Un réglage désactivé côté compte reste désactivé, quoi qu'on envoie.
+        disable_comment: !!info.comment_disabled || !!opts.disableComment,
+        disable_duet: !!info.duet_disabled || !!opts.disableDuet,
+        disable_stitch: !!info.stitch_disabled || !!opts.disableStitch,
+        brand_organic_toggle: !!opts.brandOrganic,
+        brand_content_toggle: !!opts.brandContent,
       },
       source_info,
     }
@@ -147,7 +163,7 @@ export const publishTikTokDraft = publishTikTokVideo
 // Poste un carrousel PHOTO (diaporama) sur TikTok : DIRECT_POST si le scope
 // video.publish est accordé, sinon MEDIA_UPLOAD (brouillon à finaliser).
 // Les images doivent être servies depuis le domaine vérifié → proxy nouvellerive.eu.
-export async function publishTikTokPhotos(imageUrls: string[], caption: string): Promise<{ publishId: string; status: string; mode: 'direct' | 'draft' }> {
+export async function publishTikTokPhotos(imageUrls: string[], caption: string, opts: TikTokPostOptions = {}): Promise<{ publishId: string; status: string; mode: 'direct' | 'draft' }> {
   const token = await getAccessToken()
   if (!imageUrls.length) throw new Error('Aucune image')
   const direct = await canDirectPost()
@@ -156,9 +172,11 @@ export async function publishTikTokPhotos(imageUrls: string[], caption: string):
   const post_info: any = { title: (caption || '').slice(0, 90), description: caption || '' }
   if (direct) {
     const info = await getTikTokCreatorInfo(token)
-    post_info.privacy_level = pickPrivacy(info)
-    post_info.disable_comment = !!info.comment_disabled
+    post_info.privacy_level = opts.privacyLevel || pickPrivacy(info)
+    post_info.disable_comment = !!info.comment_disabled || !!opts.disableComment
     post_info.auto_add_music = true
+    post_info.brand_organic_toggle = !!opts.brandOrganic
+    post_info.brand_content_toggle = !!opts.brandContent
   }
 
   const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {

@@ -7,20 +7,23 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { publishTikTokVideo, publishTikTokPhotos } from '@/lib/tiktokPublish'
+import { publishTikTokVideo, publishTikTokPhotos, type TikTokPostOptions } from '@/lib/tiktokPublish'
 
 export async function POST(req: NextRequest) {
   try {
-    const { chronique, date, videoUrl, imageUrls, caption } = await req.json()
+    const { chronique, date, videoUrl, imageUrls, caption, options } = await req.json()
+    // Réglages de l'écran de confirmation Direct Post (confidentialité, interactions,
+    // contenu commercial). Vide = valeurs du compte (publication automatique).
+    const opts: TikTokPostOptions = options && typeof options === 'object' ? options : {}
 
     // Vidéo directe fournie → reel
     if (videoUrl) {
-      const r = await publishTikTokVideo(videoUrl, caption || '')
+      const r = await publishTikTokVideo(videoUrl, caption || '', opts)
       return NextResponse.json({ success: true, ...r })
     }
     // Images fournies → carrousel photo
     if (Array.isArray(imageUrls) && imageUrls.length) {
-      const r = await publishTikTokPhotos(imageUrls, caption || '')
+      const r = await publishTikTokPhotos(imageUrls, caption || '', opts)
       return NextResponse.json({ success: true, type: 'photo', ...r })
     }
 
@@ -35,18 +38,18 @@ export async function POST(req: NextRequest) {
       const images = (Array.isArray(p.medias) ? p.medias : []).filter((m: any) => m.type === 'image').map((m: any) => m.url)
       const firstVideo = (Array.isArray(p.medias) ? p.medias : []).find((m: any) => m.type === 'video')?.url
       if (images.length) {
-        const r = await publishTikTokPhotos(images, docCaption)
+        const r = await publishTikTokPhotos(images, docCaption, opts)
         return NextResponse.json({ success: true, type: 'photo', ...r })
       }
       if (firstVideo) {
-        const r = await publishTikTokVideo(firstVideo, docCaption)
+        const r = await publishTikTokVideo(firstVideo, docCaption, opts)
         return NextResponse.json({ success: true, ...r })
       }
       return NextResponse.json({ success: false, error: 'aucun média' }, { status: 400 })
     }
 
     if (!p.videoUrl) return NextResponse.json({ success: false, error: 'aucune vidéo' }, { status: 400 })
-    const r = await publishTikTokVideo(p.videoUrl, docCaption)
+    const r = await publishTikTokVideo(p.videoUrl, docCaption, opts)
     return NextResponse.json({ success: true, ...r })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'Erreur' }, { status: 500 })

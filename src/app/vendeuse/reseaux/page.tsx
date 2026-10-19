@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { PlusSquare, LayoutGrid, Play, Copy, Pencil, Pause, Eye, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react'
 import { storage } from '@/lib/firebaseConfig'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import TikTokPostSheet, { type TikTokPostOptions } from '@/components/TikTokPostSheet'
 
 type Tab = 'contenu' | 'feed'
 type Reseau = 'ig' | 'tiktok'
@@ -295,6 +296,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
   const [collabInput, setCollabInput] = useState('')
   const [posting, setPosting] = useState(false)
   const [tiktokPosting, setTiktokPosting] = useState(false)
+  const [tiktokSheet, setTiktokSheet] = useState(false) // écran de confirmation TikTok
   const [zoom, setZoom] = useState<Media | null>(null) // aperçu plein écran
 
   useEffect(() => setP(prod), [prod])
@@ -482,14 +484,13 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
 
   // Envoie sur TikTok (vidéo → reel, images → carrousel photo). Publication
   // directe si l'app a le scope video.publish, sinon brouillon à finaliser.
-  const postTikTok = async () => {
+  const postTikTok = async (options: TikTokPostOptions) => {
     const video = p.videoUrl || p.medias?.find((m) => m.type === 'video')?.url || ''
     const images = (p.medias || []).filter((m) => m.type === 'image').map((m) => m.url)
     const body: any = (p.format === 'publi' && images.length)
-      ? { imageUrls: images, caption: p.caption }
-      : video ? { videoUrl: video, caption: p.caption } : null
+      ? { imageUrls: images, caption: p.caption, options }
+      : video ? { videoUrl: video, caption: p.caption, options } : null
     if (!body) { alert('Rien à envoyer sur TikTok') ; return }
-    if (!confirm('Envoyer sur TikTok ?')) return
     // Copie la caption pour la coller dans l'éditeur TikTok (le brouillon ne la
     // préremplit pas via l'API ; auto après audit Direct Post).
     try { await navigator.clipboard?.writeText(p.caption || '') } catch {}
@@ -502,6 +503,7 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
       })
       const data = await res.json()
       if (!data.success) throw new Error(data.error || 'échec')
+      setTiktokSheet(false)
       if (data.mode === 'direct') {
         alert('Publié sur TikTok ✅ (publication directe, caption incluse)')
       } else {
@@ -819,13 +821,21 @@ function ProductionCard({ chronique, prod, onSaved, collabOptions, dates = [], o
 
       {hasMedia && p.status !== 'published' && (
         <button
-          onClick={postTikTok}
+          onClick={() => setTiktokSheet(true)}
           disabled={tiktokPosting}
           className="w-full border border-gray-800 text-gray-800 text-sm font-medium rounded-lg py-2.5 disabled:opacity-50"
         >
-          {tiktokPosting ? 'Envoi TikTok…' : 'Poster maintenant sur TikTok (brouillon)'}
+          {tiktokPosting ? 'Envoi TikTok…' : 'Poster maintenant sur TikTok'}
         </button>
       )}
+
+      <TikTokPostSheet
+        open={tiktokSheet}
+        isPhoto={p.format === 'publi' && (p.medias || []).some((m) => m.type === 'image')}
+        posting={tiktokPosting}
+        onClose={() => setTiktokSheet(false)}
+        onPublish={postTikTok}
+      />
 
       {zoom && (
         <div
