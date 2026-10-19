@@ -51,6 +51,7 @@ const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'c
   { cle: 'deplacements', label: 'Déplacements', sens: 'charge', prefixes: ['6251'] },
   { cle: 'transportVentes', label: 'Transport sur ventes', sens: 'charge', prefixes: ['6242'] },
   { cle: 'equipements', label: "Achats d'équipements", sens: 'charge', prefixes: ['6063'] },
+  { cle: 'receptions', label: 'Réceptions', sens: 'charge', prefixes: ['6257'] },
   { cle: 'marchandises', label: 'Achats de marchandises', sens: 'charge', prefixes: ['60'] },
   { cle: 'externes', label: 'Services extérieurs', sens: 'charge', prefixes: ['61', '62'] },
   { cle: 'impots', label: 'Impôts & taxes', sens: 'charge', prefixes: ['63'] },
