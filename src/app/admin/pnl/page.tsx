@@ -305,7 +305,10 @@ export default function PnlPage() {
                 </div>
               )}
               <BlocPostes titre="Charges fixes" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
-              <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-t">
+              <div
+                className="flex items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-t"
+                title="Calcul : PENNYLANE — produits (comptes 7) − charges (comptes 6) − frais SQUARE"
+              >
                 <span className="font-semibold">Résultat</span>
                 <span className={`text-base sm:text-lg font-semibold tabular-nums ${data.pnl.resultat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatPrix(data.pnl.resultat, { decimals: 0 })} €
@@ -643,7 +646,14 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
           <tr className="bg-gray-50/70">
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Résultat</td>
           </tr>
-          <Ligne label="Résultat" valeurs={mois.map(m => m.resultat)} total={data.pnl.resultat} gras couleur />
+          <Ligne
+            label="Résultat"
+            titre="Calcul : PENNYLANE — produits (comptes 7) − charges (comptes 6) − frais SQUARE"
+            valeurs={mois.map(m => m.resultat)}
+            total={data.pnl.resultat}
+            gras
+            couleur
+          />
           <Ligne
             label="dont Printemps"
             titre="Calcul : encaissements Printemps − reversements à ses chineuses"
