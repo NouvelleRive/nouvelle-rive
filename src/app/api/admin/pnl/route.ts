@@ -48,22 +48,22 @@ const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'c
 
   { cle: 'loyer', label: 'Loyer et charges locatives', sens: 'charge', prefixes: ['6132', '6135'] },
   { cle: 'energie', label: 'Énergie', sens: 'charge', prefixes: ['6061'] },
+  { cle: 'personnel', label: 'Charges de personnel', sens: 'charge', prefixes: ['64'] },
   { cle: 'deplacements', label: 'Déplacements', sens: 'charge', prefixes: ['6251'] },
-  { cle: 'transportVentes', label: 'Transport sur ventes', sens: 'charge', prefixes: ['6242'] },
   { cle: 'equipements', label: "Achats d'équipements", sens: 'charge', prefixes: ['6063'] },
   { cle: 'receptions', label: 'Réceptions', sens: 'charge', prefixes: ['6257'] },
   { cle: 'publicite', label: 'Publicité', sens: 'charge', prefixes: ['623'] },
   { cle: 'marchandises', label: 'Achats de marchandises', sens: 'charge', prefixes: ['60'] },
   { cle: 'externes', label: 'Services extérieurs', sens: 'charge', prefixes: ['61', '62'] },
   { cle: 'impots', label: 'Impôts & taxes', sens: 'charge', prefixes: ['63'] },
-  { cle: 'personnel', label: 'Charges de personnel', sens: 'charge', prefixes: ['64'] },
   { cle: 'autresCharges', label: 'Autres charges', sens: 'charge', prefixes: ['65'] },
   { cle: 'chargesFin', label: 'Charges financières', sens: 'charge', prefixes: ['66'] },
-  // Les vols remboursés aux chineuses ont leur propre ligne.
   { cle: 'vols', label: 'Vols remboursés', sens: 'charge', prefixes: ['6718'] },
   { cle: 'chargesExc', label: 'Charges exceptionnelles', sens: 'charge', prefixes: ['67'] },
   { cle: 'amortissements', label: 'Amortissements & provisions', sens: 'charge', prefixes: ['68'] },
   { cle: 'is', label: 'Impôt sur les sociétés', sens: 'charge', prefixes: ['69'] },
+
+  { cle: 'transportVentes', label: 'Transport sur ventes', sens: 'charge', prefixes: ['6242'] },
 ]
 
 // Dépôt-vente, modèle du comptable (exercice 2025) : les encaissements Square
