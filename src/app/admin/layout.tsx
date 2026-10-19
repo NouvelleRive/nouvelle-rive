@@ -273,8 +273,8 @@
           </div>
         </nav>
         
-        {/* Stats bar */}
-        <div className="bg-white border-b">
+        {/* Stats bar — stocks de la chineuse, sans objet sur le P&L */}
+        <div className={`bg-white border-b ${pathname.startsWith('/admin/pnl') ? 'hidden' : ''}`}>
           <div className="max-w-7xl mx-auto px-4 py-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
