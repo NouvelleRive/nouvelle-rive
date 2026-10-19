@@ -862,15 +862,20 @@ export async function GET(req: NextRequest) {
         // Les abonnements récurrents, sortis des services extérieurs.
         const estAbonnement = (l: SousLigne) => {
           const t = `${l.label} ${l.titre || ''}`
-          return /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ORUS|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(t)
+          return /PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ORUS|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(t)
         }
         // Pressing et laverie : de l'entretien, pas un service général.
         const estEntretien = (l: SousLigne) =>
           /5 ?A ?SEC|5ASEC|LAVERIE|PRESSING|BLANCHISSERIE/i.test(`${l.label} ${l.titre || ''}`)
+        // La télésurveillance de la boutique : EPS (Euro Protection
+        // Surveillance) et le gardiennage, à part des autres services.
+        const estSecurite = (l: SousLigne) =>
+          /\bEPS\b|EURO PROTECTION|AK PROTECTION|HOMIRIS|TELESURVEILLANCE|GARDIENNAGE/i.test(`${l.label} ${l.titre || ''}`)
         const externes = detail['externes'] ?? []
-        const entretien = externes.filter(estEntretien)
-        const abonnements = externes.filter(l => !estEntretien(l) && estAbonnement(l))
-        const autresExternes = externes.filter(l => !estEntretien(l) && !estAbonnement(l))
+        const securite = externes.filter(estSecurite)
+        const entretien = externes.filter(l => !estSecurite(l) && estEntretien(l))
+        const abonnements = externes.filter(l => !estSecurite(l) && !estEntretien(l) && estAbonnement(l))
+        const autresExternes = externes.filter(l => !estSecurite(l) && !estEntretien(l) && !estAbonnement(l))
         const loyers = loyersRanges
         const loyerPri = loyers.filter(estPrintemps)
         const loyerNr = loyers.filter(l => !estPrintemps(l))
@@ -888,8 +893,11 @@ export async function GET(req: NextRequest) {
                     avecDetail(p),
                     { ...p, cle: 'entretien', label: 'Entretien', titre: 'Source : PENNYLANE — comptes 61, 62, pressing et laverie', montant: sommeS(entretien), comptes: [], sousLignes: entretien },
                   ]
-                : p.cle === 'externes' && (abonnements.length > 0 || entretien.length > 0)
+                : p.cle === 'externes' && (abonnements.length > 0 || entretien.length > 0 || securite.length > 0)
                   ? [
+                      ...(securite.length > 0
+                        ? [{ ...p, cle: 'securite', label: 'Sécurité et alarme', titre: 'Source : PENNYLANE — comptes 61, 62, télésurveillance et gardiennage', montant: sommeS(securite), comptes: [], sousLignes: securite }]
+                        : []),
                       ...(abonnements.length > 0
                         ? [{ ...p, cle: 'abonnements', label: 'Abonnements', titre: 'Source : PENNYLANE — comptes 61, 62, abonnements récurrents', montant: sommeS(abonnements), comptes: [], sousLignes: abonnements }]
                         : []),
@@ -1178,12 +1186,14 @@ export async function GET(req: NextRequest) {
                 loyerPri: pri.reduce((t, x) => t + x.montant, 0),
                 ...(() => {
                   const e = (detail['externes'] ?? []).filter(x => x.mois === m.cle)
-                  const en = e.filter(x => /5 ?A ?SEC|5ASEC|LAVERIE|PRESSING|BLANCHISSERIE/i.test(`${x.label} ${x.titre || ''}`))
-                  const ab = e.filter(x => !en.includes(x) && /HOMIRIS|EURO PROTECTION|PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ORUS|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(`${x.label} ${x.titre || ''}`))
+                  const se = e.filter(x => /\bEPS\b|EURO PROTECTION|AK PROTECTION|HOMIRIS|TELESURVEILLANCE|GARDIENNAGE/i.test(`${x.label} ${x.titre || ''}`))
+                  const en = e.filter(x => !se.includes(x) && /5 ?A ?SEC|5ASEC|LAVERIE|PRESSING|BLANCHISSERIE/i.test(`${x.label} ${x.titre || ''}`))
+                  const ab = e.filter(x => !se.includes(x) && !en.includes(x) && /PENNYLANE|PAYFIT|SQUAREUP|SQUARE|ANTHROPIC|CLAUDE|GOOGLE|GCP|CLOUD|ORANGE|FREE|BOUYGUES|SFR|BUNNY|VERCEL|SHINE|OVH|FASHN|REPLICATE|OPENAI|ORUS|ASSURANC|AXA|ALLIANZ|MAIF|MACIF|GENERALI|HISCOX|ADOBE|CANVA|MICROSOFT|APPLE|SPOTIFY|DROPBOX|NOTION|SLACK|ZOOM/i.test(`${x.label} ${x.titre || ''}`))
                   return {
+                    securite: se.reduce((t, x) => t + x.montant, 0),
                     abonnements: ab.reduce((t, x) => t + x.montant, 0),
                     entretien: en.reduce((t, x) => t + x.montant, 0),
-                    externes: e.filter(x => !ab.includes(x) && !en.includes(x)).reduce((t, x) => t + x.montant, 0),
+                    externes: e.filter(x => !ab.includes(x) && !en.includes(x) && !se.includes(x)).reduce((t, x) => t + x.montant, 0),
                   }
                 })(),
               }
