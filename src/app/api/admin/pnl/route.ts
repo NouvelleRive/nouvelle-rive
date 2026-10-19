@@ -48,7 +48,7 @@ const POSTES: { cle: string; label: string; titre?: string; sens: 'produit' | 'c
 
   { cle: 'loyer', label: 'Loyer et charges locatives', sens: 'charge', prefixes: ['6132', '6135'] },
   { cle: 'energie', label: 'Énergie', sens: 'charge', prefixes: ['6061'] },
-  { cle: 'deplacements', label: 'Déplacements', sens: 'charge', prefixes: ['6251', '625'] },
+  { cle: 'deplacements', label: 'Déplacements', sens: 'charge', prefixes: ['6251'] },
   { cle: 'transportVentes', label: 'Transport sur ventes', sens: 'charge', prefixes: ['6242'] },
   { cle: 'marchandises', label: 'Achats de marchandises', sens: 'charge', prefixes: ['60'] },
   { cle: 'externes', label: 'Services extérieurs', sens: 'charge', prefixes: ['61', '62'] },
