@@ -24,6 +24,7 @@ type Mois = {
   margeChineuses: number | null
   margeAchat: number | null
   resultatPrintemps: number
+  resultatApp: number
   pieces: number
   caVentes: number | null
 }
@@ -46,6 +47,7 @@ type Data = {
     resultat: number
   }
   resultatPrintemps?: number
+  resultatApp?: number
   calculeLe?: string
   ducache?: boolean
   parChineuse: { nom: string; trigramme: string; taux: number; pieces: number; volume: number | null; commission: number | null }[]
@@ -305,27 +307,43 @@ export default function PnlPage() {
                 </div>
               )}
               <BlocPostes titre="Charges fixes" postes={charges} total={data.pnl.charges} ouverts={ouverts} setOuverts={setOuverts} />
-              <div
-                className="flex items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-t"
-                title="Calcul : PENNYLANE — produits (comptes 7) − charges (comptes 6) − frais SQUARE"
-              >
-                <span className="font-semibold">Résultat</span>
-                <span className={`text-base sm:text-lg font-semibold tabular-nums ${data.pnl.resultat >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPrix(data.pnl.resultat, { decimals: 0 })} €
-                </span>
-              </div>
-              {data.resultatPrintemps != null && (
-                <>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Calcul : encaissements Printemps − reversements à ses chineuses">
-                    <span className="pl-4 text-gray-600">dont Printemps</span>
-                    <span className="tabular-nums text-gray-700">{formatPrix(data.resultatPrintemps, { decimals: 0 })} €</span>
+              {[
+                {
+                  cle: 'pl',
+                  label: 'Résultat PENNYLANE',
+                  titre: 'Calcul : PENNYLANE — produits (comptes 7) − charges (comptes 6) − frais SQUARE',
+                  valeur: data.pnl.resultat,
+                },
+                ...(data.resultatApp != null
+                  ? [{
+                      cle: 'app',
+                      label: 'Résultat APP NR',
+                      titre: 'Calcul : APP NR — marge brute (SQUARE + factures chineuses) − les mêmes charges',
+                      valeur: data.resultatApp,
+                    }]
+                  : []),
+              ].map(r => (
+                <div key={r.cle}>
+                  <div className="flex items-center justify-between px-3 sm:px-4 py-3 bg-gray-50 border-t" title={r.titre}>
+                    <span className="font-semibold">{r.label}</span>
+                    <span className={`text-base sm:text-lg font-semibold tabular-nums ${r.valeur >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPrix(r.valeur, { decimals: 0 })} €
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Calcul : le résultat moins celui du Printemps">
-                    <span className="pl-4 text-gray-600">dont NR</span>
-                    <span className="tabular-nums text-gray-700">{formatPrix(data.pnl.resultat - data.resultatPrintemps, { decimals: 0 })} €</span>
-                  </div>
-                </>
-              )}
+                  {data.resultatPrintemps != null && (
+                    <>
+                      <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Calcul : PENNYLANE — encaissements Printemps − reversements à ses chineuses">
+                        <span className="pl-4 text-gray-600">dont Printemps</span>
+                        <span className="tabular-nums text-gray-700">{formatPrix(data.resultatPrintemps, { decimals: 0 })} €</span>
+                      </div>
+                      <div className="flex items-center justify-between px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-50 border-t text-xs sm:text-sm" title="Calcul : le résultat moins celui du Printemps">
+                        <span className="pl-4 text-gray-600">dont NR</span>
+                        <span className="tabular-nums text-gray-700">{formatPrix(r.valeur - data.resultatPrintemps, { decimals: 0 })} €</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
               </div>
               </div>
             </section>
@@ -647,7 +665,7 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
             <td className={`${tete} bg-gray-50 text-xs uppercase tracking-wide text-gray-500 font-semibold`} colSpan={mois.length + 2}>Résultat</td>
           </tr>
           <Ligne
-            label="Résultat"
+            label="Résultat PENNYLANE"
             titre="Calcul : PENNYLANE — produits (comptes 7) − charges (comptes 6) − frais SQUARE"
             valeurs={mois.map(m => m.resultat)}
             total={data.pnl.resultat}
@@ -656,16 +674,38 @@ function TableauMois({ data, produits, charges, ouverts, setOuverts }: {
           />
           <Ligne
             label="dont Printemps"
-            titre="Calcul : encaissements Printemps − reversements à ses chineuses"
+            titre="Calcul : PENNYLANE — encaissements Printemps − reversements à ses chineuses"
             valeurs={mois.map(m => m.resultatPrintemps ?? 0)}
             total={data.resultatPrintemps ?? 0}
             couleur
           />
           <Ligne
             label="dont NR"
-            titre="Calcul : le résultat moins celui du Printemps"
+            titre="Calcul : le résultat Pennylane moins celui du Printemps"
             valeurs={mois.map(m => m.resultat - (m.resultatPrintemps ?? 0))}
             total={data.pnl.resultat - (data.resultatPrintemps ?? 0)}
+            couleur
+          />
+          <Ligne
+            label="Résultat APP NR"
+            titre="Calcul : APP NR — marge brute (SQUARE + factures chineuses) − les mêmes charges"
+            valeurs={mois.map(m => m.resultatApp ?? 0)}
+            total={data.resultatApp ?? 0}
+            gras
+            couleur
+          />
+          <Ligne
+            label="dont Printemps"
+            titre="Calcul : PENNYLANE — encaissements Printemps − reversements à ses chineuses"
+            valeurs={mois.map(m => m.resultatPrintemps ?? 0)}
+            total={data.resultatPrintemps ?? 0}
+            couleur
+          />
+          <Ligne
+            label="dont NR"
+            titre="Calcul : le résultat app moins celui du Printemps"
+            valeurs={mois.map(m => (m.resultatApp ?? 0) - (m.resultatPrintemps ?? 0))}
+            total={(data.resultatApp ?? 0) - (data.resultatPrintemps ?? 0)}
             couleur
           />
 

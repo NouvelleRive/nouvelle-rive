@@ -820,6 +820,18 @@ export async function GET(req: NextRequest) {
       pri: COMPTES_BANCAIRES_EXCLUS.includes(c.id),
     }))
 
+    // Deux lectures du résultat. Celle de Pennylane sort de la balance
+    // (comptes 7 − comptes 6). Celle de l'app repart de la marge reconstituée
+    // depuis Square et les factures chineuses, moins les mêmes charges.
+    // L'écart entre les deux mesure ce qui reste à aligner dans la compta.
+    const sommeTotale = (l: SousLigne[]) => l.reduce((t, x) => t + x.montant, 0)
+    const resultatPrintempsTotal = (canaux?.montantTotal ?? 0)
+      - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0)
+    const margeAppTotal = sommeTotale(commissionsFactures) + sommeTotale(marchandisesFactures)
+      + sommeTotale(servicesPrintemps) + resultatPrintempsTotal
+    const chargesTotal = agreger(balance).charges + (frais?.total ?? 0)
+    const resultatAppTotal = margeAppTotal - chargesTotal
+
     const corps = {
       success: true,
       periode: { start, end },
@@ -1146,8 +1158,8 @@ export async function GET(req: NextRequest) {
       parChineuse,
       // Printemps : ce qu'il nous verse moins ce qu'on reverse à ses chineuses.
       // Le reste du résultat est celui de la boutique.
-      resultatPrintemps: (canaux?.montantTotal ?? 0)
-        - Object.values(reversePrintemps).reduce((s2, v) => s2 + v, 0),
+      resultatPrintemps: resultatPrintempsTotal,
+      resultatApp: resultatAppTotal,
       mois: mois.map((m, i) => {
         const a = agreger(balancesMois[i])
         return {
@@ -1232,6 +1244,13 @@ export async function GET(req: NextRequest) {
           resultatPrintemps:
             ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
             - (reversePrintemps[m.cle] ?? 0),
+          resultatApp: (() => {
+            const somme2 = (l: SousLigne[]) => l.filter(r => r.mois === m.cle).reduce((s2, r) => s2 + r.montant, 0)
+            const pri = ((canaux?.parMois[m.cle]?.vintage ?? 0) + (canaux?.parMois[m.cle]?.upcycling ?? 0))
+              - (reversePrintemps[m.cle] ?? 0)
+            const marge = somme2(commissionsFactures) + somme2(marchandisesFactures) + somme2(servicesPrintemps) + pri
+            return marge - (a.charges + (frais?.parMois[m.cle] ?? 0))
+          })(),
           pieces: volumes[m.cle]?.pieces ?? 0,
           caVentes: volumes[m.cle]?.ca ?? null,
           volumeSquare: square?.parMois[m.cle]?.net ?? null,
