@@ -43,7 +43,7 @@
       { key: 'calendrier', label: 'Calendrier', href: '/chineuse/calendrier', chineuseOnly: true },
       {
         key: 'commandes',
-        label: 'Commande',
+        label: 'Commandes',
         href: '/admin/nos-commandes',
         adminOnly: true,
         matches: ['/admin/nos-commandes', '/admin/clientes'],
