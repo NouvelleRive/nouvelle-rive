@@ -38,7 +38,13 @@ export async function GET(req: NextRequest) {
     .orderBy('dateVente', 'desc')
     .limit(MAX_VENTES)
     .get()
-  const ventes = snap.docs.map(d => {
+  // Même date de vente → la dernière saisie en premier (tri en mémoire, sans index composite).
+  const docs = [...snap.docs].sort((a, b) => {
+    const da = a.get('dateVente') as string, db = b.get('dateVente') as string
+    if (da !== db) return da < db ? 1 : -1
+    return (b.get('createdAt')?.toMillis?.() ?? 0) - (a.get('createdAt')?.toMillis?.() ?? 0)
+  })
+  const ventes = docs.map(d => {
     const v = d.data()
     return {
       id: d.id,
