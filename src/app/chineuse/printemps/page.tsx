@@ -25,13 +25,32 @@ const BROUILLON = 'nr_brouillon_vente_printemps'
 const aujourdhui = () => new Date().toISOString().slice(0, 10)
 
 // Photo de téléphone → JPEG 1600 px max, pour rester sous la limite d'upload.
+// createImageBitmap refuse certains JPEG (ex. photo transférée par WhatsApp) :
+// on retombe alors sur un <img> classique.
+async function decoderImage(file: File): Promise<{ img: CanvasImageSource; width: number; height: number }> {
+  try {
+    const b = await createImageBitmap(file)
+    return { img: b, width: b.width, height: b.height }
+  } catch {
+    const url = URL.createObjectURL(file)
+    try {
+      const img = new Image()
+      img.src = url
+      await img.decode()
+      return { img, width: img.naturalWidth, height: img.naturalHeight }
+    } finally {
+      URL.revokeObjectURL(url)
+    }
+  }
+}
+
 async function reduireImage(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file)
+  const bitmap = await decoderImage(file)
   const ratio = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * ratio)
   canvas.height = Math.round(bitmap.height * ratio)
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  canvas.getContext('2d')!.drawImage(bitmap.img, 0, 0, canvas.width, canvas.height)
   return new Promise((resolve, reject) =>
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('image illisible'))), 'image/jpeg', 0.85)
   )
