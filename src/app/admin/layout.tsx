@@ -11,6 +11,7 @@
   import LogoutButton from '@/components/LogoutButton'
   import ResetNotifsButton from '@/components/ResetNotifsButton'
   import EnableNotifsButton from '@/components/EnableNotifsButton'
+  import { EMAILS_PRINTEMPS } from '@/lib/ventesPrintemps'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -80,7 +81,7 @@
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
       { key: 'paiements', label: 'Paiements', href: '/admin/paiements', adminOnly: true },
       { key: 'reseaux', label: 'Réseaux', href: '/vendeuse/reseaux', adminOnly: true },
-      { key: 'printemps', label: 'Printemps', href: '/chineuse/printemps', adminOnly: true },
+      { key: 'printemps', label: 'Printemps', href: '/admin/printemps', printemps: true },
       ]
 
     // Filtrer selon le rôle sélectionné :
@@ -89,6 +90,8 @@
     const visibleTabs = tabs.filter(tab => {
       if ((tab as any).adminOnly && selectedChineuse) return false
       if ((tab as any).chineuseOnly && !selectedChineuse) return false
+      // Printemps : vue NOUVELLE RIVE, ou « Je suis » une chineuse du corner
+      if ((tab as any).printemps && selectedChineuse && !EMAILS_PRINTEMPS.includes(selectedChineuse.email)) return false
       return true
     })
 
