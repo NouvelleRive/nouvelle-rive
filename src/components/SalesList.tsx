@@ -64,6 +64,7 @@ interface SalesListProps {
   isDeposante?: boolean
   prefixeFacture?: string
   ventesFacture?: Vente[]
+  sousTitre?: React.ReactNode // affiché sous le titre (ex. bouton « Nouvelle vente »)
   loading?: boolean
   // Callbacks admin
   onAttribuer?: (vente: Vente) => void
@@ -90,6 +91,7 @@ export default function SalesList({
   isDeposante = false,
   prefixeFacture,
   ventesFacture,
+  sousTitre,
   loading = false,
   onAttribuer,
   onModifierPrix, 
@@ -208,6 +210,7 @@ export default function SalesList({
       {/* Header : Titre */}
       <div className="mb-4">
         <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
+        {sousTitre && <div className="mt-3 flex justify-center lg:justify-start">{sousTitre}</div>}
       </div>
 
       {/* Ligne : Actualiser + Stats */}

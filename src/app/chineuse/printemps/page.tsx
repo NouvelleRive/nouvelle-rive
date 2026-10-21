@@ -189,14 +189,13 @@ export default function VentesPrintempsPage() {
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-4 pt-4 flex justify-end">
-        <button onClick={ouvrirModal} className="bg-[#22209C] text-white text-sm font-medium px-4 py-2 rounded-lg">
-          Nouvelle vente
-        </button>
-      </div>
-
       <SalesList
         titre="VENTES PRINTEMPS"
+        sousTitre={
+          <button onClick={ouvrirModal} className="bg-[#22209C] text-white text-sm font-medium px-4 py-2 rounded-lg">
+            Nouvelle vente
+          </button>
+        }
         ventes={ventesListe}
         // Tout le monde voit tout, mais la facture PRI ne porte que ses propres ventes.
         ventesFacture={chineuse ? ventesListe.filter(v => TRIGRAMME_PROPRIETAIRE[v.trigramme] === chineuse.codeChineuse) : undefined}
