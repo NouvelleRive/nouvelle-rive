@@ -20,6 +20,7 @@ type VentePrintemps = {
   canal: string
 }
 
+const BROUILLON = 'nr_brouillon_vente_printemps'
 const aujourdhui = () => new Date().toISOString().slice(0, 10)
 
 // Photo de téléphone → JPEG 1600 px max, pour rester sous la limite d'upload.
@@ -102,6 +103,52 @@ export default function VentesPrintempsPage() {
   const [photoTicket, setPhotoTicket] = useState<File | null>(null)
   const [dateVente, setDateVente] = useState(aujourdhui())
   const [canal, setCanal] = useState('')
+  // Photos envoyées dès qu'on les choisit : leur URL survit à un rechargement.
+  const [urlPiece, setUrlPiece] = useState('')
+  const [urlTicket, setUrlTicket] = useState('')
+  const [envois, setEnvois] = useState(0)
+
+  // Brouillon : sur téléphone, la page peut se recharger au retour de l'appareil
+  // photo (ou pendant la lecture du ticket) et vider le formulaire.
+  useEffect(() => {
+    if (!user) return
+    try {
+      const b = JSON.parse(localStorage.getItem(BROUILLON) || 'null')
+      if (!b) return
+      setDescription(b.description || ''); setPrix(b.prix || ''); setProprietaire(b.proprietaire || '')
+      setDateVente(b.dateVente || aujourdhui()); setCanal(b.canal || '')
+      setUrlPiece(b.urlPiece || ''); setUrlTicket(b.urlTicket || '')
+      setEnEdition(null); setShowModal(true)
+    } catch { /* pas de brouillon */ }
+  }, [user])
+
+  useEffect(() => {
+    if (!showModal || enEdition) return
+    try {
+      localStorage.setItem(BROUILLON, JSON.stringify({ description, prix, proprietaire, dateVente, canal, urlPiece, urlTicket }))
+    } catch { /* stockage indisponible */ }
+  }, [showModal, enEdition, description, prix, proprietaire, dateVente, canal, urlPiece, urlTicket])
+
+  function fermerModal() {
+    setShowModal(false)
+    try { localStorage.removeItem(BROUILLON) } catch { /* rien */ }
+  }
+
+  async function envoyer(file: File, setUrl: (u: string) => void) {
+    setEnvois(n => n + 1)
+    try {
+      setUrl(await uploaderPhoto(file))
+    } catch {
+      setErreur('Envoi de la photo échoué, reprends-la')
+    } finally {
+      setEnvois(n => n - 1)
+    }
+  }
+
+  function choisirPiece(file: File | null) {
+    setPhotoPiece(file)
+    if (file) envoyer(file, setUrlPiece)
+  }
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -130,6 +177,7 @@ export default function VentesPrintempsPage() {
   async function choisirTicket(file: File | null) {
     setPhotoTicket(file)
     if (!file) return
+    envoyer(file, setUrlTicket)
     setLectureTicket('Lecture du ticket…')
     try {
       const lu = await lireTicket(file)
@@ -149,6 +197,7 @@ export default function VentesPrintempsPage() {
     setEnEdition(null)
     setDescription(''); setPrix(''); setProprietaire(''); setCanal('')
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(aujourdhui()); setErreur('')
+    setUrlPiece(''); setUrlTicket('')
     setShowModal(true)
   }
 
@@ -159,6 +208,7 @@ export default function VentesPrintempsPage() {
     setLectureTicket('')
     setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal)
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(v.dateVente); setErreur('')
+    setUrlPiece(''); setUrlTicket('')
     setShowModal(true)
   }
 
@@ -177,14 +227,13 @@ export default function VentesPrintempsPage() {
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault()
     if (!user) return
-    if ((!photoPiece && !enEdition) || (!photoTicket && !enEdition)) { setErreur('Les deux photos sont obligatoires'); return }
+    if (envois > 0) { setErreur('Photo en cours d\'envoi, patiente une seconde'); return }
+    const piece = urlPiece || enEdition?.photoPiece
+    const ticket = urlTicket || enEdition?.photoTicket
+    if (!piece || !ticket) { setErreur('Les deux photos sont obligatoires'); return }
     setSubmitting(true)
     setErreur('')
     try {
-      const [urlPiece, urlTicket] = await Promise.all([
-        photoPiece ? uploaderPhoto(photoPiece) : enEdition!.photoPiece,
-        photoTicket ? uploaderPhoto(photoTicket) : enEdition!.photoTicket,
-      ])
       const res = await fetch('/api/ventes-printemps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
@@ -193,15 +242,15 @@ export default function VentesPrintempsPage() {
           description,
           prix: Number(prix.replace(',', '.')),
           proprietaire,
-          photoPiece: urlPiece,
-          photoTicket: urlTicket,
+          photoPiece: piece,
+          photoTicket: ticket,
           dateVente,
           canal,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'enregistrement échoué')
-      setShowModal(false)
+      fermerModal()
       fetchVentes(user)
     } catch (err) {
       setErreur(err instanceof Error ? err.message : 'Erreur')
@@ -241,12 +290,14 @@ export default function VentesPrintempsPage() {
       />
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !submitting && setShowModal(false)}>
-          <form onSubmit={enregistrer} onClick={e => e.stopPropagation()} className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4">
+        // Pas de fermeture au clic sur le fond : le double-clic dans la fenêtre
+        // de choix de fichier retombait dessus et vidait le formulaire.
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <form onSubmit={enregistrer} className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4">
             <h2 className="text-lg font-bold text-[#22209C] uppercase">{enEdition ? 'Modifier la vente' : 'Nouvelle vente'}</h2>
 
-            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={enEdition?.photoPiece} onChange={setPhotoPiece} />
-            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={enEdition?.photoTicket} onChange={choisirTicket} />
+            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece || enEdition?.photoPiece} onChange={choisirPiece} />
+            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket || enEdition?.photoTicket} onChange={choisirTicket} />
             {lectureTicket && <p className="text-xs text-[#22209C] -mt-2">{lectureTicket}</p>}
 
             <div>
@@ -283,7 +334,7 @@ export default function VentesPrintempsPage() {
             {erreur && <p className="text-sm text-red-600">{erreur}</p>}
 
             <div className="flex gap-2 pt-2">
-              <button type="button" disabled={submitting} onClick={() => setShowModal(false)} className="flex-1 border rounded px-4 py-2 text-sm">
+              <button type="button" disabled={submitting} onClick={fermerModal} className="flex-1 border rounded px-4 py-2 text-sm">
                 Annuler
               </button>
               <button type="submit" disabled={submitting} className="flex-1 bg-[#22209C] text-white rounded px-4 py-2 text-sm font-medium disabled:opacity-50">
