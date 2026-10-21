@@ -201,6 +201,7 @@ if (formData.existingPhotos.details?.length) photosData.details = formData.exist
         material: formData.material.trim() || null,
         color: formData.color.trim() || null,
         madeIn: formData.madeIn || null,
+        atelier: formData.atelier === true,
         modele: formData.modele?.trim() || null,
         motif: formData.motif?.trim() || null,
         sleeveLength: formData.sleeveLength?.trim() || null,

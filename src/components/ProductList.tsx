@@ -835,6 +835,7 @@
             bagHeight: (data as any).bagHeight || '',
             bagSizeName: data.bagSizeName || '',
             madeIn: data.madeIn || '',
+            atelier: data.atelier === true,
             modele: data.modele?.trim() || null,
             motif: (data as any).motif?.trim() || null,
             sleeveLength: (data as any).sleeveLength?.trim() || null,
