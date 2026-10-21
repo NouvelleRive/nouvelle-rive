@@ -23,9 +23,17 @@ async function emailAutorise(req: NextRequest): Promise<string | null> {
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await emailAutorise(req))) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  const email = await emailAutorise(req)
+  if (!email) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  // Fiche de la chineuse connectée, pour l'en-tête de sa facture PRI.
+  const chSnap = await adminDb.collection('chineuse').where('email', '==', email).limit(1).get()
+  const c = chSnap.docs[0]?.data()
+  const chineuse = c ? {
+    nom: c.nom, siret: c.siret, adresse1: c.adresse1, adresse2: c.adresse2, tva: c.tva,
+    iban: c.iban, bic: c.bic, banqueAdresse: c.banqueAdresse, taux: c.taux, codeChineuse: c.trigramme,
+  } : null
+
   const snap = await adminDb.collection('ventesPrintemps')
     .orderBy('dateVente', 'desc')
     .limit(MAX_VENTES)
@@ -44,7 +52,7 @@ export async function GET(req: NextRequest) {
       saisiePar: v.saisiePar,
     }
   })
-  return NextResponse.json({ ventes })
+  return NextResponse.json({ ventes, chineuse })
 }
 
 export async function POST(req: NextRequest) {

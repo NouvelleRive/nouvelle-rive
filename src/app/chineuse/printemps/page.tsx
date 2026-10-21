@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
-import SalesList from '@/components/SalesList'
+import SalesList, { ChineuseMeta } from '@/components/SalesList'
 import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS, CANAUX_PRINTEMPS } from '@/lib/ventesPrintemps'
 
 type VentePrintemps = {
@@ -74,6 +74,7 @@ export default function VentesPrintempsPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [ventes, setVentes] = useState<VentePrintemps[]>([])
+  const [chineuse, setChineuse] = useState<ChineuseMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -103,6 +104,7 @@ export default function VentesPrintempsPage() {
       const res = await fetch('/api/ventes-printemps', { headers: { Authorization: `Bearer ${await u.getIdToken()}` } })
       const data = await res.json()
       setVentes(data.ventes || [])
+      setChineuse(data.chineuse || null)
     } catch (err) {
       console.error('Erreur chargement ventes Printemps:', err)
     } finally {
@@ -168,7 +170,9 @@ export default function VentesPrintempsPage() {
           dateVente: v.dateVente,
           imageUrls: [v.photoPiece, v.photoTicket],
         }))}
+        chineuse={chineuse}
         userEmail={user?.email || undefined}
+        prefixeFacture="PRI"
         loading={loading}
         onRefresh={() => user && fetchVentes(user)}
       />

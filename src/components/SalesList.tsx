@@ -62,6 +62,7 @@ interface SalesListProps {
   userEmail?: string
   isAdmin?: boolean
   isDeposante?: boolean
+  prefixeFacture?: string
   loading?: boolean
   // Callbacks admin
   onAttribuer?: (vente: Vente) => void
@@ -86,6 +87,7 @@ export default function SalesList({
   userEmail,
   isAdmin = false,
   isDeposante = false,
+  prefixeFacture,
   loading = false,
   onAttribuer,
   onModifierPrix, 
@@ -248,6 +250,7 @@ export default function SalesList({
         userEmail={userEmail}
         isAdmin={isAdmin}
         isDeposante={isDeposante}
+        prefixeFacture={prefixeFacture}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onFiltered={setVentesFiltrées}

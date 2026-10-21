@@ -20,6 +20,7 @@ interface SalesFiltersProps {
   userEmail?: string
   isAdmin?: boolean
   isDeposante?: boolean
+  prefixeFacture?: string // 'PRI' pour les ventes du corner Printemps
   viewMode: 'grid' | 'list'
   onViewModeChange: (mode: 'grid' | 'list') => void
   onFiltered: (ventes: Vente[]) => void
@@ -33,6 +34,7 @@ export default function SalesFilters({
   userEmail,
   isAdmin = false,
   isDeposante = false,
+  prefixeFacture = 'NR',
   viewMode,
   onViewModeChange,
   onFiltered,
@@ -282,7 +284,7 @@ export default function SalesFilters({
     const tauxHT = typeof ch?.taux === 'number' ? ch.taux / 100 : (typeof ch?.commissionHT === 'number' ? ch.commissionHT : 0.40)
     const commissionHT = ca * tauxHT, commissionTTC = commissionHT * 1.2, tva = commissionTTC - commissionHT, net = ca - commissionTTC
     const code = (ch?.codeChineuse || ch?.code || ch?.nom?.split(/\s+/)[0] || 'NR').toString().trim().toUpperCase()
-    const ref = `NR${String(m).padStart(2, '0')}${String(y).slice(-2)}-${code}`
+    const ref = `${prefixeFacture}${String(m).padStart(2, '0')}${String(y).slice(-2)}-${code}`
     const fmt = (n: number) => n.toFixed(2).replace('.', ',')
     const fmtEUR = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
     const docPDF = new jsPDF({ unit: 'pt', format: 'a4' })
