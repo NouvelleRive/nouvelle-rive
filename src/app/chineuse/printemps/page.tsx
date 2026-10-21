@@ -259,6 +259,9 @@ export default function VentesPrintempsPage() {
     }
   }
 
+  const grandePiece = urlPiece || enEdition?.photoPiece
+  const grandTicket = urlTicket || enEdition?.photoTicket
+
   const ventesListe = ventes.map(v => ({
     id: v.id,
     nom: v.description,
@@ -293,9 +296,19 @@ export default function VentesPrintempsPage() {
         // Pas de fermeture au clic sur le fond : le double-clic dans la fenêtre
         // de choix de fichier retombait dessus et vidait le formulaire.
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <form onSubmit={enregistrer} className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4">
-            <h2 className="text-lg font-bold text-[#22209C] uppercase">{enEdition ? 'Modifier la vente' : 'Nouvelle vente'}</h2>
+          <form onSubmit={enregistrer} className={`bg-white rounded-lg w-full ${grandePiece || grandTicket ? 'max-w-5xl' : 'max-w-md'} max-h-[90vh] overflow-y-auto p-5`}>
+            <h2 className="text-lg font-bold text-[#22209C] uppercase mb-4">{enEdition ? 'Modifier la vente' : 'Nouvelle vente'}</h2>
 
+            <div className="flex flex-col lg:flex-row gap-5">
+            {/* Photos en grand, pour rédiger la description et vérifier le ticket */}
+            {(grandePiece || grandTicket) && (
+              <div className="lg:w-1/2 flex flex-col sm:flex-row lg:flex-col gap-3">
+                {grandePiece && <img src={grandePiece} alt="Pièce" className="w-full max-h-[40vh] object-contain rounded border bg-gray-50" />}
+                {grandTicket && <img src={grandTicket} alt="Ticket" className="w-full max-h-[40vh] object-contain rounded border bg-gray-50" />}
+              </div>
+            )}
+
+            <div className="flex-1 space-y-4">
             <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece || enEdition?.photoPiece} onChange={choisirPiece} />
             <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket || enEdition?.photoTicket} onChange={choisirTicket} />
             {lectureTicket && <p className="text-xs text-[#22209C] -mt-2">{lectureTicket}</p>}
@@ -340,6 +353,8 @@ export default function VentesPrintempsPage() {
               <button type="submit" disabled={submitting} className="flex-1 bg-[#22209C] text-white rounded px-4 py-2 text-sm font-medium disabled:opacity-50">
                 {submitting ? 'Enregistrement…' : 'Enregistrer'}
               </button>
+            </div>
+            </div>
             </div>
           </form>
         </div>
