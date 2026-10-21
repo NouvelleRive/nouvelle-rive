@@ -42,7 +42,17 @@
       { key: 'ventes', label: 'Ventes', href: '/admin/nos-ventes' },
       { key: 'printemps', label: 'Printemps', href: '/chineuse/printemps', adminOnly: true },
       { key: 'calendrier', label: 'Calendrier', href: '/chineuse/calendrier', chineuseOnly: true },
-      { key: 'commandes', label: 'Commandes', href: '/admin/nos-commandes', adminOnly: true },
+      {
+        key: 'commandes',
+        label: 'Commande',
+        href: '/admin/nos-commandes',
+        adminOnly: true,
+        matches: ['/admin/nos-commandes', '/admin/clientes'],
+        dropdown: [
+          { label: 'Commandes', href: '/admin/nos-commandes' },
+          { label: 'Clientes', href: '/admin/clientes' },
+        ],
+      },
       { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', adminOnly: true },
       { key: 'perf', label: 'Perf', href: '/admin/performance' },
       {
@@ -69,7 +79,6 @@
         ],
       },
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
-      { key: 'clients', label: 'Clientes', href: '/admin/clientes', adminOnly: true },
       { key: 'paiements', label: 'Paiements', href: '/admin/paiements', adminOnly: true },
       { key: 'reseaux', label: 'Réseaux', href: '/vendeuse/reseaux', adminOnly: true },
       ]
