@@ -210,11 +210,13 @@ export default function SalesList({
       {/* Header : Titre */}
       <div className="mb-4">
         <h1 className="text-xl md:text-2xl font-bold text-[#22209C] text-center uppercase">{titre}</h1>
-        {sousTitre && <div className="mt-3 flex justify-center lg:justify-start">{sousTitre}</div>}
+        {sousTitre && <div className="mt-3 flex justify-center lg:hidden">{sousTitre}</div>}
       </div>
 
       {/* Ligne : Actualiser + Stats */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
+        {/* Sur ordi, le bouton sous-titre s'aligne avec les KPI */}
+        {sousTitre && <div className="hidden lg:block">{sousTitre}</div>}
         {/* Bouton Actualiser (chineuse) */}
         {!isAdmin && onRefresh && (
           <button
