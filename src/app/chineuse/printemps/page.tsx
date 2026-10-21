@@ -58,7 +58,7 @@ async function uploaderPhoto(file: File): Promise<string> {
   return (await res.json()).url
 }
 
-function ChampPhoto({ label, file, urlExistante, onChange }: { label: string; file: File | null; urlExistante?: string; onChange: (f: File | null) => void }) {
+function ChampPhoto({ label, file, urlExistante, onChange, onRetirer }: { label: string; file: File | null; urlExistante?: string; onChange: (f: File | null) => void; onRetirer: () => void }) {
   const [apercu, setApercu] = useState<string | null>(null)
   useEffect(() => {
     if (!file) { setApercu(null); return }
@@ -70,7 +70,15 @@ function ChampPhoto({ label, file, urlExistante, onChange }: { label: string; fi
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {(apercu || urlExistante) && <img src={apercu || urlExistante} alt="" className="w-24 h-24 object-cover rounded mb-2 border" />}
+      {(apercu || urlExistante) && (
+        <div className="relative w-24 h-24 mb-2">
+          <img src={apercu || urlExistante} alt="" className="w-24 h-24 object-cover rounded border" />
+          <button type="button" onClick={onRetirer} aria-label="Retirer la photo"
+            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border shadow text-gray-600 text-sm leading-none flex items-center justify-center">
+            ×
+          </button>
+        </div>
+      )}
       <div className="flex gap-2">
         <label className="flex-1 text-center text-sm border border-[#22209C] text-[#22209C] rounded px-3 py-2 cursor-pointer">
           Image déjà prise
@@ -213,7 +221,7 @@ export default function VentesPrintempsPage() {
     setLectureTicket(''); setLignesTicket([])
     setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal)
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(v.dateVente); setErreur('')
-    setUrlPiece(''); setUrlTicket('')
+    setUrlPiece(v.photoPiece); setUrlTicket(v.photoTicket)
     setShowModal(true)
   }
 
@@ -233,8 +241,8 @@ export default function VentesPrintempsPage() {
     e.preventDefault()
     if (!user) return
     if (envois > 0) { setErreur('Photo en cours d\'envoi, patiente une seconde'); return }
-    const piece = urlPiece || enEdition?.photoPiece
-    const ticket = urlTicket || enEdition?.photoTicket
+    const piece = urlPiece
+    const ticket = urlTicket
     if (!piece || !ticket) { setErreur('Les deux photos sont obligatoires'); return }
     setSubmitting(true)
     setErreur('')
@@ -264,8 +272,8 @@ export default function VentesPrintempsPage() {
     }
   }
 
-  const grandePiece = urlPiece || enEdition?.photoPiece
-  const grandTicket = urlTicket || enEdition?.photoTicket
+  const grandePiece = urlPiece
+  const grandTicket = urlTicket
 
   const ventesListe = ventes.map(v => ({
     id: v.id,
@@ -314,8 +322,8 @@ export default function VentesPrintempsPage() {
             )}
 
             <div className="flex-1 space-y-4">
-            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece || enEdition?.photoPiece} onChange={choisirPiece} />
-            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket || enEdition?.photoTicket} onChange={choisirTicket} />
+            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece} onChange={choisirPiece} onRetirer={() => { setPhotoPiece(null); setUrlPiece('') }} />
+            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket} onChange={choisirTicket} onRetirer={() => { setPhotoTicket(null); setUrlTicket(''); setLignesTicket([]); setLectureTicket('') }} />
             {lectureTicket && <p className="text-xs text-[#22209C] -mt-2">{lectureTicket}</p>}
             {lignesTicket.length > 0 && (
               <div className="flex flex-wrap gap-2 -mt-2">
