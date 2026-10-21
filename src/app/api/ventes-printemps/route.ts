@@ -73,8 +73,11 @@ export async function POST(req: NextRequest) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVente)) return NextResponse.json({ error: 'date invalide' }, { status: 400 })
   if (!b.photoPiece || !b.photoTicket) return NextResponse.json({ error: 'photos requises' }, { status: 400 })
 
-  // ID fourni par le client : un double clic ou un renvoi réécrit la même vente.
-  await adminDb.collection('ventesPrintemps').doc(id).set({
+  // ID fourni par le client : un double clic ou un renvoi réécrit la même vente,
+  // et une modification renvoie l'ID existant.
+  const ref = adminDb.collection('ventesPrintemps').doc(id)
+  const existe = (await ref.get()).exists
+  await ref.set({
     description,
     prix,
     proprietaire: b.proprietaire,
@@ -82,8 +85,17 @@ export async function POST(req: NextRequest) {
     photoTicket: String(b.photoTicket),
     dateVente,
     canal: b.canal,
-    saisiePar: email,
-    createdAt: FieldValue.serverTimestamp(),
-  })
+    ...(existe
+      ? { modifiePar: email, modifieLe: FieldValue.serverTimestamp() }
+      : { saisiePar: email, createdAt: FieldValue.serverTimestamp() }),
+  }, { merge: true })
   return NextResponse.json({ ok: true, id })
+}
+
+export async function DELETE(req: NextRequest) {
+  if (!(await emailAutorise(req))) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const id = new URL(req.url).searchParams.get('id') || ''
+  if (!/^[a-zA-Z0-9-]{8,64}$/.test(id)) return NextResponse.json({ error: 'id invalide' }, { status: 400 })
+  await adminDb.collection('ventesPrintemps').doc(id).delete()
+  return NextResponse.json({ ok: true })
 }

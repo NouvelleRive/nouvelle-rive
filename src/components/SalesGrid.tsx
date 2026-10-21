@@ -165,8 +165,8 @@ export default function SalesGrid({
                   <p style={{ fontSize: 8, color: '#aaa', letterSpacing: '0.05em' }}>{getDate(vente)}</p>
                 )}
 
-                {/* Actions admin */}
-                {isAdmin && (
+                {/* Actions (admin, ou page qui les fournit : Printemps) */}
+                {(isAdmin || onModifierPrix || onSupprimer) && (
                   <div className="flex gap-1 mt-1">
                     {onAttribuer && (
                       <button

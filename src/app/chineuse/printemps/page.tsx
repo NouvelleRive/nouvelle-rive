@@ -43,7 +43,7 @@ async function uploaderPhoto(file: File): Promise<string> {
   return (await res.json()).url
 }
 
-function ChampPhoto({ label, file, onChange }: { label: string; file: File | null; onChange: (f: File | null) => void }) {
+function ChampPhoto({ label, file, urlExistante, onChange }: { label: string; file: File | null; urlExistante?: string; onChange: (f: File | null) => void }) {
   const [apercu, setApercu] = useState<string | null>(null)
   useEffect(() => {
     if (!file) { setApercu(null); return }
@@ -55,7 +55,7 @@ function ChampPhoto({ label, file, onChange }: { label: string; file: File | nul
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {apercu && <img src={apercu} alt="" className="w-24 h-24 object-cover rounded mb-2 border" />}
+      {(apercu || urlExistante) && <img src={apercu || urlExistante} alt="" className="w-24 h-24 object-cover rounded mb-2 border" />}
       <div className="flex gap-2">
         <label className="flex-1 text-center text-sm border border-[#22209C] text-[#22209C] rounded px-3 py-2 cursor-pointer">
           Image déjà prise
@@ -79,6 +79,7 @@ export default function VentesPrintempsPage() {
   const [showModal, setShowModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [erreur, setErreur] = useState('')
+  const [enEdition, setEnEdition] = useState<VentePrintemps | null>(null)
 
   const [description, setDescription] = useState('')
   const [prix, setPrix] = useState('')
@@ -113,24 +114,49 @@ export default function VentesPrintempsPage() {
   }
 
   function ouvrirModal() {
+    setEnEdition(null)
     setDescription(''); setPrix(''); setProprietaire(''); setCanal('')
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(aujourdhui()); setErreur('')
     setShowModal(true)
   }
 
+  function modifier(id: string) {
+    const v = ventes.find(x => x.id === id)
+    if (!v) return
+    setEnEdition(v)
+    setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal)
+    setPhotoPiece(null); setPhotoTicket(null); setDateVente(v.dateVente); setErreur('')
+    setShowModal(true)
+  }
+
+  async function supprimer(id: string) {
+    if (!user) return
+    const v = ventes.find(x => x.id === id)
+    if (!confirm(`Supprimer la vente « ${v?.description || ''} » ?`)) return
+    const res = await fetch(`/api/ventes-printemps?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+    })
+    if (!res.ok) { alert('Suppression échouée'); return }
+    fetchVentes(user)
+  }
+
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault()
     if (!user) return
-    if (!photoPiece || !photoTicket) { setErreur('Les deux photos sont obligatoires'); return }
+    if ((!photoPiece && !enEdition) || (!photoTicket && !enEdition)) { setErreur('Les deux photos sont obligatoires'); return }
     setSubmitting(true)
     setErreur('')
     try {
-      const [urlPiece, urlTicket] = await Promise.all([uploaderPhoto(photoPiece), uploaderPhoto(photoTicket)])
+      const [urlPiece, urlTicket] = await Promise.all([
+        photoPiece ? uploaderPhoto(photoPiece) : enEdition!.photoPiece,
+        photoTicket ? uploaderPhoto(photoTicket) : enEdition!.photoTicket,
+      ])
       const res = await fetch('/api/ventes-printemps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
         body: JSON.stringify({
-          id: crypto.randomUUID(),
+          id: enEdition?.id || crypto.randomUUID(),
           description,
           prix: Number(prix.replace(',', '.')),
           proprietaire,
@@ -179,12 +205,14 @@ export default function VentesPrintempsPage() {
         prefixeFacture="PRI"
         loading={loading}
         onRefresh={() => user && fetchVentes(user)}
+        onModifierPrix={v => modifier(v.id)}
+        onSupprimer={v => supprimer(v.id)}
       />
 
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !submitting && setShowModal(false)}>
           <form onSubmit={enregistrer} onClick={e => e.stopPropagation()} className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4">
-            <h2 className="text-lg font-bold text-[#22209C] uppercase">Nouvelle vente</h2>
+            <h2 className="text-lg font-bold text-[#22209C] uppercase">{enEdition ? 'Modifier la vente' : 'Nouvelle vente'}</h2>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -204,8 +232,8 @@ export default function VentesPrintempsPage() {
               </select>
             </div>
 
-            <ChampPhoto label="Photo pièce" file={photoPiece} onChange={setPhotoPiece} />
-            <ChampPhoto label="Photo ticket" file={photoTicket} onChange={setPhotoTicket} />
+            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={enEdition?.photoPiece} onChange={setPhotoPiece} />
+            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={enEdition?.photoTicket} onChange={setPhotoTicket} />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date de vente</label>

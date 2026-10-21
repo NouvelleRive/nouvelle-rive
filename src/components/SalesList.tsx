@@ -377,7 +377,7 @@ export default function SalesList({
                       {vente.trigramme && <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded flex-shrink-0">{vente.trigramme}</span>}
                       <p className="font-bold text-green-600 text-[14px] ml-auto whitespace-nowrap">{formatPrix(prix)}€</p>
                       {vente.prixInitial && vente.prixInitial !== prix && <p className="text-[10px] text-gray-400 whitespace-nowrap">({formatPrix(vente.prixInitial)}€)</p>}
-                      {isAdmin && (
+                      {(isAdmin || onModifierPrix || onSupprimer) && (
                         <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
                           {onAttribuer && <button onClick={(e) => { e.stopPropagation(); onAttribuer(vente) }} className={`p-1 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={13} /></button>}
                           {onModifierPrix && <button onClick={(e) => { e.stopPropagation(); onModifierPrix(vente) }} className="p-1 bg-blue-100 text-blue-600 rounded"><Pencil size={13} /></button>}
@@ -425,7 +425,7 @@ export default function SalesList({
                       <p className="font-bold text-green-600 text-lg">{formatPrix(prix)}€</p>
                       {vente.prixInitial && vente.prixInitial !== prix && <p className="text-xs text-gray-400">Initial: {formatPrix(vente.prixInitial)}€</p>}
                     </div>
-                    {isAdmin && (
+                    {(isAdmin || onModifierPrix || onSupprimer) && (
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {onAttribuer && <button onClick={(e) => { e.stopPropagation(); onAttribuer(vente) }} className={`p-2 rounded-lg ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={16} /></button>}
                         {onModifierPrix && <button onClick={(e) => { e.stopPropagation(); onModifierPrix(vente) }} className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Pencil size={16} /></button>}
