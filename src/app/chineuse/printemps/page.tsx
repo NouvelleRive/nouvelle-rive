@@ -203,7 +203,6 @@ export default function VentesPrintempsPage() {
         userEmail={user?.email || undefined}
         prefixeFacture="PRI"
         loading={loading}
-        onRefresh={() => user && fetchVentes(user)}
         onModifierPrix={v => modifier(v.id)}
         onSupprimer={v => supprimer(v.id)}
       />
