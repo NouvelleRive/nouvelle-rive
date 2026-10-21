@@ -26,8 +26,11 @@ export async function GET(req: NextRequest) {
   const email = await emailAutorise(req)
   if (!email) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  // Fiche de la chineuse connectée, pour l'en-tête de sa facture PRI.
-  const chSnap = await adminDb.collection('chineuse').where('email', '==', email).limit(1).get()
+  // Fiche de la chineuse connectée (ou, pour l'admin, celle du « Je suis »),
+  // pour l'en-tête de sa facture PRI.
+  const demandee = new URL(req.url).searchParams.get('chineuse')
+  const cible = email === 'nouvelleriveparis@gmail.com' && demandee ? demandee : email
+  const chSnap = await adminDb.collection('chineuse').where('email', '==', cible).limit(1).get()
   const c = chSnap.docs[0]?.data()
   const chineuse = c ? {
     nom: c.nom, siret: c.siret, adresse1: c.adresse1, adresse2: c.adresse2, tva: c.tva,
