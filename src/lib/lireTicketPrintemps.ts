@@ -19,7 +19,9 @@ export function lireTicketPrintemps(texte: string, aujourdhui = new Date()): Tic
 
   // Jour/mois fiables, année souvent mal lue (« 20 6 », « 2006 ») : on prend la
   // date passée la plus récente qui tombe ce jour-là.
-  const d = t.match(/(\d{2})[/.](\d{2})[/.]\s?(\d[\d ]{1,4}?)\s*-?\s*\d{2}[: ]\d{2}/)
+  // Le jour peut perdre un chiffre (« 8/08/2026 »), l'heure être illisible :
+  // on se cale sur le tiret ou l'heure qui suit, absents de la date d'échange.
+  const d = t.match(/(?<!\d)(\d{1,2})[/.](\d{2})[/.]\s?\d[\d ]{1,4}?\s*(?:-|\d{2}[: ]\d{2})/)
   if (d && +d[2] >= 1 && +d[2] <= 12 && +d[1] >= 1 && +d[1] <= 31) {
     let annee = aujourdhui.getFullYear()
     if (new Date(annee, +d[2] - 1, +d[1]) > aujourdhui) annee--
