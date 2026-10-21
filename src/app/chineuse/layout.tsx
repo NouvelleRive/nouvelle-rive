@@ -10,6 +10,7 @@ import Link from 'next/link'
 import NotifsAutoSubscribe from '@/components/NotifsAutoSubscribe'
 import LogoutButton from '@/components/LogoutButton'
 import { ACHETEUSE_EMAIL } from '@/lib/roles'
+import { EMAILS_PRINTEMPS } from '@/lib/ventesPrintemps'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 const VENDEUSE_EMAIL = 'nouvellerivecommandes@gmail.com'
@@ -27,6 +28,7 @@ function ChineuseNavbar() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [isVendeuse, setIsVendeuse] = useState(false)
   const [isAnimatrice, setIsAnimatrice] = useState(false)
+  const [isPrintemps, setIsPrintemps] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -34,6 +36,7 @@ function ChineuseNavbar() {
       setIsAdmin(user?.email === ADMIN_EMAIL)
       setIsVendeuse(user?.email === VENDEUSE_EMAIL)
       setIsAnimatrice(ANIMATRICES_EMAILS.includes(user?.email || ''))
+      setIsPrintemps(EMAILS_PRINTEMPS.includes(user?.email || ''))
     })
     return () => unsubscribe()
   }, [])
@@ -55,6 +58,11 @@ function ChineuseNavbar() {
   // Ajouter Ateliers pour admin ET animatrices
   if (isAdmin || isAnimatrice) {
     links.push({ href: '/chineuse/ateliers', label: 'Ateliers' })
+  }
+
+  // Corner Printemps : IP, TDO, CHINEUZ2BLING (+ admin)
+  if (isPrintemps) {
+    links.push({ href: '/chineuse/printemps', label: 'Printemps' })
   }
 
   // Ajouter Commandes pour admin ET vendeuse

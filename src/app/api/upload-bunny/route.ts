@@ -7,7 +7,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 
-const ALLOWED_FOLDERS = ['produits/', 'reseaux/']
+const ALLOWED_FOLDERS = ['produits/', 'reseaux/', 'printemps/']
 
 async function putToBunny(path: string, body: Buffer, contentType: string) {
   const storageZone = process.env.BUNNY_STORAGE_ZONE
