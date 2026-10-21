@@ -4,6 +4,7 @@ import { Client, Environment } from 'square'
 import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getFraisLivraison } from '@/lib/shipping'
+import { lireCodePromo } from '@/lib/codesPromo'
 
 if (!getApps().length) {
   initializeApp({
@@ -45,13 +46,15 @@ export async function POST(request: Request) {
       attribution,
       fbp,
       fbc,
-      consent
+      consent,
+      promoCode
     }: {
       items: ItemPanier[]
       clientInfo: { prenom: string; nom: string; email: string; telephone?: string }
       adresse: any
       modeLivraison: 'retrait' | 'livraison'
       paysCode?: string
+      promoCode?: string | null
       attribution?: {
         utm_source?: string
         utm_medium?: string
@@ -77,7 +80,7 @@ export async function POST(request: Request) {
     console.log('Mode:', modeLivraison)
 
     // Recharger les prix côté serveur pour éviter qu'un client trafique le prix
-    const prixServeur: { id: string; nom: string; prix: number }[] = []
+    const prixServeur: { id: string; nom: string; prix: number; sku: string }[] = []
     for (const it of items) {
       const snap = await adminDb.collection('produits').doc(it.id).get()
       if (!snap.exists) {
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
       if (d.vendu === true) {
         return NextResponse.json({ success: false, error: `Produit ${it.nom || it.id} déjà vendu`, soldOutId: it.id }, { status: 409 })
       }
-      prixServeur.push({ id: it.id, nom: d.nom || it.nom, prix: Number(d.prix) || 0 })
+      prixServeur.push({ id: it.id, nom: d.nom || it.nom, prix: Number(d.prix) || 0, sku: String(d.sku || '').toUpperCase() })
     }
 
     const sousTotal = prixServeur.reduce((s, p) => s + p.prix, 0)
@@ -97,8 +100,23 @@ export async function POST(request: Request) {
       fraisLivraison = getFraisLivraison(codePays, sousTotal)
     }
 
-    const totalFinal = sousTotal + fraisLivraison
-    console.log('💰 Sous-total:', sousTotal.toFixed(2), '€ — Livraison:', fraisLivraison, '€ — Total:', totalFinal.toFixed(2), '€')
+    // Code promo ciblé (lib/codesPromo) : remise sur les seules pièces listées,
+    // jamais sur la livraison. Financée par NR : la vente chineuse reste au prix plein.
+    const promo = promoCode ? await lireCodePromo(String(promoCode)) : null
+    if (promoCode && String(promoCode).trim() && !promo) {
+      return NextResponse.json({ success: false, error: 'Code promo invalide', promoInvalid: true }, { status: 400 })
+    }
+    const eligible = (p: { sku: string }) => !!promo && promo.skus.includes(p.sku)
+    const remise = promo
+      ? prixServeur.filter(eligible).reduce((s, p) => s + Math.round(p.prix * promo.remisePct) / 100, 0)
+      : 0
+    const DISCOUNT_UID = 'code-promo'
+    const discounts = promo && remise > 0
+      ? [{ uid: DISCOUNT_UID, name: `${promo.code} -${promo.remisePct}%`, percentage: String(promo.remisePct), scope: 'LINE_ITEM' as const }]
+      : undefined
+
+    const totalFinal = sousTotal - remise + fraisLivraison
+    console.log('💰 Sous-total:', sousTotal.toFixed(2), '€ — Remise:', remise.toFixed(2), '€ — Livraison:', fraisLivraison, '€ — Total:', totalFinal.toFixed(2), '€')
 
     const idempotencyKey = `cart-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
 
@@ -112,6 +130,10 @@ export async function POST(request: Request) {
       nombreArticles: prixServeur.length.toString(),
       sousTotal: sousTotal.toString(),
       fraisLivraison: fraisLivraison.toString(),
+    }
+    if (discounts && promo) {
+      metadata.promoCode = promo.code
+      metadata.remise = remise.toFixed(2)
     }
 
     if (clientInfo.telephone && clientInfo.telephone.trim() !== '') {
@@ -151,7 +173,8 @@ export async function POST(request: Request) {
         note: [
           `productId:${p.id}`,
           original?.imageUrl ? `Image: ${original.imageUrl}` : null
-        ].filter(Boolean).join(' | ').substring(0, 500)
+        ].filter(Boolean).join(' | ').substring(0, 500),
+        ...(discounts && eligible(p) ? { appliedDiscounts: [{ discountUid: DISCOUNT_UID }] } : {})
       }
     })
 
@@ -176,6 +199,7 @@ export async function POST(request: Request) {
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
         lineItems,
+        ...(discounts ? { discounts } : {}),
         metadata
       },
       idempotencyKey
@@ -215,6 +239,7 @@ export async function POST(request: Request) {
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
         lineItems,
+        ...(discounts ? { discounts } : {}),
         metadata
       },
       checkoutOptions: {

@@ -63,9 +63,47 @@ function CheckoutContent() {
     }
   }, [hydrated, count, items, sousTotal])
 
+  // Code promo ciblé (ex. LOAH15) : aperçu ici, le calcul qui fait foi est refait
+  // par /api/checkout au paiement.
+  const [promoSaisi, setPromoSaisi] = useState('')
+  const [promo, setPromo] = useState<{ code: string; remisePct: number; skus: string[] } | null>(null)
+  const [promoMsg, setPromoMsg] = useState('')
+  const [promoChecking, setPromoChecking] = useState(false)
+  const remise = promo
+    ? items.filter(i => promo.skus.includes((i.sku || '').toUpperCase())).reduce((s, i) => s + Math.round(i.prix * promo.remisePct) / 100, 0)
+    : 0
+
+  const appliquerCode = async () => {
+    const code = promoSaisi.trim()
+    if (!code) return
+    setPromoChecking(true)
+    setPromoMsg('')
+    try {
+      const data = await (await fetch('/api/code-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })).json()
+      if (!data.valid) {
+        setPromo(null)
+        setPromoMsg(t('Code invalide.', 'Invalid code.', lang))
+      } else if (!items.some(i => data.skus.includes((i.sku || '').toUpperCase()))) {
+        setPromo(null)
+        setPromoMsg(t('Ce code ne concerne aucune pièce de votre panier.', 'This code does not apply to any item in your cart.', lang))
+      } else {
+        setPromo({ code: data.code, remisePct: data.remisePct, skus: data.skus })
+      }
+    } catch {
+      setPromo(null)
+      setPromoMsg(t('Code invalide.', 'Invalid code.', lang))
+    } finally {
+      setPromoChecking(false)
+    }
+  }
+
   const fraisLivraison = calculerLivraison(sousTotal, modeLivraison, adresse.paysCode)
   const fraisLivraisonPreview = calculerLivraison(sousTotal, 'livraison', adresse.paysCode)
-  const total = sousTotal + fraisLivraison
+  const total = sousTotal - remise + fraisLivraison
   const locale = lang === 'en' ? 'en-US' : 'fr-FR'
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,11 +132,15 @@ function CheckoutContent() {
           fbp: fb.fbp,
           fbc: fb.fbc,
           consent: getConsent(),
+          promoCode: promo?.code || null,
         })
       })
       const data = await response.json()
       if (data.success && data.checkoutUrl) {
         window.location.href = data.checkoutUrl
+      } else if (data?.promoInvalid) {
+        setPromo(null)
+        setPromoMsg(t('Code invalide.', 'Invalid code.', lang))
       } else if (data?.soldOutId) {
         removeItem(data.soldOutId)
         alert(t(
@@ -183,6 +225,41 @@ function CheckoutContent() {
                     : <span>{formatPrix(fraisLivraison, { decimals: 2 })} €</span>}
                 </div>
               )}
+              {remise > 0 && promo && (
+                <div className="flex justify-between" style={{ color: bleuElectrique }}>
+                  <span>{promo.code} (‑{promo.remisePct}%)</span>
+                  <span>‑{formatPrix(remise, { decimals: 2 })} €</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label style={{ fontSize: '11px', letterSpacing: '0.15em', fontWeight: 600 }}>
+                {t('CODE PROMO', 'PROMO CODE', lang)}
+              </label>
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  value={promoSaisi}
+                  onChange={(e) => { setPromoSaisi(e.target.value); setPromoMsg('') }}
+                  placeholder={t('Votre code', 'Your code', lang)}
+                  className="flex-1 min-w-0 px-3 py-2 border border-black bg-white uppercase"
+                  style={{ fontSize: '13px', letterSpacing: '0.1em' }}
+                  disabled={!!promo}
+                />
+                {promo ? (
+                  <button type="button" onClick={() => { setPromo(null); setPromoSaisi('') }}
+                    className="px-4 py-2 border border-black" style={{ fontSize: '11px', letterSpacing: '0.15em' }}>
+                    {t('RETIRER', 'REMOVE', lang)}
+                  </button>
+                ) : (
+                  <button type="button" onClick={appliquerCode} disabled={promoChecking || !promoSaisi.trim()}
+                    className="px-4 py-2 text-white disabled:opacity-50" style={{ backgroundColor: '#000', fontSize: '11px', letterSpacing: '0.15em' }}>
+                    {promoChecking ? '…' : 'OK'}
+                  </button>
+                )}
+              </div>
+              {promoMsg && <p className="mt-2" style={{ fontSize: '12px', color: '#c0392b' }}>{promoMsg}</p>}
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t border-black">
