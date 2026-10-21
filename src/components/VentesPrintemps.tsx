@@ -334,7 +334,10 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
         }
         ventes={ventesListe}
         // Tout le monde voit tout, mais la facture PRI ne porte que ses propres ventes.
-        ventesFacture={chineuse ? ventesListe.filter(v => TRIGRAMME_PROPRIETAIRE[v.trigramme] === chineuse.codeChineuse) : undefined}
+        // Sans fiche chineuse (admin en vue NOUVELLE RIVE) : rien à facturer.
+        ventesFacture={chineuse ? ventesListe.filter(v => TRIGRAMME_PROPRIETAIRE[v.trigramme] === chineuse.codeChineuse) : []}
+        chineuses={PROPRIETAIRES_PRINTEMPS.map(p => ({ trigramme: p, nom: p }))}
+        avecFiltreChineuse
         chineuse={chineuse}
         userEmail={user?.email || undefined}
         prefixeFacture="PRI"

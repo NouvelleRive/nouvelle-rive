@@ -64,6 +64,7 @@ interface SalesListProps {
   isDeposante?: boolean
   prefixeFacture?: string
   ventesFacture?: Vente[]
+  avecFiltreChineuse?: boolean
   sousTitre?: React.ReactNode // affiché sous le titre (ex. bouton « Nouvelle vente »)
   loading?: boolean
   // Callbacks admin
@@ -90,6 +91,7 @@ export default function SalesList({
   isDeposante = false,
   prefixeFacture,
   ventesFacture,
+  avecFiltreChineuse,
   sousTitre,
   loading = false,
   onAttribuer,
@@ -246,6 +248,7 @@ export default function SalesList({
         isDeposante={isDeposante}
         prefixeFacture={prefixeFacture}
         ventesFacture={ventesFacture}
+        avecFiltreChineuse={avecFiltreChineuse}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onFiltered={setVentesFiltrées}

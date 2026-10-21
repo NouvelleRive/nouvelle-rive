@@ -22,6 +22,7 @@ interface SalesFiltersProps {
   isDeposante?: boolean
   prefixeFacture?: string // 'PRI' pour les ventes du corner Printemps
   ventesFacture?: Vente[] // ventes à facturer, si différentes de la liste affichée
+  avecFiltreChineuse?: boolean // filtre par chineuse hors admin (page Printemps)
   viewMode: 'grid' | 'list'
   onViewModeChange: (mode: 'grid' | 'list') => void
   onFiltered: (ventes: Vente[]) => void
@@ -37,6 +38,7 @@ export default function SalesFilters({
   isDeposante = false,
   prefixeFacture = 'NR',
   ventesFacture,
+  avecFiltreChineuse = false,
   viewMode,
   onViewModeChange,
   onFiltered,
@@ -282,6 +284,10 @@ export default function SalesFilters({
     const [m, y] = monthValue.split('-').map(Number)
     const start = new Date(y, m - 1, 1), end = new Date(y, m, 0, 23, 59, 59, 999)
     const ventesDuMois = (ventesFacture ?? ventes).filter(v => { const d = getDateFromVente(v); return d >= start && d <= end })
+    if (prefixeFacture !== 'NR' && ventesDuMois.length === 0) {
+      alert("Aucune vente à facturer pour ce mois. En admin, choisis d'abord la chineuse dans « Je suis ».")
+      return
+    }
     const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
     const tauxHT = typeof ch?.taux === 'number' ? ch.taux / 100 : (typeof ch?.commissionHT === 'number' ? ch.commissionHT : 0.40)
     const commissionHT = ca * tauxHT, commissionTTC = commissionHT * 1.2, tva = commissionTTC - commissionHT, net = ca - commissionTTC
@@ -429,7 +435,7 @@ export default function SalesFilters({
           filters={{
             recherche: { value: recherche, onChange: setRecherche, placeholder: 'SKU, nom, remarque...' },
             mois: { value: filtreMois, onChange: setFiltreMois, options: moisDisponibles.map(({ value, label }) => ({ value, label: label.charAt(0).toUpperCase() + label.slice(1) })) },
-            ...(isAdmin && { chineuse: { value: filtreChineuse, onChange: setFiltreChineuse, options: chineusesDisponibles.map(c => ({ value: c.trigramme, label: `${c.trigramme} - ${c.nom}` })) } }),
+            ...((isAdmin || avecFiltreChineuse) && { chineuse: { value: filtreChineuse, onChange: setFiltreChineuse, options: chineusesDisponibles.map(c => ({ value: c.trigramme, label: c.nom === c.trigramme ? c.nom : `${c.trigramme} - ${c.nom}` })) } }),
             prix: { value: filtrePrix, onChange: setFiltrePrix },
             tri: { value: tri, onChange: (v) => setTri(v as any) },
             ...(isAdmin && { statut: { value: filtreStatut, onChange: (v) => setFiltreStatut(v as any), options: [{ value: 'all', label: 'Tous statuts' }, { value: 'attribue', label: 'Attribuées' }, { value: 'non-attribue', label: 'Non attribuées' }] } }),
