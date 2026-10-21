@@ -302,9 +302,9 @@ export default function VentesPrintempsPage() {
             <div className="flex flex-col lg:flex-row gap-5">
             {/* Photos en grand, pour rédiger la description et vérifier le ticket */}
             {(grandePiece || grandTicket) && (
-              <div className="lg:w-1/2 flex flex-col sm:flex-row lg:flex-col gap-3">
-                {grandePiece && <img src={grandePiece} alt="Pièce" className="w-full max-h-[40vh] object-contain rounded border bg-gray-50" />}
-                {grandTicket && <img src={grandTicket} alt="Ticket" className="w-full max-h-[40vh] object-contain rounded border bg-gray-50" />}
+              <div className="lg:w-2/5 grid grid-cols-2 lg:grid-cols-1 gap-3">
+                {grandePiece && <a href={grandePiece} target="_blank" rel="noreferrer"><img src={grandePiece} alt="Pièce" className="w-full aspect-square object-cover rounded border" /></a>}
+                {grandTicket && <a href={grandTicket} target="_blank" rel="noreferrer"><img src={grandTicket} alt="Ticket" className="w-full aspect-square object-cover rounded border" /></a>}
               </div>
             )}
 
