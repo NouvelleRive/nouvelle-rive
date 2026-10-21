@@ -53,7 +53,7 @@
           { label: 'Clientes', href: '/admin/clientes' },
         ],
       },
-      { key: 'ebay', label: '🛒 eBay', href: '/admin/ebay', adminOnly: true },
+      { key: 'ebay', label: 'eBay', href: '/admin/ebay', adminOnly: true },
       { key: 'perf', label: 'Perf', href: '/admin/performance' },
       {
         key: 'financials',
