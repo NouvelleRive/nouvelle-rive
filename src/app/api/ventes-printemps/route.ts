@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
       photoTicket: v.photoTicket,
       dateVente: v.dateVente,
       canal: v.canal,
+      atelier: v.atelier === true,
       saisiePar: v.saisiePar,
     }
   })
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest) {
     photoTicket: String(b.photoTicket),
     dateVente,
     canal: b.canal,
+    atelier: b.atelier === true,
     ...(existe
       ? { modifiePar: email, modifieLe: FieldValue.serverTimestamp() }
       : { saisiePar: email, createdAt: FieldValue.serverTimestamp() }),

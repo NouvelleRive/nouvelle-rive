@@ -19,6 +19,7 @@ type VentePrintemps = {
   photoTicket: string
   dateVente: string
   canal: string
+  atelier?: boolean
 }
 
 const BROUILLON = 'nr_brouillon_vente_printemps'
@@ -138,6 +139,7 @@ export default function VentesPrintempsPage() {
   const [photoTicket, setPhotoTicket] = useState<File | null>(null)
   const [dateVente, setDateVente] = useState(aujourdhui())
   const [canal, setCanal] = useState('')
+  const [atelier, setAtelier] = useState(false)
   // Photos envoyées dès qu'on les choisit : leur URL survit à un rechargement.
   const [urlPiece, setUrlPiece] = useState('')
   const [urlTicket, setUrlTicket] = useState('')
@@ -151,7 +153,7 @@ export default function VentesPrintempsPage() {
       const b = JSON.parse(localStorage.getItem(BROUILLON) || 'null')
       if (!b) return
       setDescription(b.description || ''); setPrix(b.prix || ''); setProprietaire(b.proprietaire || '')
-      setDateVente(b.dateVente || aujourdhui()); setCanal(b.canal || '')
+      setDateVente(b.dateVente || aujourdhui()); setCanal(b.canal || ''); setAtelier(b.atelier === true)
       setUrlPiece(b.urlPiece || ''); setUrlTicket(b.urlTicket || '')
       setEnEdition(null); setShowModal(true)
     } catch { /* pas de brouillon */ }
@@ -160,9 +162,9 @@ export default function VentesPrintempsPage() {
   useEffect(() => {
     if (!showModal || enEdition) return
     try {
-      localStorage.setItem(BROUILLON, JSON.stringify({ description, prix, proprietaire, dateVente, canal, urlPiece, urlTicket }))
+      localStorage.setItem(BROUILLON, JSON.stringify({ description, prix, proprietaire, dateVente, canal, atelier, urlPiece, urlTicket }))
     } catch { /* stockage indisponible */ }
-  }, [showModal, enEdition, description, prix, proprietaire, dateVente, canal, urlPiece, urlTicket])
+  }, [showModal, enEdition, description, prix, proprietaire, dateVente, canal, atelier, urlPiece, urlTicket])
 
   function fermerModal() {
     setShowModal(false)
@@ -233,7 +235,7 @@ export default function VentesPrintempsPage() {
   function ouvrirModal() {
     setLectureTicket(''); setLignesTicket([])
     setEnEdition(null)
-    setDescription(''); setPrix(''); setProprietaire(''); setCanal('')
+    setDescription(''); setPrix(''); setProprietaire(''); setCanal(''); setAtelier(false)
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(aujourdhui()); setErreur('')
     setUrlPiece(''); setUrlTicket('')
     setShowModal(true)
@@ -244,7 +246,7 @@ export default function VentesPrintempsPage() {
     if (!v) return
     setEnEdition(v)
     setLectureTicket(''); setLignesTicket([])
-    setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal)
+    setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal); setAtelier(v.atelier === true)
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(v.dateVente); setErreur('')
     setUrlPiece(v.photoPiece); setUrlTicket(v.photoTicket)
     setShowModal(true)
@@ -287,6 +289,7 @@ export default function VentesPrintempsPage() {
           photoTicket: ticket,
           dateVente,
           canal,
+          atelier,
         }),
       })
       const data = await res.json()
@@ -401,6 +404,12 @@ export default function VentesPrintempsPage() {
                 {CANAUX_PRINTEMPS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+
+            {/* Décochée par défaut : les ventes saisies avant cette case n'étaient pas des ateliers */}
+            <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
+              <input type="checkbox" checked={atelier} onChange={e => setAtelier(e.target.checked)} className="w-4 h-4 accent-[#22209C]" />
+              Atelier
+            </label>
 
             {erreur && <p className="text-sm text-red-600">{erreur}</p>}
 
