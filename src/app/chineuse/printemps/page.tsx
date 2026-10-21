@@ -5,8 +5,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
+import { formatPrix } from '@/lib/formatPrix'
 import SalesList, { ChineuseMeta } from '@/components/SalesList'
-import { lireTicketPrintemps } from '@/lib/lireTicketPrintemps'
+import { lireTicketPrintemps, LigneTicket } from '@/lib/lireTicketPrintemps'
 import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS, CANAUX_PRINTEMPS, TRIGRAMME_PROPRIETAIRE } from '@/lib/ventesPrintemps'
 
 type VentePrintemps = {
@@ -95,6 +96,7 @@ export default function VentesPrintempsPage() {
   const [erreur, setErreur] = useState('')
   const [enEdition, setEnEdition] = useState<VentePrintemps | null>(null)
   const [lectureTicket, setLectureTicket] = useState('')
+  const [lignesTicket, setLignesTicket] = useState<LigneTicket[]>([])
 
   const [description, setDescription] = useState('')
   const [prix, setPrix] = useState('')
@@ -184,16 +186,19 @@ export default function VentesPrintempsPage() {
       if (lu.prix) setPrix(String(lu.prix).replace('.', ','))
       if (lu.dateVente) setDateVente(lu.dateVente)
       if (lu.canal) setCanal(lu.canal)
-      setLectureTicket(lu.prix || lu.dateVente || lu.canal
-        ? 'Ticket lu : vérifie les champs préremplis'
-        : 'Ticket illisible : remplis les champs à la main')
+      setLignesTicket(lu.lignes || [])
+      setLectureTicket(lu.lignes
+        ? `Ticket à ${lu.lignes.length} pièces : clique sur celle que tu saisis`
+        : lu.prix || lu.dateVente || lu.canal
+          ? 'Ticket lu : vérifie les champs préremplis'
+          : 'Ticket illisible : remplis les champs à la main')
     } catch {
       setLectureTicket('Ticket illisible : remplis les champs à la main')
     }
   }
 
   function ouvrirModal() {
-    setLectureTicket('')
+    setLectureTicket(''); setLignesTicket([])
     setEnEdition(null)
     setDescription(''); setPrix(''); setProprietaire(''); setCanal('')
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(aujourdhui()); setErreur('')
@@ -205,7 +210,7 @@ export default function VentesPrintempsPage() {
     const v = ventes.find(x => x.id === id)
     if (!v) return
     setEnEdition(v)
-    setLectureTicket('')
+    setLectureTicket(''); setLignesTicket([])
     setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal)
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(v.dateVente); setErreur('')
     setUrlPiece(''); setUrlTicket('')
@@ -312,10 +317,27 @@ export default function VentesPrintempsPage() {
             <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece || enEdition?.photoPiece} onChange={choisirPiece} />
             <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket || enEdition?.photoTicket} onChange={choisirTicket} />
             {lectureTicket && <p className="text-xs text-[#22209C] -mt-2">{lectureTicket}</p>}
+            {lignesTicket.length > 0 && (
+              <div className="flex flex-wrap gap-2 -mt-2">
+                {lignesTicket.map((l, i) => {
+                  const choisie = prix === String(l.prix).replace('.', ',') && canal === l.canal
+                  return (
+                    <button key={i} type="button" onClick={() => { setPrix(String(l.prix).replace('.', ',')); setCanal(l.canal) }}
+                      className={`text-xs rounded px-3 py-1.5 border border-[#22209C] ${choisie ? 'bg-[#22209C] text-white' : 'text-[#22209C]'}`}>
+                      {formatPrix(l.prix, { decimals: l.prix % 1 ? 2 : 0 })} € · {l.canal.toLowerCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <input required value={description} onChange={e => setDescription(e.target.value)} className="w-full border rounded px-3 py-2 text-sm" />
+              <input required list="descriptions-printemps" autoComplete="off" value={description} onChange={e => setDescription(e.target.value)} className="w-full border rounded px-3 py-2 text-sm" />
+              {/* Suggestions au fil de la frappe : les pièces upcycling reviennent souvent */}
+              <datalist id="descriptions-printemps">
+                {Array.from(new Set(ventes.map(v => v.description))).map(d => <option key={d} value={d} />)}
+              </datalist>
             </div>
 
             <div>
