@@ -284,8 +284,6 @@ async function compressImage(file: File): Promise<string> {
     material: string
     color: string
     madeIn: string
-    /** Pièce d'atelier (décoché par défaut ; absent = pas un atelier) */
-    atelier?: boolean
     modele: string
     motif: string
     sleeveLength: string
@@ -506,7 +504,6 @@ async function compressImage(file: File): Promise<string> {
       material: initialData?.material || '',
       color: initialData?.color || '',
       madeIn: initialData?.madeIn || '',
-      atelier: (initialData as any)?.atelier === true,
       modele: initialData?.modele || '',
       motif: initialData?.motif || '',
       sleeveLength: initialData?.sleeveLength || '',
@@ -572,7 +569,6 @@ async function compressImage(file: File): Promise<string> {
           material: initialData.material || '',
           color: initialData.color || '',
           madeIn: initialData.madeIn || '',
-          atelier: (initialData as any).atelier === true,
           modele: initialData.modele || '',
           motif: initialData.motif || '',
           sleeveLength: initialData.sleeveLength || '',
@@ -2670,18 +2666,6 @@ async function compressImage(file: File): Promise<string> {
                   </label>
                 ))}
               </div>
-            </div>
-
-            <div className="mt-3 pt-3 border-t">
-              <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
-                <input
-                  type="checkbox"
-                  checked={formData.atelier === true}
-                  onChange={(e) => setFormData({ ...formData, atelier: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300 accent-[#22209C]"
-                />
-                Atelier
-              </label>
             </div>
           </div>
 

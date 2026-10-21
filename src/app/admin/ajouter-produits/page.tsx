@@ -91,7 +91,7 @@ export default function AdminAjouterPage() {
         ...((data as any).fraisPort?.trim?.() ? { fraisPort: parseFloat((data as any).fraisPort) || 0 } : {}),
         marque: data.marque.trim(), taille: data.taille.trim(),
         material: data.material.trim() || null, color: data.color.trim() || null,
-        madeIn: data.madeIn || null, atelier: data.atelier === true, sku: finalSku,
+        madeIn: data.madeIn || null, sku: finalSku,
         modele: data.modele?.trim() || null,
         motif: (data as any).motif?.trim() || null,
         sleeveLength: (data as any).sleeveLength?.trim() || null,
