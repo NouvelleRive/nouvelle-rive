@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import SalesList, { ChineuseMeta } from '@/components/SalesList'
+import { lireTicketPrintemps } from '@/lib/lireTicketPrintemps'
 import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS, CANAUX_PRINTEMPS, TRIGRAMME_PROPRIETAIRE } from '@/lib/ventesPrintemps'
 
 type VentePrintemps = {
@@ -32,6 +33,18 @@ async function reduireImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) =>
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('image illisible'))), 'image/jpeg', 0.85)
   )
+}
+
+// OCR dans le navigateur (gratuit) : le ticket préremplit prix, date et canal.
+async function lireTicket(file: File) {
+  const { createWorker } = await import('tesseract.js')
+  const worker = await createWorker('fra')
+  try {
+    const { data } = await worker.recognize(await reduireImage(file))
+    return lireTicketPrintemps(data.text)
+  } finally {
+    await worker.terminate()
+  }
 }
 
 async function uploaderPhoto(file: File): Promise<string> {
@@ -80,6 +93,7 @@ export default function VentesPrintempsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [erreur, setErreur] = useState('')
   const [enEdition, setEnEdition] = useState<VentePrintemps | null>(null)
+  const [lectureTicket, setLectureTicket] = useState('')
 
   const [description, setDescription] = useState('')
   const [prix, setPrix] = useState('')
@@ -113,7 +127,25 @@ export default function VentesPrintempsPage() {
     }
   }
 
+  async function choisirTicket(file: File | null) {
+    setPhotoTicket(file)
+    if (!file) return
+    setLectureTicket('Lecture du ticket…')
+    try {
+      const lu = await lireTicket(file)
+      if (lu.prix) setPrix(String(lu.prix).replace('.', ','))
+      if (lu.dateVente) setDateVente(lu.dateVente)
+      if (lu.canal) setCanal(lu.canal)
+      setLectureTicket(lu.prix || lu.dateVente || lu.canal
+        ? 'Ticket lu : vérifie les champs préremplis'
+        : 'Ticket illisible : remplis les champs à la main')
+    } catch {
+      setLectureTicket('Ticket illisible : remplis les champs à la main')
+    }
+  }
+
   function ouvrirModal() {
+    setLectureTicket('')
     setEnEdition(null)
     setDescription(''); setPrix(''); setProprietaire(''); setCanal('')
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(aujourdhui()); setErreur('')
@@ -124,6 +156,7 @@ export default function VentesPrintempsPage() {
     const v = ventes.find(x => x.id === id)
     if (!v) return
     setEnEdition(v)
+    setLectureTicket('')
     setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal)
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(v.dateVente); setErreur('')
     setShowModal(true)
@@ -212,6 +245,10 @@ export default function VentesPrintempsPage() {
           <form onSubmit={enregistrer} onClick={e => e.stopPropagation()} className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4">
             <h2 className="text-lg font-bold text-[#22209C] uppercase">{enEdition ? 'Modifier la vente' : 'Nouvelle vente'}</h2>
 
+            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={enEdition?.photoPiece} onChange={setPhotoPiece} />
+            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={enEdition?.photoTicket} onChange={choisirTicket} />
+            {lectureTicket && <p className="text-xs text-[#22209C] -mt-2">{lectureTicket}</p>}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <input required value={description} onChange={e => setDescription(e.target.value)} className="w-full border rounded px-3 py-2 text-sm" />
@@ -229,9 +266,6 @@ export default function VentesPrintempsPage() {
                 {PROPRIETAIRES_PRINTEMPS.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
-
-            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={enEdition?.photoPiece} onChange={setPhotoPiece} />
-            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={enEdition?.photoTicket} onChange={setPhotoTicket} />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date de vente</label>
