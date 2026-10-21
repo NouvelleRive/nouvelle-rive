@@ -235,7 +235,7 @@ function CheckoutContent() {
 
             <div className="mb-4">
               <label style={{ fontSize: '11px', letterSpacing: '0.15em', fontWeight: 600 }}>
-                {t('CODE PROMO', 'PROMO CODE', lang)}
+                {t('CODE', 'CODE', lang)}
               </label>
               <div className="flex gap-2 mt-2">
                 <input
