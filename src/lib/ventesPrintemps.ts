@@ -8,4 +8,12 @@ export const EMAILS_PRINTEMPS = [
 ]
 
 export const PROPRIETAIRES_PRINTEMPS = ['CHINEUZ2BLING', 'GIGI PARIS', 'INES PINEAU', "TETE D'ORANGE"]
+// Propriétaire du formulaire → trigramme de sa fiche chineuse (facture PRI).
+export const TRIGRAMME_PROPRIETAIRE: Record<string, string> = {
+  'CHINEUZ2BLING': 'CHB',
+  'GIGI PARIS': 'GIGI',
+  'INES PINEAU': 'IP',
+  "TETE D'ORANGE": 'TDO',
+}
+
 export const CANAUX_PRINTEMPS = ['VINTAGE', 'UPCYCLING']

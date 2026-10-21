@@ -21,6 +21,7 @@ interface SalesFiltersProps {
   isAdmin?: boolean
   isDeposante?: boolean
   prefixeFacture?: string // 'PRI' pour les ventes du corner Printemps
+  ventesFacture?: Vente[] // ventes à facturer, si différentes de la liste affichée
   viewMode: 'grid' | 'list'
   onViewModeChange: (mode: 'grid' | 'list') => void
   onFiltered: (ventes: Vente[]) => void
@@ -35,6 +36,7 @@ export default function SalesFilters({
   isAdmin = false,
   isDeposante = false,
   prefixeFacture = 'NR',
+  ventesFacture,
   viewMode,
   onViewModeChange,
   onFiltered,
@@ -279,7 +281,7 @@ export default function SalesFilters({
     const ch = { ...chineuse, taux: chineuse?.taux ?? dep?.taux, siret: chineuse?.siret || dep?.siret, adresse1: chineuse?.adresse1 || dep?.adresse1, adresse2: chineuse?.adresse2 || dep?.adresse2, tva: chineuse?.tva || dep?.tva, iban: chineuse?.iban || dep?.iban, bic: chineuse?.bic || dep?.bic, banqueAdresse: chineuse?.banqueAdresse || dep?.banqueAdresse }
     const [m, y] = monthValue.split('-').map(Number)
     const start = new Date(y, m - 1, 1), end = new Date(y, m, 0, 23, 59, 59, 999)
-    const ventesDuMois = ventes.filter(v => { const d = getDateFromVente(v); return d >= start && d <= end })
+    const ventesDuMois = (ventesFacture ?? ventes).filter(v => { const d = getDateFromVente(v); return d >= start && d <= end })
     const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
     const tauxHT = typeof ch?.taux === 'number' ? ch.taux / 100 : (typeof ch?.commissionHT === 'number' ? ch.commissionHT : 0.40)
     const commissionHT = ca * tauxHT, commissionTTC = commissionHT * 1.2, tva = commissionTTC - commissionHT, net = ca - commissionTTC

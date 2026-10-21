@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
 import SalesList, { ChineuseMeta } from '@/components/SalesList'
-import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS, CANAUX_PRINTEMPS } from '@/lib/ventesPrintemps'
+import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS, CANAUX_PRINTEMPS, TRIGRAMME_PROPRIETAIRE } from '@/lib/ventesPrintemps'
 
 type VentePrintemps = {
   id: string
@@ -151,6 +151,16 @@ export default function VentesPrintempsPage() {
     }
   }
 
+  const ventesListe = ventes.map(v => ({
+    id: v.id,
+    nom: v.description,
+    trigramme: v.proprietaire,
+    categorie: v.canal,
+    prix: v.prix,
+    dateVente: v.dateVente,
+    imageUrls: [v.photoPiece, v.photoTicket],
+  }))
+
   return (
     <>
       <div className="max-w-6xl mx-auto px-4 pt-4 flex justify-end">
@@ -161,15 +171,9 @@ export default function VentesPrintempsPage() {
 
       <SalesList
         titre="VENTES PRINTEMPS"
-        ventes={ventes.map(v => ({
-          id: v.id,
-          nom: v.description,
-          trigramme: v.proprietaire,
-          categorie: v.canal,
-          prix: v.prix,
-          dateVente: v.dateVente,
-          imageUrls: [v.photoPiece, v.photoTicket],
-        }))}
+        ventes={ventesListe}
+        // Tout le monde voit tout, mais la facture PRI ne porte que ses propres ventes.
+        ventesFacture={chineuse ? ventesListe.filter(v => TRIGRAMME_PROPRIETAIRE[v.trigramme] === chineuse.codeChineuse) : undefined}
         chineuse={chineuse}
         userEmail={user?.email || undefined}
         prefixeFacture="PRI"
