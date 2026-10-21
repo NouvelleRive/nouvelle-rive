@@ -40,7 +40,6 @@
       { key: 'ajouter', label: 'Ajouter', href: '/admin/ajouter-produits' },  
       { key: 'produits', label: 'Produits', href: '/admin/nos-produits' },
       { key: 'ventes', label: 'Ventes', href: '/admin/nos-ventes' },
-      { key: 'printemps', label: 'Printemps', href: '/chineuse/printemps', adminOnly: true },
       { key: 'calendrier', label: 'Calendrier', href: '/chineuse/calendrier', chineuseOnly: true },
       {
         key: 'commandes',
@@ -81,6 +80,7 @@
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
       { key: 'paiements', label: 'Paiements', href: '/admin/paiements', adminOnly: true },
       { key: 'reseaux', label: 'Réseaux', href: '/vendeuse/reseaux', adminOnly: true },
+      { key: 'printemps', label: 'Printemps', href: '/chineuse/printemps', adminOnly: true },
       ]
 
     // Filtrer selon le rôle sélectionné :
