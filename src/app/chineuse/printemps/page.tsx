@@ -50,8 +50,14 @@ async function lireTicket(file: File) {
 }
 
 async function uploaderPhoto(file: File): Promise<string> {
+  let jpeg: Blob
+  try {
+    jpeg = await reduireImage(file)
+  } catch {
+    throw new Error('format de photo illisible (HEIC ?), utilise un JPEG ou un PNG')
+  }
   const form = new FormData()
-  form.append('file', new File([await reduireImage(file)], 'photo.jpg', { type: 'image/jpeg' }))
+  form.append('file', new File([jpeg], 'photo.jpg', { type: 'image/jpeg' }))
   form.append('folder', 'printemps/')
   const res = await fetch('/api/upload-bunny', { method: 'POST', body: form })
   if (!res.ok) throw new Error('upload photo échoué')
@@ -148,8 +154,8 @@ export default function VentesPrintempsPage() {
     setEnvois(n => n + 1)
     try {
       setUrl(await uploaderPhoto(file))
-    } catch {
-      setErreur('Envoi de la photo échoué, reprends-la')
+    } catch (err) {
+      setErreur(`Envoi de la photo échoué : ${err instanceof Error ? err.message : 'erreur'}`)
     } finally {
       setEnvois(n => n - 1)
     }
@@ -241,12 +247,15 @@ export default function VentesPrintempsPage() {
     e.preventDefault()
     if (!user) return
     if (envois > 0) { setErreur('Photo en cours d\'envoi, patiente une seconde'); return }
-    const piece = urlPiece
-    const ticket = urlTicket
-    if (!piece || !ticket) { setErreur('Les deux photos sont obligatoires'); return }
+    if ((!urlPiece && !photoPiece) || (!urlTicket && !photoTicket)) { setErreur('Les deux photos sont obligatoires'); return }
     setSubmitting(true)
     setErreur('')
     try {
+      // Une photo dont l'envoi a échoué en arrière-plan est renvoyée ici.
+      const piece = urlPiece || await uploaderPhoto(photoPiece!)
+      const ticket = urlTicket || await uploaderPhoto(photoTicket!)
+      if (!urlPiece) setUrlPiece(piece)
+      if (!urlTicket) setUrlTicket(ticket)
       const res = await fetch('/api/ventes-printemps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
