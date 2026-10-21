@@ -98,11 +98,6 @@ async function fetchVentes(trigramme: string, email: string) {
     }
   }, [user?.email, chineuse?.codeChineuse])
 
-  const handleRefresh = async () => {
-  if (user?.email) {
-    await fetchVentes(chineuse?.codeChineuse || '', user.email)
-  }
-}
 
   return (
     <>
@@ -118,7 +113,6 @@ async function fetchVentes(trigramme: string, email: string) {
         userEmail={user?.email || undefined}
         isAdmin={false}
         loading={loading}
-        onRefresh={handleRefresh}
       />
     </>
   )

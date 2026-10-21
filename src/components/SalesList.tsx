@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { RefreshCw, Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil, LayoutGrid, List, Heart } from 'lucide-react'
+import { Trash2, Link, CheckCircle, AlertCircle, CheckSquare, Square, Pencil, LayoutGrid, List, Heart } from 'lucide-react'
 import SalesFilters from '@/components/SalesFilters'
 import SalesGrid from '@/components/SalesGrid'
 import SaleDetailModal from '@/components/SaleDetailModal'
@@ -74,7 +74,6 @@ interface SalesListProps {
   onAjouterVente?: () => void
   onVenteFamiliale?: () => void
   // Refresh
-  onRefresh?: () => void
 }
 
 // =====================
@@ -99,7 +98,6 @@ export default function SalesList({
   onSupprimerBatch,
   onAjouterVente,
   onVenteFamiliale,
-  onRefresh,
 }: SalesListProps) {
 
   // Sélection (admin)
@@ -213,21 +211,10 @@ export default function SalesList({
         {sousTitre && <div className="mt-3 flex justify-center lg:hidden">{sousTitre}</div>}
       </div>
 
-      {/* Ligne : Actualiser + Stats */}
+      {/* Ligne : Stats */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         {/* Sur ordi, le bouton sous-titre s'aligne avec les KPI */}
         {sousTitre && <div className="hidden lg:block">{sousTitre}</div>}
-        {/* Bouton Actualiser (chineuse) */}
-        {!isAdmin && onRefresh && (
-          <button
-            onClick={onRefresh}
-            className="flex items-center gap-2 bg-[#22209C] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1a1a7a] transition-colors"
-          >
-            <RefreshCw size={16} />
-            Actualiser
-          </button>
-        )}
-
         {/* Stats — desktop only (mobile: voir ligne Nb · CA · Télécharger dans SalesFilters) */}
         <div className="hidden lg:flex flex-wrap items-center gap-2 flex-1">
           <div className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2">

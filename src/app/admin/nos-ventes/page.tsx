@@ -528,7 +528,6 @@ export default function AdminNosVentesPage() {
         onSupprimerBatch={handleSupprimerBatch}
         onAjouterVente={() => setShowModalAjout(true)}
         onVenteFamiliale={() => setShowModalFamiliale(true)}
-        onRefresh={loadVentes}
       />
 
       {/* Modal Ajout */}

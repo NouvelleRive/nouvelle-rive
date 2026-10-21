@@ -82,7 +82,6 @@ export default function AcheteuseMesVentesPage() {
         userEmail={user?.email || undefined}
         isAdmin={false}
         loading={loading}
-        onRefresh={fetchVentes}
       />
     </>
   )
