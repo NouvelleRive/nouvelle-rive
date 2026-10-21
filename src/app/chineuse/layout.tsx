@@ -60,7 +60,7 @@ function ChineuseNavbar() {
     links.push({ href: '/chineuse/ateliers', label: 'Ateliers' })
   }
 
-  // Corner Printemps : IP, TDO, CHINEUZ2BLING (+ admin)
+  // Corner Printemps : IP, TDO, CHINEUZ2BLING, GIGI PARIS (+ admin)
   if (isPrintemps) {
     links.push({ href: '/chineuse/printemps', label: 'Printemps' })
   }

@@ -3,6 +3,7 @@ export const EMAILS_PRINTEMPS = [
   'studio.inespineau@gmail.com', // INES PINEAU
   'contact@tete-dorange.com',    // TÊTE D'ORANGE
   'chineuz2bling@gmail.com',     // CHINEUZ2BLING
+  'contactgigiparis@gmail.com',  // GIGI PARIS
   'nouvelleriveparis@gmail.com', // admin
 ]
 

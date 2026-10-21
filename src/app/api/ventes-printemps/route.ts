@@ -1,6 +1,6 @@
 // app/api/ventes-printemps/route.ts
 // Ventes du corner Printemps, saisies à la main par les chineuses du stand.
-// Réservé à INES PINEAU, TÊTE D'ORANGE, CHINEUZ2BLING (+ admin).
+// Réservé à INES PINEAU, TÊTE D'ORANGE, CHINEUZ2BLING, GIGI PARIS (+ admin).
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
