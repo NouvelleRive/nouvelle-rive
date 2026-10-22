@@ -44,7 +44,11 @@ export async function genererFacturePrintemps(params: {
   chineuse: ChineuseMeta | null | undefined
   mois: string // « MM-AAAA »
 }) {
-  const { chineuse: ch } = params
+  // Accents saisis en deux caractères (« e » + accent) : jsPDF ne sait pas les
+  // afficher et espace alors toute la ligne → on les recompose (NFC).
+  const ch = params.chineuse && Object.fromEntries(
+    Object.entries(params.chineuse).map(([k, v]) => [k, typeof v === 'string' ? v.normalize('NFC') : v])
+  ) as ChineuseMeta
   if (!ch?.codeChineuse) {
     alert("Aucune vente à facturer pour ce mois. En admin, choisis d'abord la chineuse dans « Je suis ».")
     return
@@ -115,7 +119,8 @@ export async function genererFacturePrintemps(params: {
   const yBank = yTot + 40
   doc.text('IBAN', margin, yBank); doc.text(ch.iban || 'xxx', margin + 120, yBank)
   doc.text('BIC', margin, yBank + 16); doc.text(ch.bic || 'xxx', margin + 120, yBank + 16)
-  doc.text('Adresse Banque', margin, yBank + 32); doc.text(ch.banqueAdresse || 'xxx', margin + 120, yBank + 32)
+  doc.text('Adresse Banque', margin, yBank + 32)
+  doc.text(doc.splitTextToSize(ch.banqueAdresse || 'xxx', contentW - 120), margin + 120, yBank + 32)
 
   // Factur-X : XML Printemps (lib/facturXPrintemps) joint côté serveur.
   const res = await fetch('/api/embed-facturx', {
