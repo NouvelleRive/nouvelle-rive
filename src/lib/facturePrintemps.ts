@@ -4,7 +4,8 @@
 //
 // Vintage : le Printemps prélève 26 % HT du CA, soit 26 % × 1,2 TTC.
 //   ex. CA 125 → com HT 32,50 → com TTC 39,00 → net 86,00
-// Upcycling : règle à venir, ligne pas encore émise.
+// Upcycling : le CA est TTC → CA HT = CA ÷ 1,2, le Printemps prélève 26 % du HT.
+//   ex. CA TTC 120 → CA HT 100 → com 26 → net 74 (HT)
 import jsPDF from 'jspdf'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -13,17 +14,22 @@ import type { ChineuseMeta } from '@/components/SalesList'
 export type VenteFacturePrintemps = { prix: number; canal: string; date: Date }
 export type LigneFacturePrintemps = { libelle: string; net: number }
 
-const COM_PRINTEMPS_VINTAGE = 0.26
+const COM_PRINTEMPS = 0.26
 const arrondi = (n: number) => Math.round(n * 100) / 100
 const fmtEUR = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
 
 export function lignesFacturePrintemps(ventes: VenteFacturePrintemps[]): LigneFacturePrintemps[] {
-  const caVintage = arrondi(ventes.filter(v => v.canal === 'VINTAGE').reduce((s, v) => s + v.prix, 0))
+  const ca = (canal: string) => arrondi(ventes.filter(v => v.canal === canal).reduce((s, v) => s + v.prix, 0))
   const lignes: LigneFacturePrintemps[] = []
+  const caVintage = ca('VINTAGE')
   if (caVintage > 0) {
-    const comHT = arrondi(caVintage * COM_PRINTEMPS_VINTAGE)
-    const comTTC = arrondi(comHT * 1.2)
+    const comTTC = arrondi(arrondi(caVintage * COM_PRINTEMPS) * 1.2)
     lignes.push({ libelle: 'Lot de pièces vintage', net: arrondi(caVintage - comTTC) })
+  }
+  const caUpcyclingHT = arrondi(ca('UPCYCLING') / 1.2)
+  if (caUpcyclingHT > 0) {
+    const com = arrondi(caUpcyclingHT * COM_PRINTEMPS)
+    lignes.push({ libelle: 'Lot de pièces upcyclées', net: arrondi(caUpcyclingHT - com) })
   }
   return lignes
 }
