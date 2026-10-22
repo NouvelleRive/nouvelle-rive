@@ -373,7 +373,7 @@ export default function AdminPaiementsPage() {
           className="ml-auto flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
         >
           <Download size={16} />
-          Exporter SEPA XML
+          Exporter SEPA XML NR
         </button>
       </div>
 
