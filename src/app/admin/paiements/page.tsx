@@ -388,7 +388,7 @@ export default function AdminPaiementsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Chineuse</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Chineuse NR</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">CA</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">TVA collectée</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Net à payer</th>
