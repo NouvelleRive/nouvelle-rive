@@ -12,6 +12,7 @@
   import ResetNotifsButton from '@/components/ResetNotifsButton'
   import EnableNotifsButton from '@/components/EnableNotifsButton'
   import { EMAILS_PRINTEMPS } from '@/lib/ventesPrintemps'
+  import { formatPrix } from '@/lib/formatPrix'
 
   const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
 
@@ -32,9 +33,9 @@
     // Stats rapides
     const actifs = produitsFiltres.filter(p => p.statut !== 'supprime' && p.statut !== 'retour' && !p.vendu && (p.quantite ?? 1) > 0)
     const stats = {
-      refs: actifs.length,
       pieces: actifs.reduce((sum, p) => sum + (p.quantite ?? 1), 0),
-      vendus: produitsFiltres.filter(p => p.vendu || (p.quantite ?? 1) <= 0).length,
+      // Valeur du stock au prix de vente, calculée sur les pièces déjà chargées (0 lecture)
+      valeur: actifs.reduce((sum, p) => sum + (Number(p.prix) || 0) * (p.quantite ?? 1), 0),
     }
 
     const tabs = [
@@ -299,16 +300,12 @@
               </div>
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500">Ref:</span>
-                  <span className="font-bold">{stats.refs}</span>
-                </div>
-                <div className="flex items-center gap-2">
                   <span className="text-gray-500">Pièces:</span>
                   <span className="font-bold">{stats.pieces}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500">Vendus:</span>
-                  <span className="font-bold text-green-600">{stats.vendus}</span>
+                  <span className="text-gray-500">Valeur:</span>
+                  <span className="font-bold">{formatPrix(stats.valeur)} €</span>
                 </div>
               </div>
             </div>
