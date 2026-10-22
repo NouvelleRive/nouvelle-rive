@@ -6,7 +6,8 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
-import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS as PROPRIETAIRES, CANAUX_PRINTEMPS as CANAUX } from '@/lib/ventesPrintemps'
+import { sendPushToOwner } from '@/lib/webpush'
+import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS as PROPRIETAIRES, CANAUX_PRINTEMPS as CANAUX, TRIGRAMME_PROPRIETAIRE } from '@/lib/ventesPrintemps'
 
 const MAX_VENTES = 300
 
@@ -104,6 +105,23 @@ export async function POST(req: NextRequest) {
       ? { modifiePar: email, modifieLe: FieldValue.serverTimestamp() }
       : { saisiePar: email, createdAt: FieldValue.serverTimestamp() }),
   }, { merge: true })
+
+  // Notif à la propriétaire (comme les ventes boutique), sauf si c'est elle qui saisit.
+  if (!existe) {
+    try {
+      const chSnap = await adminDb.collection('chineuse').where('trigramme', '==', TRIGRAMME_PROPRIETAIRE[b.proprietaire]).limit(1).get()
+      const ch = chSnap.docs[0]
+      if (ch && ch.get('email') !== email) {
+        await sendPushToOwner(ch.id, {
+          title: '🎉 Vente Printemps !',
+          body: `${description} vendu ${prix}€`,
+          url: '/chineuse/printemps',
+          tag: `pri_${id}`,
+          image: String(b.photoPiece),
+        })
+      }
+    } catch (e) { console.warn('Push vente Printemps KO:', e) }
+  }
   return NextResponse.json({ ok: true, id })
 }
 
