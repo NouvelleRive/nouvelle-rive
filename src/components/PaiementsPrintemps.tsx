@@ -21,6 +21,7 @@ const SANS_VIREMENT = ['GIGI']
 export default function PaiementsPrintemps({ mois, chineuses }: { mois: string; chineuses: Chineuse[] }) {
   const [ventes, setVentes] = useState<VentePRI[]>([])
   const [recues, setRecues] = useState<Record<string, boolean>>({})
+  const [relectures, setRelectures] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -29,7 +30,7 @@ export default function PaiementsPrintemps({ mois, chineuses }: { mois: string; 
       if (!token) return
       const res = await fetch(`/api/ventes-printemps?mois=${mois}`, { headers: { Authorization: `Bearer ${token}` } })
       const data = res.ok ? await res.json() : { ventes: [] }
-      if (!cancelled) setVentes(data.ventes || [])
+      if (!cancelled) { setVentes(data.ventes || []); setRelectures(data.relecturesMois || {}) }
     })().catch(err => console.error('[paiements PRI] ventes:', err))
     return () => { cancelled = true }
   }, [mois])
@@ -80,7 +81,17 @@ export default function PaiementsPrintemps({ mois, chineuses }: { mois: string; 
 
   return (
     <div className="space-y-4 pt-6">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        {/* Relecture des ventes du mois par chineuse : on paie après validation */}
+        <div className="flex items-center gap-3 text-sm text-gray-600">
+          <span>Ventes relues :</span>
+          {lignes.filter(l => !SANS_VIREMENT.includes(l.trigramme)).map(l => (
+            <span key={l.trigramme} className="flex items-center gap-1" title={relectures[l.trigramme] ? 'Ventes du mois validées' : 'Pas encore validées'}>
+              <span className={`w-3 h-3 rounded-full ${relectures[l.trigramme] ? 'bg-green-500' : 'bg-red-500'}`} />
+              {l.trigramme}
+            </span>
+          ))}
+        </div>
         <button onClick={exporterSepa} className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878]">
           <Download size={16} />
           Exporter SEPA XML PRI

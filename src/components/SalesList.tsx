@@ -66,6 +66,7 @@ interface SalesListProps {
   ventesFacture?: Vente[]
   avecFiltreChineuse?: boolean
   sousTitre?: React.ReactNode // affiché sous le titre (ex. bouton « Nouvelle vente »)
+  sousFiltres?: React.ReactNode // affiché sous les filtres (ex. relecture des ventes Printemps)
   loading?: boolean
   // Callbacks admin
   onAttribuer?: (vente: Vente) => void
@@ -93,6 +94,7 @@ export default function SalesList({
   ventesFacture,
   avecFiltreChineuse,
   sousTitre,
+  sousFiltres,
   loading = false,
   onAttribuer,
   onModifierPrix, 
@@ -253,6 +255,8 @@ export default function SalesList({
         onViewModeChange={setViewMode}
         onFiltered={setVentesFiltrées}
       />
+
+      {sousFiltres && <div className="mb-6">{sousFiltres}</div>}
 
       {/* Sélection groupée (admin) */}
       {isAdmin && selectedIds.size > 0 && (

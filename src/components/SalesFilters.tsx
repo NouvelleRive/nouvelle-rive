@@ -436,6 +436,8 @@ export default function SalesFilters({
       {/* FILTRER + TOGGLE */}
       <div className="lg:col-span-2">
         <FilterBox
+          // Page Printemps : boîte Filtrer à la hauteur de la boîte Télécharger
+          className={avecFiltreChineuse ? 'lg:h-full' : ''}
           hasActiveFilters={hasActiveFilters}
           onReset={resetFilters}
           filters={{

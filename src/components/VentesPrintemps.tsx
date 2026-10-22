@@ -3,6 +3,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import { User, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebaseConfig'
@@ -127,6 +129,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
   const [user, setUser] = useState<User | null>(null)
   const [ventes, setVentes] = useState<VentePrintemps[]>([])
   const [chineuse, setChineuse] = useState<ChineuseMeta | null>(null)
+  const [relues, setRelues] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -211,6 +214,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
       const data = await res.json()
       setVentes(data.ventes || [])
       setChineuse(data.chineuse || null)
+      setRelues(data.relues || {})
     } catch (err) {
       console.error('Erreur chargement ventes Printemps:', err)
     } finally {
@@ -313,6 +317,23 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
   const grandePiece = urlPiece
   const grandTicket = urlTicket
 
+  // Relecture par mois : la chineuse valide ses ventes d'un mois (bouton vert).
+  const moisVentes = Array.from(new Set(ventes.map(v => `${v.dateVente.slice(5, 7)}-${v.dateVente.slice(0, 4)}`)))
+    .sort((a, b) => b.slice(3).localeCompare(a.slice(3)) || b.localeCompare(a))
+
+  async function basculerRelecture(mois: string) {
+    if (!user) return
+    const relu = !relues[mois]
+    setRelues(r => ({ ...r, [mois]: relu || undefined }))
+    const q = emailChineuse ? `?chineuse=${encodeURIComponent(emailChineuse)}` : ''
+    const res = await fetch(`/api/ventes-printemps${q}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify({ mois, relu }),
+    })
+    if (!res.ok) { alert('Validation non enregistrée'); fetchVentes(user) }
+  }
+
   const ventesListe = ventes.map(v => ({
     id: v.id,
     nom: v.description,
@@ -327,6 +348,23 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
     <>
       <SalesList
         titre="VENTES PRINTEMPS"
+        sousFiltres={chineuse?.codeChineuse ? (
+          <div className="flex flex-wrap gap-2">
+            {moisVentes.map(mois => {
+              const relu = !!relues[mois]
+              const [mm, aaaa] = mois.split('-').map(Number)
+              const nomMois = format(new Date(aaaa, mm - 1, 1), 'MMMM', { locale: fr })
+              return (
+                <button key={mois} onClick={() => basculerRelecture(mois)}
+                  className={`text-sm px-3 py-1.5 rounded-lg border ${relu
+                    ? 'bg-green-500 text-white border-green-600'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-[#22209C]'}`}>
+                  {relu ? `✓ Ventes ${nomMois} relues` : `Valider les ventes ${nomMois}`}
+                </button>
+              )
+            })}
+          </div>
+        ) : undefined}
         sousTitre={
           <button onClick={ouvrirModal} className="bg-[#22209C] text-white text-sm font-medium px-4 py-2 rounded-lg">
             Nouvelle vente

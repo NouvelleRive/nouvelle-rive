@@ -23,16 +23,35 @@ async function emailAutorise(req: NextRequest): Promise<string | null> {
   }
 }
 
+// Chineuse visée : celle connectée, ou pour l'admin celle du « Je suis » (?chineuse=email).
+async function ficheCible(req: NextRequest, email: string) {
+  const demandee = new URL(req.url).searchParams.get('chineuse')
+  const cible = email === 'nouvelleriveparis@gmail.com' && demandee ? demandee : email
+  const chSnap = await adminDb.collection('chineuse').where('email', '==', cible).limit(1).get()
+  return chSnap.docs[0]?.data()
+}
+
+// PATCH { mois: 'MM-AAAA', relu: boolean } : la chineuse valide (ou dévalide) la relecture du mois.
+export async function PATCH(req: NextRequest) {
+  const email = await emailAutorise(req)
+  if (!email) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const { mois, relu } = await req.json()
+  if (!/^\d{2}-\d{4}$/.test(String(mois))) return NextResponse.json({ error: 'mois invalide' }, { status: 400 })
+  const c = await ficheCible(req, email)
+  if (!c?.trigramme) return NextResponse.json({ error: 'chineuse introuvable' }, { status: 400 })
+  await adminDb.collection('relecturesPrintemps').doc(c.trigramme).set({
+    mois: { [mois]: relu ? { par: email, le: FieldValue.serverTimestamp() } : FieldValue.delete() },
+  }, { merge: true })
+  return NextResponse.json({ ok: true })
+}
+
 export async function GET(req: NextRequest) {
   const email = await emailAutorise(req)
   if (!email) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   // Fiche de la chineuse connectée (ou, pour l'admin, celle du « Je suis »),
   // pour l'en-tête de sa facture PRI.
-  const demandee = new URL(req.url).searchParams.get('chineuse')
-  const cible = email === 'nouvelleriveparis@gmail.com' && demandee ? demandee : email
-  const chSnap = await adminDb.collection('chineuse').where('email', '==', cible).limit(1).get()
-  const c = chSnap.docs[0]?.data()
+  const c = await ficheCible(req, email)
   const chineuse = c ? {
     nom: c.nom, siret: c.siret, adresse1: c.adresse1, adresse2: c.adresse2, tva: c.tva,
     iban: c.iban, bic: c.bic, banqueAdresse: c.banqueAdresse, taux: c.taux, codeChineuse: c.trigramme,
@@ -67,7 +86,18 @@ export async function GET(req: NextRequest) {
       saisiePar: v.saisiePar,
     }
   })
-  return NextResponse.json({ ventes, chineuse })
+  // Mois de ventes relus et validés par la chineuse (relecturesPrintemps/{trigramme})
+  const relues = c?.trigramme
+    ? ((await adminDb.collection('relecturesPrintemps').doc(c.trigramme).get()).get('mois') || {})
+    : {}
+  // Page Paiements (admin + ?mois) : qui a validé la relecture de ce mois-là.
+  let relecturesMois: Record<string, boolean> | undefined
+  if (email === 'nouvelleriveparis@gmail.com' && mois) {
+    const tris = Object.values(TRIGRAMME_PROPRIETAIRE)
+    const docs = await adminDb.getAll(...tris.map(t => adminDb.collection('relecturesPrintemps').doc(t)))
+    relecturesMois = Object.fromEntries(tris.map((t, i) => [t, !!docs[i].get('mois')?.[mois]]))
+  }
+  return NextResponse.json({ ventes, chineuse, relues, relecturesMois })
 }
 
 export async function POST(req: NextRequest) {
