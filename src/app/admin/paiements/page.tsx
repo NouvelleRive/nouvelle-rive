@@ -13,6 +13,8 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { CheckCircle, Download, ExternalLink, Mail } from 'lucide-react'
 import { formatPrix } from '@/lib/formatPrix'
+import PaiementsPrintemps from '@/components/PaiementsPrintemps'
+import { genererSepaXml, telechargerXml } from '@/lib/sepaXml'
 
 type Chineuse = {
   id: string
@@ -204,79 +206,14 @@ export default function AdminPaiementsPage() {
       return
     }
 
-    const now = new Date()
-    const msgId = `NR-${moisSelectionne}-${now.getTime()}`
-    const dateISO = now.toISOString().split('.')[0]
-    const totalAmount = aExporter.reduce((s, p) => s + p.net, 0)
-
-    const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-
-    const transactions = aExporter.map((p) => {
-      const iban = (p.chineuse.iban || '').replace(/\s/g, '')
-      const bic = (p.chineuse.bic || '').replace(/\s/g, '')
-      const nom = stripAccents((p.chineuse.raisonSociale || p.chineuse.nom || p.chineuse.email || '')).slice(0, 70)
-      return `
-      <CdtTrfTxInf>
-        <PmtId>
-          <EndToEndId>${p.ref}</EndToEndId>
-        </PmtId>
-        <Amt>
-          <InstdAmt Ccy="EUR">${p.net.toFixed(2)}</InstdAmt>
-        </Amt>
-        ${bic ? `<CdtrAgt><FinInstnId><BIC>${bic}</BIC></FinInstnId></CdtrAgt>` : ''}
-        <Cdtr>
-          <Nm>${nom}</Nm>
-        </Cdtr>
-        <CdtrAcct>
-          <Id><IBAN>${iban}</IBAN></Id>
-        </CdtrAcct>
-        <RmtInf>
-          <Ustrd>${p.ref}</Ustrd>
-        </RmtInf>
-      </CdtTrfTxInf>`
-    }).join('')
-
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
-  <CstmrCdtTrfInitn>
-    <GrpHdr>
-      <MsgId>${msgId}</MsgId>
-      <CreDtTm>${dateISO}</CreDtTm>
-      <NbOfTxs>${aExporter.length}</NbOfTxs>
-      <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
-      <InitgPty>
-        <Nm>NR1 SAS</Nm>
-      </InitgPty>
-    </GrpHdr>
-    <PmtInf>
-      <PmtInfId>${msgId}-001</PmtInfId>
-      <PmtMtd>TRF</PmtMtd>
-      <NbOfTxs>${aExporter.length}</NbOfTxs>
-      <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
-      <PmtTpInf>
-        <SvcLvl><Cd>SEPA</Cd></SvcLvl>
-      </PmtTpInf>
-      <ReqdExctnDt>${now.toISOString().split('T')[0]}</ReqdExctnDt>
-      <Dbtr>
-        <Nm>NR1 SAS</Nm>
-      </Dbtr>
-      <DbtrAcct>
-        <Id><IBAN>FR7617418000010001189894769</IBAN></Id>
-      </DbtrAcct>
-      <DbtrAgt>
-        <FinInstnId><BIC>SNNNFR22XXX</BIC></FinInstnId>
-      </DbtrAgt>
-      <ChrgBr>SLEV</ChrgBr>${transactions}
-    </PmtInf>
-  </CstmrCdtTrfInitn>
-</Document>`
-
-    const blob = new Blob([xml], { type: 'application/xml' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `virements_${moisSelectionne}.xml`
-    link.click()
-    URL.revokeObjectURL(link.href)
+    const xml = genererSepaXml(`NR-${moisSelectionne}-${Date.now()}`, aExporter.map(p => ({
+      ref: p.ref,
+      montant: p.net,
+      iban: p.chineuse.iban || '',
+      bic: p.chineuse.bic,
+      nom: p.chineuse.raisonSociale || p.chineuse.nom || p.chineuse.email || '',
+    })))
+    telechargerXml(xml, `virements_${moisSelectionne}.xml`)
 
     // Nos ventes de stock propre n'ont pas de facture chineuse : sans écriture,
     // elles restent sur le compte de transit et ne deviennent jamais du chiffre.
@@ -477,6 +414,8 @@ export default function AdminPaiementsPage() {
           </div>
         </div>
       )}
+
+      <PaiementsPrintemps mois={moisSelectionne} chineuses={chineuses} />
     </div>
   )
 }

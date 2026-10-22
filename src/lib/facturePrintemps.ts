@@ -39,6 +39,15 @@ export function lignesFacturePrintemps(ventes: VenteFacturePrintemps[]): LigneFa
   return lignes
 }
 
+// Montants de la facture PRI d'une chineuse (mêmes calculs que le PDF) :
+// sert aussi à la page Paiements.
+export function montantsFacturePrintemps(ventes: VenteFacturePrintemps[], trigramme: string) {
+  const lignes = lignesFacturePrintemps(ventes)
+  const montantHT = arrondi(lignes.reduce((s, l) => s + l.net, 0))
+  const tva = TRIGRAMMES_TVA_PRINTEMPS.includes(trigramme.toUpperCase()) ? arrondi(montantHT * 0.2) : 0
+  return { lignes, montantHT, tva, total: arrondi(montantHT + tva) }
+}
+
 export async function genererFacturePrintemps(params: {
   ventes: VenteFacturePrintemps[]
   chineuse: ChineuseMeta | null | undefined

@@ -37,10 +37,14 @@ export async function GET(req: NextRequest) {
     iban: c.iban, bic: c.bic, banqueAdresse: c.banqueAdresse, taux: c.taux, codeChineuse: c.trigramme,
   } : null
 
-  const snap = await adminDb.collection('ventesPrintemps')
-    .orderBy('dateVente', 'desc')
-    .limit(MAX_VENTES)
-    .get()
+  // ?mois=MM-AAAA (page Paiements) : seulement ce mois-là, sans plafond utile.
+  const mois = new URL(req.url).searchParams.get('mois')
+  let q: FirebaseFirestore.Query = adminDb.collection('ventesPrintemps')
+  if (mois && /^\d{2}-\d{4}$/.test(mois)) {
+    const [mm, aaaa] = mois.split('-')
+    q = q.where('dateVente', '>=', `${aaaa}-${mm}-01`).where('dateVente', '<=', `${aaaa}-${mm}-31`)
+  }
+  const snap = await q.orderBy('dateVente', 'desc').limit(MAX_VENTES).get()
   // Même date de vente → la dernière saisie en premier (tri en mémoire, sans index composite).
   const docs = [...snap.docs].sort((a, b) => {
     const da = a.get('dateVente') as string, db = b.get('dateVente') as string
