@@ -519,6 +519,18 @@ const query = encodeURIComponent(`(${fromClause}) (has:attachment OR has:drive) 
           console.log(`✅ Facture reçue: ${ref} → ${ch.email} (${refMois})`)
         }
       }
+      // Factures Printemps « PRImmaa-TRIGRAMME » : statut à part (statutsPRI/{trigramme}),
+      // lu par le tableau Chineuses PRI de la page Paiements.
+      for (const refMatch of text.matchAll(/PRI(\d{2})(\d{2})-([A-Z]+)/g)) {
+        const refMois = `${refMatch[1]}-20${refMatch[2]}`
+        if (new Date(2000 + parseInt(refMatch[2]), parseInt(refMatch[1]) - 1, 1) > curMonthStart) continue
+        if (refMatch[3] !== trigramme) continue
+        if (processedMois.has(`PRI ${refMois}`)) continue
+        processedMois.add(`PRI ${refMois}`)
+        await db.collection('paiements').doc(refMois).collection('statutsPRI').doc(trigramme)
+          .set({ factureRecue: true }, { merge: true })
+        console.log(`✅ Facture PRI reçue: ${refMatch[0]} → ${ch.email} (${refMois})`)
+      }
     }
   }
 }
