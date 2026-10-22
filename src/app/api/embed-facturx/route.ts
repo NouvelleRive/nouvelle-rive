@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
+import { genererXMLPrintemps, type FacturXPrintemps } from '@/lib/facturXPrintemps'
 
 interface InvoiceData {
   ref: string
@@ -145,15 +146,16 @@ function generateFacturXML(d: InvoiceData): string {
 
 export async function POST(request: Request) {
   try {
-    const { pdfBase64, invoiceData } = await request.json() as {
+    const { pdfBase64, invoiceData, printemps } = await request.json() as {
       pdfBase64: string
-      invoiceData: InvoiceData
+      invoiceData?: InvoiceData
+      printemps?: FacturXPrintemps // facture PRI : XML séparé (lib/facturXPrintemps)
     }
 
     const pdfBytes = Buffer.from(pdfBase64, 'base64')
     const pdfDoc = await PDFDocument.load(pdfBytes)
 
-    const xmlContent = generateFacturXML(invoiceData)
+    const xmlContent = printemps ? genererXMLPrintemps(printemps) : generateFacturXML(invoiceData!)
     const xmlBytes = new TextEncoder().encode(xmlContent)
 
     await pdfDoc.attach(xmlBytes, 'factur-x.xml', {

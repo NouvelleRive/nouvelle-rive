@@ -8,6 +8,7 @@ import jsPDF from 'jspdf'
 import FilterBox from '@/components/FilterBox'
 import { Download, FileSpreadsheet, LayoutGrid, List } from 'lucide-react'
 import { Vente, ChineuseMeta } from '@/components/SalesList'
+import { genererFacturePrintemps } from '@/lib/facturePrintemps'
 
 
 const PRIMARY = '#22209C'
@@ -278,16 +279,21 @@ export default function SalesFilters({
   }
 
   const generateInvoiceFor = async (monthValue: string) => {
+    // Facture Printemps : générateur séparé (lib/facturePrintemps), la facture NR ne change pas.
+    if (prefixeFacture === 'PRI') {
+      await genererFacturePrintemps({
+        ventes: (ventesFacture ?? ventes).map(v => ({ prix: getPrix(v), canal: String(v.categorie || ''), date: getDateFromVente(v) })),
+        chineuse,
+        mois: monthValue,
+      })
+      return
+    }
     if (!chineuse && !userEmail) return
     const dep = deposants.find((d: any) => d.email === userEmail || d.nom === chineuse?.nom || d.trigramme === chineuse?.codeChineuse)
     const ch = { ...chineuse, taux: chineuse?.taux ?? dep?.taux, siret: chineuse?.siret || dep?.siret, adresse1: chineuse?.adresse1 || dep?.adresse1, adresse2: chineuse?.adresse2 || dep?.adresse2, tva: chineuse?.tva || dep?.tva, iban: chineuse?.iban || dep?.iban, bic: chineuse?.bic || dep?.bic, banqueAdresse: chineuse?.banqueAdresse || dep?.banqueAdresse }
     const [m, y] = monthValue.split('-').map(Number)
     const start = new Date(y, m - 1, 1), end = new Date(y, m, 0, 23, 59, 59, 999)
     const ventesDuMois = (ventesFacture ?? ventes).filter(v => { const d = getDateFromVente(v); return d >= start && d <= end })
-    if (prefixeFacture !== 'NR' && ventesDuMois.length === 0) {
-      alert("Aucune vente à facturer pour ce mois. En admin, choisis d'abord la chineuse dans « Je suis ».")
-      return
-    }
     const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
     const tauxHT = typeof ch?.taux === 'number' ? ch.taux / 100 : (typeof ch?.commissionHT === 'number' ? ch.commissionHT : 0.40)
     const commissionHT = ca * tauxHT, commissionTTC = commissionHT * 1.2, tva = commissionTTC - commissionHT, net = ca - commissionTTC
