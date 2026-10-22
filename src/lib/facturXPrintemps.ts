@@ -1,6 +1,7 @@
 // XML Factur-X de la facture PRI (corner Printemps). Séparé du XML NR.
 // Une ligne par lot (vintage / upcyclé), montant = net à devoir.
-// TVA : règle Printemps à venir → en attendant, lignes en catégorie Z (0 %).
+// TVA : chineuse assujettie → catégorie S 20 % ; sinon franchise en base
+// → catégorie E avec le motif « art. 293 B du CGI ».
 
 export type FacturXPrintemps = {
   ref: string
@@ -11,6 +12,7 @@ export type FacturXPrintemps = {
   iban?: string
   periode: string
   lignes: { libelle: string; net: number }[]
+  assujettie: boolean
 }
 
 const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -23,7 +25,13 @@ export function genererXMLPrintemps(d: FacturXPrintemps): string {
   const iban = d.iban?.replace(/\s/g, '') || ''
   const tva = d.tva?.replace(/\s/g, '').toUpperCase() || ''
   const tvaValide = /^[A-Z]{2}[0-9A-Z]{8,13}$/.test(tva)
-  const total = d.lignes.reduce((s, l) => s + l.net, 0).toFixed(2)
+  const ht = Math.round(d.lignes.reduce((s, l) => s + l.net, 0) * 100) / 100
+  const tvaMontant = d.assujettie ? Math.round(ht * 20) / 100 : 0
+  const totalHT = ht.toFixed(2)
+  const totalTTC = (ht + tvaMontant).toFixed(2)
+  const categorie = d.assujettie
+    ? '<ram:CategoryCode>S</ram:CategoryCode>\n          <ram:RateApplicablePercent>20</ram:RateApplicablePercent>'
+    : '<ram:CategoryCode>E</ram:CategoryCode>\n          <ram:RateApplicablePercent>0</ram:RateApplicablePercent>'
 
   const lignes = d.lignes.map((l, i) => `
     <ram:IncludedSupplyChainTradeLineItem>
@@ -36,8 +44,7 @@ export function genererXMLPrintemps(d: FacturXPrintemps): string {
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>Z</ram:CategoryCode>
-          <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
+          ${categorie}
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${l.net.toFixed(2)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
@@ -74,21 +81,22 @@ export function genererXMLPrintemps(d: FacturXPrintemps): string {
       <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
       ${iban ? `<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode><ram:PayeePartyCreditorFinancialAccount><ram:IBANID>${iban}</ram:IBANID></ram:PayeePartyCreditorFinancialAccount></ram:SpecifiedTradeSettlementPaymentMeans>` : ''}
       <ram:ApplicableTradeTax>
-        <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
+        <ram:CalculatedAmount>${tvaMontant.toFixed(2)}</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
-        <ram:BasisAmount>${total}</ram:BasisAmount>
-        <ram:CategoryCode>Z</ram:CategoryCode>
-        <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
+        ${d.assujettie ? '' : '<ram:ExemptionReason>TVA non applicable, art. 293 B du CGI</ram:ExemptionReason>'}
+        <ram:BasisAmount>${totalHT}</ram:BasisAmount>
+        ${d.assujettie ? '<ram:CategoryCode>S</ram:CategoryCode>' : '<ram:CategoryCode>E</ram:CategoryCode>\n        <ram:ExemptionReasonCode>VATEX-FR-FRANCHISE</ram:ExemptionReasonCode>'}
+        <ram:RateApplicablePercent>${d.assujettie ? 20 : 0}</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradePaymentTerms>
         <ram:DueDateDateTime><udt:DateTimeString format="102">${dueStr}</udt:DateTimeString></ram:DueDateDateTime>
       </ram:SpecifiedTradePaymentTerms>
       <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount>${total}</ram:LineTotalAmount>
-        <ram:TaxBasisTotalAmount>${total}</ram:TaxBasisTotalAmount>
-        <ram:TaxTotalAmount currencyID="EUR">0.00</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount>${total}</ram:GrandTotalAmount>
-        <ram:DuePayableAmount>${total}</ram:DuePayableAmount>
+        <ram:LineTotalAmount>${totalHT}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>${totalHT}</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="EUR">${tvaMontant.toFixed(2)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>${totalTTC}</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>${totalTTC}</ram:DuePayableAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
   </rsm:SupplyChainTradeTransaction>

@@ -6,6 +6,9 @@
 //   ex. CA 125 → com HT 32,50 → com TTC 39,00 → net 86,00
 // Upcycling : le CA est TTC → CA HT = CA ÷ 1,2, le Printemps prélève 26 % du HT.
 //   ex. CA TTC 120 → CA HT 100 → com 26 → net 74 (HT)
+//
+// TVA : selon la chineuse, pas selon sa fiche (CHB a un n° de TVA sans la facturer).
+// Assujetties → +20 % sur toutes les lignes ; les autres → franchise (art. 293 B).
 import jsPDF from 'jspdf'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -15,6 +18,8 @@ export type VenteFacturePrintemps = { prix: number; canal: string; date: Date }
 export type LigneFacturePrintemps = { libelle: string; net: number }
 
 const COM_PRINTEMPS = 0.26
+export const TRIGRAMMES_TVA_PRINTEMPS = ['IP']
+export const MENTION_FRANCHISE = 'TVA non applicable, art. 293 B du CGI'
 const arrondi = (n: number) => Math.round(n * 100) / 100
 const fmtEUR = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
 
@@ -51,7 +56,10 @@ export async function genererFacturePrintemps(params: {
     alert('Aucune vente à facturer pour ce mois.')
     return
   }
-  const total = arrondi(lignes.reduce((s, l) => s + l.net, 0))
+  const montantHT = arrondi(lignes.reduce((s, l) => s + l.net, 0))
+  const assujettie = TRIGRAMMES_TVA_PRINTEMPS.includes(ch.codeChineuse.toUpperCase())
+  const tva = assujettie ? arrondi(montantHT * 0.2) : 0
+  const total = arrondi(montantHT + tva)
   const ref = `PRI${String(m).padStart(2, '0')}${String(y).slice(-2)}-${ch.codeChineuse.toUpperCase()}`
   const periode = format(start, 'LLLL yyyy', { locale: fr })
   const dateEmission = new Date()
@@ -93,10 +101,17 @@ export async function genererFacturePrintemps(params: {
     yRow += 20
   })
 
-  const yTot = yRow + 22
+  let yTot = yRow + 22
+  if (assujettie) {
+    doc.text('Montant HT', margin, yTot); doc.text(fmtEUR(montantHT), margin + 160, yTot)
+    doc.text('TVA 20%', margin, yTot + 18); doc.text(fmtEUR(tva), margin + 160, yTot + 18)
+    doc.text('Total TTC', margin, yTot + 36); doc.text(fmtEUR(total), margin + 160, yTot + 36)
+    yTot += 60
+  }
   doc.setFont('helvetica', 'bold')
   doc.text('Net à reverser', margin, yTot); doc.text(fmtEUR(total), margin + 160, yTot)
   doc.setFont('helvetica', 'normal')
+  if (!assujettie) { yTot += 20; doc.setFontSize(9); doc.text(MENTION_FRANCHISE, margin, yTot); doc.setFontSize(10) }
   const yBank = yTot + 40
   doc.text('IBAN', margin, yBank); doc.text(ch.iban || 'xxx', margin + 120, yBank)
   doc.text('BIC', margin, yBank + 16); doc.text(ch.bic || 'xxx', margin + 120, yBank + 16)
@@ -117,6 +132,7 @@ export async function genererFacturePrintemps(params: {
         iban: ch.iban,
         periode,
         lignes,
+        assujettie,
       },
     }),
   })
