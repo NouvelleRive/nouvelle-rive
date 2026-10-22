@@ -88,8 +88,10 @@ export default function SalesGrid({
   }
 
   return (
+    // Mobile : bord à bord (-mx-6 annule le p-4 du layout + le p-2 de SalesList)
+    // pour des carrés plus grands.
     <div
-      className="grid grid-cols-3 lg:grid-cols-6 gap-[1px] bg-gray-200"
+      className="grid grid-cols-3 lg:grid-cols-6 gap-[1px] bg-gray-200 -mx-6 sm:mx-0"
       style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
     >
       {ventes.map((vente) => {
