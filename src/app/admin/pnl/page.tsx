@@ -145,7 +145,15 @@ export default function PnlPage() {
       if (forcer) params.set('refresh', '1')
       const qs = params.toString() ? `?${params}` : ''
       const res = await fetch(`/api/admin/pnl${qs}`, { headers: { Authorization: `Bearer ${token}` } })
-      const json = await res.json()
+      // Un rafraîchissement qui dépasse la minute revient en page d'erreur
+      // HTML, pas en JSON : on le dit en clair plutôt que de planter.
+      const texte = await res.text()
+      let json: any
+      try {
+        json = JSON.parse(texte)
+      } catch {
+        throw new Error(res.ok ? 'réponse illisible' : 'Pennylane a mis trop de temps à répondre, réessaie')
+      }
       if (!json.success) throw new Error(json.error || 'erreur')
       setData(json)
       setPeriode(json.periode)

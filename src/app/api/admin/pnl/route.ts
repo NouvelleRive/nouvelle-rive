@@ -17,7 +17,7 @@ import {
   getLedgerAccounts, getLignesDeComptes, getLedgerEntriesParIds, viderCacheTransactions,
   type TrialBalanceLine,
 } from '@/lib/pennylane'
-import { ventesSquare, fraisSquare } from '@/lib/squareVentes'
+import { ventesSquare } from '@/lib/squareVentes'
 import { calcMargeNette } from '@/lib/marge'
 
 const ADMIN_EMAIL = 'nouvelleriveparis@gmail.com'
@@ -749,7 +749,7 @@ export async function GET(req: NextRequest) {
     if (forcer) viderCacheTransactions()
 
     const mois = moisDe(start, end)
-    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, frais, stockPropre] = await Promise.all([
+    const [comptes, balance, balancesMois, volumes, parChineuse, square, canaux, stockPropre] = await Promise.all([
       getBankAccounts(),
       getTrialBalance(start, end),
       parPaquets(mois.map(m => () => getTrialBalance(m.start, m.end))),
@@ -757,7 +757,6 @@ export async function GET(req: NextRequest) {
       volumesParChineuse(start, end).catch(() => []),
       ventesSquare(start, end).catch(() => null),
       printempsParCanal(start, end).catch(() => null),
-      fraisSquare(start, end).catch(() => null),
       margeStockPropre(start, end).catch(() => null),
     ])
 
@@ -765,6 +764,17 @@ export async function GET(req: NextRequest) {
     const brutDetail = await detailParPoste(start, end)
       .catch(() => ({ parPoste: {} as Record<string, SousLigne[]>, reversePrintemps: {} as Record<string, number>, volumes: [] as SousLigne[], commissions: [] as SousLigne[], nets: [] as SousLigne[], marchandises: [] as SousLigne[], achats: [] as SousLigne[], tva: [] as SousLigne[], services: [] as SousLigne[] }))
     const detail = brutDetail.parPoste
+    // Les commissions de paiement Square sont saisies dans Pennylane, compte
+    // 627 : on les lit dans la balance plutôt que d'interroger l'API Square,
+    // qui coûtait dix-huit secondes sur un rafraîchissement déjà à la limite.
+    const lignesFrais = detail['fraisBancaires'] ?? []
+    const frais = {
+      total: lignesFrais.reduce((s2, l) => s2 + l.montant, 0),
+      parMois: lignesFrais.reduce((acc, l) => {
+        if (l.mois) acc[l.mois] = (acc[l.mois] || 0) + l.montant
+        return acc
+      }, {} as Record<string, number>),
+    }
     const reversePrintemps = brutDetail.reversePrintemps
     const volumesFactures = brutDetail.volumes
     const commissionsFactures = brutDetail.commissions
