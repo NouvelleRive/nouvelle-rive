@@ -167,8 +167,21 @@ export async function getTransactions(forcer = false): Promise<Transaction[]> {
   return items
 }
 
+// Sur une période, Pennylane sait filtrer : seize pages au lieu de vingt-six
+// sur un exercice, et le P&L repassait sous la minute de Vercel.
+const cacheParPeriode = new Map<string, { le: number; items: Transaction[] }>()
+
+export async function getTransactionsPeriode(debut: string, fin: string): Promise<Transaction[]> {
+  const cle = `${debut}|${fin}`
+  const vu = cacheParPeriode.get(cle)
+  if (vu && Date.now() - vu.le < TTL_TRANSACTIONS) return vu.items
+  const items = await listAll<Transaction>('transactions', filtreDates(debut, fin))
+  cacheParPeriode.set(cle, { le: Date.now(), items })
+  return items
+}
+
 // Après une écriture, le cache ne reflète plus Pennylane.
-export const viderCacheTransactions = () => { cacheTransactions = null }
+export const viderCacheTransactions = () => { cacheTransactions = null; cacheParPeriode.clear() }
 export const getFiscalYears = () => listAll<FiscalYear>('fiscal_years')
 export const getTrialBalance = (start: string, end: string) =>
   listAll<TrialBalanceLine>('trial_balance', { period_start: start, period_end: end })

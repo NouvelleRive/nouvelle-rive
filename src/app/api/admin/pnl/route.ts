@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin'
 import { AggregateField, Timestamp } from 'firebase-admin/firestore'
 import {
-  getBankAccounts, getFiscalYears, getTrialBalance, getTransactions,
+  getBankAccounts, getFiscalYears, getTrialBalance, getTransactionsPeriode,
   getLedgerAccounts, getLignesDeComptes, getLedgerEntriesParIds, viderCacheTransactions,
   type TrialBalanceLine,
 } from '@/lib/pennylane'
@@ -255,7 +255,7 @@ async function volumesParMois(mois: { cle: string; start: string; end: string }[
 // Les mêmes montants réapparaissent ensuite sur le compte PRI : ce sont des
 // virements internes, pas des recettes. On ne lit donc que le Business.
 async function printempsParCanal(start: string, end: string) {
-  const tx = await getTransactions()
+  const tx = await getTransactionsPeriode(start, end)
   const vide = () => ({ vintage: 0, upcycling: 0 })
   const total = vide()
   const parMois: Record<string, { vintage: number; upcycling: number }> = {}
@@ -383,7 +383,7 @@ async function volumesParChineuse(start: string, end: string) {
 // Ce que Square a réellement viré sur le compte : les ventes moins ses frais,
 // avec un décalage de règlement de un à deux jours.
 async function recuEnBanque(start: string, end: string) {
-  const tx = await getTransactions()
+  const tx = await getTransactionsPeriode(start, end)
   const parMois: Record<string, number> = {}
   let total = 0
   for (const t of tx) {
