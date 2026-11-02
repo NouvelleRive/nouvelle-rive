@@ -35,6 +35,7 @@ type Produit = {
   statut?: string
   dateVente?: Timestamp
   dateEntree?: Timestamp
+  dateReception?: Timestamp
   createdAt?: Timestamp
   updatedAt?: Timestamp
   marque?: string
@@ -386,6 +387,7 @@ export default function PerformanceContent({ role, chineuseTrigramme }: Performa
 
   // Helper pour obtenir la date d'entrée
   const getDateEntree = (p: Produit): Date | null => {
+    if (p.dateReception instanceof Timestamp) return p.dateReception.toDate()
     if (p.dateEntree instanceof Timestamp) return p.dateEntree.toDate()
     if (p.createdAt instanceof Timestamp) return p.createdAt.toDate()
     return null
