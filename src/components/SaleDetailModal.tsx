@@ -73,7 +73,7 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
   const sku = p.sku || vente.sku
   const prix = typeof vente.prixVenteReel === 'number' ? vente.prixVenteReel : (vente.prix || 0)
   const dateVente = toDate(vente.dateVente)
-  const dateEntree = toDate(vente.createdAt ?? p.createdAt)
+  const dateEntree = toDate(p.dateReception ?? p.createdAt)
   const marge = isAdmin ? calcMargeNette(prix, p.prixAchat) : null
   const afficherTaille = !categoriesSansTaille.some(c => cat.toLowerCase().includes(c))
 
