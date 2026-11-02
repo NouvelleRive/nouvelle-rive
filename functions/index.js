@@ -760,6 +760,9 @@ async function pollGmailAchats() {
     // Échec BRUYANT : une autorisation Gmail révoquée bloque tous les imports
     // achats. En août 2026 ça a tourné un mois en silence (23 pièces à
     // rattraper à la main). La route throttle à 1 push/jour.
+    // Seul invalid_grant = autorisation révoquée ; les erreurs passagères de
+    // Google (internal_failure…) se règlent au passage suivant, pas d'alerte.
+    if (tokenJson.error !== 'invalid_grant') return
     try {
       await fetch(`${process.env.NR_BASE_URL || 'https://www.nouvellerive.eu'}/api/webhooks/gmail-achats`, {
         method: 'POST',
