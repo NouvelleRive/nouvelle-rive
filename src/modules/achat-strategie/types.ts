@@ -104,6 +104,8 @@ export type RuleResult = StrategieRule & {
 export type StrategieRealise = {
   cible: number
   commandees: number
+  /** Commandées pas encore reçues (en route). */
+  enRoute: number
   enSurface: number
   rules: RuleResult[]
   /** Règles sous objectif, triées par manque décroissant (notifs restock). */
@@ -123,6 +125,7 @@ export function estEnSurface(p: StrategieProduit): boolean {
 export function evaluer(objectif: StrategieObjectif, produits: StrategieProduit[]): StrategieRealise {
   const cible = Math.max(0, Math.round(objectif.cibleStock || 0))
   const commandees = produits.length
+  const enRoute = produits.filter(p => p.recu !== true && !p.vendu).length
   const enSurface = produits.filter(estEnSurface).length
   const denom = cible > 0 ? cible : commandees // fallback : si pas de cible, base sur le commandé
 
@@ -140,5 +143,5 @@ export function evaluer(objectif: StrategieObjectif, produits: StrategieProduit[
     .filter(r => r.underTarget)
     .sort((a, b) => b.manque - a.manque)
 
-  return { cible, commandees, enSurface, rules, aRestocker }
+  return { cible, commandees, enRoute, enSurface, rules, aRestocker }
 }

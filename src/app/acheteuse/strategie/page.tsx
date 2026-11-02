@@ -345,7 +345,7 @@ function RealiseTab({ realise }: { realise: StrategieRealise | null }) {
       {/* Compteurs */}
       <div className="grid grid-cols-3 gap-3">
         <Counter label="Pièces cible" value={realise.cible} color="text-[#22209C]" />
-        <Counter label="Commandées" value={realise.commandees} color="text-emerald-600" />
+        <Counter label="En route" value={realise.enRoute ?? 0} color="text-emerald-600" />
         <Counter label="En surface" value={realise.enSurface} color="text-[#09B1BA]" />
       </div>
 
