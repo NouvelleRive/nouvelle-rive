@@ -20,6 +20,7 @@
     import ImportMailModal from '@/modules/achat/ImportMailModal'
     import { calcMargeNette, calcMargeNetteAvecPort } from '@/lib/marge'
     import { formatPrix } from '@/lib/formatPrix'
+    import { etatCycle, baisseOfficielleEligible } from '@/lib/cycleBaisse'
 
     // Conversion base64 robuste pour gros fichiers
     function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -155,12 +156,6 @@
       return true
     }
 
-    function isOlderThan2Months(date: Timestamp | undefined): boolean {
-      if (!date) return false
-      const twoMonthsAgo = new Date()
-      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-      return date.toDate() < twoMonthsAgo
-  }
 
   function getPriceBadgeStatus(p: Produit, chineusesList: { trigramme: string; stockType?: string }[]): 'none' | 'orange' | 'blue' | 'red' {
     // Pas de badge tant que la pièce n'est pas physiquement reçue en boutique
@@ -168,20 +163,10 @@
     // Chineuses petite série : pas de cycle "faire tourner / venir chercher" (aligné cron reminders)
     const tri = (p.trigramme || p.sku?.match(/^[A-Za-z]+/)?.[0] || '').toUpperCase()
     if (tri && chineusesList.find(c => c.trigramme?.toUpperCase() === tri)?.stockType === 'smallBatch') return 'none'
-    // Si prix baissé, vérifier le délai depuis la baisse
-    if (p.prixBaisseLe) {
-      const oneMonthAgo = new Date()
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-      // Garde-fou : jamais "à récupérer" (rouge) avant 3 mois de présence en boutique.
-      const threeMonthsAgo = new Date()
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
-      const recuAvant3Mois = p.dateReception instanceof Timestamp && p.dateReception.toDate() < threeMonthsAgo
-      if (p.prixBaisseLe.toDate() < oneMonthAgo && recuAvant3Mois) return 'red'
-      return 'blue'
-    }
-    // Orange = en boutique depuis +2 mois (basé sur dateReception, pas createdAt)
-    if (isOlderThan2Months(p.dateReception) && !p.statutRecuperation) return 'orange'
-    return 'none'
+    // Cycle : cf. src/lib/cycleBaisse.ts (1 mois → baisse officielle, 2 mois / baisse+1 mois → orange, 3 mois → rouge)
+    const etat = etatCycle(p.dateReception, p.prixBaisseLe)
+    if (etat === 'orange' && p.statutRecuperation) return 'none'
+    return etat
   }
 
   function getWearTypeForProduct(p: Produit, chineusesList: {trigramme: string, wearType: string}[]): string {
@@ -301,7 +286,7 @@
       }
       const [localHidden, setLocalHidden] = useState<Record<string, boolean>>({})
       const [localEtiquetteMaj, setLocalEtiquetteMaj] = useState<Record<string, boolean>>({})
-      const needsEtiquetteMaj = (p: Produit) => !!p.prixBaisseLe && !(localEtiquetteMaj[p.id] ?? p.etiquetteMaj)
+      const needsEtiquetteMaj = (p: Produit) => (!!p.prixBaisseLe || p.etiquetteMaj === false) && !(localEtiquetteMaj[p.id] ?? p.etiquetteMaj)
       const handleMajEtiquette = async (p: Produit) => {
         setLocalEtiquetteMaj(prev => ({ ...prev, [p.id]: true }))
         try {
@@ -508,15 +493,12 @@
 
       // Produits à récupérer (même règle que le badge rouge)
       const produitsARecuperer = useMemo(() => {
-        const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-        const threeMonthsAgo = new Date(); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
         return produits.filter((p) => {
           if (p.statut === 'supprime' || p.statut === 'retour' || p.statut === 'vendu' || p.statut === 'outOfStock') return false
           if (p.vendu === true) return false
           if (p.statutRecuperation === 'aRecuperer') return true
-          // Garde-fou : jamais "à récupérer" avant 3 mois de présence en boutique.
-          return p.prixBaisseLe instanceof Timestamp && p.prixBaisseLe.toDate() < oneMonthAgo
-            && p.dateReception instanceof Timestamp && p.dateReception.toDate() < threeMonthsAgo
+          // Règle : à récupérer à 3 mois de présence en boutique (cf. lib/cycleBaisse)
+          return etatCycle(p.dateReception, p.prixBaisseLe) === 'red'
         })
       }, [produits])
 
@@ -850,10 +832,12 @@
 ...((() => {
   const newPrix = parseFloat(data.prix) || 0
   const oldPrix = editingProduct.prix ?? 0
-  const eligibleBaisse = isOlderThan2Months(editingProduct.dateReception)
+  const eligibleBaisse = baisseOfficielleEligible(editingProduct.dateReception)
   if (newPrix < oldPrix && newPrix > 0 && eligibleBaisse) {
-    return { prixBaisseLe: Timestamp.now(), ancienPrix: oldPrix }
+    return { prixBaisseLe: Timestamp.now(), ancienPrix: oldPrix, etiquetteMaj: false }
   }
+  // Tout autre changement de prix : pas de chrono, mais l'étiquette doit être refaite
+  if (newPrix > 0 && newPrix !== oldPrix) return { etiquetteMaj: false }
   return {}
 })()),
           }
@@ -1399,30 +1383,28 @@
                         onClick={() => handleDelete(p.id)}
                         className="inline-flex items-center gap-1 text-[11px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full mt-1 hover:bg-orange-200"
                       >
-                        🔄 2 mois+ – rotation / baisse de prix ?
+                        🔄 Rotation / baisse de prix ?
                       </button>
                     )}
-                    {getPriceBadgeStatus(p, chineusesList) === 'blue' && (
-                      needsEtiquetteMaj(p) ? (
+                    {needsEtiquetteMaj(p) ? (
                         <button
                           onClick={() => handleMajEtiquette(p)}
                           className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 border border-[#22209C] px-2 py-0.5 rounded-full mt-1 hover:bg-blue-200 transition-colors"
                         >
-                          💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €) · <span className="font-semibold">MÀJ étiquette</span>
+                          💰 {getPriceBadgeStatus(p, chineusesList) === 'blue' ? `Prix baissé le ${format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })}` : 'Prix modifié'}{typeof p.ancienPrix === 'number' ? ` (avant : ${formatPrix(p.ancienPrix)} €)` : ''} · <span className="font-semibold">MÀJ étiquette</span>
                         </button>
-                      ) : (
+                      ) : getPriceBadgeStatus(p, chineusesList) === 'blue' && (
                         <span className="inline-flex items-center gap-1 text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full mt-1">
                           💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
                         </span>
-                      )
-                    )}
+                      )}
                     {p.statutRecuperation === 'aRecuperer' ? (
                       <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
                         🚨 À récupérer
                       </span>
                     ) : getPriceBadgeStatus(p, chineusesList) === 'red' && (
                       <span className="inline-flex items-center gap-1 text-[11px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full mt-1">
-                        🚨 À récupérer – prix baissé il y a 1 mois+
+                        🚨 À récupérer – 3 mois+ en boutique
                       </span>
                     )}
 
@@ -1509,30 +1491,28 @@
     onClick={() => handleDelete(p.id)}
     className="inline-flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full mt-1 hover:bg-orange-200 transition-colors"
   >
-    🔄 En surface depuis 2 mois+ – rotation / baisse de prix nécessaire
+    🔄 Rotation / baisse de prix nécessaire
   </button>
 )}
-{getPriceBadgeStatus(p, chineusesList) === 'blue' && (
-  needsEtiquetteMaj(p) ? (
+{needsEtiquetteMaj(p) ? (
     <button
       onClick={() => handleMajEtiquette(p)}
       className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 border border-[#22209C] px-2 py-1 rounded-full mt-1 hover:bg-blue-200 transition-colors"
     >
-      💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €) · <span className="font-semibold">MÀJ étiquette</span>
+      💰 {getPriceBadgeStatus(p, chineusesList) === 'blue' ? `Prix baissé le ${format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })}` : 'Prix modifié'}{typeof p.ancienPrix === 'number' ? ` (avant : ${formatPrix(p.ancienPrix)} €)` : ''} · <span className="font-semibold">MÀJ étiquette</span>
     </button>
-  ) : (
+  ) : getPriceBadgeStatus(p, chineusesList) === 'blue' && (
     <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full mt-1">
       💰 Prix baissé le {format(p.prixBaisseLe!.toDate(), 'dd/MM', { locale: fr })} (avant : {formatPrix(p.ancienPrix)} €)
     </span>
-  )
-)}
+  )}
 {p.statutRecuperation === 'aRecuperer' ? (
   <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
     🚨 À récupérer
   </span>
 ) : getPriceBadgeStatus(p, chineusesList) === 'red' && (
   <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full mt-1">
-    🚨 À récupérer – prix baissé il y a 1 mois+
+    🚨 À récupérer – 3 mois+ en boutique
   </span>
 )}
                     </div>

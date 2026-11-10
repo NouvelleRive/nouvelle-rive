@@ -11,6 +11,7 @@
   import { getColorsPrioritized } from '@/lib/couleurs'
   import { getMatieresForCategorie } from '@/lib/matieres'
   import PhotoEditor from '@/components/PhotoEditor'
+  import { etatCycle, pivotOrange, baisseOfficielleEligible } from '@/lib/cycleBaisse'
 
   // Groupe WhatsApp interne « restock » (PAS la déposante) où les filles envoient
   // la photo du portant finalisé. Lien d'invitation = gratuit ; ouvre le groupe
@@ -764,6 +765,7 @@
         const updates: Record<string, any> = {}
         if (editValues.prix !== undefined && editValues.prix !== '') {
           updates.prix = parseFloat(editValues.prix)
+          if (updates.prix !== editTarget.prix) updates.etiquetteMaj = false
         }
         if (editValues.taille !== undefined) {
           updates.taille = editValues.taille
@@ -1579,46 +1581,35 @@
           // n'a pas de sens, on doit pouvoir quitter l'écran destock.
           const isNouvelleRive = tri === 'NR' || /nouvelle\s*rive/i.test(restockFiniChineuse.nom || '')
           const now = new Date()
-          const oneMonthAgo = new Date(now); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-          const twoMonthsAgo = new Date(now); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-          const threeMonthsAgo = new Date(now); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
           const pieces = produits.filter(p =>
             getTri(p) === tri &&
             p.statut !== 'supprime' && p.statut !== 'vendu' && p.statut !== 'retour' && p.statut !== 'outOfStock' &&
             p.vendu !== true
           )
           // Rouge (à récupérer) : demande de récupération, demande de destock,
-          // prix baissé +1 mois OU réception +3 mois (règle 3 mois absolue)
+          // OU réception +3 mois (règle 3 mois absolue, cf. lib/cycleBaisse)
           const aRecuperer = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return true
             if ((p as any).statutDestock === 'enAttente') return true
-            const baisse = (p as any).prixBaisseLe?.toDate?.()
-            if (baisse instanceof Date && baisse < oneMonthAgo) return true
-            const dr = (p as any).dateReception?.toDate?.()
-            return dr instanceof Date && dr < threeMonthsAgo
+            return etatCycle((p as any).dateReception, (p as any).prixBaisseLe, now) === 'red'
           })
-          // Bascule « à baisser » dans ≤ 7 jours (2 mois - 7 j de réception).
-          const dueInWeek = new Date(now); dueInWeek.setMonth(dueInWeek.getMonth() - 2); dueInWeek.setDate(dueInWeek.getDate() + 7)
-          // Orange (prix à baisser MAINTENANT) : réception 2-3 mois, jamais baissé,
+          // Bascule « à baisser » dans ≤ 7 jours.
+          const inWeek = new Date(now); inWeek.setDate(inWeek.getDate() + 7)
+          // Orange (prix à baisser MAINTENANT) : 2 mois sans baisse OU baissé il y a +1 mois,
           // aucune demande de sortie (au-delà de 3 mois → passe en rouge)
           const prixABaisser = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return false
             if ((p as any).statutDestock === 'enAttente') return false
-            const baisse = (p as any).prixBaisseLe?.toDate?.()
-            if (baisse instanceof Date) return false
-            const dr = (p as any).dateReception?.toDate?.()
-            if (!(dr instanceof Date)) return false
-            return dr < twoMonthsAgo && dr >= threeMonthsAgo
+            return etatCycle((p as any).dateReception, (p as any).prixBaisseLe, now) === 'orange'
           })
-          // À anticiper : pas encore à 2 mois mais y sera dans ≤ 7 jours.
+          // À anticiper : pas encore orange mais le sera dans ≤ 7 jours.
           const prixABaisserBientot = pieces.filter(p => {
             if (p.statutRecuperation === 'aRecuperer') return false
             if ((p as any).statutDestock === 'enAttente') return false
-            const baisse = (p as any).prixBaisseLe?.toDate?.()
-            if (baisse instanceof Date) return false
-            const dr = (p as any).dateReception?.toDate?.()
-            if (!(dr instanceof Date)) return false
-            return dr >= twoMonthsAgo && dr <= dueInWeek
+            const etat = etatCycle((p as any).dateReception, (p as any).prixBaisseLe, now)
+            if (etat === 'orange' || etat === 'red') return false
+            const pivot = pivotOrange((p as any).dateReception, (p as any).prixBaisseLe)
+            return !!pivot && pivot <= inWeek
           })
           const aGerer = [
             ...aRecuperer.map(p => ({ p, kind: 'red' as const })),
@@ -1632,7 +1623,7 @@
           const baisseAppSoon = prixABaisserBientot.filter(p => !phaseASession.has(p.id))
           // Sous-liste ÉTIQUETTES : prix déjà baissé mais étiquette pas validée (bloquant)
           const baisseEtiquette = pieces
-            .filter(p => !!(p as any).prixBaisseLe && !(p as any).etiquetteMaj && !etiquetteSession.has(p.id))
+            .filter(p => (!!(p as any).prixBaisseLe || (p as any).etiquetteMaj === false) && !(p as any).etiquetteMaj && !etiquetteSession.has(p.id))
             .sort((a, b) => extractSkuNumber(a.sku) - extractSkuNumber(b.sku))
 
           // Fin complète du parcours restock
@@ -1714,12 +1705,12 @@
               // Process normal baisse de prix : { ancienPrix, prix, prixBaisseLe }
               // → tag "💰 Prix baissé le … · MÀJ étiquette" apparaît côté vendeuse
               // On n'arme le chrono "à récupérer" (prixBaisseLe) QUE si la pièce est
-              // en boutique depuis ≥ 2 mois. Avant, c'est un simple réajustement.
-              const twoMonthsAgo = new Date(); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-              const eligibleBaisse = p.dateReception instanceof Timestamp && p.dateReception.toDate() < twoMonthsAgo
+              // en boutique depuis ≥ 1 mois. Avant, c'est un simple réajustement.
+              const eligibleBaisse = baisseOfficielleEligible(p.dateReception)
               await updateDoc(doc(db, 'produits', p.id), {
                 ancienPrix: actuel,
                 prix: nouveau,
+                etiquetteMaj: false,
                 ...(eligibleBaisse ? { prixBaisseLe: Timestamp.now() } : {}),
               })
               setPhaseASession(prev => new Set(prev).add(p.id))

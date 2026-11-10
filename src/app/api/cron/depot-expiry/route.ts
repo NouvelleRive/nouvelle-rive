@@ -173,6 +173,7 @@ export async function GET(req: NextRequest) {
         ancienPrix: prixAvant,
         prixBaisseLe: Timestamp.now(),
         baisse20Done: true,
+        etiquetteMaj: false,
       })
     }
     baissesAppliquees.push({ id: p.id, sku: p.sku, prixAvant, prixApres })

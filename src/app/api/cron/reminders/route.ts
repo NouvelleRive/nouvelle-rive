@@ -17,6 +17,7 @@ import { sendPushToOwner } from '@/lib/webpush'
 import { publishDueReseaux } from '@/lib/reseauxPublish'
 import { sendPanierOublie, langFromPays } from '@/lib/emails/commandes'
 import { Resend } from 'resend'
+import { etatCycle, pivotOrange, pivotRouge } from '@/lib/cycleBaisse'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -84,17 +85,14 @@ type PieceInfo = { sku: string; nom: string; imageUrl: string; categorie: string
 
 // Liste les pièces "à récupérer" (pastille rouge) et "prix à baisser" (pastille orange)
 // pour une chineuse donnée, évaluées à la date du restock (refDate).
-// - rouge : statutRecuperation = 'aRecuperer' OU prix baissé +1 mois OU réception +3 mois
-// - orange : réception entre 2 et 3 mois, jamais baissé, sans statut de récupération
+// - rouge : statutRecuperation = 'aRecuperer' OU réception +3 mois
+// - orange : 2 mois sans baisse OU dernière baisse il y a +1 mois (cf. lib/cycleBaisse)
 async function actionsChineuse(
   trigramme: string,
   refDate: Date,
 ): Promise<{ aRecuperer: PieceInfo[]; prixABaisser: PieceInfo[]; stockActif: number }> {
   if (!trigramme) return { aRecuperer: [], prixABaisser: [], stockActif: 0 }
   const snap = await adminDb.collection('produits').where('trigramme', '==', trigramme.toUpperCase()).get()
-  const oneMonthAgo = new Date(refDate); oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
-  const twoMonthsAgo = new Date(refDate); twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-  const threeMonthsAgo = new Date(refDate); threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
   const aRecuperer: PieceInfo[] = []
   const prixABaisser: PieceInfo[] = []
   let stockActif = 0
@@ -111,23 +109,10 @@ async function actionsChineuse(
     if (p.vendu === true) continue
     if (p.statut === 'vendu' || p.statut === 'supprime' || p.statut === 'retour') continue
     if (p.statutRecuperation === 'aRecuperer') { aRecuperer.push(toInfo(p)); continue }
-    const receptionDate = p.dateReception?.toDate?.()
-    // Règle absolue : réception +3 mois → rouge, peu importe la baisse
-    if (receptionDate instanceof Date && receptionDate < threeMonthsAgo) {
-      aRecuperer.push(toInfo(p))
-      continue
-    }
-    const baisseDate = p.prixBaisseLe?.toDate?.()
-    if (baisseDate instanceof Date) {
-      // Garde-fou : jamais "à récupérer" avant 3 mois de présence, même si baissé
-      // (protège des baisses prématurées posées par un simple réajustement de prix).
-      const recuAvant3Mois = receptionDate instanceof Date && receptionDate < threeMonthsAgo
-      if (baisseDate < oneMonthAgo && recuAvant3Mois) { aRecuperer.push(toInfo(p)); continue }
-      if (p.recu === true) stockActif++
-      continue
-    }
-    // Orange : réception entre 2 et 3 mois, jamais baissé
-    if (receptionDate instanceof Date && receptionDate < twoMonthsAgo) prixABaisser.push(toInfo(p))
+    // Cycle : cf. lib/cycleBaisse (3 mois → rouge, 2 mois / baisse +1 mois → orange)
+    const etat = etatCycle(p.dateReception, p.prixBaisseLe, refDate)
+    if (etat === 'red') { aRecuperer.push(toInfo(p)); continue }
+    if (etat === 'orange') prixABaisser.push(toInfo(p))
     if (p.recu === true) stockActif++
   }
   return { aRecuperer, prixABaisser, stockActif }
@@ -645,7 +630,7 @@ export async function GET(req: NextRequest) {
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Tu nous amènes de nouvelles pépites ? 💙</h1>
             <p>Hello ${prenom},</p>
-            <p>Tes plus anciennes pièces atteignent bientôt 2 mois en boutique. Il est temps de prendre rdv pour faire tourner ton stock 🌊</p>
+            <p>Certaines de tes pièces passent bientôt en « prix à baisser ». Il est temps de prendre rdv pour faire tourner ton stock 🌊</p>
             <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
           </div>`
         pushTitle = `🌊 Tu nous amènes des pépites ?`
@@ -667,7 +652,7 @@ export async function GET(req: NextRequest) {
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Il est temps de baisser les prix 💸</h1>
             <p>Hello ${prenom},</p>
-            <p>Les ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} ci-dessous ${pieces.length > 1 ? 'sont' : 'est'} en boutique depuis +2 mois. Il est temps de baisser leur prix (ou de prendre rdv pour venir les chercher) 🌊</p>
+            <p>Les ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} ci-dessous ${pieces.length > 1 ? 'sont' : 'est'} en boutique depuis +2 mois (ou baissée${pieces.length > 1 ? 's' : ''} il y a +1 mois). Il est temps de baisser leur prix (ou de prendre rdv pour venir les chercher) 🌊</p>
             ${piecesHtmlOf(pieces)}
             <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/mes-produits" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mes pièces</a></p>
           </div>`
@@ -680,18 +665,18 @@ export async function GET(req: NextRequest) {
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Pense à venir chercher tes pièces 💙</h1>
             <p>Hello ${prenom},</p>
-            <p>Plusieurs de tes pièces baissées passent à "à récupérer" dans 10 jours. Prends rdv pour les emporter (et nous amener de nouvelles pépites en passant !) 🌊</p>
+            <p>Plusieurs de tes pièces atteignent 3 mois en boutique et passent à "à récupérer" dans 10 jours. Prends rdv pour les emporter (et nous amener de nouvelles pépites en passant !) 🌊</p>
             <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
           </div>`
         pushTitle = `💙 Pense à venir chercher tes pièces`
-        pushBody = `Tes pièces baissées passent à "à récupérer" dans 10 jours`
+        pushBody = `Tes pièces passent à "à récupérer" dans 10 jours`
       } else if (stage === 'j7' && kind === 'rouge') {
         subject = `Plus que 7j pour venir chercher tes pièces ma vie ! 💙`
         html = `
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Plus que 7j ma vie ! ⏰</h1>
             <p>Hello ${prenom},</p>
-            <p>Tes pièces baissées passent à "à récupérer" dans une semaine. Prends rdv au plus vite pour venir les chercher 🌊</p>
+            <p>Tes pièces atteignent 3 mois en boutique et passent à "à récupérer" dans une semaine. Prends rdv au plus vite pour venir les chercher 🌊</p>
             <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
           </div>`
         pushTitle = `⏰ Plus que 7j pour venir chercher !`
@@ -703,7 +688,7 @@ export async function GET(req: NextRequest) {
           <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
             <h1 style="color:#22209C;">Il est temps de venir chercher tes pièces 💙</h1>
             <p>Hello ${prenom},</p>
-            <p>Les ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} ci-dessous ${pieces.length > 1 ? 'sont' : 'est'} baissée${pieces.length > 1 ? 's' : ''} depuis +1 mois et ${pieces.length > 1 ? 'doivent' : 'doit'} être récupérée${pieces.length > 1 ? 's' : ''}. Prends rdv pour les emporter 🌊</p>
+            <p>Les ${pieces.length} pièce${pieces.length > 1 ? 's' : ''} ci-dessous ${pieces.length > 1 ? 'sont' : 'est'} en boutique depuis 3 mois et ${pieces.length > 1 ? 'doivent' : 'doit'} être récupérée${pieces.length > 1 ? 's' : ''}. Prends rdv pour les emporter 🌊</p>
             ${piecesHtmlOf(pieces)}
             <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/calendrier" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Prendre RDV</a></p>
           </div>`
@@ -772,6 +757,9 @@ export async function GET(req: NextRequest) {
       let dateMinBaisse: Date | null = null
       const piecesOranges: PieceInfo[] = []
       const piecesRouges: PieceInfo[] = []
+      const piecesUnMois: PieceInfo[] = []
+      const recepUnMois: Date[] = []
+      let maxRecepUnMois: Date | null = null
       let stockActif = 0
       let dateLastRestock: Date | null = null
       type VenteInfo = { sku: string; nom: string; imageUrl: string; prix: number; dateVente: Date }
@@ -799,20 +787,21 @@ export async function GET(req: NextRequest) {
           const dr = p.dateReception?.toDate?.()
           if (dr instanceof Date && (!dateLastRestock || dr > dateLastRestock)) dateLastRestock = dr
         }
-        if (p.prixBaisseLe) {
-          const bd = p.prixBaisseLe?.toDate?.()
-          if (!(bd instanceof Date)) continue
-          if (!dateMinBaisse || bd < dateMinBaisse) dateMinBaisse = bd
-          // Garde-fou : jamais "à récupérer" avant 3 mois de présence, même si baissé.
-          const recep = p.dateReception?.toDate?.()
-          const recuAvant3Mois = recep instanceof Date && recep < threeMonthsAgo
-          if (bd < oneMonthAgo && recuAvant3Mois) piecesRouges.push(toInfo(p))
-        } else {
-          // Cycle orange basé sur la date de réception en boutique (pas createdAt)
-          const recep = p.dateReception?.toDate?.()
-          if (!(recep instanceof Date)) continue
-          if (!dateMinCreated || recep < dateMinCreated) dateMinCreated = recep
-          if (recep < twoMonthsAgo) piecesOranges.push(toInfo(p))
+        // Cycle : cf. lib/cycleBaisse. Pivots = date de bascule la plus proche.
+        const recep = p.dateReception?.toDate?.()
+        if (!(recep instanceof Date)) continue
+        const etat = etatCycle(recep, p.prixBaisseLe, today)
+        const pr = pivotRouge(recep)
+        if (pr && (!dateMinBaisse || pr < dateMinBaisse)) dateMinBaisse = pr
+        if (etat === 'red') { piecesRouges.push(toInfo(p)); continue }
+        const po = pivotOrange(recep, p.prixBaisseLe)
+        if (po && (!dateMinCreated || po < dateMinCreated)) dateMinCreated = po
+        if (etat === 'orange') { piecesOranges.push(toInfo(p)); continue }
+        // Info 1 mois : jamais baissé, entre 1 et 2 mois de présence
+        if (!p.prixBaisseLe && p.recu === true && recep < oneMonthAgo && recep >= twoMonthsAgo) {
+          piecesUnMois.push(toInfo(p))
+          if (!maxRecepUnMois || recep > maxRecepUnMois) maxRecepUnMois = recep
+          recepUnMois.push(recep)
         }
       }
       // Ventes depuis le dernier restock (fallback 30j si jamais reçu)
@@ -836,8 +825,9 @@ export async function GET(req: NextRequest) {
       const cycles: Array<{ kind: CycleKind; dateMin: Date | null; offsetMonths: number; pieces: PieceInfo[] }> = isSmallBatch
         ? []
         : [
-          { kind: 'orange', dateMin: dateMinCreated, offsetMonths: 2, pieces: piecesOranges },
-          { kind: 'rouge', dateMin: dateMinBaisse, offsetMonths: 1, pieces: piecesRouges },
+          // dateMin = pivot déjà calculé (lib/cycleBaisse) → offset 0
+          { kind: 'orange', dateMin: dateMinCreated, offsetMonths: 0, pieces: piecesOranges },
+          { kind: 'rouge', dateMin: dateMinBaisse, offsetMonths: 0, pieces: piecesRouges },
         ]
 
       // Phase 1 : identifier les stages candidats pour chaque cycle
@@ -896,6 +886,46 @@ export async function GET(req: NextRequest) {
           rappels: { ...rappels, ...updates },
         })
         if (update) Object.assign(updates, update)
+      }
+
+      // Info 1 mois : « tes pièces sont en boutique depuis 1 mois, tu peux baisser maintenant
+      // ou attendre encore un mois ». 1 envoi par lot de réception (watermark unMoisLastReception).
+      const unMoisWatermark = rappels.unMoisLastReception?.toDate?.() as Date | undefined
+      const unMoisNew = isSmallBatch ? [] : piecesUnMois.filter((_, i) => !unMoisWatermark || recepUnMois[i] > unMoisWatermark)
+      if (unMoisNew.length > 0 && maxRecepUnMois) {
+        const prenom = chin.prenom || chin.nom || ''
+        const emails: string[] = Array.isArray(chin.emails) && chin.emails.length > 0 ? chin.emails : (chin.email ? [chin.email] : [])
+        const n = unMoisNew.length
+        const skus = unMoisNew.map(p => p.sku).filter(Boolean).join(', ')
+        if (emails.length > 0) {
+          try {
+            await sendMail({
+              from: 'Nouvelle Rive <noreply@nouvellerive.eu>',
+              to: emails,
+              subject: `Tes pièces sont en boutique depuis 1 mois 💙`,
+              html: `
+                <div style="font-family: Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color:#000;">
+                  <h1 style="color:#22209C;">Déjà 1 mois en boutique 💙</h1>
+                  <p>Hello ${prenom},</p>
+                  <p>Ça fait un mois que ${n > 1 ? `les pièces ${skus} sont` : `la pièce ${skus} est`} en boutique. Tu peux baisser ${n > 1 ? 'leur' : 'son'} prix dès maintenant ou attendre encore un mois 🌊</p>
+                  ${piecesHtmlOf(unMoisNew)}
+                  <p style="margin-top:24px;"><a href="https://www.nouvellerive.eu/chineuse/mes-produits" style="display:inline-block;background:#22209C;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;">Voir mes pièces</a></p>
+                </div>`,
+            }, unMoisNew)
+          } catch (e: any) {
+            console.error(`[cron/reminders] un-mois mail échoué ${chinDoc.id}:`, e?.message)
+          }
+        }
+        if (chin.authUid) {
+          await sendPushToOwner(chin.authUid, {
+            title: `💙 ${n} pièce${n > 1 ? 's' : ''} en boutique depuis 1 mois`,
+            body: `Tu peux baisser le prix maintenant ou attendre encore un mois`,
+            url: '/chineuse/mes-produits',
+            tag: `chineuse-un-mois-${chinDoc.id}-${dateStr}`,
+          })
+        }
+        updates.unMoisLastReception = maxRecepUnMois
+        actions.push(`chineuse-un-mois-${chinDoc.id}`)
       }
 
       // Stock bas : nb pièces en boutique < cibleStock * 0.8 + pas de RDV dans 10j
