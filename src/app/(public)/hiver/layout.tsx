@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Vintage hiver — manteaux, fourrure, laine',
+  title: 'HIVER — Manteaux, pulls, laine et fourrure vintage',
   description:
-    "Pièces vintage et upcyclées d'hiver chez NOUVELLE RIVE : manteaux, fourrures, vestes en laine, doudounes, pulls maille. Sélection chinée à Paris.",
+    "Manteaux, vestes en cuir, pulls en laine, cols roulés, fourrure — pièces vintage et upcyclées d'hiver chinées à Paris.",
   alternates: { canonical: 'https://www.nouvellerive.eu/hiver' },
   openGraph: {
-    title: 'Vintage hiver — NOUVELLE RIVE',
-    description: "Manteaux, fourrures, vestes laine vintage chinés à Paris.",
+    title: 'HIVER — Manteaux, pulls, laine et fourrure vintage | NOUVELLE RIVE',
+    description: "Manteaux, vestes en cuir, pulls en laine, cols roulés, fourrure — pièces vintage et upcyclées d'hiver chinées à Paris.",
     url: 'https://www.nouvellerive.eu/hiver',
     type: 'website',
     siteName: 'NOUVELLE RIVE',
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vintage hiver — NOUVELLE RIVE',
-    description: 'Manteaux, fourrures, laine vintage chinés à Paris.',
+    title: 'HIVER — Manteaux, pulls, laine et fourrure vintage | NOUVELLE RIVE',
+    description: "Manteaux, vestes en cuir, pulls en laine, cols roulés, fourrure — pièces vintage et upcyclées d'hiver.",
     images: ['/facade%20paysage.jpg'],
   },
 }
