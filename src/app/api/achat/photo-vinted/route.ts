@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (!storageZone || !apiKey || !cdnUrl) {
       return NextResponse.json({ success: false, error: 'Config Bunny manquante' }, { status: 500 })
     }
-    const path = `produits/vinted_${productId}_${Date.now()}.${ext}`
+    const path = `produits/achat_${productId}_${Date.now()}.${ext}`
     const put = await fetch(`https://storage.bunnycdn.com/${storageZone}/${path}`, {
       method: 'PUT', headers: { AccessKey: apiKey, 'Content-Type': contentType }, body: buf,
     })

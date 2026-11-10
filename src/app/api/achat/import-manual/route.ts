@@ -162,10 +162,16 @@ async function handleValidatedItems(
       let docId: string | null = null
       if (provenance === 'fleek' && it.achatOrderId) {
         docId = fleekPieceDocId(String(it.achatOrderId), i, p)
-      } else if (it.itemId) {
-        docId = `vinted_item_${it.itemId}`
-      } else if (it.achatOrderId && provenance === 'vinted') {
-        docId = `vinted_${it.achatOrderId}`
+      } else if (it.itemId || (it.achatOrderId && provenance === 'vinted')) {
+        // Vinted : id = SKU (URL publique sans mention de provenance). Re-import
+        // → on réécrit la pièce déjà créée (ancien id vinted_… ou SKU).
+        const champ = it.itemId ? 'achatItemId' : 'achatOrderId'
+        const val = String(it.itemId || it.achatOrderId)
+        const ancien = it.itemId ? `vinted_item_${it.itemId}` : `vinted_${it.achatOrderId}`
+        const exist = (await adminDb.collection('produits').doc(ancien).get()).exists
+          ? ancien
+          : (await adminDb.collection('produits').where(champ, '==', val).limit(1).get()).docs[0]?.id
+        docId = exist || sku
       } else if (it.achatOrderId && provenance === 'whatnot') {
         docId = `whatnot_${it.achatOrderId}`
       }
@@ -210,6 +216,7 @@ async function handleValidatedItems(
         achatVendeur: it.vendeur || '',
         achatTitreOriginal: it.titreOriginal || it.titre || '',
         ...(it.achatOrderId ? { achatOrderId: String(it.achatOrderId) } : {}),
+        ...(it.itemId ? { achatItemId: String(it.itemId) } : {}),
       }
 
       if (docId) {
@@ -355,14 +362,18 @@ async function handleVintedReceipt(
   const receipt = parseVintedReceipt(body)
   if (!receipt.ok) return NextResponse.json({ ok: false, reason: receipt.reason })
 
-  const sku = await computeNextSku(target.trigramme)
+  const parId = await adminDb.collection('produits').doc(vintedDocId(receipt.transactionId)).get()
+  const deja = parId.exists
+    ? parId
+    : (await adminDb.collection('produits').where('achatOrderId', '==', receipt.transactionId).limit(1).get()).docs[0]
+  const sku = deja?.data()?.sku || await computeNextSku(target.trigramme)
   // buildVintedProduitPayload est typé pour NR — on l'appelle puis on override
   // les champs chineuse + trigramme + sku derrière.
   const base = buildVintedProduitPayload(receipt, {
     chineuseNR: { uid: target.uid, email: target.email },
     sku,
   })
-  const docId = vintedDocId(receipt.transactionId)
+  const docId = deja?.id || sku
 
   await adminDb.collection('produits').doc(docId).set(
     {

@@ -135,8 +135,8 @@ async function handleAlerteToken(detail: string) {
 
 // ---------------------------------------------------------------------------
 // Vinted "Ton reçu" : crée un nouveau brouillon produit sous chineuse NR.
-// ID Firestore déterministe = `vinted_${transactionId}` → si on re-parse le même
-// mail, on écrit le même doc (pas de doublon).
+// ID Firestore = SKU ; anti-doublon via achatOrderId (re-parse du même mail
+// → pièce existante retrouvée, rien n'est réécrit).
 // ---------------------------------------------------------------------------
 async function handleVintedReceipt(body: string, gmailMessageId: string) {
   const receipt = parseVintedReceipt(body)
@@ -148,8 +148,13 @@ async function handleVintedReceipt(body: string, gmailMessageId: string) {
   // écraserait les retouches faites depuis (nom, prix, photos) et brûlerait un
   // SKU au passage. Réponse ok:true pour que le rejeu d'un mail soit sans
   // risque (rattrapage, retry, mail relu à la main).
-  const dejaLa = await adminDb.collection('produits').doc(vintedDocId(receipt.transactionId)).get()
-  if (dejaLa.exists) {
+  // Anciennes pièces : id `vinted_<transactionId>` ; nouvelles : id = SKU,
+  // retrouvées par achatOrderId.
+  const parId = await adminDb.collection('produits').doc(vintedDocId(receipt.transactionId)).get()
+  const dejaLa = parId.exists
+    ? parId
+    : (await adminDb.collection('produits').where('achatOrderId', '==', receipt.transactionId).limit(1).get()).docs[0]
+  if (dejaLa) {
     return NextResponse.json({
       ok: true,
       docId: dejaLa.id,
@@ -172,7 +177,8 @@ async function handleVintedReceipt(body: string, gmailMessageId: string) {
 
   const sku = await computeNextSku(trigramme)
   const payload = buildVintedProduitPayload(receipt, { chineuseNR: chineuse, sku, trigramme })
-  const docId = vintedDocId(receipt.transactionId)
+  // Id = SKU, comme les autres pièces (URL publique sans mention de provenance).
+  const docId = sku
 
   // Pré-remplissage des champs secondaires depuis le titre (catégorie ACH,
   // marque, modèle, motif, matière, couleur, taille) — comme l'import manuel.
