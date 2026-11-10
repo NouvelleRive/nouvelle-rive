@@ -77,6 +77,8 @@ export function extractIdFromSlug(slug: string): string | null {
   if (/^[A-Za-z]{2,10}\d{1,5}$/.test(last)) return last
   // Fleek batch id : fleek_<orderId>_<groupIdx>_<itemIdx>
   if (/^fleek_\d+_\d+_\d+$/.test(last)) return last
+  // Achat Vinted : vinted_<transactionId> ou vinted_item_<itemId>
+  if (/^vinted_(item_)?\d+$/.test(last)) return last
   // Fallback générique
   if (/^[A-Za-z0-9]{15,30}$/.test(last)) return last
   return null
