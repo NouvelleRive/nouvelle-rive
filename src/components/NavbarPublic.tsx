@@ -33,6 +33,9 @@ export default function NavbarPublic() {
   const showVideo = pathname === '/'
   const [stickyVisible, setStickyVisible] = useState(false)
   const [stickyMenuOpen, setStickyMenuOpen] = useState(false)
+  // Mobile : la liste des onglets est repliée derrière « MENU + » pour que les
+  // pièces apparaissent dès le premier écran. Desktop : toujours dépliée.
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   // Nav dynamique : SSR/premier paint = STATIC_LINKS (fallback), puis remplacée par la
   // config Firestore/blob cachée dès que /api/nav-config répond (0 read Firestore).
   const [dynamicNav, setDynamicNav] = useState<typeof STATIC_LINKS | null>(null)
@@ -355,9 +358,18 @@ export default function NavbarPublic() {
 
         <div style={{ borderBottom: '1px solid #000' }} />
 
-        {/* Onglets toujours visibles (liste verticale, comme avant) */}
-        <div className="px-4 md:px-6 py-4 flex">
-          <div className="flex flex-col gap-0.5">
+        {/* Onglets : liste verticale toujours visible en desktop, repliable en mobile */}
+        <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(o => !o)}
+            className="md:hidden self-start"
+            style={{ fontSize: '11px', letterSpacing: '0.2em', fontWeight: 600, lineHeight: '1.8', color: '#000' }}
+            aria-expanded={mobileMenuOpen}
+          >
+            {menuLabel} {mobileMenuOpen ? '−' : '+'}
+          </button>
+          <div className={`${mobileMenuOpen ? 'flex mt-1' : 'hidden'} md:flex md:mt-0 flex-col gap-0.5`}>
             {boutiqueLinks.map((link) => {
               const linkPath = link.href.split('#')[0]
               const active = pathname === linkPath
@@ -365,6 +377,7 @@ export default function NavbarPublic() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
                   className="nav-link transition-colors duration-200"
                   style={{
                     fontSize: '11px',
