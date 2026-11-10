@@ -160,8 +160,15 @@ async function handleValidatedItems(
 
       // ID déterministe par provenance (anti-doublon strict si re-import).
       let docId: string | null = null
+      let achatRef: string | null = null
       if (provenance === 'fleek' && it.achatOrderId) {
-        docId = fleekPieceDocId(String(it.achatOrderId), i, p)
+        // Id = SKU (URL publique sans mention de provenance). Re-import → on
+        // réécrit la pièce déjà créée (ancien id fleek_… ou achatRef).
+        achatRef = fleekPieceDocId(String(it.achatOrderId), i, p)
+        const exist = (await adminDb.collection('produits').doc(achatRef).get()).exists
+          ? achatRef
+          : (await adminDb.collection('produits').where('achatRef', '==', achatRef).limit(1).get()).docs[0]?.id
+        docId = exist || sku
       } else if (it.itemId || (it.achatOrderId && provenance === 'vinted')) {
         // Vinted : id = SKU (URL publique sans mention de provenance). Re-import
         // → on réécrit la pièce déjà créée (ancien id vinted_… ou SKU).
@@ -217,6 +224,7 @@ async function handleValidatedItems(
         achatTitreOriginal: it.titreOriginal || it.titre || '',
         ...(it.achatOrderId ? { achatOrderId: String(it.achatOrderId) } : {}),
         ...(it.itemId ? { achatItemId: String(it.itemId) } : {}),
+        ...(achatRef ? { achatRef } : {}),
       }
 
       if (docId) {
