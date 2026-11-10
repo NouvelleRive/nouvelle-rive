@@ -58,7 +58,17 @@ export function buildProduitPath(p: ProduitForSlug): string {
     .filter(Boolean)
     .join(' ')
   const descSlug = slugifyPart(descParts).slice(0, 80) || 'piece'
-  return `${type}/${marque}/${descSlug}-${p.id}`
+  return `${type}/${marque}/${descSlug}-${encodeIdForUrl(p.id)}`
+}
+
+// Les ids d'achat (vinted_xxx) ne doivent jamais apparaître dans une URL publique :
+// vinted_<n> → nra<n>, vinted_item_<n> → nri<n> (décodé par extractIdFromSlug).
+function encodeIdForUrl(id: string): string {
+  const item = id.match(/^vinted_item_(\d+)$/)
+  if (item) return `nri${item[1]}`
+  const order = id.match(/^vinted_(\d+)$/)
+  if (order) return `nra${order[1]}`
+  return id
 }
 
 // Alias rétro-compat — retourne désormais le chemin complet (avec slashs).
@@ -71,14 +81,15 @@ export function extractIdFromSlug(slug: string): string | null {
   const segments = slug.split('-')
   const last = segments[segments.length - 1]
   if (!last) return null
+  // Ids d'achat encodés (cf. encodeIdForUrl)
+  const achat = last.match(/^nr([ai])(\d{6,})$/)
+  if (achat) return achat[1] === 'i' ? `vinted_item_${achat[2]}` : `vinted_${achat[2]}`
   // Firestore auto-ID : 20 chars alphanumériques (case-sensitive)
   if (/^[A-Za-z0-9]{20}$/.test(last)) return last
   // SKU-format id : 2-10 lettres + 1-5 chiffres (PRI171, MAK22, IP123…)
   if (/^[A-Za-z]{2,10}\d{1,5}$/.test(last)) return last
   // Fleek batch id : fleek_<orderId>_<groupIdx>_<itemIdx>
   if (/^fleek_\d+_\d+_\d+$/.test(last)) return last
-  // Achat Vinted : vinted_<transactionId> ou vinted_item_<itemId>
-  if (/^vinted_(item_)?\d+$/.test(last)) return last
   // Fallback générique
   if (/^[A-Za-z0-9]{15,30}$/.test(last)) return last
   return null
