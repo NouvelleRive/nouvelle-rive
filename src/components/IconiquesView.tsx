@@ -488,8 +488,8 @@ export default function IconiquesView({
                 </div>
                 <div className="py-3 px-3 text-center">
                   <h3
-                    className="uppercase font-bold line-clamp-1"
-                    style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '12px', letterSpacing: '0.05em' }}
+                    className="uppercase font-bold break-words text-[10px] md:text-[12px]"
+                    style={{ fontFamily: 'Helvetica Neue, sans-serif', letterSpacing: '0.05em' }}
                   >
                     {lang === 'en' && item.nomEn ? item.nomEn : item.nom}
                   </h3>
@@ -914,8 +914,8 @@ export default function IconiquesView({
                           </div>
                           <div className="py-3 px-3 text-center">
                             <p
-                              className="uppercase truncate"
-                              style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px', color: '#666' }}
+                              className="uppercase break-words text-[9px] md:text-[11px]"
+                              style={{ fontFamily: 'Helvetica Neue, sans-serif', color: '#666' }}
                             >
                               {p.nom || ''}
                             </p>
@@ -969,7 +969,7 @@ export default function IconiquesView({
                                     {img && <img src={img} alt={p.nom || ''} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
                                   </div>
                                   <div className="py-4 px-3 text-center bg-white">
-                                    <h3 className="uppercase font-semibold line-clamp-2" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px' }}>{p.nom}</h3>
+                                    <h3 className="uppercase font-semibold break-words text-[9px] md:text-[10px]" style={{ fontFamily: 'Helvetica Neue, sans-serif' }}>{p.nom}</h3>
                                     {p.marque && <p className="mt-1 uppercase" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '10px', color: '#666' }}>{p.marque}</p>}
                                     <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>{p.prix.toLocaleString(lang === 'en' ? 'en-US' : 'fr-FR')} €</p>
                                   </div>
