@@ -498,7 +498,7 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between sticky top-0 z-30 bg-white/95 backdrop-blur py-3 border-b">
+      <div className="flex items-center justify-between">
         <button onClick={backToList} className="flex items-center gap-2 text-sm text-gray-600 hover:text-black">
           <ArrowLeft size={16} /> Retour à la liste
         </button>
@@ -815,6 +815,17 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
               ))}
             </ul>
           )}
+        </div>
+
+        {/* Sauvegarder aussi en bas : le bouton du haut sort de l'écran sur les longues fiches */}
+        <div className="pt-6 border-t flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={saving || uploadingCount > 0}
+            className="flex items-center gap-2 bg-[#22209C] text-white px-4 py-2 rounded hover:bg-[#1a1878] disabled:opacity-50"
+          >
+            <Save size={16} /> {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+          </button>
         </div>
       </div>
     </div>
