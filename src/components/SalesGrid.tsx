@@ -220,6 +220,8 @@ export default function SalesGrid({
           produit={enriched.get(detail.id)}
           isAdmin={isAdmin}
           onClose={() => setDetail(null)}
+          onPrev={(() => { const i = ventes.findIndex(v => v.id === detail.id); return i > 0 ? () => setDetail(ventes[i - 1]) : undefined })()}
+          onNext={(() => { const i = ventes.findIndex(v => v.id === detail.id); return i >= 0 && i < ventes.length - 1 ? () => setDetail(ventes[i + 1]) : undefined })()}
         />
       )}
     </div>

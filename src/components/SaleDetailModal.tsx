@@ -5,7 +5,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebaseConfig'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { X } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatPrix } from '@/lib/formatPrix'
 import { calcMargeNette } from '@/lib/marge'
 import type { Vente } from '@/components/SalesList'
@@ -45,14 +45,28 @@ interface Props {
   produit?: any
   isAdmin?: boolean
   onClose: () => void
+  /** Pièce précédente / suivante de la liste (flèches < > et touches ← →). */
+  onPrev?: () => void
+  onNext?: () => void
 }
 
-export default function SaleDetailModal({ vente, produit, isAdmin = false, onClose }: Props) {
+export default function SaleDetailModal({ vente, produit, isAdmin = false, onClose, onPrev, onNext }: Props) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && onPrev) onPrev()
+      else if (e.key === 'ArrowRight' && onNext) onNext()
+      else if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onPrev, onNext, onClose])
+
   // Si la grille n'a pas déjà le produit (vue liste), on le charge une seule fois, au clic.
   const [fetched, setFetched] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    setFetched(null)
     if (produit || !vente.produitId) return
     let annule = false
     setLoading(true)
@@ -66,6 +80,7 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
   const p = produit || fetched || {}
 
   const [zoom, setZoom] = useState<string | null>(null)
+  useEffect(() => { setZoom(null) }, [vente.id])
 
   const images: string[] = (p.imageUrls?.length ? p.imageUrls : (vente as any).imageUrls || []) as string[]
   const cat = labelCategorie(p.categorie ?? vente.categorie)
@@ -164,6 +179,21 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
           </div>
         </div>
       </div>
+
+      {onPrev && (
+        <button
+          onClick={e => { e.stopPropagation(); onPrev() }}
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-[75] bg-white/90 hover:bg-white shadow-lg rounded-full w-12 h-12 flex items-center justify-center text-gray-800"
+          aria-label="Pièce précédente"
+        ><ChevronLeft size={28} /></button>
+      )}
+      {onNext && (
+        <button
+          onClick={e => { e.stopPropagation(); onNext() }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-[75] bg-white/90 hover:bg-white shadow-lg rounded-full w-12 h-12 flex items-center justify-center text-gray-800"
+          aria-label="Pièce suivante"
+        ><ChevronRight size={28} /></button>
+      )}
 
       {zoom && (
         <div

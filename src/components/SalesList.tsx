@@ -449,7 +449,13 @@ export default function SalesList({
 
       {/* Fiche détail (vue liste) */}
       {detail && (
-        <SaleDetailModal vente={detail} isAdmin={isAdmin} onClose={() => setDetail(null)} />
+        <SaleDetailModal
+          vente={detail}
+          isAdmin={isAdmin}
+          onClose={() => setDetail(null)}
+          onPrev={(() => { const i = ventesFiltrées.findIndex(v => v.id === detail.id); return i > 0 ? () => setDetail(ventesFiltrées[i - 1]) : undefined })()}
+          onNext={(() => { const i = ventesFiltrées.findIndex(v => v.id === detail.id); return i >= 0 && i < ventesFiltrées.length - 1 ? () => setDetail(ventesFiltrées[i + 1]) : undefined })()}
+        />
       )}
 
       {/* Modal suppression groupée */}
