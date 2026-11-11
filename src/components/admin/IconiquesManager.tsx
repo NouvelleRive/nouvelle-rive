@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore'
+import PhotoEditor from '@/components/PhotoEditor'
 import { auth, db } from '@/lib/firebaseConfig'
 import { Eye, EyeOff, Plus, Trash2, Save, ArrowLeft, ImagePlus, X, Film, ArrowUp, ArrowDown, Crop } from 'lucide-react'
 import {
@@ -57,40 +58,6 @@ type Iconique = {
   soldOut?: boolean
   buyLink?: string
 }
-
-// Même contrainte que Field : défini au niveau module pour ne pas remonter le slider
-// à chaque frappe (sinon le drag se coupe dès que le draft change).
-const CropSlider = ({
-  label,
-  value,
-  min,
-  max,
-  step,
-  display,
-  onChange,
-}: {
-  label: string
-  value: number
-  min: number
-  max: number
-  step: number
-  display: string
-  onChange: (v: number) => void
-}) => (
-  <label className="flex items-center gap-1.5">
-    <span className="text-[10px] text-gray-500 w-14 shrink-0">{label}</span>
-    <input
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onChange={e => onChange(Number(e.target.value))}
-      className="flex-1 h-1 accent-black"
-    />
-    <span className="text-[10px] text-gray-400 w-10 text-right shrink-0">{display}</span>
-  </label>
-)
 
 const emptyDraft = (type: IconiqueType, ordre: number): Iconique => ({
   id: '',
@@ -326,16 +293,6 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
     })
   }
 
-  /** Applique un réglage de cadrage (zoom ou focus) à une seule photo. */
-  const updateImageTransform = (idx: number, patch: Partial<ImageTransform>) => {
-    setDraft(prev => {
-      const transforms = alignTransforms(prev)
-      if (!transforms[idx]) return prev
-      transforms[idx] = { ...transforms[idx], ...patch }
-      return { ...prev, imageTransforms: transforms }
-    })
-  }
-
   const addVideoUrl = () => {
     const url = window.prompt('URL de la vidéo (mp4 ou embed)')?.trim()
     if (!url) return
@@ -541,7 +498,7 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between sticky top-0 z-30 bg-white/95 backdrop-blur py-3 border-b">
         <button onClick={backToList} className="flex items-center gap-2 text-sm text-gray-600 hover:text-black">
           <ArrowLeft size={16} /> Retour à la liste
         </button>
@@ -774,9 +731,9 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
                     <X size={14} />
                   </button>
                   <button
-                    onClick={() => setCroppingIndex(isCropping ? null : idx)}
+                    onClick={() => setCroppingIndex(idx)}
                     className={`absolute top-1 left-1 p-1 rounded-full shadow ${isCropping ? 'bg-black text-white' : 'bg-white/90 hover:bg-white'}`}
-                    title="Recadrer (zoom et position)"
+                    title="Recadrer"
                   >
                     <Crop size={14} />
                   </button>
@@ -797,49 +754,33 @@ export default function IconiquesManager({ typeFilter }: { typeFilter: IconiqueT
                     </button>
                   </div>
 
-                  {isCropping && (
-                    <div className="absolute inset-x-0 bottom-0 bg-white/95 border-t p-2 space-y-1.5">
-                      <CropSlider
-                        label="Zoom"
-                        value={transform.scale}
-                        min={1}
-                        max={3}
-                        step={0.05}
-                        display={`${Math.round(transform.scale * 100)} %`}
-                        onChange={v => updateImageTransform(idx, { scale: v })}
-                      />
-                      <CropSlider
-                        label="Horizontal"
-                        value={transform.x}
-                        min={0}
-                        max={100}
-                        step={1}
-                        display={`${Math.round(transform.x)} %`}
-                        onChange={v => updateImageTransform(idx, { x: v })}
-                      />
-                      <CropSlider
-                        label="Vertical"
-                        value={transform.y}
-                        min={0}
-                        max={100}
-                        step={1}
-                        display={`${Math.round(transform.y)} %`}
-                        onChange={v => updateImageTransform(idx, { y: v })}
-                      />
-                      <button
-                        onClick={() => updateImageTransform(idx, DEFAULT_IMAGE_TRANSFORM)}
-                        className="w-full text-[10px] text-gray-500 hover:text-black underline"
-                      >
-                        Réinitialiser
-                      </button>
-                    </div>
-                  )}
                 </div>
                 )
               })}
             </div>
           )}
         </div>
+
+        {/* Recadrage : même éditeur que les fiches produit (glisser + zoom → nouvelle photo carrée) */}
+        {croppingIndex !== null && (draft.images || [])[croppingIndex] && (
+          <PhotoEditor
+            imageUrl={(draft.images || [])[croppingIndex]}
+            alreadyProcessed
+            initialMode="crop"
+            onCancel={() => setCroppingIndex(null)}
+            onConfirm={(newUrl) => {
+              const idx = croppingIndex
+              setDraft(prev => {
+                const images = [...(prev.images || [])]
+                const transforms = alignTransforms(prev)
+                images[idx] = newUrl
+                transforms[idx] = { ...DEFAULT_IMAGE_TRANSFORM }
+                return { ...prev, images, imageTransforms: transforms }
+              })
+              setCroppingIndex(null)
+            }}
+          />
+        )}
 
         {/* Vidéos */}
         <div className="pt-6 border-t">
