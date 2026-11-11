@@ -77,7 +77,7 @@ export async function decalerChronique(chronique: string, depuis: string): Promi
   const batch = adminDb.batch()
   for (const m of moves) {
     if (m.from === m.to) continue
-    batch.set(adminDb.collection(COLL).doc(m.to), m.data)
+    batch.set(adminDb.collection(COLL).doc(m.to), { ...m.data, date: m.to.slice(chronique.length + 1) })
     if (!targets.has(m.from)) batch.delete(adminDb.collection(COLL).doc(m.from))
   }
   await batch.commit()
