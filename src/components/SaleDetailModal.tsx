@@ -78,13 +78,13 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
   const afficherTaille = !categoriesSansTaille.some(c => cat.toLowerCase().includes(c))
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-3" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-0 md:p-2" onClick={onClose}>
       <div
-        className="bg-white rounded-xl w-full max-w-[95vw] h-[95vh] max-h-[95vh] overflow-hidden flex flex-col"
+        className="bg-white md:rounded-xl w-full h-full overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b flex items-start justify-between gap-3 flex-shrink-0">
+        <div className="px-4 py-2 border-b flex items-start justify-between gap-3 flex-shrink-0">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-gray-900 truncate">
               {sku && <span className="text-[#22209C]">{sku}</span>}{sku && <span className="text-gray-400"> · </span>}{nom}
@@ -94,10 +94,10 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={20} /></button>
         </div>
 
-        <div className="p-4 flex-1 min-h-0 flex flex-col md:flex-row gap-4 overflow-y-auto md:overflow-hidden">
+        <div className="p-2 flex-1 min-h-0 flex flex-col md:flex-row gap-3 overflow-y-auto md:overflow-hidden">
           {/* Photos : côte à côte, pleine hauteur, sans scroll */}
           {images.length > 0 ? (
-            <div className="md:flex-1 min-w-0 md:min-h-0 flex flex-col md:flex-row gap-3">
+            <div className="md:flex-1 min-w-0 md:min-h-0 flex flex-col md:flex-row gap-2">
               {images.map((url, i) => (
                 <img
                   key={i}
@@ -114,7 +114,7 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
             </div>
           ) : null}
 
-          <div className="md:w-80 flex-shrink-0 md:overflow-y-auto">
+          <div className="md:w-64 flex-shrink-0 md:overflow-y-auto pr-2">
 
           {/* Vente */}
           <div className="text-sm mb-4">
