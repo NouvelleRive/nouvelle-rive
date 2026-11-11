@@ -807,7 +807,7 @@ export default function IconiquesView({
               </div>
 
               {(item.buyLink || (!sideBySide && item.videos && item.videos.length > 0)) && (
-                <div style={{ borderTop: '1px solid #000' }} className="bg-white">
+                <div style={{ borderTop: '1px solid #000' }} className={`bg-white ${item.buyLink ? '' : 'hidden sm:block'}`}>
                   {item.buyLink && (
                     <div className="px-6 md:px-12 py-8 text-center" style={{ borderBottom: !sideBySide && item.videos && item.videos.length > 0 ? '1px solid #000' : 'none' }}>
                       <a
@@ -830,9 +830,8 @@ export default function IconiquesView({
                   )}
                   {!sideBySide && item.videos && item.videos.length > 0 && (
                     <div className="px-6 md:px-12 py-10">
-                      {/* Mobile : défilement horizontal (pas de case vide) ; sm+ : grille */}
                       <div
-                        className="flex overflow-x-auto snap-x snap-mandatory gap-3 sm:grid sm:gap-6 sm:overflow-visible mx-auto"
+                        className="grid gap-6 mx-auto grid-cols-1 sm:grid-cols-2"
                         style={{
                           gridTemplateColumns: `repeat(${Math.min(item.videos.length, 3)}, minmax(0, 1fr))`,
                           maxWidth: item.videos.length === 1 ? '420px' : item.videos.length === 2 ? '880px' : '1280px',
@@ -841,7 +840,7 @@ export default function IconiquesView({
                         {item.videos.map((url) => {
                           if (/\.mp4(\?|$)/i.test(url)) {
                             return (
-                              <div key={url} className={`${item.videos!.length > 1 ? 'w-[70%]' : 'w-full'} shrink-0 snap-start sm:w-full`} style={{ aspectRatio: '9 / 16' }}>
+                              <div key={url} className="w-full" style={{ aspectRatio: '9 / 16' }}>
                                 <LazyAutoplayVideo src={url} className="w-full h-full object-cover" style={{ background: '#000' }} />
                               </div>
                             )
@@ -849,7 +848,7 @@ export default function IconiquesView({
                           const embed = instagramEmbed(url)
                           if (!embed) return null
                           return (
-                            <div key={url} className={`${item.videos!.length > 1 ? 'w-[70%]' : 'w-full'} shrink-0 snap-start sm:w-full`} style={{ aspectRatio: '9 / 16' }}>
+                            <div key={url} className="w-full" style={{ aspectRatio: '9 / 16' }}>
                               <iframe src={embed} className="w-full h-full" style={{ border: 'none', background: '#fafafa' }} allowFullScreen allow="autoplay; encrypted-media" />
                             </div>
                           )

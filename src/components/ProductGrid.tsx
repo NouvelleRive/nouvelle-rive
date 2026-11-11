@@ -545,20 +545,14 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
     const blockSize = 7
     let boundaryCount = 0
-    // Cellules occupées en grille mobile (2 colonnes) : sert à ne jamais laisser
-    // de case vide avant une vidéo pleine largeur.
-    let mobileCells = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
-      mobileCells++
       const isBoundary = (i + 1) % blockSize === 0
       if (!isBoundary || chineuseByTrigramme.size === 0) continue
 
       // Mobile : alterne 1 vidéo full-width (col-span-2) → 2 vidéos demi-largeur (col-span-1 chacune).
-      // Si la ligne en cours n'a qu'une pièce, 1 seule vidéo demi-largeur comble la case.
       // Desktop : toujours 1 vidéo par cellule.
-      const ligneIncomplete = !isDesktop && mobileCells % 2 === 1
-      const wantPair = !isDesktop && !ligneIncomplete && (boundaryCount % 2 === 1)
+      const wantPair = !isDesktop && (boundaryCount % 2 === 1)
 
       // Cherche les chineuses des pièces du bloc, du plus récent au plus ancien, sans doublons.
       const uniqueChineuses: ChineuseLite[] = []
@@ -586,8 +580,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
         picks.push({ c, videoUrl: c.videos[idx % c.videos.length], idx })
       }
 
-      const mobileSpan: 1 | 2 = picks.length === 2 || ligneIncomplete ? 1 : 2
-      mobileCells += picks.length * mobileSpan
+      const mobileSpan: 1 | 2 = picks.length === 2 ? 1 : 2
       for (let k = 0; k < picks.length; k++) {
         const p = picks[k]
         items.push({
