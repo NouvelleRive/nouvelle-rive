@@ -97,14 +97,14 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
         <div className="p-4 overflow-y-auto flex-1">
           {/* Photos */}
           {images.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 gap-3 mb-4">
               {images.map((url, i) => (
                 <img
                   key={i}
                   src={bunny(url, 1600)}
                   alt=""
                   onClick={() => setZoom(url)}
-                  className="w-full max-h-[80vh] object-contain bg-gray-50 rounded-lg cursor-zoom-in hover:opacity-90"
+                  className="w-full object-contain bg-gray-50 rounded-lg cursor-zoom-in hover:opacity-90"
                 />
               ))}
             </div>
