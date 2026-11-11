@@ -80,7 +80,7 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
   return (
     <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-3" onClick={onClose}>
       <div
-        className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-xl w-full max-w-[95vw] h-[95vh] max-h-[95vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
