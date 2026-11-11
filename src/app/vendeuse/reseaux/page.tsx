@@ -1246,11 +1246,13 @@ export default function ReseauxPage() {
       return n
     })
     try {
-      await fetch('/api/reseaux/suspend', {
+      const r = await fetch('/api/reseaux/suspend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chronique: key, suspended: willSuspend }),
       })
+      if (!r.ok) throw new Error('suspend failed')
+      if (!willSuspend) refreshCounts()
     } catch {
       // Rollback si l'appel échoue.
       setSuspended((prev) => {
