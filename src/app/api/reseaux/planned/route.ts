@@ -66,10 +66,13 @@ export async function GET() {
       .map((s) => {
         const d = s.data() as any
         const firstMedia = Array.isArray(d.medias) && d.medias[0] ? d.medias[0] : null
+        // Date/chronique tirées de l'id `${chronique}_${date}` (source de vérité),
+        // pas des champs internes qui peuvent être périmés après un décalage.
+        const [, chronique, date] = s.id.match(/^(.*)_(\d{4}-\d{2}-\d{2})$/) || [, d.chronique, d.date]
         return {
-          date: d.date,
-          chronique: d.chronique,
-          heurePost: d.heurePost || CHRONIQUE_HEURE[d.chronique] || '',
+          date,
+          chronique,
+          heurePost: d.heurePost || CHRONIQUE_HEURE[chronique] || '',
           vignetteUrl: d.vignetteUrl || (firstMedia && firstMedia.type === 'image' ? firstMedia.url : ''),
           videoUrl: d.videoUrl || (firstMedia && firstMedia.type === 'video' ? firstMedia.url : ''),
           // Le recadrage est propre à l'aperçu affiché : vignette du doc → vignetteOffsetY,
