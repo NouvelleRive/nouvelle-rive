@@ -237,8 +237,8 @@ export default function SalesList({
             return (
               <div key={k.trigramme} className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2">
                 <span className="text-xs text-gray-500">{k.label}</span>
-                <span className="font-bold">{vs.length}</span>
-                <span className="text-xs text-gray-400">{formatPrix(vs.reduce((s, v) => s + getPrix(v), 0))}€</span>
+                <span className="font-bold">{formatPrix(vs.reduce((s, v) => s + getPrix(v), 0))}€</span>
+                <span className="text-xs text-gray-400">{vs.length}</span>
               </div>
             )
           })}
