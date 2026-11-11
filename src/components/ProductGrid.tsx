@@ -547,7 +547,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     let boundaryCount = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
+      // Moins de 7 pièces : aucune vidéo ne tomberait → une vidéo après la dernière pièce.
       const isBoundary = (i + 1) % blockSize === 0
+        || (filteredProduits.length < blockSize && i === filteredProduits.length - 1)
       if (!isBoundary || chineuseByTrigramme.size === 0) continue
 
       // Mobile : alterne 1 vidéo full-width (col-span-2) → 2 vidéos demi-largeur (col-span-1 chacune).
