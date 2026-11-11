@@ -67,6 +67,7 @@ interface SalesListProps {
   avecFiltreChineuse?: boolean
   sousTitre?: React.ReactNode // affiché sous le titre (ex. bouton « Nouvelle vente »)
   sousFiltres?: React.ReactNode // affiché sous les filtres (ex. relecture des ventes Printemps)
+  kpisParChineuse?: Array<{ trigramme: string; label: string }> // KPI ventes par chineuse (ex. Printemps)
   loading?: boolean
   // Callbacks admin
   onAttribuer?: (vente: Vente) => void
@@ -95,6 +96,7 @@ export default function SalesList({
   avecFiltreChineuse,
   sousTitre,
   sousFiltres,
+  kpisParChineuse,
   loading = false,
   onAttribuer,
   onModifierPrix, 
@@ -230,6 +232,16 @@ export default function SalesList({
             <span className="text-xs text-blue-600">CA</span>
             <span className="font-bold text-blue-600">{formatPrix(stats.ca)}€</span>
           </div>
+          {kpisParChineuse?.map(k => {
+            const vs = ventesFiltrées.filter(v => v.trigramme === k.trigramme)
+            return (
+              <div key={k.trigramme} className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2">
+                <span className="text-xs text-gray-500">{k.label}</span>
+                <span className="font-bold">{vs.length}</span>
+                <span className="text-xs text-gray-400">{formatPrix(vs.reduce((s, v) => s + getPrix(v), 0))}€</span>
+              </div>
+            )
+          })}
           {isDeposante && (
             <div className="bg-white border border-[#22209C]/30 rounded-lg px-3 py-2 flex items-center gap-2">
               <span className="text-xs text-[#22209C]">Ma cagnotte</span>

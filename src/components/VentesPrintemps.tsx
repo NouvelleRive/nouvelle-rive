@@ -376,6 +376,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
         ventesFacture={chineuse ? ventesListe.filter(v => TRIGRAMME_PROPRIETAIRE[v.trigramme] === chineuse.codeChineuse) : []}
         chineuses={PROPRIETAIRES_PRINTEMPS.map(p => ({ trigramme: p, nom: p }))}
         avecFiltreChineuse
+        kpisParChineuse={['GIGI PARIS', 'INES PINEAU', "TETE D'ORANGE", 'CHINEUZ2BLING'].map(p => ({ trigramme: p, label: TRIGRAMME_PROPRIETAIRE[p] }))}
         chineuse={chineuse}
         userEmail={user?.email || undefined}
         prefixeFacture="PRI"
