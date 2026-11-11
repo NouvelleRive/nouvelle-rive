@@ -80,7 +80,7 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
   return (
     <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-3" onClick={onClose}>
       <div
-        className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -97,14 +97,14 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
         <div className="p-4 overflow-y-auto flex-1">
           {/* Photos */}
           {images.length > 0 ? (
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               {images.map((url, i) => (
                 <img
                   key={i}
-                  src={bunny(url, 300)}
+                  src={bunny(url, 1600)}
                   alt=""
                   onClick={() => setZoom(url)}
-                  className="aspect-square w-full object-cover rounded-lg cursor-zoom-in hover:opacity-90"
+                  className="w-full max-h-[80vh] object-contain bg-gray-50 rounded-lg cursor-zoom-in hover:opacity-90"
                 />
               ))}
             </div>
