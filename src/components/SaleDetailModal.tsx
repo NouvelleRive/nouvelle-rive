@@ -94,25 +94,27 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X size={20} /></button>
         </div>
 
-        <div className="p-4 overflow-y-auto flex-1">
-          {/* Photos */}
+        <div className="p-4 flex-1 min-h-0 flex flex-col md:flex-row gap-4 overflow-y-auto md:overflow-hidden">
+          {/* Photos : côte à côte, pleine hauteur, sans scroll */}
           {images.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 mb-4">
+            <div className="md:flex-1 min-w-0 md:min-h-0 flex flex-col md:flex-row gap-3">
               {images.map((url, i) => (
                 <img
                   key={i}
                   src={bunny(url, 1600)}
                   alt=""
                   onClick={() => setZoom(url)}
-                  className="w-full object-contain bg-gray-50 rounded-lg cursor-zoom-in hover:opacity-90"
+                  className="md:flex-1 min-w-0 w-full md:h-full object-contain bg-gray-50 rounded-lg cursor-zoom-in hover:opacity-90"
                 />
               ))}
             </div>
           ) : loading ? (
-            <div className="h-24 flex items-center justify-center">
+            <div className="md:flex-1 h-24 flex items-center justify-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#22209C]" />
             </div>
           ) : null}
+
+          <div className="md:w-80 flex-shrink-0 md:overflow-y-auto">
 
           {/* Vente */}
           <div className="text-sm mb-4">
@@ -159,6 +161,7 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
               <p className="text-gray-700 whitespace-pre-line leading-relaxed">{p.entretien}</p>
             </div>
           )}
+          </div>
         </div>
       </div>
 
