@@ -1796,6 +1796,26 @@ async function compressImage(file: File): Promise<string> {
                 )}
               </div>
 
+              {/* Black Week */}
+              {typeof tauxCom === 'number' && (
+                <div className="col-span-3 bg-black text-white rounded px-3 py-2">
+                  <label className="block text-xs font-bold tracking-widest mb-1">BLACK WEEK — % (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
+                  <input
+                    type="number"
+                    value={formData.remiseBlackWeek ?? '0'}
+                    onChange={(e) => {
+                      const max = plafondRemise(BLACK_WEEK_2026, tauxCom)
+                      const v = Math.min(max, Math.max(0, parseInt(e.target.value || '0', 10) || 0))
+                      setFormData({ ...formData, remiseBlackWeek: String(v) })
+                    }}
+                    step="1"
+                    min="0"
+                    max={plafondRemise(BLACK_WEEK_2026, tauxCom)}
+                    className="w-full border border-white bg-black text-white rounded px-2 py-1.5 text-sm"
+                  />
+                </div>
+              )}
+
               {/* Prix */}
               <div>
                 <label className="block text-xs font-medium mb-1">Prix (€)</label>
@@ -1822,26 +1842,6 @@ async function compressImage(file: File): Promise<string> {
                   )
                 })()}
               </div>
-
-              {/* % Black Week */}
-              {typeof tauxCom === 'number' && (
-                <div>
-                  <label className="block text-xs font-medium mb-1">% Black Week (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
-                  <input
-                    type="number"
-                    value={formData.remiseBlackWeek ?? '0'}
-                    onChange={(e) => {
-                      const max = plafondRemise(BLACK_WEEK_2026, tauxCom)
-                      const v = Math.min(max, Math.max(0, parseInt(e.target.value || '0', 10) || 0))
-                      setFormData({ ...formData, remiseBlackWeek: String(v) })
-                    }}
-                    step="1"
-                    min="0"
-                    max={plafondRemise(BLACK_WEEK_2026, tauxCom)}
-                    className="w-full border rounded px-2 py-1.5 text-sm"
-                  />
-                </div>
-              )}
 
               {/* Prix d'achat + marge nette — stock maison acheté (NR + acheteuse ACH).
                   Les autres chineuses ne payent pas d'achat, leur marge dépend de la
