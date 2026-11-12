@@ -13,6 +13,82 @@ const squareClient = new Client({
 
 const locationId = "L9SXWZQHWAJF4";
 
+// ─── Black Week : remises automatiques Square (cf. src/lib/remiseOperation.ts) ───
+// Une remise « Black Week -X % » par pourcentage, liée aux variations des pièces
+// à ce %. Valable du 23 au 29/11/2026 inclus. Le prix catalogue ne change pas :
+// en caisse, le ticket affiche prix de départ + ligne « Black Week -X % ».
+const BW_DEBUT = "2026-11-23";
+const BW_FIN = "2026-11-29";
+const bwNom = (pct) => `Black Week -${pct} %`;
+
+async function bwTrouverRegle(pct) {
+  let cursor;
+  do {
+    const { result } = await squareClient.catalogApi.listCatalog(cursor, "PRICING_RULE");
+    const r = (result.objects || []).find((o) => o.pricingRuleData?.name === bwNom(pct) && !o.isDeleted);
+    if (r) return r;
+    cursor = result.cursor;
+  } while (cursor);
+  return null;
+}
+
+async function bwAjouter(pct, variationId) {
+  for (let essai = 0; essai < 3; essai++) {
+    try {
+      const regle = await bwTrouverRegle(pct);
+      if (!regle) {
+        await squareClient.catalogApi.batchUpsertCatalogObjects({
+          idempotencyKey: uuidv4(),
+          batches: [{ objects: [
+            { type: "DISCOUNT", id: "#d", discountData: { name: bwNom(pct), discountType: "FIXED_PERCENTAGE", percentage: String(pct) } },
+            { type: "PRODUCT_SET", id: "#ps", productSetData: { name: bwNom(pct), productIdsAny: [variationId] } },
+            { type: "PRICING_RULE", id: "#pr", pricingRuleData: { name: bwNom(pct), discountId: "#d", matchProductsId: "#ps",
+              validFromDate: BW_DEBUT, validFromLocalTime: "00:00:00", validUntilDate: BW_FIN, validUntilLocalTime: "23:59:59" } },
+          ] }],
+        });
+        return;
+      }
+      const { result } = await squareClient.catalogApi.retrieveCatalogObject(regle.pricingRuleData.matchProductsId);
+      const ps = result.object;
+      const ids = ps.productSetData.productIdsAny || [];
+      if (ids.includes(variationId)) return;
+      await squareClient.catalogApi.upsertCatalogObject({
+        idempotencyKey: uuidv4(),
+        object: { ...ps, productSetData: { ...ps.productSetData, productIdsAny: [...ids, variationId] } },
+      });
+      return;
+    } catch (e) {
+      if (essai === 2) throw e;
+    }
+  }
+}
+
+async function bwRetirer(pct, variationId) {
+  for (let essai = 0; essai < 3; essai++) {
+    try {
+      const regle = await bwTrouverRegle(pct);
+      if (!regle) return;
+      const { result } = await squareClient.catalogApi.retrieveCatalogObject(regle.pricingRuleData.matchProductsId);
+      const ps = result.object;
+      const ids = (ps.productSetData.productIdsAny || []).filter((id) => id !== variationId);
+      if (ids.length === 0) {
+        // Plus aucune pièce à ce % : on supprime la remise (Square refuse une liste vide)
+        await squareClient.catalogApi.batchDeleteCatalogObjects({
+          objectIds: [regle.id, ps.id, regle.pricingRuleData.discountId],
+        });
+        return;
+      }
+      await squareClient.catalogApi.upsertCatalogObject({
+        idempotencyKey: uuidv4(),
+        object: { ...ps, productSetData: { ...ps.productSetData, productIdsAny: ids } },
+      });
+      return;
+    } catch (e) {
+      if (essai === 2) throw e;
+    }
+  }
+}
+
 exports.onProductReceived = functions
   .region("europe-west1")
   .firestore
@@ -300,6 +376,19 @@ exports.onProductReceived = functions
           if (squareError?.body) {
             console.error(`❌ Square body:`, squareError.body);
           }
+        }
+      }
+
+      // CAS 2c: % Black Week modifié → remise automatique Square
+      const bwAvant = Number(before.remiseBlackWeek) || 0;
+      const bwApres = Number(after.remiseBlackWeek) || 0;
+      if (bwAvant !== bwApres) {
+        try {
+          if (bwAvant > 0) await bwRetirer(bwAvant, after.variationId);
+          if (bwApres > 0) await bwAjouter(bwApres, after.variationId);
+          console.log(`✅ Black Week Square: ${after.sku} ${bwAvant}% → ${bwApres}%`);
+        } catch (e) {
+          console.error(`❌ Black Week Square error:`, e?.message || e, e?.body || "");
         }
       }
 
