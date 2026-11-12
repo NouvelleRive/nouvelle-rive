@@ -18,7 +18,7 @@
   import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
   import { isHousePurchaseTrigramme } from '@/lib/roles'
   import { margeTtcVersHt } from '@/lib/marge'
-  import { BLACK_WEEK_2026, plafondRemise } from '@/lib/remiseOperation'
+  import { BLACK_WEEK_2026, plafondRemise, prixClient } from '@/lib/remiseOperation'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -1796,23 +1796,6 @@ async function compressImage(file: File): Promise<string> {
                 )}
               </div>
 
-              {/* Black Week */}
-              {typeof tauxCom === 'number' && (
-                <div className="col-span-3 bg-black text-white rounded px-3 py-2">
-                  <label className="block text-xs font-bold tracking-widest mb-1">BLACK WEEK — % (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
-                  <select
-                    value={formData.remiseBlackWeek ?? '0'}
-                    onChange={(e) => setFormData({ ...formData, remiseBlackWeek: e.target.value })}
-                    className="w-full border border-white bg-black text-white rounded px-2 py-1.5 text-sm"
-                  >
-                    <option value="0">Aucune</option>
-                    {Array.from({ length: Math.max(0, (plafondRemise(BLACK_WEEK_2026, tauxCom) - 10) / 5 + 1) }, (_, i) => 10 + i * 5).map(v => (
-                      <option key={v} value={String(v)}>-{v} %</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
               {/* Prix */}
               <div>
                 <label className="block text-xs font-medium mb-1">Prix (€)</label>
@@ -1839,6 +1822,26 @@ async function compressImage(file: File): Promise<string> {
                   )
                 })()}
               </div>
+
+              {/* Black Week */}
+              {typeof tauxCom === 'number' && (
+                <div className="bg-black text-white rounded px-2 py-1">
+                  <label className="block text-xs font-bold tracking-widest mb-1">BLACK WEEK — % (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
+                  <select
+                    value={formData.remiseBlackWeek ?? '0'}
+                    onChange={(e) => setFormData({ ...formData, remiseBlackWeek: e.target.value })}
+                    className="w-full border border-white bg-black text-white rounded px-2 py-1.5 text-sm"
+                  >
+                    <option value="0">Aucune</option>
+                    {Array.from({ length: Math.max(0, (plafondRemise(BLACK_WEEK_2026, tauxCom) - 10) / 5 + 1) }, (_, i) => 10 + i * 5).map(v => (
+                      <option key={v} value={String(v)}>-{v} %</option>
+                    ))}
+                  </select>
+                  {Number(formData.remiseBlackWeek || '0') > 0 && parseFloat(formData.prix || '') > 0 && (
+                    <p className="text-[11px] mt-1">Prix client : <strong>{prixClient(parseFloat(formData.prix), Number(formData.remiseBlackWeek))} €</strong></p>
+                  )}
+                </div>
+              )}
 
               {/* Prix d'achat + marge nette — stock maison acheté (NR + acheteuse ACH).
                   Les autres chineuses ne payent pas d'achat, leur marge dépend de la
