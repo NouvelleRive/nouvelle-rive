@@ -19,6 +19,7 @@
   import { isHousePurchaseTrigramme } from '@/lib/roles'
   import { margeTtcVersHt } from '@/lib/marge'
   import { BLACK_WEEK_2026, plafondRemise, prixClient } from '@/lib/remiseOperation'
+  import { formatPrix } from '@/lib/formatPrix'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -1825,6 +1826,7 @@ async function compressImage(file: File): Promise<string> {
 
               {/* Black Week */}
               {typeof tauxCom === 'number' && (
+                <div>
                 <div className="bg-black text-white rounded px-2 py-1">
                   <label className="block text-xs font-bold tracking-widest mb-1">BLACK WEEK — % (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
                   <select
@@ -1837,9 +1839,12 @@ async function compressImage(file: File): Promise<string> {
                       <option key={v} value={String(v)}>-{v} %</option>
                     ))}
                   </select>
-                  {Number(formData.remiseBlackWeek || '0') > 0 && parseFloat(formData.prix || '') > 0 && (
-                    <p className="text-[11px] mt-1">Prix client : <strong>{prixClient(parseFloat(formData.prix), Number(formData.remiseBlackWeek))} €</strong></p>
-                  )}
+                </div>
+                {Number(formData.remiseBlackWeek || '0') > 0 && parseFloat(formData.prix || '') > 0 && (
+                  <p className="text-[11px] mt-1 text-gray-500">
+                    Prix client du 23 au 29/11 : <strong>{(() => { const pc = prixClient(parseFloat(formData.prix), Number(formData.remiseBlackWeek)); return formatPrix(pc, { decimals: Number.isInteger(pc) ? 0 : 2 }) })()} €</strong>
+                  </p>
+                )}
                 </div>
               )}
 
