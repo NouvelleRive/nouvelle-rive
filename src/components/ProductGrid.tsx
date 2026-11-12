@@ -15,6 +15,7 @@ import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
 import PrixBlackWeek, { BadgeBlackWeek } from '@/components/PrixBlackWeek'
+import { BLACK_WEEK_2026, remiseAffichee } from '@/lib/remiseOperation'
 import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/lib/cloudinary'
 import { trackSearch } from '@/lib/backstage'
 
@@ -402,7 +403,8 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   }
   
   if (filters.promotion) {
-    filteredProduits = filteredProduits.filter(p => p.promotion)
+    // Promotion = flag manuel OU remise Black Week active (lib/remiseOperation)
+    filteredProduits = filteredProduits.filter(p => p.promotion || remiseAffichee(BLACK_WEEK_2026, p.remiseBlackWeek) > 0)
   }
   if (filters.marque.length > 0) {
     filteredProduits = filteredProduits.filter(p => p.marque && filters.marque.includes(p.marque))
