@@ -17,7 +17,7 @@ export type VentesSquare = {
   commandes: number
   parMois: Record<string, { net: number; commandes: number }>
   // Une entrée par article vendu : le nom porte le SKU, donc la chineuse.
-  lignes: { mois: string; nom: string; montant: number }[]
+  lignes: { mois: string; nom: string; montant: number; orderId?: string; uid?: string }[]
 }
 
 export async function ventesSquare(start: string, end: string): Promise<VentesSquare | null> {
@@ -71,7 +71,7 @@ export async function ventesSquare(start: string, end: string): Promise<VentesSq
 
       for (const li of o.line_items || []) {
         const m = Number(li.total_money?.amount || 0) / 100
-        if (m) lignes.push({ mois: cle, nom: String(li.name || ''), montant: m })
+        if (m) lignes.push({ mois: cle, nom: String(li.name || ''), montant: m, orderId: o.id, uid: li.uid })
       }
     }
 

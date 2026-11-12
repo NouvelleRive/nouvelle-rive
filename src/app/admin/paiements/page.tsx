@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore'
 import { format } from 'date-fns'
 import { totauxVentes } from '@/lib/remiseOperation'
+import type { ControleChineuse } from '@/lib/controleEncaissement'
 import { fr } from 'date-fns/locale'
 import { CheckCircle, Download, ExternalLink, Mail } from 'lucide-react'
 import { formatPrix } from '@/lib/formatPrix'
@@ -181,6 +182,29 @@ export default function AdminPaiementsPage() {
 
   const PENNYLANE_COMPANY_ID = '22358154'
 
+  // Contrôle facturé = encaissé (lib/controleEncaissement), à la demande.
+  const [controle, setControle] = useState<Record<string, ControleChineuse> | null>(null)
+  const [controleEnCours, setControleEnCours] = useState(false)
+  useEffect(() => { setControle(null) }, [moisSelectionne])
+  const verifierEncaisse = async () => {
+    setControleEnCours(true)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/admin/paiements/controle', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mois: moisSelectionne }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'erreur')
+      setControle(Object.fromEntries((json.controle as ControleChineuse[]).map(c => [c.trigramme, c])))
+    } catch (e: any) {
+      alert(`Erreur contrôle : ${e?.message || e}`)
+    } finally {
+      setControleEnCours(false)
+    }
+  }
+
   const markPaidApi = async (items: { chineuseId: string; montant: number }[]) => {
     const res = await fetch('/api/paiements/mark-paid', {
       method: 'POST',
@@ -310,8 +334,15 @@ export default function AdminPaiementsPage() {
           </div>
         )}
         <button
+          onClick={verifierEncaisse}
+          disabled={controleEnCours}
+          className="ml-auto px-4 py-2 border border-[#22209C] text-[#22209C] rounded-lg text-sm font-medium hover:bg-blue-50 disabled:opacity-50"
+        >
+          {controleEnCours ? 'Vérification…' : 'Vérifier facturé = encaissé'}
+        </button>
+        <button
           onClick={exporterSepaXML}
-          className="ml-auto flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#22209C] text-white rounded-lg text-sm font-medium hover:bg-[#1a1878] transition-colors"
         >
           <Download size={16} />
           Exporter SEPA XML NR
@@ -357,6 +388,16 @@ export default function AdminPaiementsPage() {
                           dont familial {formatPrix(caFamiliale, { decimals: 2 })} €
                         </div>
                       )}
+                      {controle && (() => {
+                        const c = controle[(chineuse.trigramme || '').toUpperCase()]
+                        if (!c) return <div className="text-xs text-gray-400">contrôle : —</div>
+                        if (c.ecarts.length === 0) return <div className="text-xs text-green-600">✓ encaissé {formatPrix(c.encaisse, { decimals: 2 })} €</div>
+                        return (
+                          <div className="text-xs text-red-600" title={c.ecarts.map(e => `${e.sku} : facturé ${e.facture} € / encaissé ${e.encaisse ?? '—'} € (${e.raison})`).join('\n')}>
+                            ⚠ {c.ecarts.length} écart{c.ecarts.length > 1 ? 's' : ''} · encaissé {formatPrix(c.encaisse, { decimals: 2 })} €
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-right text-blue-600">
                       <div>{formatPrix(tva, { decimals: 2 })} €</div>
