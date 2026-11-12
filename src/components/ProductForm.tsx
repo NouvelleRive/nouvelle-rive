@@ -18,8 +18,7 @@
   import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
   import { isHousePurchaseTrigramme } from '@/lib/roles'
   import { margeTtcVersHt } from '@/lib/marge'
-  import { BLACK_WEEK_2026, plafondRemise, erreurRemise, prixClient } from '@/lib/remiseOperation'
-  import { formatPrix } from '@/lib/formatPrix'
+  import { BLACK_WEEK_2026, plafondRemise } from '@/lib/remiseOperation'
 
   // Conversion base64 robuste pour gros fichiers
   function uint8ArrayToBase64(uint8Array: Uint8Array): string {
@@ -1477,15 +1476,6 @@ async function compressImage(file: File): Promise<string> {
         }
       }
       
-      // ✅ VÉRIFICATION % BLACK WEEK (plafond selon la commission)
-      if (typeof tauxCom === 'number') {
-        const errBW = erreurRemise(BLACK_WEEK_2026, Number(formData.remiseBlackWeek || '0'), tauxCom)
-        if (errBW) {
-          alert(`❌ ${errBW}`)
-          return
-        }
-      }
-
       // ✅ VÉRIFICATION UNICITÉ SKU
       const finalSku = formData.sku || sku
       if (finalSku) {
@@ -1833,35 +1823,25 @@ async function compressImage(file: File): Promise<string> {
                 })()}
               </div>
 
-              {/* % Black Week — choisi par la déposante, plafonné selon sa commission.
-                  Ne modifie jamais le prix de départ (cf. lib/remiseOperation). */}
-              {typeof tauxCom === 'number' && (() => {
-                const max = plafondRemise(BLACK_WEEK_2026, tauxCom)
-                const val = Number(formData.remiseBlackWeek || '0')
-                const err = erreurRemise(BLACK_WEEK_2026, val, tauxCom)
-                const prixNum = parseFloat(formData.prix || '')
-                return (
-                  <div>
-                    <label className="block text-xs font-medium mb-1">% Black Week <span className="text-gray-400 font-normal">(0 à {max} %)</span></label>
-                    <input
-                      type="number"
-                      value={formData.remiseBlackWeek ?? '0'}
-                      onChange={(e) => setFormData({ ...formData, remiseBlackWeek: e.target.value })}
-                      step="1"
-                      min="0"
-                      max={max}
-                      className={`w-full border rounded px-2 py-1.5 text-sm ${err ? 'border-red-500' : ''}`}
-                    />
-                    {err ? (
-                      <p className="text-[11px] mt-1 text-red-600">{err}</p>
-                    ) : val > 0 && prixNum > 0 ? (
-                      <p className="text-[11px] mt-1 text-gray-500">
-                        Prix client du 23 au 29/11 : <strong>{(() => { const pc = prixClient(prixNum, val); return formatPrix(pc, { decimals: Number.isInteger(pc) ? 0 : 2 }) })()} €</strong>
-                      </p>
-                    ) : null}
-                  </div>
-                )
-              })()}
+              {/* % Black Week */}
+              {typeof tauxCom === 'number' && (
+                <div>
+                  <label className="block text-xs font-medium mb-1">% Black Week (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
+                  <input
+                    type="number"
+                    value={formData.remiseBlackWeek ?? '0'}
+                    onChange={(e) => {
+                      const max = plafondRemise(BLACK_WEEK_2026, tauxCom)
+                      const v = Math.min(max, Math.max(0, parseInt(e.target.value || '0', 10) || 0))
+                      setFormData({ ...formData, remiseBlackWeek: String(v) })
+                    }}
+                    step="1"
+                    min="0"
+                    max={plafondRemise(BLACK_WEEK_2026, tauxCom)}
+                    className="w-full border rounded px-2 py-1.5 text-sm"
+                  />
+                </div>
+              )}
 
               {/* Prix d'achat + marge nette — stock maison acheté (NR + acheteuse ACH).
                   Les autres chineuses ne payent pas d'achat, leur marge dépend de la
