@@ -43,12 +43,12 @@ export default function PrixBlackWeek({ prix, remiseBlackWeek, badge = false }: 
 }
 
 /** Badge BLACK WEEK posé sur l'image (le parent doit être `relative`). */
-export function BadgeBlackWeek({ remiseBlackWeek, taille = 13 }: { remiseBlackWeek?: number; taille?: number }) {
+export function BadgeBlackWeek({ remiseBlackWeek, taille = 13, avecPct = false }: { remiseBlackWeek?: number; taille?: number; avecPct?: boolean }) {
   const pct = remiseAffichee(BLACK_WEEK_2026, remiseBlackWeek)
   if (!pct) return null
   return (
     <span style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: taille, fontWeight: 700, letterSpacing: '0.08em', padding: `${Math.round(taille / 4)}px ${Math.round(taille * 0.6)}px`, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-      BLACK WEEK
+      BLACK WEEK{avecPct ? ` ${pct}%` : ''}
     </span>
   )
 }
@@ -73,9 +73,9 @@ export function PrixBlackWeekGrille({ prix, remiseBlackWeek }: { prix: number; r
   if (!pct) return <>{formatPrix(prix)} €</>
   return (
     <>
-      <span style={{ display: 'inline-block', marginRight: 6, background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>BLACK WEEK -{pct} %</span>
-      <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
-      <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
+      <span style={{ display: 'inline-block', marginRight: 6, background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>BLACK WEEK</span>
+      <span style={{ textDecoration: 'line-through', fontWeight: 700, marginRight: 6 }}>{fmt(prix)} €</span>
+      <span>{fmt(prixClient(prix, pct))} €</span>
     </>
   )
 }
