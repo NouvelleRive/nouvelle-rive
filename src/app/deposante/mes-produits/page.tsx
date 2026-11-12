@@ -7,6 +7,15 @@ import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from 'fire
 import ProductList, { Produit } from '@/components/ProductList'
 import { useEtapes } from '../layout'
 
+// Commission déposante : `taux` si renseigné, sinon selon le mode de paiement
+// choisi dans le profil (virement = 40 %, bon d'achat = 30 %).
+function tauxDeposante(d: any): number | undefined {
+  if (typeof d?.taux === 'number') return d.taux
+  if (d?.modePaiement === 'cash') return 40
+  if (d?.modePaiement === 'bon') return 30
+  return undefined
+}
+
 export default function DeposanteMesProduits() {
   const etapes = useEtapes()
   const [produits, setProduits] = useState<Produit[]>([])
@@ -25,14 +34,12 @@ export default function DeposanteMesProduits() {
         const snap = await getDoc(doc(db, 'deposante', user.uid))
         if (snap.exists()) {
           trigramme = (snap.data() as any)?.trigramme || ''
-          const t = (snap.data() as any)?.taux
-          if (typeof t === 'number') setTauxCom(t)
+          setTauxCom(tauxDeposante(snap.data()))
         } else {
           const fb = await getDocs(query(collection(db, 'deposante'), where('authUid', '==', user.uid)))
           if (!fb.empty) {
             trigramme = (fb.docs[0].data() as any)?.trigramme || ''
-            const t = (fb.docs[0].data() as any)?.taux
-            if (typeof t === 'number') setTauxCom(t)
+            setTauxCom(tauxDeposante(fb.docs[0].data()))
           }
         }
       } catch (e) {
