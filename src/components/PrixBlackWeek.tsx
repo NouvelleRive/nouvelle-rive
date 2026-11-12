@@ -53,6 +53,26 @@ export function BadgeBlackWeek({ remiseBlackWeek, taille = 13, avecPct = false }
   )
 }
 
+/** Compte à rebours « 17j 06h 42min 08s » jusqu'à la fin, rafraîchi chaque seconde. */
+function CompteARebours() {
+  const [txt, setTxt] = useState('')
+  useEffect(() => {
+    const p2 = (n: number) => String(n).padStart(2, '0')
+    const maj = () => {
+      const ms = FIN_MS - Date.now()
+      if (ms <= 0) { setTxt(''); return }
+      const t = Math.floor(ms / 1000)
+      const j = Math.floor(t / 86400), h = Math.floor((t % 86400) / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60
+      setTxt(`${p2(j)}j ${p2(h)}h ${p2(m)}min ${p2(sec)}s`)
+    }
+    maj()
+    const id = setInterval(maj, 1000)
+    return () => clearInterval(id)
+  }, [])
+  if (!txt) return null
+  return <span style={{ marginLeft: 8, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{txt}</span>
+}
+
 /** Fiche produit — rendu validé, FIGÉ (version du commit fbcbc535) :
  *  prix barré gris, prix client en gras, puis badge « BLACK WEEK -X % ».
  *  Ne pas modifier avec la grille. */
@@ -64,6 +84,7 @@ export function PrixBlackWeekFiche({ prix, remiseBlackWeek }: { prix: number; re
       <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
       <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
       <span style={{ display: 'inline-block', marginLeft: 6, background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>BLACK WEEK -{pct} %</span>
+      <CompteARebours />
     </>
   )
 }
