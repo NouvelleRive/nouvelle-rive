@@ -43,11 +43,11 @@ export default function PrixBlackWeek({ prix, remiseBlackWeek, badge = false }: 
 }
 
 /** Badge BLACK WEEK posé sur l'image (le parent doit être `relative`). */
-export function BadgeBlackWeek({ remiseBlackWeek }: { remiseBlackWeek?: number }) {
+export function BadgeBlackWeek({ remiseBlackWeek, taille = 13 }: { remiseBlackWeek?: number; taille?: number }) {
   const pct = remiseAffichee(BLACK_WEEK_2026, remiseBlackWeek)
   if (!pct) return null
   return (
-    <span style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', padding: '3px 8px', fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <span style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: taille, fontWeight: 700, letterSpacing: '0.08em', padding: `${Math.round(taille / 4)}px ${Math.round(taille * 0.6)}px`, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       BLACK WEEK
     </span>
   )
