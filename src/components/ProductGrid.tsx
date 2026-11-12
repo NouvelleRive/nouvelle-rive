@@ -771,7 +771,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
               <div className="aspect-square bg-white overflow-hidden relative">
-              <BadgeBlackWeek remiseBlackWeek={produit.remiseBlackWeek} taille={20} />
+              <BadgeBlackWeek remiseBlackWeek={produit.remiseBlackWeek} taille={26} />
               {produit.imageUrls?.[0] ? (
                 <>
                   <img
