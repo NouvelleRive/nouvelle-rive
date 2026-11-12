@@ -1827,19 +1827,17 @@ async function compressImage(file: File): Promise<string> {
               {/* Black Week */}
               {typeof tauxCom === 'number' && (
                 <div>
-                <div className="bg-black text-white rounded px-2 py-1">
-                  <label className="block text-xs font-bold tracking-widest mb-1">BLACK WEEK — % (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
+                  <label className="block text-xs font-medium mb-1">Black Week (max {plafondRemise(BLACK_WEEK_2026, tauxCom)} %)</label>
                   <select
                     value={formData.remiseBlackWeek ?? '0'}
                     onChange={(e) => setFormData({ ...formData, remiseBlackWeek: e.target.value })}
-                    className="w-full border border-white bg-black text-white rounded px-2 py-1.5 text-sm"
+                    className="w-full border border-black bg-black text-white rounded px-2 py-1.5 text-sm"
                   >
                     <option value="0">Aucune</option>
                     {Array.from({ length: Math.max(0, (plafondRemise(BLACK_WEEK_2026, tauxCom) - 10) / 5 + 1) }, (_, i) => 10 + i * 5).map(v => (
                       <option key={v} value={String(v)}>-{v} %</option>
                     ))}
                   </select>
-                </div>
                 {Number(formData.remiseBlackWeek || '0') > 0 && parseFloat(formData.prix || '') > 0 && (
                   <p className="text-[11px] mt-1 text-gray-500">
                     Prix client du 23 au 29/11 : <strong>{(() => { const pc = prixClient(parseFloat(formData.prix), Number(formData.remiseBlackWeek)); return formatPrix(pc, { decimals: Number.isInteger(pc) ? 0 : 2 }) })()} €</strong>
