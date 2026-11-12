@@ -1426,6 +1426,9 @@
                       ) : (
                         <span className="font-medium">—</span>
                       )}</span>
+                      {(p.remiseBlackWeek ?? 0) > 0 && (
+                        <span className="bg-black text-white text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded">BLACK WEEK -{p.remiseBlackWeek} %</span>
+                      )}
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <span><span className="text-gray-400">Achat:</span> <span className="font-medium">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></span>
@@ -1543,6 +1546,9 @@
                       ) : (
                         <span className="font-medium text-gray-700">—</span>
                       )}</p>
+                      {(p.remiseBlackWeek ?? 0) > 0 && (
+                        <span className="inline-block bg-black text-white text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded">BLACK WEEK -{p.remiseBlackWeek} %</span>
+                      )}
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></p>
                       )}
