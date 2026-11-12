@@ -22,6 +22,8 @@ export type ProduitInitial = {
   nom: string
   nomEn?: string
   prix: number
+  /** % Black Week (cf. lib/remiseOperation) — affiché seulement pendant la période */
+  remiseBlackWeek?: number
   imageUrls: string[]
   imageUrl?: string
   marque?: string
@@ -57,6 +59,7 @@ export function serialize(id: string, raw: any): ProduitInitial {
     nom: raw.nom || '',
     nomEn: raw.nomEn,
     prix: typeof raw.prix === 'number' ? raw.prix : 0,
+    remiseBlackWeek: Number(raw.remiseBlackWeek) || 0,
     imageUrls: Array.isArray(raw.imageUrls) ? raw.imageUrls : (raw.imageUrl ? [raw.imageUrl] : []),
     imageUrl: raw.photos?.face || (Array.isArray(raw.imageUrls) ? raw.imageUrls[0] : null) || raw.imageUrl || undefined,
     marque: raw.marque,

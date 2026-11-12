@@ -89,6 +89,7 @@ const getProduit = cache(async (id: string): Promise<ProduitDoc | null> => {
       nom: raw.nom,
       nomEn: raw.nomEn,
       prix: raw.prix,
+      remiseBlackWeek: Number(raw.remiseBlackWeek) || 0,
       imageUrls: raw.imageUrls || [],
       sku: raw.sku,
       photos: raw.photos,

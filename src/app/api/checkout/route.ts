@@ -5,6 +5,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getFraisLivraison } from '@/lib/shipping'
 import { lireCodePromo } from '@/lib/codesPromo'
+import { BLACK_WEEK_2026, remiseEffective, prixClient } from '@/lib/remiseOperation'
 
 if (!getApps().length) {
   initializeApp({
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
     console.log('Mode:', modeLivraison)
 
     // Recharger les prix côté serveur pour éviter qu'un client trafique le prix
-    const prixServeur: { id: string; nom: string; prix: number; sku: string }[] = []
+    const prixServeur: { id: string; nom: string; prix: number; sku: string; bw: number }[] = []
     for (const it of items) {
       const snap = await adminDb.collection('produits').doc(it.id).get()
       if (!snap.exists) {
@@ -90,14 +91,17 @@ export async function POST(request: Request) {
       if (d.vendu === true) {
         return NextResponse.json({ success: false, error: `Produit ${it.nom || it.id} déjà vendu`, soldOutId: it.id }, { status: 409 })
       }
-      prixServeur.push({ id: it.id, nom: d.nom || it.nom, prix: Number(d.prix) || 0, sku: String(d.sku || '').toUpperCase() })
+      prixServeur.push({ id: it.id, nom: d.nom || it.nom, prix: Number(d.prix) || 0, sku: String(d.sku || '').toUpperCase(), bw: remiseEffective(BLACK_WEEK_2026, Number(d.remiseBlackWeek) || 0) })
     }
 
     const sousTotal = prixServeur.reduce((s, p) => s + p.prix, 0)
 
+    // Black Week (lib/remiseOperation) : remise par pièce, uniquement pendant la période.
+    const remiseBW = prixServeur.reduce((s, p) => s + (p.bw ? p.prix - prixClient(p.prix, p.bw) : 0), 0)
+
     let fraisLivraison = 0
     if (modeLivraison === 'livraison') {
-      fraisLivraison = getFraisLivraison(codePays, sousTotal)
+      fraisLivraison = getFraisLivraison(codePays, sousTotal - remiseBW)
     }
 
     // Code promo ciblé (lib/codesPromo) : remise sur les seules pièces listées,
@@ -106,16 +110,20 @@ export async function POST(request: Request) {
     if (promoCode && String(promoCode).trim() && !promo) {
       return NextResponse.json({ success: false, error: 'Code promo invalide', promoInvalid: true }, { status: 400 })
     }
-    const eligible = (p: { sku: string }) => !!promo && promo.skus.includes(p.sku)
+    // Pas de cumul : une pièce en Black Week n'est pas éligible au code promo.
+    const eligible = (p: { sku: string; bw: number }) => !!promo && !p.bw && promo.skus.includes(p.sku)
     const remise = promo
       ? prixServeur.filter(eligible).reduce((s, p) => s + Math.round(p.prix * promo.remisePct) / 100, 0)
       : 0
     const DISCOUNT_UID = 'code-promo'
-    const discounts = promo && remise > 0
-      ? [{ uid: DISCOUNT_UID, name: `${promo.code} -${promo.remisePct}%`, percentage: String(promo.remisePct), scope: 'LINE_ITEM' as const }]
-      : undefined
+    const listeDiscounts: { uid: string; name: string; percentage: string; scope: 'LINE_ITEM' }[] = []
+    if (promo && remise > 0) listeDiscounts.push({ uid: DISCOUNT_UID, name: `${promo.code} -${promo.remisePct}%`, percentage: String(promo.remisePct), scope: 'LINE_ITEM' })
+    for (const pct of Array.from(new Set(prixServeur.filter(p => p.bw).map(p => p.bw)))) {
+      listeDiscounts.push({ uid: `bw-${pct}`, name: `Black Week -${pct} %`, percentage: String(pct), scope: 'LINE_ITEM' })
+    }
+    const discounts = listeDiscounts.length ? listeDiscounts : undefined
 
-    const totalFinal = sousTotal - remise + fraisLivraison
+    const totalFinal = sousTotal - remise - remiseBW + fraisLivraison
     console.log('💰 Sous-total:', sousTotal.toFixed(2), '€ — Remise:', remise.toFixed(2), '€ — Livraison:', fraisLivraison, '€ — Total:', totalFinal.toFixed(2), '€')
 
     const idempotencyKey = `cart-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
@@ -131,10 +139,11 @@ export async function POST(request: Request) {
       sousTotal: sousTotal.toString(),
       fraisLivraison: fraisLivraison.toString(),
     }
-    if (discounts && promo) {
+    if (promo && remise > 0) {
       metadata.promoCode = promo.code
       metadata.remise = remise.toFixed(2)
     }
+    if (remiseBW > 0) metadata.remiseBlackWeek = remiseBW.toFixed(2)
 
     if (clientInfo.telephone && clientInfo.telephone.trim() !== '') {
       metadata.clientTelephone = clientInfo.telephone
@@ -174,7 +183,7 @@ export async function POST(request: Request) {
           `productId:${p.id}`,
           original?.imageUrl ? `Image: ${original.imageUrl}` : null
         ].filter(Boolean).join(' | ').substring(0, 500),
-        ...(discounts && eligible(p) ? { appliedDiscounts: [{ discountUid: DISCOUNT_UID }] } : {})
+        ...(p.bw ? { appliedDiscounts: [{ discountUid: `bw-${p.bw}` }] } : eligible(p) ? { appliedDiscounts: [{ discountUid: DISCOUNT_UID }] } : {})
       }
     })
 

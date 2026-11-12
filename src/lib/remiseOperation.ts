@@ -134,3 +134,17 @@ export function totauxFacture(ventes: LigneVente[], tauxCom: number, partNR: num
     avecRemise: totalRemise > 0,
   }
 }
+
+/**
+ * Remise à AFFICHER sur le site (%) : remise effective, ou aperçu forcé par
+ * `?apercu=blackweek` dans l'URL (affichage seulement — le paiement, lui,
+ * n'applique la remise que pendant la vraie période).
+ */
+export function remiseAffichee(op: OperationRemise, remisePct: number | undefined): number {
+  if (!remisePct || remisePct <= 0) return 0
+  if (operationActive(op)) return remisePct
+  try {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('apercu') === 'blackweek') return remisePct
+  } catch { /* pas d'URL */ }
+  return 0
+}

@@ -13,6 +13,8 @@ import { getTypeSlug } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { formatPrix } from '@/lib/formatPrix'
+import PrixBlackWeek from '@/components/PrixBlackWeek'
+import { BLACK_WEEK_2026, remiseEffective, prixClient } from '@/lib/remiseOperation'
 import { marketingAllowed } from '@/lib/consent'
 import { pixelViewContent } from '@/lib/metaPixel'
 
@@ -36,6 +38,7 @@ export type Produit = {
   nom: string
   nomEn?: string
   prix: number
+  remiseBlackWeek?: number
   imageUrls: string[]
   sku?: string
   photos?: {
@@ -167,7 +170,8 @@ export default function ProduitClient({
     const ok = addItem({
       id: produit.id,
       nom: produit.nom,
-      prix: produit.prix,
+      // Black Week : panier au prix client (recalculé côté serveur au paiement)
+      prix: prixClient(produit.prix, remiseEffective(BLACK_WEEK_2026, produit.remiseBlackWeek)),
       imageUrl: produit.imageUrls?.[0] || produit.photos?.face || null,
       marque: produit.marque || null,
       sku: produit.sku || null,
@@ -271,7 +275,7 @@ export default function ProduitClient({
               </p>
             )}
             <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>
-              {formatPrix(produit.prix)} €
+              <PrixBlackWeek prix={produit.prix} remiseBlackWeek={produit.remiseBlackWeek} />
             </p>
             {(lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description) && (
               <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>
