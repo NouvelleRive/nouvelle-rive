@@ -13,7 +13,7 @@ import { getTypeSlug } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { formatPrix } from '@/lib/formatPrix'
-import PrixBlackWeek from '@/components/PrixBlackWeek'
+import PrixBlackWeek, { BadgeBlackWeek } from '@/components/PrixBlackWeek'
 import { BLACK_WEEK_2026, remiseEffective, prixClient } from '@/lib/remiseOperation'
 import { marketingAllowed } from '@/lib/consent'
 import { pixelViewContent } from '@/lib/metaPixel'
@@ -214,7 +214,8 @@ export default function ProduitClient({
             <div className="flex flex-col">
               {/* 1ère photo en premier */}
               {allImages[0] && (
-                <div className="w-full aspect-square overflow-hidden bg-white" style={{ borderBottom: '1px solid #000' }}>
+                <div className="w-full aspect-square overflow-hidden bg-white relative" style={{ borderBottom: '1px solid #000' }}>
+                  <BadgeBlackWeek remiseBlackWeek={produit.remiseBlackWeek} />
                   <img src={allImages[0]} alt={`${produit.nom} - Photo 1`} className="w-full h-full object-cover" />
                 </div>
               )}
@@ -275,7 +276,7 @@ export default function ProduitClient({
               </p>
             )}
             <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>
-              <PrixBlackWeek prix={produit.prix} remiseBlackWeek={produit.remiseBlackWeek} badge />
+              <PrixBlackWeek prix={produit.prix} remiseBlackWeek={produit.remiseBlackWeek} />
             </p>
             {(lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description) && (
               <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>
