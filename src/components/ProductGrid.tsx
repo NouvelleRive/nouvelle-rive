@@ -14,7 +14,7 @@ import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
-import PrixBlackWeek, { BadgeBlackWeek } from '@/components/PrixBlackWeek'
+import { PrixBlackWeekGrille, BadgeBlackWeek } from '@/components/PrixBlackWeek'
 import { BLACK_WEEK_2026, remiseAffichee } from '@/lib/remiseOperation'
 import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/lib/cloudinary'
 import { trackSearch } from '@/lib/backstage'
@@ -882,7 +882,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                     color: '#000'
                   }}
                 >
-                  <PrixBlackWeek prix={produit.prix} remiseBlackWeek={produit.remiseBlackWeek} />
+                  <PrixBlackWeekGrille prix={produit.prix} remiseBlackWeek={produit.remiseBlackWeek} />
                 </p>
               </div>
             </Link>

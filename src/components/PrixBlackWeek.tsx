@@ -66,3 +66,16 @@ export function PrixBlackWeekFiche({ prix, remiseBlackWeek }: { prix: number; re
     </>
   )
 }
+
+/** Grille /boutique, sous le titre : « BLACK WEEK -X % » + prix barré + nouveau prix. */
+export function PrixBlackWeekGrille({ prix, remiseBlackWeek }: { prix: number; remiseBlackWeek?: number }) {
+  const pct = remiseAffichee(BLACK_WEEK_2026, remiseBlackWeek)
+  if (!pct) return <>{formatPrix(prix)} €</>
+  return (
+    <>
+      <span style={{ display: 'inline-block', marginRight: 6, background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>BLACK WEEK -{pct} %</span>
+      <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
+      <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
+    </>
+  )
+}
