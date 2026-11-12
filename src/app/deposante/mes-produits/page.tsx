@@ -11,6 +11,8 @@ export default function DeposanteMesProduits() {
   const etapes = useEtapes()
   const [produits, setProduits] = useState<Produit[]>([])
   const [loading, setLoading] = useState(true)
+  // Taux de commission de la déposante (fiche déjà lue ci-dessous) → plafond % Black Week
+  const [tauxCom, setTauxCom] = useState<number | undefined>(undefined)
 
   useEffect(() => {
     let unsubProduits: (() => void) | undefined
@@ -23,9 +25,15 @@ export default function DeposanteMesProduits() {
         const snap = await getDoc(doc(db, 'deposante', user.uid))
         if (snap.exists()) {
           trigramme = (snap.data() as any)?.trigramme || ''
+          const t = (snap.data() as any)?.taux
+          if (typeof t === 'number') setTauxCom(t)
         } else {
           const fb = await getDocs(query(collection(db, 'deposante'), where('authUid', '==', user.uid)))
-          if (!fb.empty) trigramme = (fb.docs[0].data() as any)?.trigramme || ''
+          if (!fb.empty) {
+            trigramme = (fb.docs[0].data() as any)?.trigramme || ''
+            const t = (fb.docs[0].data() as any)?.taux
+            if (typeof t === 'number') setTauxCom(t)
+          }
         }
       } catch (e) {
         console.error(e); setLoading(false); return
@@ -58,6 +66,7 @@ if (!etapes.profil) return <div className="p-12 text-center text-gray-500">Compl
         produits={produits}
         isAdmin={false}
         isDeposante
+        tauxCom={tauxCom}
         loading={loading}
       />
       <div className="flex justify-center px-4 pb-12">

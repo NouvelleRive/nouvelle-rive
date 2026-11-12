@@ -20,6 +20,7 @@
     import ImportMailModal from '@/modules/achat/ImportMailModal'
     import { calcMargeNette, calcMargeNetteAvecPort } from '@/lib/marge'
     import { formatPrix } from '@/lib/formatPrix'
+    import { isHousePurchaseTrigramme } from '@/lib/roles'
     import { etatCycle, baisseOfficielleEligible } from '@/lib/cycleBaisse'
 
     // Conversion base64 robuste pour gros fichiers
@@ -43,6 +44,8 @@
       description?: string
       categorie?: any
       prix?: number
+      /** % Black Week choisi par la déposante (cf. lib/remiseOperation). Ne modifie jamais `prix`. */
+      remiseBlackWeek?: number
       quantite?: number
       sku?: string
       marque?: string
@@ -133,6 +136,8 @@
   targetChineuse?: { uid: string; email: string; trigramme: string; stockType?: string }
   /** Trigramme initial pour le filtre "déposant" — utilisé quand on arrive via /vendeuse/produits?chineuse=XXX */
   initialFiltreDeposant?: string
+  /** Taux de commission (%) de la déposante connectée (espace déposante) — sinon lu dans la fiche chineuse. */
+  tauxCom?: number
 }
 
     // =====================
@@ -194,12 +199,13 @@
       customDeleteTitle,
       targetChineuse,
       initialFiltreDeposant,
+      tauxCom,
     }: ProductListProps) {
       // Catégories
       const [categories, setCategories] = useState<{ label: string; idsquare?: string }[]>([])
 
       // Chineuses depuis Firestore
-      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string, trigramme: string, wearType: string, categories: {label: string, idsquare?: string}[]}[]>([])
+      const [chineusesList, setChineusesList] = useState<{id: string, nom: string, authUid: string, email: string, trigramme: string, wearType: string, taux?: number, categories: {label: string, idsquare?: string}[]}[]>([])
 
       useEffect(() => {
         const unsub = onSnapshot(collection(db, 'chineuse'), (snap) => {
@@ -211,6 +217,7 @@
             trigramme: d.data().trigramme || '',
             wearType: d.data().wearType || 'womenswear',
             stockType: d.data().stockType || 'unique',
+            taux: typeof d.data().taux === 'number' ? d.data().taux as number : undefined,
             categories: d.data()['Catégorie'] || d.data().categories || []
           }))
           setChineusesList(data)
@@ -825,6 +832,8 @@
             closureType: (data as any).closureType?.trim() || null,
             shoeType: (data as any).shoeType?.trim() || null,
             updatedAt: Timestamp.now(),
+            // % Black Week : entier, borné côté formulaire (lib/remiseOperation). Ne touche pas `prix`.
+            remiseBlackWeek: Math.max(0, parseInt(data.remiseBlackWeek || '0', 10) || 0),
             // Si le prix baisse, on enregistre la date et l'ancien prix — MAIS
             // uniquement si la pièce est en boutique depuis ≥ 2 mois (cycle de
             // rotation). Un simple réajustement de prix avant 2 mois n'est PAS une
@@ -1717,12 +1726,16 @@
                       categories={categories.length > 0 ? categories : categoriesUniques.map(c => ({ label: c as string }))}
                       sku={editingProduct?.sku}
                       trigramme={editingProduct?.trigramme}
+                      tauxCom={editingProduct && !isHousePurchaseTrigramme(editingProduct.trigramme || '')
+                        ? (tauxCom ?? chineusesList.find(c => c.trigramme?.toUpperCase() === (editingProduct.trigramme || '').toUpperCase())?.taux)
+                        : undefined}
                       initialData={editingProduct ? {
                       nom: (editingProduct.nom || '').replace(new RegExp(`^${editingProduct.sku}\\s*-\\s*`, 'i'), ''),
                       sku: editingProduct.sku,
                       description: editingProduct.description,
                       categorie: typeof editingProduct.categorie === 'object' ? editingProduct.categorie?.label : editingProduct.categorie,
                       prix: editingProduct.prix?.toString(),
+                      remiseBlackWeek: String(editingProduct.remiseBlackWeek ?? 0),
                       prixAchat: (editingProduct as any).prixAchat?.toString(),
                       fraisPort: (editingProduct as any).fraisPort?.toString(),
                       achatDateCommande: (editingProduct as any).achatDateCommande instanceof Timestamp
