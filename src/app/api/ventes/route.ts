@@ -95,6 +95,9 @@ export async function GET(req: NextRequest) {
         prix: d.prix || d.prixInitial || null,
         prixInitial: d.prixInitial || null,
         prixVenteReel: d.prixVenteReel || 0,
+        // Opération de remise (lib/remiseOperation) — figés à la vente
+        remiseBlackWeek: Number(d.remiseBlackWeek) || 0,
+        prixClient: typeof d.prixClient === 'number' ? d.prixClient : null,
         dateVente: d.dateVente?.toDate?.()?.toISOString?.() || null,
         remarque: d.remarque || d.noteArticle || null,
         source: d.source || 'manual',

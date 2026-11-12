@@ -10,6 +10,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { format } from 'date-fns'
+import { totauxVentes } from '@/lib/remiseOperation'
 import { fr } from 'date-fns/locale'
 import { CheckCircle, Download, ExternalLink, Mail } from 'lucide-react'
 import { formatPrix } from '@/lib/formatPrix'
@@ -33,6 +34,8 @@ type Vente = {
   trigramme?: string
   prixVenteReel?: number
   prix?: number
+  prixInitial?: number | null
+  remiseBlackWeek?: number
   dateVente?: any
   sku?: string
   source?: string
@@ -159,10 +162,11 @@ export default function AdminPaiementsPage() {
         .filter(v => v.venteFamiliale === true || v.source === 'familiale')
         .reduce((s, v) => s + getPrix(v), 0)
       const taux = typeof ch.taux === 'number' ? ch.taux / 100 : 0.40
-      const commissionHT = ca * taux
-      const tva = commissionHT * 0.2
-      const commissionTTC = commissionHT * 1.2
-      const net = ca - commissionTTC
+      // Même calcul que la facture chineuse (lib/remiseOperation) : sans remise
+      // d'opération → ca × taux comme avant ; avec → prise en charge NR déduite.
+      const tot = totauxVentes(ventesDuMois, Math.round(taux * 10000) / 100)
+      const tva = tot.tva
+      const net = tot.net
       const ref = `NR${String(m).padStart(2, '0')}${String(y).slice(-2)}-${(ch.trigramme || '').toUpperCase()}`
       return { chineuse: ch, ca, caFamiliale, net, tva, taux, ref, nbVentes: ventesDuMois.length }
     }).filter(p => p.nbVentes > 0)

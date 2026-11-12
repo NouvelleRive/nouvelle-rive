@@ -195,3 +195,28 @@ export function remiseAffichee(op: OperationRemise, remisePct: number | undefine
   } catch { /* pas d'URL */ }
   return 0
 }
+
+// ── Ventes → facture / paiement (même calcul partout) ──────────────────────
+
+export type VenteFacturable = {
+  prixVenteReel?: number
+  prix?: number | null
+  prixInitial?: number | null
+  /** % figé à la vente (0/absent = vente sans remise d'opération) */
+  remiseBlackWeek?: number
+}
+
+/** Prix réellement encaissé d'une vente (même règle que la facture historique). */
+export const prixEncaisse = (v: VenteFacturable): number =>
+  typeof v.prixVenteReel === 'number' ? v.prixVenteReel : (v.prix || 0)
+
+/** Prix de départ : `prixInitial` UNIQUEMENT pour une vente remisée par une
+ *  opération ; sinon le prix encaissé (→ calcul strictement identique à avant). */
+export const prixDepartVente = (v: VenteFacturable): number =>
+  (v.remiseBlackWeek ?? 0) > 0 && typeof v.prixInitial === 'number' ? v.prixInitial : prixEncaisse(v)
+
+/** Totaux facture/paiement d'une chineuse pour une liste de ventes.
+ *  @param tauxCom taux de commission en % (ex. 40) */
+export function totauxVentes(ventes: VenteFacturable[], tauxCom: number, op: OperationRemise = OPERATION_EN_COURS): TotauxFacture {
+  return totauxFacture(ventes.map(v => ({ prixClient: prixEncaisse(v), prixDepart: prixDepartVente(v) })), tauxCom, op.partNR)
+}

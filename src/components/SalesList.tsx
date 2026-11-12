@@ -11,6 +11,7 @@ import SalesGrid from '@/components/SalesGrid'
 import SaleDetailModal from '@/components/SaleDetailModal'
 export { formatPrix } from '@/lib/formatPrix'
 import { formatPrix } from '@/lib/formatPrix'
+import { OPERATION_EN_COURS, libelleMaj } from '@/lib/remiseOperation'
 
 // =====================
 // TYPES
@@ -392,6 +393,7 @@ export default function SalesList({
                       {vente.trigramme && <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded flex-shrink-0">{vente.trigramme}</span>}
                       <p className="font-bold text-green-600 text-[14px] ml-auto whitespace-nowrap">{formatPrix(prix)}€</p>
                       {vente.prixInitial && vente.prixInitial !== prix && <p className="text-[10px] text-gray-400 whitespace-nowrap">({formatPrix(vente.prixInitial)}€)</p>}
+                      {(vente.remiseBlackWeek ?? 0) > 0 && <span className="bg-black text-white text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap">{libelleMaj(OPERATION_EN_COURS)} -{vente.remiseBlackWeek} %</span>}
                       {(isAdmin || onModifierPrix || onSupprimer) && (
                         <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
                           {onAttribuer && <button onClick={(e) => { e.stopPropagation(); onAttribuer(vente) }} className={`p-1 rounded ${vente.isAttribue ? 'bg-gray-100 text-gray-600' : 'bg-amber-100 text-amber-700'}`}><Link size={13} /></button>}
@@ -439,6 +441,7 @@ export default function SalesList({
                     <div className="text-right flex-shrink-0">
                       <p className="font-bold text-green-600 text-lg">{formatPrix(prix)}€</p>
                       {vente.prixInitial && vente.prixInitial !== prix && <p className="text-xs text-gray-400">Initial: {formatPrix(vente.prixInitial)}€</p>}
+                      {(vente.remiseBlackWeek ?? 0) > 0 && <span className="inline-block mt-1 bg-black text-white text-[11px] font-semibold px-2 py-0.5 rounded">{libelleMaj(OPERATION_EN_COURS)} -{vente.remiseBlackWeek} %</span>}
                     </div>
                     {(isAdmin || onModifierPrix || onSupprimer) && (
                       <div className="flex items-center gap-1 flex-shrink-0">

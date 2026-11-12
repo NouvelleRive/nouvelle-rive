@@ -9,7 +9,7 @@ import FilterBox from '@/components/FilterBox'
 import { Download, FileSpreadsheet, LayoutGrid, List } from 'lucide-react'
 import { Vente, ChineuseMeta } from '@/components/SalesList'
 import { genererFacturePrintemps } from '@/lib/facturePrintemps'
-import { totauxFacture, OPERATION_EN_COURS } from '@/lib/remiseOperation'
+import { totauxVentes, OPERATION_EN_COURS } from '@/lib/remiseOperation'
 
 
 const PRIMARY = '#22209C'
@@ -299,14 +299,7 @@ export default function SalesFilters({
     // Black Week (lib/remiseOperation) : commission sur le prix de départ, moins la
     // prise en charge NR. Prix de départ utilisé UNIQUEMENT pour les ventes marquées
     // Black Week → sans remise, calcul strictement identique à avant.
-    const tot = totauxFacture(
-      ventesDuMois.map(v => ({
-        prixClient: getPrix(v),
-        prixDepart: (v.remiseBlackWeek ?? 0) > 0 && typeof v.prixInitial === 'number' ? v.prixInitial : getPrix(v),
-      })),
-      Math.round(tauxHT * 10000) / 100,
-      OPERATION_EN_COURS.partNR,
-    )
+    const tot = totauxVentes(ventesDuMois, Math.round(tauxHT * 10000) / 100)
     const ca = tot.totalPrixClient
     const commissionHT = tot.commissionHT, commissionTTC = tot.commissionTTC, tva = tot.tva, net = tot.net
     // Ligne « Lot » = commission brute (sur prix de départ) ; ligne BW = prise en charge
