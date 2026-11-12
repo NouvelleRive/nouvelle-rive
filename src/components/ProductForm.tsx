@@ -1800,19 +1800,16 @@ async function compressImage(file: File): Promise<string> {
               {typeof tauxCom === 'number' && (
                 <div className="col-span-3 bg-black text-white rounded px-3 py-2">
                   <label className="block text-xs font-bold tracking-widest mb-1">BLACK WEEK — % (max {plafondRemise(BLACK_WEEK_2026, tauxCom)})</label>
-                  <input
-                    type="number"
+                  <select
                     value={formData.remiseBlackWeek ?? '0'}
-                    onChange={(e) => {
-                      const max = plafondRemise(BLACK_WEEK_2026, tauxCom)
-                      const v = Math.min(max, Math.max(0, parseInt(e.target.value || '0', 10) || 0))
-                      setFormData({ ...formData, remiseBlackWeek: String(v) })
-                    }}
-                    step="1"
-                    min="0"
-                    max={plafondRemise(BLACK_WEEK_2026, tauxCom)}
+                    onChange={(e) => setFormData({ ...formData, remiseBlackWeek: e.target.value })}
                     className="w-full border border-white bg-black text-white rounded px-2 py-1.5 text-sm"
-                  />
+                  >
+                    <option value="0">Aucune</option>
+                    {Array.from({ length: Math.max(0, (plafondRemise(BLACK_WEEK_2026, tauxCom) - 10) / 5 + 1) }, (_, i) => 10 + i * 5).map(v => (
+                      <option key={v} value={String(v)}>-{v} %</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
