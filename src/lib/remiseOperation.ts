@@ -40,7 +40,7 @@ export type OperationRemise = {
 export const BLACK_WEEK_2026: OperationRemise = {
   id: 'blackweek2026',
   label: 'Black Week',
-  debut: '2026-11-12', // TEST — remettre '2026-11-23'
+  debut: '2026-11-23',
   fin: '2026-11-29',
   partNR: 0.5,
   plafonds: [
