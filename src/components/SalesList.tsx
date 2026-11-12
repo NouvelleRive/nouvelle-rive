@@ -29,6 +29,10 @@ export interface Vente {
   chineurUid?: string
   prix?: number
   prixInitial?: number | null
+  /** Black Week : % figé à la vente (cf. lib/remiseOperation) */
+  remiseBlackWeek?: number
+  /** Black Week : prix payé par le client, figé à la vente */
+  prixClient?: number
   prixVenteReel?: number
   dateVente?: Timestamp | string | null
   createdAt?: Timestamp | string | null

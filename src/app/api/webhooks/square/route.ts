@@ -11,6 +11,17 @@ import { sendPushToOwner } from '@/lib/webpush'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 import { sendCapiPurchase } from '@/lib/metaCapi'
 import { sendConfirmationCommande } from '@/lib/emails/commandes'
+import { BLACK_WEEK_2026, remiseEffective, prixClient as calcPrixClient } from '@/lib/remiseOperation'
+
+// Black Week : champs FIGÉS à la création de la vente. Sur une re-livraison du
+// webhook (vente déjà existante) on ne les réécrit jamais — une modification
+// ultérieure du produit ne doit pas changer une vente passée.
+const CHAMPS_FIGES = ['remiseBlackWeek', 'prixClient', 'operationRemise', 'prixVenteReel', 'prixInitial'] as const
+function sansChampsFiges<T extends Record<string, any>>(data: T): Partial<T> {
+  const copie: Record<string, any> = { ...data }
+  for (const k of CHAMPS_FIGES) delete copie[k]
+  return copie as Partial<T>
+}
 
 if (!getApps().length) {
   initializeApp({
@@ -223,12 +234,16 @@ async function traiterProduit(opts: {
     }
   }
 
+  // Black Week : remise active à la date de la vente → prix encaissé = prix client
+  const bwVente = remiseEffective(BLACK_WEEK_2026, Number(produitData.remiseBlackWeek) || 0, saleTimestamp.toDate())
+  const prixDepartVente = produitData.prix || lineItemPrice
   const venteData = {
     paymentId,
     orderId,
     lineItemUid: lineItem?.uid || null,
     dateVente: saleTimestamp,
-    prixVenteReel: produitData.prix || lineItemPrice,
+    prixVenteReel: bwVente ? calcPrixClient(prixDepartVente, bwVente) : prixDepartVente,
+    ...(bwVente ? { remiseBlackWeek: bwVente, prixClient: calcPrixClient(prixDepartVente, bwVente), operationRemise: BLACK_WEEK_2026.id } : {}),
     quantite: 1,
     nomSquare: lineItem?.name || productNameFallback,
     produitId: productId,
@@ -249,7 +264,7 @@ async function traiterProduit(opts: {
   const venteRef = adminDb.collection('ventes').doc(venteDocId)
   const venteSnapBefore = await venteRef.get()
   const isNewVente = !venteSnapBefore.exists
-  await venteRef.set(venteData, { merge: true })
+  await venteRef.set(isNewVente ? venteData : sansChampsFiges(venteData), { merge: true })
   console.log(`✅ Vente ${isNewVente ? 'créée' : 're-livrée (skip notif)'}:`, produitData.sku, `[${venteDocId}]`)
 
   if (isNewVente) {
@@ -422,6 +437,7 @@ export async function POST(request: Request) {
           }
         }
 
+        const bwCaisse = remiseEffective(BLACK_WEEK_2026, Number(produitData?.remiseBlackWeek) || 0, saleTimestamp.toDate())
         const venteData = {
           paymentId,
           orderId,
@@ -439,6 +455,8 @@ export async function POST(request: Request) {
           chineurUid,
           trigramme,
           prixInitial: produitData?.prix || null,
+          // Black Week : la remise est appliquée par Square en caisse → prix = prix client
+          ...(bwCaisse ? { remiseBlackWeek: bwCaisse, prixClient: prix, operationRemise: BLACK_WEEK_2026.id } : {}),
           attribue: !!produitDoc,
           source: 'square',
           skuSource: 'webhook_caisse',
@@ -448,7 +466,7 @@ export async function POST(request: Request) {
         const venteRef = adminDb.collection('ventes').doc(venteDocId)
         const venteSnapBefore = await venteRef.get()
         const isNewVente = !venteSnapBefore.exists
-        await venteRef.set(venteData, { merge: true })
+        await venteRef.set(isNewVente ? venteData : sansChampsFiges(venteData), { merge: true })
         console.log(`✅ Vente caisse ${isNewVente ? 'créée' : 're-livrée (skip notif)'}: ${sku || itemName} (${prix}€) [${venteDocId}]`)
 
         if (isNewVente) {

@@ -9,6 +9,7 @@ import FilterBox from '@/components/FilterBox'
 import { Download, FileSpreadsheet, LayoutGrid, List } from 'lucide-react'
 import { Vente, ChineuseMeta } from '@/components/SalesList'
 import { genererFacturePrintemps } from '@/lib/facturePrintemps'
+import { totauxFacture, BLACK_WEEK_2026 } from '@/lib/remiseOperation'
 
 
 const PRIMARY = '#22209C'
@@ -294,9 +295,23 @@ export default function SalesFilters({
     const [m, y] = monthValue.split('-').map(Number)
     const start = new Date(y, m - 1, 1), end = new Date(y, m, 0, 23, 59, 59, 999)
     const ventesDuMois = (ventesFacture ?? ventes).filter(v => { const d = getDateFromVente(v); return d >= start && d <= end })
-    const ca = ventesDuMois.reduce((s, v) => s + getPrix(v), 0)
     const tauxHT = typeof ch?.taux === 'number' ? ch.taux / 100 : (typeof ch?.commissionHT === 'number' ? ch.commissionHT : 0.40)
-    const commissionHT = ca * tauxHT, commissionTTC = commissionHT * 1.2, tva = commissionTTC - commissionHT, net = ca - commissionTTC
+    // Black Week (lib/remiseOperation) : commission sur le prix de départ, moins la
+    // prise en charge NR. Prix de départ utilisé UNIQUEMENT pour les ventes marquées
+    // Black Week → sans remise, calcul strictement identique à avant.
+    const tot = totauxFacture(
+      ventesDuMois.map(v => ({
+        prixClient: getPrix(v),
+        prixDepart: (v.remiseBlackWeek ?? 0) > 0 && typeof v.prixInitial === 'number' ? v.prixInitial : getPrix(v),
+      })),
+      Math.round(tauxHT * 10000) / 100,
+      BLACK_WEEK_2026.partNR,
+    )
+    const ca = tot.totalPrixClient
+    const commissionHT = tot.commissionHT, commissionTTC = tot.commissionTTC, tva = tot.tva, net = tot.net
+    // Ligne « Lot » = commission brute (sur prix de départ) ; ligne BW = prise en charge
+    const bruteHT = tot.commissionBruteHT, bruteTTC = bruteHT * 1.2, bruteTVA = bruteTTC - bruteHT
+    const priseHT = tot.priseEnChargeHT, priseTTC = priseHT * 1.2, priseTVA = priseTTC - priseHT
     const code = (ch?.codeChineuse || ch?.code || ch?.nom?.split(/\s+/)[0] || 'NR').toString().trim().toUpperCase()
     const ref = `${prefixeFacture}${String(m).padStart(2, '0')}${String(y).slice(-2)}-${code}`
     const fmt = (n: number) => n.toFixed(2).replace('.', ',')
@@ -343,13 +358,24 @@ export default function SalesFilters({
     docPDF.setTextColor(0, 0, 0)
     const rowY = yHead + hHead + 22
     x = margin + 8
-    ;['Lot de pièces vintage', fmt(ca), fmt(commissionHT), fmt(commissionTTC), fmt(tva), fmt(net)].forEach((val, i) => {
+    ;['Lot de pièces vintage', fmt(ca), fmt(bruteHT), fmt(bruteTTC), fmt(bruteTVA), fmt(ca - bruteTTC)].forEach((val, i) => {
       const col = cols[i]
       if (col.align === 'right') { const tw = docPDF.getTextWidth(val); docPDF.text(val, x + col.width - 8 - tw, rowY) }
       else docPDF.text(val, x, rowY)
       x += col.width
     })
-    const yPay = rowY + 42
+    // Ligne Black Week — seulement s'il y a au moins une vente remisée
+    const rowY2 = rowY + 20
+    if (tot.avecRemise) {
+      x = margin + 8
+      ;['Prise en charge Black Week NR (50 %)', '', fmt(-priseHT), fmt(-priseTTC), fmt(-priseTVA), fmt(priseTTC)].forEach((val, i) => {
+        const col = cols[i]
+        if (col.align === 'right') { const tw = docPDF.getTextWidth(val); docPDF.text(val, x + col.width - 8 - tw, rowY2) }
+        else docPDF.text(val, x, rowY2)
+        x += col.width
+      })
+    }
+    const yPay = (tot.avecRemise ? rowY2 : rowY) + 42
     docPDF.text('Montant HT', margin, yPay); docPDF.text(fmtEUR(commissionHT), margin + 160, yPay)
     docPDF.text('TVA 20%', margin, yPay + 18); docPDF.text(fmtEUR(tva), margin + 160, yPay + 18)
     docPDF.setFont('helvetica', 'bold')
