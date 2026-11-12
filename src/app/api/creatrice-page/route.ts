@@ -86,6 +86,7 @@ export async function GET(req: NextRequest) {
       nom: p.nom || 'Produit',
       marque: p.marque || '',
       prix: p.prix || 0,
+      remiseBlackWeek: Number(p.remiseBlackWeek) || 0,
       imageUrl:
         (Array.isArray(p.imageUrls) && p.imageUrls[0]) ||
         p.imageUrl ||

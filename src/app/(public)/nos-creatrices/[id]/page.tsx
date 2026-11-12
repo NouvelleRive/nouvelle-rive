@@ -10,6 +10,7 @@ import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import InfiniteImageMarquee from '@/components/InfiniteImageMarquee'
 import { formatPrix } from '@/lib/formatPrix'
+import PrixBlackWeek from '@/components/PrixBlackWeek'
 
 type Creatrice = {
   nom: string
@@ -54,6 +55,7 @@ type Produit = {
   nom: string
   marque?: string
   prix: number
+  remiseBlackWeek?: number
   imageUrl: string
 }
 
@@ -447,7 +449,7 @@ export default function CreateurPage() {
                       {p.marque || creatrice.nom}
                     </p>
                     <p className="mt-1" style={{ fontFamily: 'Helvetica Neue, sans-serif', fontSize: '11px' }}>
-                      {formatPrix(p.prix)} €
+                      <PrixBlackWeek prix={p.prix} remiseBlackWeek={p.remiseBlackWeek} />
                     </p>
                   </div>
                 </Link>
