@@ -10,7 +10,7 @@ import LazyAutoplayVideo from '@/components/LazyAutoplayVideo'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import InfiniteImageMarquee from '@/components/InfiniteImageMarquee'
 import { formatPrix } from '@/lib/formatPrix'
-import PrixBlackWeek from '@/components/PrixBlackWeek'
+import PrixBlackWeek, { BadgeBlackWeek } from '@/components/PrixBlackWeek'
 
 type Creatrice = {
   nom: string
@@ -423,6 +423,7 @@ export default function CreateurPage() {
                   style={{ borderRight: '1px solid #000', borderBottom: '1px solid #000' }}
                 >
                   <div className="aspect-square bg-white overflow-hidden relative">
+                    <BadgeBlackWeek remiseBlackWeek={p.remiseBlackWeek} />
                     {p.imageUrl ? (
                       <img
                         src={p.imageUrl}

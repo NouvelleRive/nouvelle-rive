@@ -275,7 +275,7 @@ export default function ProduitClient({
               </p>
             )}
             <p className="mb-6" style={{ fontSize: '16px', letterSpacing: '0.02em' }}>
-              <PrixBlackWeek prix={produit.prix} remiseBlackWeek={produit.remiseBlackWeek} />
+              <PrixBlackWeek prix={produit.prix} remiseBlackWeek={produit.remiseBlackWeek} badge />
             </p>
             {(lang === 'en' && produit.descriptionEn ? produit.descriptionEn : produit.description) && (
               <p style={{ fontSize: '13px', lineHeight: '1.7', color: '#333', fontWeight: '300', whiteSpace: 'pre-wrap' }}>
