@@ -36,8 +36,8 @@ export default function PrixBlackWeek({ prix, remiseBlackWeek, badge = false }: 
   return (
     <>
       {badge && <span style={{ display: 'table', margin: '0 auto 4px', background: '#000', color: '#fff', fontSize: '1.15em', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 8px' }}>BLACK WEEK -{pct} %<Decompte /></span>}
-      <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
-      <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
+      <span style={{ textDecoration: 'line-through', fontWeight: 600, marginRight: 6 }}>{fmt(prix)} €</span>
+      <span>{fmt(prixClient(prix, pct))} €</span>
     </>
   )
 }
