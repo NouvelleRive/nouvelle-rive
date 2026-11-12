@@ -52,3 +52,17 @@ export function BadgeBlackWeek({ remiseBlackWeek }: { remiseBlackWeek?: number }
     </span>
   )
 }
+
+/** Fiche produit — rendu validé, FIGÉ : badge « BLACK WEEK -X % » au-dessus,
+ *  prix barré gris, prix client en gras. Ne pas modifier avec la grille. */
+export function PrixBlackWeekFiche({ prix, remiseBlackWeek }: { prix: number; remiseBlackWeek?: number }) {
+  const pct = remiseAffichee(BLACK_WEEK_2026, remiseBlackWeek)
+  if (!pct) return <>{formatPrix(prix)} €</>
+  return (
+    <>
+      <span style={{ display: 'table', margin: '0 auto 4px', background: '#000', color: '#fff', fontSize: '1.15em', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 8px' }}>BLACK WEEK -{pct} %</span>
+      <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
+      <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
+    </>
+  )
+}
