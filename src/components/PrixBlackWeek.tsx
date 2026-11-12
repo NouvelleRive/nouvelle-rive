@@ -48,7 +48,7 @@ export function BadgeBlackWeek({ remiseBlackWeek }: { remiseBlackWeek?: number }
   if (!pct) return null
   return (
     <span style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, background: '#000', color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', padding: '3px 8px', fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-      BLACK WEEK -{pct} %<Decompte />
+      BLACK WEEK
     </span>
   )
 }
