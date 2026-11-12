@@ -9,7 +9,7 @@ import FilterBox from '@/components/FilterBox'
 import { Download, FileSpreadsheet, LayoutGrid, List } from 'lucide-react'
 import { Vente, ChineuseMeta } from '@/components/SalesList'
 import { genererFacturePrintemps } from '@/lib/facturePrintemps'
-import { totauxFacture, BLACK_WEEK_2026 } from '@/lib/remiseOperation'
+import { totauxFacture, OPERATION_EN_COURS } from '@/lib/remiseOperation'
 
 
 const PRIMARY = '#22209C'
@@ -305,7 +305,7 @@ export default function SalesFilters({
         prixDepart: (v.remiseBlackWeek ?? 0) > 0 && typeof v.prixInitial === 'number' ? v.prixInitial : getPrix(v),
       })),
       Math.round(tauxHT * 10000) / 100,
-      BLACK_WEEK_2026.partNR,
+      OPERATION_EN_COURS.partNR,
     )
     const ca = tot.totalPrixClient
     const commissionHT = tot.commissionHT, commissionTTC = tot.commissionTTC, tva = tot.tva, net = tot.net
@@ -368,7 +368,7 @@ export default function SalesFilters({
     const rowY2 = rowY + 20
     if (tot.avecRemise) {
       x = margin + 8
-      ;['Prise en charge Black Week NR (50 %)', '', fmt(-priseHT), fmt(-priseTTC), fmt(-priseTVA), fmt(priseTTC)].forEach((val, i) => {
+      ;[`Prise en charge ${OPERATION_EN_COURS.label} NR (${Math.round(OPERATION_EN_COURS.partNR * 100)} %)`, '', fmt(-priseHT), fmt(-priseTTC), fmt(-priseTVA), fmt(priseTTC)].forEach((val, i) => {
         const col = cols[i]
         if (col.align === 'right') { const tw = docPDF.getTextWidth(val); docPDF.text(val, x + col.width - 8 - tw, rowY2) }
         else docPDF.text(val, x, rowY2)

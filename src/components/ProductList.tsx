@@ -21,6 +21,7 @@
     import { calcMargeNette, calcMargeNetteAvecPort } from '@/lib/marge'
     import { formatPrix } from '@/lib/formatPrix'
     import { isHousePurchaseTrigramme } from '@/lib/roles'
+    import { OPERATION_EN_COURS, libelleMaj, infosOperation } from '@/lib/remiseOperation'
     import { etatCycle, baisseOfficielleEligible } from '@/lib/cycleBaisse'
 
     // Conversion base64 robuste pour gros fichiers
@@ -834,6 +835,8 @@
             updatedAt: Timestamp.now(),
             // % Black Week : entier, borné côté formulaire (lib/remiseOperation). Ne touche pas `prix`.
             remiseBlackWeek: Math.max(0, parseInt(data.remiseBlackWeek || '0', 10) || 0),
+            // Opération recopiée sur le produit : le trigger Square (functions) en lit dates + libellé
+            ...((parseInt(data.remiseBlackWeek || '0', 10) || 0) > 0 ? { operationRemise: infosOperation(OPERATION_EN_COURS) } : {}),
             // Si le prix baisse, on enregistre la date et l'ancien prix — MAIS
             // uniquement si la pièce est en boutique depuis ≥ 2 mois (cycle de
             // rotation). Un simple réajustement de prix avant 2 mois n'est PAS une
@@ -1427,7 +1430,7 @@
                         <span className="font-medium">—</span>
                       )}</span>
                       {(p.remiseBlackWeek ?? 0) > 0 && (
-                        <span className="bg-black text-white text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded">BLACK WEEK -{p.remiseBlackWeek} %</span>
+                        <span className="bg-black text-white text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded">{libelleMaj(OPERATION_EN_COURS)} -{p.remiseBlackWeek} %</span>
                       )}
                       <span><span className="text-gray-400">Qté:</span> <span className="font-medium">{p.quantite ?? 1}</span></span>
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
@@ -1547,7 +1550,7 @@
                         <span className="font-medium text-gray-700">—</span>
                       )}</p>
                       {(p.remiseBlackWeek ?? 0) > 0 && (
-                        <span className="inline-block bg-black text-white text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded">BLACK WEEK -{p.remiseBlackWeek} %</span>
+                        <span className="inline-block bg-black text-white text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded">{libelleMaj(OPERATION_EN_COURS)} -{p.remiseBlackWeek} %</span>
                       )}
                       {(isAdmin || isAcheteuse) && (p.trigramme?.toUpperCase() === 'NR' || typeof p.prixAchat === 'number') && (
                         <p><span className="text-gray-400">Achat:</span> <span className="font-medium text-gray-700">{typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : '—'}</span></p>

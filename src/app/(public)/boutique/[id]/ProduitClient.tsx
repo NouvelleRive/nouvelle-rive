@@ -14,7 +14,7 @@ import { getTypeShortLabel } from '@/lib/typeLabels'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { formatPrix } from '@/lib/formatPrix'
 import { PrixBlackWeekFiche } from '@/components/PrixBlackWeek'
-import { BLACK_WEEK_2026, remiseEffective, prixClient } from '@/lib/remiseOperation'
+import { OPERATION_EN_COURS, remiseEffective, prixClient } from '@/lib/remiseOperation'
 import { marketingAllowed } from '@/lib/consent'
 import { pixelViewContent } from '@/lib/metaPixel'
 
@@ -171,7 +171,7 @@ export default function ProduitClient({
       id: produit.id,
       nom: produit.nom,
       // Black Week : panier au prix client (recalculé côté serveur au paiement)
-      prix: prixClient(produit.prix, remiseEffective(BLACK_WEEK_2026, produit.remiseBlackWeek)),
+      prix: prixClient(produit.prix, remiseEffective(OPERATION_EN_COURS, produit.remiseBlackWeek)),
       imageUrl: produit.imageUrls?.[0] || produit.photos?.face || null,
       marque: produit.marque || null,
       sku: produit.sku || null,

@@ -11,7 +11,13 @@
 //   Ex : 100 €, -20 %, commission 40 % → client 80 €, commission TTC 48 − 10 = 38 €
 //        (31,67 HT + 6,33 TVA), reversé 80 − 38 = 42 € (52 sans remise → −10 €).
 //
-// Pour une nouvelle opération : déclarer une nouvelle constante OperationRemise.
+// ── NOUVELLE CAMPAGNE (soldes, offre…) ─────────────────────────────────────
+//   1. Déclarer une constante OperationRemise ci-dessous (dates, libellé, plafonds…).
+//   2. Changer UNE ligne : `OPERATION_EN_COURS = <nouvelle constante>`.
+//   Tout le reste suit : champ produit, site (badges, prix barré, filtre promo),
+//   paiement en ligne, remises auto Square en caisse, ventes figées, facture.
+//   Le % choisi par pièce est stocké dans `produit.remiseBlackWeek` (nom historique,
+//   commun à toutes les opérations).
 
 export type OperationRemise = {
   /** Identifiant stable (stocké sur les ventes). */
@@ -26,6 +32,9 @@ export type OperationRemise = {
   partNR: number
   /** Plafond de remise selon le taux de commission (%), du plus haut au plus bas. */
   plafonds: { tauxComMin: number; remiseMax: number }[]
+  /** Remise minimale proposée (%) et pas entre deux choix (ex. 10, 15, 20…). */
+  remiseMin: number
+  pas: number
 }
 
 export const BLACK_WEEK_2026: OperationRemise = {
@@ -39,6 +48,44 @@ export const BLACK_WEEK_2026: OperationRemise = {
     { tauxComMin: 30, remiseMax: 30 },
     { tauxComMin: 20, remiseMax: 20 },
   ],
+  remiseMin: 10,
+  pas: 5,
+}
+
+/** L'opération en cours — LA SEULE LIGNE À CHANGER pour une nouvelle campagne. */
+export const OPERATION_EN_COURS: OperationRemise = BLACK_WEEK_2026
+
+/** Libellé en capitales pour les badges (ex. « BLACK WEEK »). */
+export const libelleMaj = (op: OperationRemise) => op.label.toUpperCase()
+
+/** Choix de remise proposés à la chineuse : remiseMin, +pas… jusqu'au plafond. */
+export function choixRemise(op: OperationRemise, tauxCom: number): number[] {
+  const max = plafondRemise(op, tauxCom)
+  const out: number[] = []
+  for (let v = op.remiseMin; v <= max; v += op.pas) out.push(v)
+  return out
+}
+
+/** « du 23 au 29/11 » */
+export function periodeCourte(op: OperationRemise): string {
+  const [, m1, d1] = op.debut.split('-')
+  const [, m2, d2] = op.fin.split('-')
+  return m1 === m2 ? `du ${Number(d1)} au ${Number(d2)}/${m2}` : `du ${Number(d1)}/${m1} au ${Number(d2)}/${m2}`
+}
+
+/** Fin de l'opération (dernier jour 23:59:59 heure de Paris) en ms epoch. */
+export function finOperationMs(op: OperationRemise): number {
+  const utc = Date.parse(`${op.fin}T23:59:59Z`)
+  const d = new Date(utc)
+  const paris = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getTime()
+  const enUtc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()
+  return utc - (paris - enUtc)
+}
+
+/** Infos recopiées sur le produit pour le trigger Square (les Firebase Functions
+ *  ne peuvent pas importer cette lib). */
+export function infosOperation(op: OperationRemise) {
+  return { id: op.id, label: op.label, debut: op.debut, fin: op.fin }
 }
 
 const TVA = 0.20

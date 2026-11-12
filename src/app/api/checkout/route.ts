@@ -5,7 +5,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getFraisLivraison } from '@/lib/shipping'
 import { lireCodePromo } from '@/lib/codesPromo'
-import { BLACK_WEEK_2026, remiseEffective, prixClient } from '@/lib/remiseOperation'
+import { OPERATION_EN_COURS, remiseEffective, prixClient } from '@/lib/remiseOperation'
 
 if (!getApps().length) {
   initializeApp({
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
       if (d.vendu === true) {
         return NextResponse.json({ success: false, error: `Produit ${it.nom || it.id} déjà vendu`, soldOutId: it.id }, { status: 409 })
       }
-      prixServeur.push({ id: it.id, nom: d.nom || it.nom, prix: Number(d.prix) || 0, sku: String(d.sku || '').toUpperCase(), bw: remiseEffective(BLACK_WEEK_2026, Number(d.remiseBlackWeek) || 0) })
+      prixServeur.push({ id: it.id, nom: d.nom || it.nom, prix: Number(d.prix) || 0, sku: String(d.sku || '').toUpperCase(), bw: remiseEffective(OPERATION_EN_COURS, Number(d.remiseBlackWeek) || 0) })
     }
 
     const sousTotal = prixServeur.reduce((s, p) => s + p.prix, 0)
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     const listeDiscounts: { uid: string; name: string; percentage: string; scope: 'LINE_ITEM' }[] = []
     if (promo && remise > 0) listeDiscounts.push({ uid: DISCOUNT_UID, name: `${promo.code} -${promo.remisePct}%`, percentage: String(promo.remisePct), scope: 'LINE_ITEM' })
     for (const pct of Array.from(new Set(prixServeur.filter(p => p.bw).map(p => p.bw)))) {
-      listeDiscounts.push({ uid: `bw-${pct}`, name: `Black Week -${pct} %`, percentage: String(pct), scope: 'LINE_ITEM' })
+      listeDiscounts.push({ uid: `bw-${pct}`, name: `${OPERATION_EN_COURS.label} -${pct} %`, percentage: String(pct), scope: 'LINE_ITEM' })
     }
     const discounts = listeDiscounts.length ? listeDiscounts : undefined
 

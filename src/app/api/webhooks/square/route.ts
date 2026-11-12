@@ -11,7 +11,7 @@ import { sendPushToOwner } from '@/lib/webpush'
 import { resolveTrigrammeFromSku } from '@/lib/resolveTrigramme'
 import { sendCapiPurchase } from '@/lib/metaCapi'
 import { sendConfirmationCommande } from '@/lib/emails/commandes'
-import { BLACK_WEEK_2026, remiseEffective, prixClient as calcPrixClient } from '@/lib/remiseOperation'
+import { OPERATION_EN_COURS, remiseEffective, prixClient as calcPrixClient } from '@/lib/remiseOperation'
 
 // Black Week : champs FIGÉS à la création de la vente. Sur une re-livraison du
 // webhook (vente déjà existante) on ne les réécrit jamais — une modification
@@ -235,7 +235,7 @@ async function traiterProduit(opts: {
   }
 
   // Black Week : remise active à la date de la vente → prix encaissé = prix client
-  const bwVente = remiseEffective(BLACK_WEEK_2026, Number(produitData.remiseBlackWeek) || 0, saleTimestamp.toDate())
+  const bwVente = remiseEffective(OPERATION_EN_COURS, Number(produitData.remiseBlackWeek) || 0, saleTimestamp.toDate())
   const prixDepartVente = produitData.prix || lineItemPrice
   const venteData = {
     paymentId,
@@ -243,7 +243,7 @@ async function traiterProduit(opts: {
     lineItemUid: lineItem?.uid || null,
     dateVente: saleTimestamp,
     prixVenteReel: bwVente ? calcPrixClient(prixDepartVente, bwVente) : prixDepartVente,
-    ...(bwVente ? { remiseBlackWeek: bwVente, prixClient: calcPrixClient(prixDepartVente, bwVente), operationRemise: BLACK_WEEK_2026.id } : {}),
+    ...(bwVente ? { remiseBlackWeek: bwVente, prixClient: calcPrixClient(prixDepartVente, bwVente), operationRemise: OPERATION_EN_COURS.id } : {}),
     quantite: 1,
     nomSquare: lineItem?.name || productNameFallback,
     produitId: productId,
@@ -437,7 +437,7 @@ export async function POST(request: Request) {
           }
         }
 
-        const bwCaisse = remiseEffective(BLACK_WEEK_2026, Number(produitData?.remiseBlackWeek) || 0, saleTimestamp.toDate())
+        const bwCaisse = remiseEffective(OPERATION_EN_COURS, Number(produitData?.remiseBlackWeek) || 0, saleTimestamp.toDate())
         const venteData = {
           paymentId,
           orderId,
@@ -456,7 +456,7 @@ export async function POST(request: Request) {
           trigramme,
           prixInitial: produitData?.prix || null,
           // Black Week : la remise est appliquée par Square en caisse → prix = prix client
-          ...(bwCaisse ? { remiseBlackWeek: bwCaisse, prixClient: prix, operationRemise: BLACK_WEEK_2026.id } : {}),
+          ...(bwCaisse ? { remiseBlackWeek: bwCaisse, prixClient: prix, operationRemise: OPERATION_EN_COURS.id } : {}),
           attribue: !!produitDoc,
           source: 'square',
           skuSource: 'webhook_caisse',

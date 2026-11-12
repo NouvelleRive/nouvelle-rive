@@ -18,7 +18,7 @@
   import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
   import { isHousePurchaseTrigramme } from '@/lib/roles'
   import { margeTtcVersHt } from '@/lib/marge'
-  import { BLACK_WEEK_2026, plafondRemise, prixClient } from '@/lib/remiseOperation'
+  import { OPERATION_EN_COURS, plafondRemise, prixClient, choixRemise, periodeCourte } from '@/lib/remiseOperation'
   import { formatPrix } from '@/lib/formatPrix'
 
   // Conversion base64 robuste pour gros fichiers
@@ -1827,20 +1827,20 @@ async function compressImage(file: File): Promise<string> {
               {/* Black Week */}
               {typeof tauxCom === 'number' && (
                 <div>
-                  <label className="block text-xs font-medium mb-1">Black Week (max {plafondRemise(BLACK_WEEK_2026, tauxCom)} %)</label>
+                  <label className="block text-xs font-medium mb-1">{OPERATION_EN_COURS.label} (max {plafondRemise(OPERATION_EN_COURS, tauxCom)} %)</label>
                   <select
                     value={formData.remiseBlackWeek ?? '0'}
                     onChange={(e) => setFormData({ ...formData, remiseBlackWeek: e.target.value })}
                     className="w-full border border-black bg-black text-white rounded px-2 py-1.5 text-sm"
                   >
                     <option value="0">Aucune</option>
-                    {Array.from({ length: Math.max(0, (plafondRemise(BLACK_WEEK_2026, tauxCom) - 10) / 5 + 1) }, (_, i) => 10 + i * 5).map(v => (
+                    {choixRemise(OPERATION_EN_COURS, tauxCom).map(v => (
                       <option key={v} value={String(v)}>-{v} %</option>
                     ))}
                   </select>
                 {Number(formData.remiseBlackWeek || '0') > 0 && parseFloat(formData.prix || '') > 0 && (
                   <p className="text-[11px] mt-1 text-gray-500">
-                    Prix client du 23 au 29/11 : <strong>{(() => { const pc = prixClient(parseFloat(formData.prix), Number(formData.remiseBlackWeek)); return formatPrix(pc, { decimals: Number.isInteger(pc) ? 0 : 2 }) })()} €</strong>
+                    Prix client {periodeCourte(OPERATION_EN_COURS)} : <strong>{(() => { const pc = prixClient(parseFloat(formData.prix), Number(formData.remiseBlackWeek)); return formatPrix(pc, { decimals: Number.isInteger(pc) ? 0 : 2 }) })()} €</strong>
                   </p>
                 )}
                 </div>
