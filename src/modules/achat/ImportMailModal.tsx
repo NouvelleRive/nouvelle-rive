@@ -17,6 +17,37 @@ import { auth } from '@/lib/firebaseConfig'
 import { ADMIN_EMAIL } from '@/lib/roles'
 import { MOTIF_OPTIONS } from '@/lib/motifs'
 import { MODELES_COMMUNS } from '@/lib/modeles'
+import { getTaillesPourCategorie, ALL_TAILLES } from '@/lib/tailles'
+
+/** Tailles autorisées pour la catégorie de l'item (toutes si catégorie pas encore choisie). */
+function taillesPour(it: { categorie: { label?: string } | null }): string[] {
+  const label = it.categorie?.label || ''
+  return label ? getTaillesPourCategorie(label) : ALL_TAILLES
+}
+
+/** Taille valide = dans la liste de la catégorie (ou catégorie sans taille). */
+export function tailleValide(it: { taille: string; categorie: { label?: string } | null }): boolean {
+  const opts = taillesPour(it)
+  return opts.length === 0 || opts.includes(it.taille)
+}
+
+function TailleSelect({ item, onChange }: { item: { taille: string; tailleOriginale?: string; categorie: { label?: string } | null }; onChange: (t: string) => void }) {
+  const opts = taillesPour(item)
+  if (opts.length === 0) {
+    return <input value="N/A" disabled className="w-full border rounded px-2 py-1.5 text-sm bg-gray-100 text-gray-500" />
+  }
+  return (
+    <>
+      <select value={opts.includes(item.taille) ? item.taille : ''} onChange={(e) => onChange(e.target.value)} className="w-full border rounded px-2 py-1.5 text-sm bg-white">
+        <option value="">Choisir...</option>
+        {opts.map((t) => <option key={t} value={t}>{t}</option>)}
+      </select>
+      {(item.tailleOriginale || (item.taille && !opts.includes(item.taille))) && (
+        <div className="text-[11px] text-gray-400 mt-0.5">orig : {item.tailleOriginale || item.taille}</div>
+      )}
+    </>
+  )
+}
 
 /**
  * Extrait le texte brut d'un PDF côté client via pdfjs-dist. On charge la lib
@@ -145,7 +176,7 @@ export const ItemCard = memo(function ItemCard({
         </div>
         <div>
           <label className="text-xs text-gray-500">Taille {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
-          <input value={item.taille} onChange={(e) => onPatch(index, { taille: e.target.value })} placeholder={item.tailleOriginale ? `orig: ${item.tailleOriginale}` : ''} className="w-full border rounded px-2 py-1.5 text-sm" />
+          <TailleSelect item={item} onChange={(t) => onPatch(index, { taille: t })} />
         </div>
         <div>
           <label className="text-xs text-gray-500">Couleur</label>
@@ -364,8 +395,8 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
           setErrorMsg(`${prefix}la marque est obligatoire.`)
           return
         }
-        if (!it.taille?.trim()) {
-          setErrorMsg(`${prefix}la taille est obligatoire.`)
+        if (!tailleValide(it)) {
+          setErrorMsg(`${prefix}taille à choisir dans la liste.`)
           return
         }
       }
@@ -542,7 +573,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
                     </div>
                     <div>
                       <label className="text-xs text-gray-500">Taille {isFleek && <span className="text-gray-400">(facultatif)</span>}</label>
-                      <input value={it.taille} onChange={(e) => updateItem(i, { taille: e.target.value })} placeholder={it.tailleOriginale ? `orig: ${it.tailleOriginale}` : ''} className="w-full border rounded px-2 py-1.5 text-sm" />
+                      <TailleSelect item={it} onChange={(t) => updateItem(i, { taille: t })} />
                     </div>
                     <div>
                       <label className="text-xs text-gray-500">Couleur</label>

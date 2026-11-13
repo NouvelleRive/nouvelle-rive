@@ -10,7 +10,7 @@
 
 import { useCallback, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
-import { ItemCard, type ItemFields } from './ImportMailModal'
+import { ItemCard, tailleValide, type ItemFields } from './ImportMailModal'
 
 type Props = {
   initialItems: ItemFields[]
@@ -48,7 +48,7 @@ export default function AchatPreviewSection({
       if (!it.categorie?.label?.trim()) { setErrorMsg(`${prefix}la catégorie est obligatoire.`); return }
       if (!isFleek) {
         if (!it.marque?.trim()) { setErrorMsg(`${prefix}la marque est obligatoire.`); return }
-        if (!it.taille?.trim()) { setErrorMsg(`${prefix}la taille est obligatoire.`); return }
+        if (!tailleValide(it)) { setErrorMsg(`${prefix}taille à choisir dans la liste.`); return }
       }
       if (isFleek) {
         const qty = Number(it.quantiteLot)
