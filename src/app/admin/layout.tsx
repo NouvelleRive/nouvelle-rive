@@ -81,6 +81,7 @@
       },
       { key: 'inventaire', label: 'Inventaire', href: '/admin/inventaires', adminOnly: true },
       { key: 'paiements', label: 'Paiements', href: '/admin/paiements', adminOnly: true },
+      { key: 'operations', label: 'Opérations', href: '/admin/operations', adminOnly: true },
       { key: 'reseaux', label: 'Réseaux', href: '/vendeuse/reseaux', adminOnly: true },
       { key: 'printemps', label: 'Printemps', href: '/admin/printemps', printemps: true },
       ]

@@ -220,3 +220,43 @@ export const prixDepartVente = (v: VenteFacturable): number =>
 export function totauxVentes(ventes: VenteFacturable[], tauxCom: number, op: OperationRemise = OPERATION_EN_COURS): TotauxFacture {
   return totauxFacture(ventes.map(v => ({ prixClient: prixEncaisse(v), prixDepart: prixDepartVente(v) })), tauxCom, op.partNR)
 }
+
+// ── Suivi d'une opération (page admin Opérations) ───────────────────────────
+
+export type ProduitOperation = {
+  trigramme?: string | null
+  remiseBlackWeek?: number
+  vendu?: boolean
+  quantite?: number
+  statut?: string
+  statutRecuperation?: unknown
+}
+
+export type StatsOperation = {
+  /** Pièces en stock avec une remise */
+  nbPieces: number
+  /** Nombre de pièces par % (ex. { 10: 4, 30: 50 }) */
+  parPct: Record<number, number>
+  /** Par chineuse : nb de pièces et répartition par % */
+  parChineuse: { trigramme: string; nbPieces: number; parPct: Record<number, number> }[]
+}
+
+/** Pièces en stock (non vendues, non récupérées) engagées dans l'opération. */
+export function statsOperation(produits: ProduitOperation[]): StatsOperation {
+  const parPct: Record<number, number> = {}
+  const parTri = new Map<string, { trigramme: string; nbPieces: number; parPct: Record<number, number> }>()
+  let nbPieces = 0
+  for (const p of produits) {
+    const pct = Number(p.remiseBlackWeek) || 0
+    if (pct <= 0 || p.vendu || (p.quantite ?? 1) <= 0) continue
+    if (p.statut === 'retour' || p.statut === 'supprime' || p.statutRecuperation) continue
+    const tri = (p.trigramme || '?').toUpperCase()
+    nbPieces++
+    parPct[pct] = (parPct[pct] || 0) + 1
+    if (!parTri.has(tri)) parTri.set(tri, { trigramme: tri, nbPieces: 0, parPct: {} })
+    const c = parTri.get(tri)!
+    c.nbPieces++
+    c.parPct[pct] = (c.parPct[pct] || 0) + 1
+  }
+  return { nbPieces, parPct, parChineuse: Array.from(parTri.values()).sort((a, b) => b.nbPieces - a.nbPieces) }
+}
