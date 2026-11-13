@@ -11,6 +11,10 @@
 // Mode trigramme (?tri=VT) : ne publie que les pièces de ce trigramme (préfixe SKU),
 // sans passer par les règles luxe, et ne retire RIEN. Sert aux files dédiées lentes
 // (ex. Vintage Therapy, 2/jour) branchées sur le cron pingEbaySync.
+//
+// Mode file générale (?tous=1) : toutes les pièces postables (tous trigrammes, hors
+// règles luxe), les plus chères d'abord, publication seule, aucun retrait. Le cron
+// pingEbaySync l'appelle avec max=1 à 3 heures différentes → 3 pièces/jour espacées.
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -126,6 +130,7 @@ export async function GET(req: NextRequest) {
   const max = Math.max(1, parseInt(searchParams.get('max') || '10', 10))
   // File dédiée par trigramme : publication seule, pas de retrait.
   const tri = (searchParams.get('tri') || '').toUpperCase().trim()
+  const tous = searchParams.get('tous') === '1'
 
   const configSnap = await adminDb.collection('siteConfig').doc('luxe').get()
   const config: LuxeConfig = configSnap.exists ? { regles: [], ...configSnap.data() } as LuxeConfig : { regles: [] }
@@ -163,9 +168,12 @@ export async function GET(req: NextRequest) {
 
   for (const p of produits) {
     const isOnEbay = !!p.ebayListingId
-    const visible = isVisibleOnSite(p, config)
+    // File générale : pas de filtres prix/récence de la page luxe.
+    const visible = isVisibleOnSite(p, tous ? { regles: [] } : config)
     // En mode trigramme on ignore les règles luxe : le périmètre, c'est le préfixe SKU.
-    const eligible = tri
+    const eligible = tous
+      ? visible
+      : tri
       ? visible && (p.sku || '').toUpperCase().startsWith(tri)
       : visible && matchesLuxeRules(p, config, chineuses)
 
@@ -181,8 +189,11 @@ export async function GET(req: NextRequest) {
       else toPublish.push(p)
     }
     // Mode trigramme = file de publication seule, on ne retire jamais rien.
-    else if (!tri && !eligible && isOnEbay) toRemove.push(p)
+    else if (!tri && !tous && !eligible && isOnEbay) toRemove.push(p)
   }
+
+  // File générale : les plus chères d'abord (même ordre que « Pièces prévues » en admin).
+  if (tous) toPublish.sort((a, b) => (b.prix ?? 0) - (a.prix ?? 0))
 
   const publishBatch = toPublish.slice(0, max)
   const removeBatch = toRemove.slice(0, max)
@@ -253,6 +264,7 @@ export async function GET(req: NextRequest) {
       skippedSansPhotos: sansPhotos.length,
     },
     tri: tri || null,
+    tous,
     published,
     removed,
     sansGenre,

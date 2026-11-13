@@ -723,56 +723,24 @@ exports.pingEbaySync = functions
     } catch (err) {
       console.error('regenSitemap (from pingEbaySync) failed:', err)
     }
-    // 3. Publication eBay — 1×/jour (à 08h UTC), montée en charge auto.
-    //    Rampe pilotée par le NOMBRE de STRC/MAKI déjà en ligne (pas par des dates),
-    //    définie dans /api/cron/ebay-warmup (table PHASES) :
-    //      3 STRC → 2 STRC+1 MAKI → 1 STRC+2 MAKI → 2 MAKI+1 luxe.
-    //    L'endpoint choisit le mix non-luxe ET renvoie `luxeToday` (combien de luxe
-    //    publier aujourd'hui) ; on relaie ça à sync-ebay-luxe. Débit volontairement
-    //    lent : publier en masse (130 d'un coup) avait valu la restriction de juillet
-    //    2026. Pendant une restriction temporaire, publishToEbay échoue sans effet
-    //    et réessaie le lendemain ; ça repart tout seul à la levée.
-    if (new Date().getUTCHours() === 8) {
-      let luxeToday = 0
-      // Non-luxe (STRC/MAKI) — phase auto
-      try {
-        const warmRes = await fetch('https://www.nouvellerive.eu/api/cron/ebay-warmup', {
+    // 3. Publication eBay — 3 pièces/jour, UNE à la fois à 10h, 14h et 18h (Paris).
+    //    File générale = toutes les pièces postables, les plus chères d'abord
+    //    (/api/cron/sync-ebay-luxe?tous=1, même liste que « Pièces prévues » en admin).
+    //    Jamais en masse : publier 130 annonces d'un coup avait valu la restriction
+    //    de juillet 2026. Une publi qui échoue est simplement retentée au créneau suivant.
+    try {
+      const ebayHour = parseInt(new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Paris', hour: '2-digit', hour12: false,
+      }).format(new Date()), 10)
+      if ([10, 14, 18].includes(ebayHour)) {
+        const pubRes = await fetch('https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?tous=1&max=1', {
           headers: secret ? { Authorization: `Bearer ${secret}` } : {},
         })
-        const warmBody = await warmRes.text()
-        console.log(`pingEbayWarmup ${warmRes.status}: ${warmBody.slice(0, 300)}`)
-        try { luxeToday = JSON.parse(warmBody)?.luxeToday || 0 } catch (_) {}
-      } catch (err) {
-        console.error('pingEbayWarmup failed:', err)
+        const pubBody = await pubRes.text()
+        console.log(`pingEbayPubli(${ebayHour}h) ${pubRes.status}: ${pubBody.slice(0, 300)}`)
       }
-
-      // Vintage Therapy (SKU VT…) — file dédiée, 2/jour, indépendante de la rampe
-      // de chauffe : ce sont des sacs de marque déposés en vente ferme, on les met
-      // en ligne au compte-gouttes (jamais en masse, cf. restriction juillet 2026).
-      // Les pièces sans assez de photos sont écartées par l'endpoint et attendent
-      // leur 5e photo sans bloquer la file.
-      try {
-        const vtRes = await fetch('https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?tri=VT&max=2', {
-          headers: secret ? { Authorization: `Bearer ${secret}` } : {},
-        })
-        const vtBody = await vtRes.text()
-        console.log(`pingEbayVT ${vtRes.status}: ${vtBody.slice(0, 300)}`)
-      } catch (err) {
-        console.error('pingEbayVT failed:', err)
-      }
-
-      // Luxe — quantité dictée par la phase courante (0 tant qu'on n'y est pas)
-      if (luxeToday > 0) {
-        try {
-          const luxeRes = await fetch(`https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?max=${luxeToday}`, {
-            headers: secret ? { Authorization: `Bearer ${secret}` } : {},
-          })
-          const luxeBody = await luxeRes.text()
-          console.log(`pingEbayLuxe(${luxeToday}) ${luxeRes.status}: ${luxeBody.slice(0, 300)}`)
-        } catch (err) {
-          console.error('pingEbayLuxe failed:', err)
-        }
-      }
+    } catch (err) {
+      console.error('pingEbayPubli failed:', err)
     }
 
     // 4. Post Instagram « next fav » hebdo (mutualisé sur ce cron 60 min).

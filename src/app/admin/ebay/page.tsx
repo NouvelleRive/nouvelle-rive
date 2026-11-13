@@ -6,16 +6,10 @@ import { useAdmin } from '@/lib/admin/context'
 import { getBrandPriority } from '@/lib/admin/helpers'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot } from 'firebase/firestore'
-import { useFilteredProducts } from '@/lib/siteConfig'
 import EbayPostingCalendar from './EbayPostingCalendar'
 
 export default function AdminEbayPage() {
   const { produitsFiltres, loadData, loading } = useAdmin()
-  // Appartenance "luxe" = pièces qui matchent les règles de siteConfig/luxe
-  // (liste de marques : Chanel, Dior, Hermès, Gucci…). Servi par /api/page-produits
-  // (cache 6h, 0 read Firestore) — même source de vérité que la page luxe et le cron eBay.
-  const { produits: luxeProduits } = useFilteredProducts('luxe')
-  const luxeIds = useMemo(() => new Set(luxeProduits.map(p => p.id)), [luxeProduits])
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [publishing, setPublishing] = useState(false)
@@ -209,51 +203,29 @@ useEffect(() => {
   const publishedCount = produitsActifs.filter(p => p.ebayListingId).length
   const totalCount = produitsActifs.length
 
-  // Stock disponible (non publié) pour le calendrier de re-publication
-  const nonLuxeDispo = produitsActifs.filter(p => !p.ebayListingId && getBrandPriority(p.marque) >= 20).length
-  const luxeDispo = produitsActifs.filter(p => !p.ebayListingId && getBrandPriority(p.marque) < 20).length
-
-  // Pièces prévues pour la phase de chauffe : non publiées, non-luxe.
-  // Priorité aux sacs STRC (chineuse "strass chronique") — pas chers, pas de taille, canons.
-  // Vague 1 = Strass Chronique (SKU STRC…), Vague 2 = lunettes MAKI (SKU MAK…)
-  const strcDispo = useMemo(() =>
-    produitsActifs.filter(p =>
-      (p.sku || '').toUpperCase().startsWith('STRC') && !p.ebayListingId && getMainImage(p) && (p as any).recu === true
-    ),
-  [produitsActifs])
-
-  const makiDispo = useMemo(() =>
-    produitsActifs.filter(p =>
-      (p.sku || '').toUpperCase().startsWith('MAK') && !p.ebayListingId && getMainImage(p) && (p as any).recu === true
-    ),
-  [produitsActifs])
-
-  // Pièces LUXE prêtes à publier (marque dans les règles luxe), hors STRC/MAKI
-  // déjà gérés par le warmup, et hors pièces bloquées (pas reçue / 0 photo / sexe inconnu).
-  const luxeCandidatsDispo = useMemo(() =>
-    produitsActifs.filter(p => {
-      const sku = (p.sku || '').toUpperCase()
-      if (sku.startsWith('STRC') || sku.startsWith('MAK')) return false
-      return luxeIds.has(p.id) && !p.ebayListingId && blocageEbay(p) === null
-    }),
-  [produitsActifs, luxeIds, chineusesList])
-
-  const candidatsChauffe = useMemo(() => {
-    const toCand = (p: any, groupe: 'STRC' | 'MAKI' | 'LUXE') => ({
-      id: p.id,
-      nom: p.nom || '—',
-      marque: p.marque || '',
-      prix: p.prix ?? null,
-      sku: p.sku || '',
-      image: getMainImage(p),
-      groupe,
-    })
-    return [
-      ...[...strcDispo].sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0)).map(p => toCand(p, 'STRC')),
-      ...[...makiDispo].sort((a, b) => (a.prix ?? 0) - (b.prix ?? 0)).map(p => toCand(p, 'MAKI')),
-      ...[...luxeCandidatsDispo].sort((a, b) => (b.prix ?? 0) - (a.prix ?? 0)).map(p => toCand(p, 'LUXE')),
-    ]
-  }, [strcDispo, makiDispo, luxeCandidatsDispo])
+  // Pièces prévues = toutes les pièces postables, dans l'ordre du robot (plus chères
+  // d'abord). Mêmes critères que /api/cron/sync-ebay-luxe?tous=1 : visible sur le site
+  // (jamais une pièce masquée), reçue, sexe connu, photos suffisantes.
+  const candidatsPrevus = useMemo(() =>
+    produitsActifs
+      .filter((p: any) => {
+        if (p.ebayListingId || p.vendu === true) return false
+        if (p.hidden === true || p.forceDisplay === false) return false
+        if (blocageEbay(p) !== null) return false
+        const nb = compterPhotos(p)
+        if (!p.videoUrl && (nb < 4 || ((p.prix || 0) > 300 && nb < 5))) return false
+        return true
+      })
+      .sort((a, b) => (b.prix ?? 0) - (a.prix ?? 0))
+      .map(p => ({
+        id: p.id,
+        nom: p.nom || '—',
+        marque: p.marque || '',
+        prix: p.prix ?? null,
+        sku: p.sku || '',
+        image: getMainImage(p),
+      })),
+  [produitsActifs, chineusesList])
 
   if (loading) {
     return (
@@ -265,16 +237,8 @@ useEffect(() => {
 
   return (
     <div className="space-y-4">
-      {/* Calendrier de re-publication (compte en déblocage) */}
-      <EbayPostingCalendar
-        nonLuxeDispo={nonLuxeDispo}
-        luxeDispo={luxeDispo}
-        candidats={candidatsChauffe}
-        strcCount={strcDispo.length}
-        makiCount={makiDispo.length}
-        onPublish={askGenderThenPublish}
-        publishing={publishing}
-      />
+      {/* Pièces prévues : file du robot, 3/jour espacées */}
+      <EbayPostingCalendar candidats={candidatsPrevus} />
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">

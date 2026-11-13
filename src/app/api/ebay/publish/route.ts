@@ -124,6 +124,12 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Une pièce masquée sur le site ne part jamais sur eBay
+        if (produitData.hidden === true || produitData.forceDisplay === false) {
+          results.push({ productId, success: false, error: 'Masquée sur le site' })
+          continue
+        }
+
         if (produitData.ebayListingId) {
           results.push({ productId, success: false, error: 'Déjà publié sur eBay' })
           continue

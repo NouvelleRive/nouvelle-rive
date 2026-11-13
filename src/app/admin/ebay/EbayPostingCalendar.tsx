@@ -1,38 +1,19 @@
 // app/admin/ebay/EbayPostingCalendar.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { formatPrixEuro } from '@/lib/formatPrix'
 
 /**
- * Calendrier de re-publication eBay.
- * Compte fraîchement débloqué → montée en charge progressive pour ne PAS
- * redéclencher une restriction (cf. ban 130 annonces du 21/07).
- * Le robot (cron sync-ebay-luxe) doit suivre ce rythme jour par jour.
+ * Pièces prévues sur eBay : toutes les pièces postables, dans l'ordre où le robot
+ * les publie (les plus chères d'abord), 3 par jour à 10h, 14h et 18h — une à la fois,
+ * jamais en masse (cf. restriction de juillet 2026).
+ * Robot : cron pingEbaySync → /api/cron/sync-ebay-luxe?tous=1&max=1.
  */
 
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MOIS = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc']
-
-type PhaseDef = {
-  jusquA: number        // dernier jour (inclus) de la phase
-  phase: string
-  nb: number            // nb de pièces à poster ce jour
-  type: string
-  luxe: number          // nb de pièces luxe autorisées ce jour
-  bg: string
-  badge: string
-}
-
-// Rythme de sécurité sur 14 jours
-const PHASES: PhaseDef[] = [
-  { jusquA: 5,  phase: 'Chauffe',        nb: 3, luxe: 0, type: 'Non-luxe uniquement (< 150 €)',   bg: 'bg-green-50 border-green-200',  badge: 'bg-green-100 text-green-700' },
-  { jusquA: 10, phase: 'Montée',         nb: 4, luxe: 0, type: 'Non-luxe + milieu de gamme',      bg: 'bg-blue-50 border-blue-200',    badge: 'bg-blue-100 text-blue-700' },
-  { jusquA: 14, phase: 'Intro luxe',     nb: 3, luxe: 1, type: '1 pièce luxe max + 2 non-luxe',    bg: 'bg-yellow-50 border-yellow-200', badge: 'bg-yellow-100 text-yellow-800' },
-]
-
-function phasePourJour(n: number): PhaseDef {
-  return PHASES.find(p => n <= p.jusquA) ?? PHASES[PHASES.length - 1]
-}
+const CRENEAUX = [10, 14, 18]
+const AFFICHES = 30
 
 type Candidat = {
   id: string
@@ -41,161 +22,71 @@ type Candidat = {
   prix: number | null
   sku: string
   image: string | null
-  groupe: 'STRC' | 'MAKI' | 'LUXE'
 }
 
-export default function EbayPostingCalendar({
-  nonLuxeDispo,
-  luxeDispo,
-  candidats = [],
-  strcCount = 0,
-  makiCount = 0,
-  onPublish,
-  publishing = false,
-}: {
-  nonLuxeDispo: number
-  luxeDispo: number
-  candidats?: Candidat[]
-  strcCount?: number
-  makiCount?: number
-  onPublish?: (ids: string[]) => void
-  publishing?: boolean
-}) {
-  // Titre éditable (sauvegardé dans le navigateur)
-  const [titre, setTitre] = useState('Pièces prévues')
-  useEffect(() => {
-    const saved = localStorage.getItem('ebayCalendarTitre')
-    if (saved != null) setTitre(saved)
-  }, [])
-  const onTitreChange = (v: string) => {
-    setTitre(v)
-    localStorage.setItem('ebayCalendarTitre', v)
+// Date/heure prévue de la i-ème pièce de la file (0 = prochaine).
+function creneau(i: number): string {
+  const now = new Date()
+  const restantsAujourdhui = CRENEAUX.filter(h => h > now.getHours()).length
+  let jour: number, h: number
+  if (i < restantsAujourdhui) {
+    jour = 0
+    h = CRENEAUX[CRENEAUX.length - restantsAujourdhui + i]
+  } else {
+    const k = i - restantsAujourdhui
+    jour = 1 + Math.floor(k / CRENEAUX.length)
+    h = CRENEAUX[k % CRENEAUX.length]
   }
+  const d = new Date(now)
+  d.setDate(now.getDate() + jour)
+  const label = jour === 0 ? "Auj." : jour === 1 ? 'Demain' : `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`
+  return `${label} ${h}h`
+}
 
-  const today = new Date()
-
-  const jours = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
-    const ph = phasePourJour(i + 1)
-    return {
-      n: i + 1,
-      label: `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`,
-      isToday: i === 0,
-      ph,
-    }
-  })
-
-  const totalNonLuxe = jours.reduce((s, j) => s + (j.ph.nb - j.ph.luxe), 0)
-  const totalLuxe = jours.reduce((s, j) => s + j.ph.luxe, 0)
-
+export default function EbayPostingCalendar({ candidats = [] }: { candidats?: Candidat[] }) {
+  const jours = Math.ceil(candidats.length / CRENEAUX.length)
   return (
     <div className="bg-white border rounded-lg p-4">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
         <div>
-          <h2 className="font-bold text-sm flex items-center gap-2">
-            📅 Calendrier de re-publication
-            <span className="text-xs font-normal bg-red-100 text-red-700 px-2 py-0.5 rounded">
-              Compte en déblocage
-            </span>
-          </h2>
+          <h2 className="font-bold text-sm">📅 Pièces prévues</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Montée en charge sur 14 jours pour éviter une nouvelle restriction. Le robot suit ce rythme.
+            Le robot publie 3 pièces par jour, une à la fois : 10h, 14h et 18h. Les plus chères d&apos;abord.
           </p>
         </div>
-        <div className="text-xs text-gray-600 text-right">
-          <p>Stock prêt : <b>{nonLuxeDispo}</b> non-luxe · <b>{luxeDispo}</b> luxe</p>
-          <p className="text-gray-400">Plan 14 j : {totalNonLuxe} non-luxe + {totalLuxe} luxe</p>
-        </div>
+        <p className="text-xs text-gray-600 text-right">
+          <b>{candidats.length}</b> pièces postables · ~{jours} jours
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-7 gap-1.5">
-        {jours.map((j) => (
-          <div
-            key={j.n}
-            className={`border rounded-md p-2 text-center ${j.ph.bg} ${
-              j.isToday ? 'ring-2 ring-[#22209C]' : ''
-            }`}
-          >
-            <p className="text-[11px] font-medium text-gray-600 leading-tight">{j.label}</p>
-            <p className="text-2xl font-bold text-gray-800 leading-none my-1">{j.ph.nb}</p>
-            <p className="text-[10px] text-gray-500 leading-tight">
-              {j.ph.luxe > 0 ? `dont ${j.ph.luxe} luxe` : 'non-luxe'}
-            </p>
-            <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded ${j.ph.badge}`}>
-              {j.ph.phase}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Légende des phases */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-[11px] text-gray-600">
-        {PHASES.map((p) => (
-          <div key={p.phase} className="flex items-center gap-1.5">
-            <span className={`w-2.5 h-2.5 rounded-full ${p.badge.split(' ')[0]}`} />
-            <span><b>{p.phase}</b> — {p.type}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Pièces concrètes prévues pour la chauffe */}
-      {candidats.length > 0 && (
-        <div className="mt-4 border-t pt-3">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-            <input
-              value={titre}
-              onChange={(e) => onTitreChange(e.target.value)}
-              className="text-xs font-semibold text-gray-700 bg-transparent border border-transparent hover:border-gray-200 focus:border-gray-300 rounded px-1 py-0.5 focus:outline-none min-w-[140px]"
-              title="Cliquer pour modifier"
-            />
-            {onPublish && candidats.length > 0 && (
-              <button
-                onClick={() => onPublish(candidats.slice(0, 3).map(c => c.id))}
-                disabled={publishing}
-                className="px-3 py-1.5 bg-yellow-500 text-white rounded text-xs font-medium hover:bg-yellow-600 disabled:opacity-50"
-              >
-                {publishing ? '⏳ Publication...' : '🚀 Publier les 3 du jour'}
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-            {candidats.map((c, i) => {
-              const marque = c.marque || (c.groupe === 'STRC' ? 'Strass Chronique' : c.groupe === 'MAKI' ? 'MAKI' : 'Luxe')
-              const tagBg = c.groupe === 'STRC' ? 'bg-pink-500' : c.groupe === 'MAKI' ? 'bg-indigo-500' : 'bg-yellow-500'
-              return (
-                <div key={c.id} className="border rounded-md overflow-hidden bg-white">
-                  <div className="relative aspect-square bg-gray-100">
-                    {c.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.image} alt={c.nom} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">—</div>
-                    )}
-                    <span className="absolute top-1 left-1 text-[9px] bg-black/60 text-white px-1 rounded">J{Math.floor(i / 3) + 1}</span>
-                    <span className={`absolute top-1 right-1 text-[9px] text-white px-1 rounded ${tagBg}`}>
-                      {c.groupe}
-                    </span>
-                  </div>
-                  <div className="p-1.5">
-                    <p className="text-[10px] font-medium truncate">{c.nom}</p>
-                    <p className="text-[10px] text-gray-500 flex justify-between">
-                      <span className="truncate">{marque}</span>
-                      <b className="text-gray-700">{c.prix != null ? `${c.prix}€` : '—'}</b>
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+      {candidats.length === 0 ? (
+        <p className="text-xs text-gray-400">Aucune pièce postable en attente.</p>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {candidats.slice(0, AFFICHES).map((c, i) => (
+            <div key={c.id} className="border rounded-md overflow-hidden bg-white">
+              <div className="relative aspect-square bg-gray-100">
+                {c.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.image} alt={c.nom} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">—</div>
+                )}
+                <span className="absolute top-1 left-1 text-[9px] bg-black/60 text-white px-1 rounded">{creneau(i)}</span>
+              </div>
+              <div className="p-1.5">
+                <p className="text-[10px] font-medium truncate">{c.sku} · {c.nom}</p>
+                <p className="text-[10px] text-gray-500 flex justify-between gap-1">
+                  <span className="truncate">{c.marque || '—'}</span>
+                  <b className="text-gray-700">{c.prix != null ? formatPrixEuro(c.prix) : '—'}</b>
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-
-      {(nonLuxeDispo < totalNonLuxe) && (
-        <p className="mt-3 text-[11px] text-orange-700 bg-orange-50 border border-orange-200 rounded px-2 py-1.5">
-          ⚠️ Stock non-luxe insuffisant pour tenir la phase de chauffe ({nonLuxeDispo} dispo / {totalNonLuxe} prévues).
-          Ajoute des pièces &lt; 150 € (vêtements sans grande marque, accessoires) avant de lancer le robot.
-        </p>
+      {candidats.length > AFFICHES && (
+        <p className="text-[11px] text-gray-400 mt-2">+ {candidats.length - AFFICHES} autres ensuite.</p>
       )}
     </div>
   )
