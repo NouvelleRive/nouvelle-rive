@@ -17,7 +17,6 @@ export default function AdminEbayPage() {
   const [publishingId, setPublishingId] = useState<string | null>(null)
   const [genderModal, setGenderModal] = useState<{ productIds: string[] } | null>(null)
   const [filterBrand, setFilterBrand] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'published' | 'ready' | 'blocked'>('ready')
   const [search, setSearch] = useState('')
   const [filterChineuse, setFilterChineuse] = useState('')
 
@@ -149,13 +148,11 @@ useEffect(() => {
     })
   }
 
-  // 3 onglets : en ligne / prêtes (le robot les postera) / bloquées (avec la raison)
+  // En ligne / prêtes (calendrier du robot) / bloquées (problèmes à gérer, avec la raison)
   const enLigne = produitsEbay.filter(p => p.ebayListingId)
   const pretes = produitsEbay.filter(p => !p.ebayListingId && blocageEbay(p) === null)
   const bloquees = produitsEbay.filter(p => !p.ebayListingId && blocageEbay(p) !== null)
-  const produitsListe = filterStatus === 'published' ? enLigne : filterStatus === 'blocked' ? bloquees : pretes
 
-  const notPublishedCount = filterStatus === 'ready' ? pretes.length : 0
 
   const toggleAll = (checked: boolean) => {
     if (checked) {
@@ -235,6 +232,76 @@ useEffect(() => {
       })),
   [pretes])
 
+  // Une ligne de pièce (problèmes à gérer / en ligne)
+  const ligne = (p: any) => {
+          const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
+          const mainImage = getMainImage(p)
+          const isLuxury = getBrandPriority(p.marque) < 20
+          const isPublished = !!p.ebayListingId
+          const nbPhotos = compterPhotos(p)
+          const sexe = resoudreSexe(p)
+          const blocage = isPublished ? null : blocageEbay(p)
+
+          return (
+            <div
+              key={p.id}
+              className={`border rounded-lg p-3 flex gap-3 items-center ${
+                isPublished ? 'bg-green-50 border-green-200' : 'bg-white'
+              } ${isLuxury && !isPublished ? 'border-l-4 border-l-yellow-400' : ''}`}
+            >
+              {/* Photo */}
+              <div className="w-14 h-14 flex-shrink-0">
+                {mainImage ? (
+                  <img src={mainImage} alt={p.nom} className="w-14 h-14 object-cover rounded" />
+                ) : (
+                  <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">—</div>
+                )}
+              </div>
+
+              {/* Infos */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm truncate">{p.nom}</p>
+                  {isLuxury && (
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">LUXE</span>
+                  )}
+                  {p.madeIn && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{p.madeIn}</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 truncate">
+                  {p.marque || '—'} • {cat || '—'} • {p.taille || '—'}
+                </p>
+                {!isPublished && (
+                  <p className="text-[11px] mt-0.5 flex items-center gap-2 flex-wrap">
+                    <span className={nbPhotos === 0 ? 'text-red-600 font-medium' : 'text-gray-500'}>📷 {nbPhotos}</span>
+                    <span className={!sexe ? 'text-red-600 font-medium' : 'text-gray-500'}>{sexe || 'sexe ?'}</span>
+                    {blocage && (
+                      <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded font-medium">⛔ {blocage}</span>
+                    )}
+                    {blocage?.startsWith('Sexe inconnu') && (
+                      <>
+                        <button onClick={() => choisirSexe(p.id, 'men')} className="px-2 py-0.5 rounded bg-blue-500 text-white font-bold hover:bg-blue-600">H</button>
+                        <button onClick={() => choisirSexe(p.id, 'women')} className="px-2 py-0.5 rounded bg-pink-500 text-white font-bold hover:bg-pink-600">F</button>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {/* Prix */}
+              <div className="text-right w-20">
+                <p className="font-bold text-sm">{p.prix ? formatPrixEuro(p.prix) : '—'}</p>
+                <p className="text-xs text-gray-400 font-mono">{p.sku || '—'}</p>
+              </div>
+
+              {isPublished && (
+                <span className="w-20 text-right text-green-600 text-sm font-medium">✅ En ligne</span>
+              )}
+            </div>
+          )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -245,26 +312,8 @@ useEffect(() => {
 
   return (
     <div className="space-y-4">
-      {/* Pièces prévues : file du robot, 3/jour espacées */}
+      {/* Calendrier : pièces prévues, file du robot, 4/jour espacées */}
       <EbayPostingCalendar candidats={candidatsPrevus} />
-
-      {/* Onglets : en ligne / prêtes / bloquées */}
-      <div className="grid grid-cols-3 gap-4">
-        {([
-          { k: 'published', n: enLigne.length, label: 'En ligne sur eBay', on: 'bg-green-50 border-green-400', txt: 'text-green-600' },
-          { k: 'ready', n: pretes.length, label: 'Prêtes (le robot les poste)', on: 'bg-yellow-50 border-yellow-400', txt: 'text-yellow-600' },
-          { k: 'blocked', n: bloquees.length, label: 'Bloquées (voir la raison)', on: 'bg-red-50 border-red-400', txt: 'text-red-600' },
-        ] as const).map(t => (
-          <button
-            key={t.k}
-            onClick={() => { setFilterStatus(t.k); setSelectedIds(new Set()) }}
-            className={`border-2 rounded-lg p-4 text-center ${filterStatus === t.k ? t.on : 'bg-white border-gray-200'}`}
-          >
-            <p className={`text-3xl font-bold ${t.txt}`}>{t.n}</p>
-            <p className="text-sm text-gray-600">{t.label}</p>
-          </button>
-        ))}
-      </div>
 
       {/* Filtres */}
       <div className="flex flex-wrap gap-4 items-end bg-white border rounded-lg p-4">
@@ -304,128 +353,24 @@ useEffect(() => {
           />
         </div>
 
-        {selectedIds.size > 0 && (
-          <button
-            onClick={() => askGenderThenPublish(Array.from(selectedIds))}
-            disabled={publishing}
-            className="px-4 py-2 bg-yellow-500 text-white rounded font-medium hover:bg-yellow-600 disabled:opacity-50 text-sm"
-          >
-            {publishing ? '⏳ Publication...' : `🚀 Publier (${selectedIds.size})`}
-          </button>
-        )}
       </div>
 
-      {/* Sélection globale */}
-      {filterStatus === 'ready' && notPublishedCount > 0 && (
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <input
-            type="checkbox"
-            checked={selectedIds.size === notPublishedCount}
-            onChange={(e) => toggleAll(e.target.checked)}
-            className="accent-yellow-500"
-          />
-          <span>Tout sélectionner ({selectedIds.size}/{notPublishedCount})</span>
+      {/* Problèmes à gérer : pièces luxe qui ne peuvent pas partir, avec la raison */}
+      <div>
+        <h2 className="font-bold text-sm mb-2">⛔ Problèmes à gérer ({bloquees.length})</h2>
+        <div className="space-y-2">
+          {[...bloquees].sort(ordreEbay).map(ligne)}
+          {bloquees.length === 0 && <p className="text-center text-gray-400 py-4 text-sm">Aucun problème 🎉</p>}
         </div>
-      )}
+      </div>
 
-      {/* Liste des produits */}
-      <div className="space-y-2">
-        {produitsListe.map((p) => {
-          const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
-          const mainImage = getMainImage(p)
-          const isLuxury = getBrandPriority(p.marque) < 20
-          const isPublished = !!p.ebayListingId
-          const nbPhotos = compterPhotos(p)
-          const sexe = resoudreSexe(p)
-          const blocage = isPublished ? null : blocageEbay(p)
-
-          return (
-            <div
-              key={p.id}
-              className={`border rounded-lg p-3 flex gap-3 items-center ${
-                isPublished ? 'bg-green-50 border-green-200' : 'bg-white'
-              } ${isLuxury && !isPublished ? 'border-l-4 border-l-yellow-400' : ''}`}
-            >
-              {/* Checkbox */}
-              {!isPublished && (
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(p.id)}
-                  onChange={() => toggleSelection(p.id)}
-                  className="accent-yellow-500"
-                />
-              )}
-
-              {/* Photo */}
-              <div className="w-14 h-14 flex-shrink-0">
-                {mainImage ? (
-                  <img src={mainImage} alt={p.nom} className="w-14 h-14 object-cover rounded" />
-                ) : (
-                  <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">—</div>
-                )}
-              </div>
-
-              {/* Infos */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{p.nom}</p>
-                  {isLuxury && (
-                    <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">LUXE</span>
-                  )}
-                  {p.madeIn && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{p.madeIn}</span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 truncate">
-                  {p.marque || '—'} • {cat || '—'} • {p.taille || '—'}
-                </p>
-                {!isPublished && (
-                  <p className="text-[11px] mt-0.5 flex items-center gap-2 flex-wrap">
-                    <span className={nbPhotos === 0 ? 'text-red-600 font-medium' : 'text-gray-500'}>📷 {nbPhotos}</span>
-                    <span className={!sexe ? 'text-red-600 font-medium' : 'text-gray-500'}>{sexe || 'sexe ?'}</span>
-                    {blocage && (
-                      <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded font-medium">⛔ {blocage}</span>
-                    )}
-                    {blocage?.startsWith('Sexe inconnu') && (
-                      <>
-                        <button onClick={() => choisirSexe(p.id, 'men')} className="px-2 py-0.5 rounded bg-blue-500 text-white font-bold hover:bg-blue-600">H</button>
-                        <button onClick={() => choisirSexe(p.id, 'women')} className="px-2 py-0.5 rounded bg-pink-500 text-white font-bold hover:bg-pink-600">F</button>
-                      </>
-                    )}
-                    {!blocage && (
-                      <span className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-medium">✅ prête</span>
-                    )}
-                  </p>
-                )}
-              </div>
-
-              {/* Prix */}
-              <div className="text-right w-20">
-                <p className="font-bold text-sm">{p.prix ? formatPrixEuro(p.prix) : '—'}</p>
-                <p className="text-xs text-gray-400 font-mono">{p.sku || '—'}</p>
-              </div>
-
-              {/* Action */}
-              <div className="w-24 text-right">
-                {isPublished ? (
-                  <span className="text-green-600 text-sm font-medium">✅ Publié</span>
-                ) : (
-                  <button
-                    onClick={() => { setPublishingId(p.id); askGenderThenPublish([p.id]) }}
-                    disabled={publishing || publishingId === p.id}
-                    className="px-3 py-1.5 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600 disabled:opacity-50"
-                  >
-                    {publishingId === p.id ? '⏳' : '🚀 Publier'}
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
-
-        {produitsListe.length === 0 && (
-          <p className="text-center text-gray-400 py-8">Aucun produit trouvé</p>
-        )}
+      {/* En ligne sur eBay */}
+      <div>
+        <h2 className="font-bold text-sm mb-2">✅ En ligne sur eBay ({enLigne.length})</h2>
+        <div className="space-y-2">
+          {[...enLigne].sort(ordreEbay).map(ligne)}
+          {enLigne.length === 0 && <p className="text-center text-gray-400 py-4 text-sm">Aucune pièce en ligne</p>}
+        </div>
       </div>
 
       {/* Modal de sélection du genre */}
