@@ -31,15 +31,6 @@ export default function OperationsPage() {
 
   const stats = useMemo(() => statsOperation(produits), [produits])
   const pcts = Object.keys(stats.parPct).map(Number).sort((a, b) => a - b)
-  // Axe du graphique : tous les paliers possibles (remiseMin → plafond max, par pas)
-  const paliers = useMemo(() => {
-    const max = Math.max(...OPERATION_EN_COURS.plafonds.map(p => p.remiseMax), ...pcts)
-    const out: number[] = []
-    for (let v = OPERATION_EN_COURS.remiseMin; v <= max; v += OPERATION_EN_COURS.pas) out.push(v)
-    pcts.forEach(p => { if (!out.includes(p)) out.push(p) })
-    return out.sort((a, b) => a - b)
-  }, [pcts.join(',')])
-  const maxPieces = Math.max(1, ...Object.values(stats.parPct))
   const [survol, setSurvol] = useState<number | null>(null)
 
   return (
@@ -69,35 +60,54 @@ export default function OperationsPage() {
 
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-1">Répartition des pièces par remise</h3>
-              {pcts.length > 0 && (
-                <div className="mb-4">
-                  <div className="h-5 text-xs text-gray-600">
-                    {survol !== null ? `-${survol} % · ${stats.parPct[survol] || 0} pièce${(stats.parPct[survol] || 0) > 1 ? 's' : ''}` : ''}
+              {pcts.length > 0 && (() => {
+                // Camembert (anneau) : une part par % présent, teinte unique claire → foncée
+                // selon le % (magnitude), 2px de blanc entre les parts.
+                const total = stats.nbPieces
+                const R = 70, r = 42, C = 80
+                const teinte = (i: number) => {
+                  const t = pcts.length === 1 ? 1 : i / (pcts.length - 1)
+                  const mix = (a: number, b: number) => Math.round(a + (b - a) * t)
+                  return `rgb(${mix(184, 18)}, ${mix(183, 17)}, ${mix(236, 110)})`
+                }
+                let angle = -Math.PI / 2
+                const parts = pcts.map((p, i) => {
+                  const n = stats.parPct[p]
+                  const a0 = angle, a1 = angle + (n / total) * 2 * Math.PI
+                  angle = a1
+                  const large = a1 - a0 > Math.PI ? 1 : 0
+                  const pt = (rad: number, ang: number) => `${C + rad * Math.cos(ang)} ${C + rad * Math.sin(ang)}`
+                  const d = n === total
+                    ? `M ${C} ${C - R} A ${R} ${R} 0 1 1 ${C - 0.01} ${C - R} L ${C - 0.01} ${C - r} A ${r} ${r} 0 1 0 ${C} ${C - r} Z`
+                    : `M ${pt(R, a0)} A ${R} ${R} 0 ${large} 1 ${pt(R, a1)} L ${pt(r, a1)} A ${r} ${r} 0 ${large} 0 ${pt(r, a0)} Z`
+                  return { p, n, d, couleur: teinte(i) }
+                })
+                const actif = survol !== null ? parts.find(x => x.p === survol) : null
+                return (
+                  <div className="flex items-center gap-8 flex-wrap mb-4">
+                    <svg viewBox="0 0 160 160" width="180" height="180" role="img" aria-label="Répartition des pièces par pourcentage de remise">
+                      {parts.map(x => (
+                        <path key={x.p} d={x.d} fill={x.couleur} stroke="#fff" strokeWidth={2}
+                          opacity={survol === null || survol === x.p ? 1 : 0.45}
+                          onMouseEnter={() => setSurvol(x.p)} onMouseLeave={() => setSurvol(null)}>
+                          <title>{`-${x.p} % : ${x.n} pièce${x.n > 1 ? 's' : ''}`}</title>
+                        </path>
+                      ))}
+                      <text x={C} y={C - 2} textAnchor="middle" fontSize="20" fontWeight="600" fill="#111">{actif ? actif.n : total}</text>
+                      <text x={C} y={C + 14} textAnchor="middle" fontSize="9" fill="#6b7280">{actif ? `à -${actif.p} %` : 'pièces'}</text>
+                    </svg>
+                    <ul className="space-y-1 text-sm">
+                      {parts.map(x => (
+                        <li key={x.p} className="flex items-center gap-2" onMouseEnter={() => setSurvol(x.p)} onMouseLeave={() => setSurvol(null)}>
+                          <span className="inline-block w-3 h-3 rounded-sm" style={{ background: x.couleur }} />
+                          <span className="font-medium text-gray-800 w-12">-{x.p} %</span>
+                          <span className="text-gray-500">{x.n} pièce{x.n > 1 ? 's' : ''} · {Math.round((x.n / total) * 100)} %</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="flex items-end gap-[2px] h-40 border-b border-gray-300" role="img" aria-label="Nombre de pièces par pourcentage de remise">
-                    {paliers.map(p => {
-                      const n = stats.parPct[p] || 0
-                      return (
-                        <div
-                          key={p}
-                          className="flex-1 h-full flex flex-col justify-end items-center cursor-default"
-                          onMouseEnter={() => setSurvol(p)}
-                          onMouseLeave={() => setSurvol(null)}
-                        >
-                          {n > 0 && <span className="text-[11px] text-gray-600 mb-1">{n}</span>}
-                          <div
-                            className="w-full max-w-[40px] rounded-t-[4px]"
-                            style={{ height: `${(n / maxPieces) * 100}%`, minHeight: n > 0 ? 2 : 0, background: survol === p ? '#16146b' : '#22209C' }}
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div className="flex gap-[2px] mt-1">
-                    {paliers.map(p => <div key={p} className="flex-1 text-center text-[11px] text-gray-500">-{p}%</div>)}
-                  </div>
-                </div>
-              )}
+                )
+              })()}
               {pcts.length === 0 ? (
                 <p className="text-sm text-gray-400">Aucune pièce en réduction pour l&apos;instant.</p>
               ) : (
