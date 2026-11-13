@@ -151,7 +151,13 @@ useEffect(() => {
   // En ligne / prêtes (calendrier du robot) / bloquées (problèmes à gérer, avec la raison)
   const enLigne = produitsEbay.filter(p => p.ebayListingId)
   const pretes = produitsEbay.filter(p => !p.ebayListingId && blocageEbay(p) === null)
-  const bloquees = produitsEbay.filter(p => !p.ebayListingId && blocageEbay(p) !== null)
+  // À gérer : pièces luxe reçues et visibles qui ne partent pas à cause du sexe ou des photos
+  // (une pièce peut être dans les deux listes)
+  const aGerer = produitsEbay.filter((p: any) =>
+    !p.ebayListingId && p.recu === true && !p.statutRecuperation &&
+    p.hidden !== true && p.forceDisplay !== false)
+  const sexeACompleter = aGerer.filter(p => !resoudreSexe(p)).sort(ordreEbay)
+  const photosManquantes = aGerer.filter(p => compterPhotos(p) < 5).sort(ordreEbay)
 
 
   const toggleAll = (checked: boolean) => {
@@ -279,7 +285,7 @@ useEffect(() => {
                     {blocage && (
                       <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded font-medium">⛔ {blocage}</span>
                     )}
-                    {blocage?.startsWith('Sexe inconnu') && (
+                    {!isPublished && !sexe && (
                       <>
                         <button onClick={() => choisirSexe(p.id, 'men')} className="px-2 py-0.5 rounded bg-blue-500 text-white font-bold hover:bg-blue-600">H</button>
                         <button onClick={() => choisirSexe(p.id, 'women')} className="px-2 py-0.5 rounded bg-pink-500 text-white font-bold hover:bg-pink-600">F</button>
@@ -355,12 +361,21 @@ useEffect(() => {
 
       </div>
 
-      {/* Problèmes à gérer : pièces luxe qui ne peuvent pas partir, avec la raison */}
-      <div>
-        <h2 className="font-bold text-sm mb-2">⛔ Problèmes à gérer ({bloquees.length})</h2>
-        <div className="space-y-2">
-          {[...bloquees].sort(ordreEbay).map(ligne)}
-          {bloquees.length === 0 && <p className="text-center text-gray-400 py-4 text-sm">Aucun problème 🎉</p>}
+      {/* Problèmes à gérer : à gauche le sexe à compléter, à droite les photos manquantes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h2 className="font-bold text-sm mb-2">⚧ Sexe à compléter ({sexeACompleter.length})</h2>
+          <div className="space-y-2">
+            {sexeACompleter.map(ligne)}
+            {sexeACompleter.length === 0 && <p className="text-center text-gray-400 py-4 text-sm">Rien à compléter</p>}
+          </div>
+        </div>
+        <div>
+          <h2 className="font-bold text-sm mb-2">📷 Pas assez de photos — 5 min ({photosManquantes.length})</h2>
+          <div className="space-y-2">
+            {photosManquantes.map(ligne)}
+            {photosManquantes.length === 0 && <p className="text-center text-gray-400 py-4 text-sm">Rien à compléter</p>}
+          </div>
         </div>
       </div>
 
