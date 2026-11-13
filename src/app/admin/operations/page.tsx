@@ -33,6 +33,14 @@ export default function OperationsPage() {
   const stats = useMemo(() => statsOperation(produits), [produits])
   const pcts = Object.keys(stats.parPct).map(Number).sort((a, b) => a - b)
   const [survol, setSurvol] = useState<number | null>(null)
+  const [filtreTri, setFiltreTri] = useState('')
+  const [recherche, setRecherche] = useState('')
+  const piecesAffichees = useMemo(() => {
+    const q = recherche.trim().toLowerCase()
+    return produits.filter(estEngagee).filter((p: any) =>
+      (!filtreTri || String(p.trigramme || '').toUpperCase() === filtreTri) &&
+      (!q || [p.sku, p.nom, p.marque].some(v => String(v || '').toLowerCase().includes(q))))
+  }, [produits, filtreTri, recherche])
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -137,8 +145,17 @@ export default function OperationsPage() {
       {/* Pièces remisées — grille photo du site (réutilisée), sans filtres ni vidéos */}
       {!loading && stats.nbPieces > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <h3 className="text-sm font-semibold text-gray-700 px-6 pt-5 pb-3">Pièces en réduction ({stats.nbPieces})</h3>
-          <ProductGrid produits={produits.filter(estEngagee) as any} columns={4} showFilters={false} videoTrigrammeWhitelist={['__aucune__']} />
+          <div className="px-6 pt-5 pb-3 flex items-center gap-3 flex-wrap">
+            <h3 className="text-sm font-semibold text-gray-700 mr-auto">Pièces en réduction ({piecesAffichees.length})</h3>
+            <select value={filtreTri} onChange={e => setFiltreTri(e.target.value)} className="border border-gray-300 rounded px-2 py-1.5 text-sm">
+              <option value="">Toutes les chineuses</option>
+              {stats.parChineuse.map(c => (
+                <option key={c.trigramme} value={c.trigramme}>{(noms[c.trigramme] || c.trigramme).toUpperCase()}</option>
+              ))}
+            </select>
+            <input type="search" value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="Rechercher (SKU, nom, marque)" className="border border-gray-300 rounded px-2 py-1.5 text-sm w-56" />
+          </div>
+          <ProductGrid produits={piecesAffichees as any} columns={4} showFilters={false} videoTrigrammeWhitelist={['__aucune__']} badgeRemiseGros />
         </div>
       )}
     </div>

@@ -101,3 +101,13 @@ export function PrixBlackWeekGrille({ prix, remiseBlackWeek }: { prix: number; r
     </>
   )
 }
+
+/** Admin (page Opérations) : « -X % » en gros sur la photo, même hors période. */
+export function BadgeRemiseGros({ remise }: { remise?: number }) {
+  if (!remise || remise <= 0) return null
+  return (
+    <span style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: 36, fontWeight: 800, lineHeight: 1, padding: '8px 16px', fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+      -{remise} %
+    </span>
+  )
+}
