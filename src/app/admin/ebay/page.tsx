@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useAdmin } from '@/lib/admin/context'
-import { getBrandPriority } from '@/lib/admin/helpers'
+import { getBrandPriority, isMarqueLuxe } from '@/lib/admin/helpers'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import EbayPostingCalendar from './EbayPostingCalendar'
@@ -46,6 +46,7 @@ useEffect(() => {
 
   // Filtrer les produits actifs
   const produitsActifs = produitsFiltres.filter(p =>
+    isMarqueLuxe(p.marque) &&
     (p.quantite ?? 1) > 0 &&
     p.vendu !== true &&
     p.statut !== 'vendu' &&

@@ -138,12 +138,8 @@ export function canUseFashnAI(categorie: string): boolean {
 }
 
 // Marques de luxe (priorité eBay US)
-export const LUXURY_BRANDS = [
-  'hermès', 'hermes', 'chanel', 'louis vuitton', 'lv', 'dior', 'christian dior',
-  'céline', 'celine', 'yves saint laurent', 'ysl', 'saint laurent', 'gucci',
-  'burberry', 'givenchy', 'lanvin', 'nina ricci', 'balenciaga', 'bottega veneta',
-  'prada', 'fendi', 'valentino', 'loewe', 'cartier', 'van cleef', 'boucheron',
-]
+import { LUXURY_BRANDS } from '@/lib/marquesLuxe'
+export { LUXURY_BRANDS, isMarqueLuxe } from '@/lib/marquesLuxe'
 
 export function getBrandPriority(marque?: string): number {
   if (!marque) return 999
