@@ -14,7 +14,7 @@ import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { buildProduitSlug } from '@/lib/produitSlug'
 import { useLang, t, translateCategory, translateProductTitle, translateMaterial, translateColor, translateMotif, translateModele, translateSize, type Lang } from '@/lib/i18n'
 import { formatPrix } from '@/lib/formatPrix'
-import { PrixBlackWeekGrille, BadgeBlackWeek } from '@/components/PrixBlackWeek'
+import { PrixBlackWeekGrille, BadgeBlackWeek, BadgeRemiseGros } from '@/components/PrixBlackWeek'
 import { OPERATION_EN_COURS, remiseAffichee } from '@/lib/remiseOperation'
 import { getCloudinaryUrl, getCloudinarySrcSet, CLOUDINARY_GRID_SIZES } from '@/lib/cloudinary'
 import { trackSearch } from '@/lib/backstage'
@@ -128,10 +128,12 @@ interface ProductGridProps {
   facetSource?: Produit[]
   /** Notifie le parent qu'une recherche est active, pour qu'il suspende sa pagination. */
   onSearchActiveChange?: (active: boolean) => void
+  /** Admin : affiche en gros le % de remise sur la photo, même hors période. */
+  badgeRemiseGros?: boolean
 }
 
 
-export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist, facetSource, onSearchActiveChange }: ProductGridProps) {
+export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist, facetSource, onSearchActiveChange, badgeRemiseGros = false }: ProductGridProps) {
   const lang = useLang()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
@@ -771,7 +773,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
               onClick={() => sessionStorage.setItem('productGrid_scrollY', String(window.scrollY))}
             >
               <div className="aspect-square bg-white overflow-hidden relative">
-              <BadgeBlackWeek remiseBlackWeek={produit.remiseBlackWeek} taille={20} avecPct />
+              {badgeRemiseGros ? <BadgeRemiseGros remise={produit.remiseBlackWeek} /> : <BadgeBlackWeek remiseBlackWeek={produit.remiseBlackWeek} taille={20} avecPct />}
               {produit.imageUrls?.[0] ? (
                 <>
                   <img
