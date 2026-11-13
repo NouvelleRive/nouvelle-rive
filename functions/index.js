@@ -723,7 +723,7 @@ exports.pingEbaySync = functions
     } catch (err) {
       console.error('regenSitemap (from pingEbaySync) failed:', err)
     }
-    // 3. Publication eBay — 3 pièces/jour, UNE à la fois à 10h, 14h et 18h (Paris).
+    // 3. Publication eBay — 4 pièces/jour, UNE à la fois à 10h, 13h, 16h et 19h (Paris).
     //    File générale = toutes les pièces postables, les plus chères d'abord
     //    (/api/cron/sync-ebay-luxe?tous=1, même liste que « Pièces prévues » en admin).
     //    Jamais en masse : publier 130 annonces d'un coup avait valu la restriction
@@ -732,7 +732,7 @@ exports.pingEbaySync = functions
       const ebayHour = parseInt(new Intl.DateTimeFormat('en-US', {
         timeZone: 'Europe/Paris', hour: '2-digit', hour12: false,
       }).format(new Date()), 10)
-      if ([10, 14, 18].includes(ebayHour)) {
+      if ([10, 13, 16, 19].includes(ebayHour)) {
         const pubRes = await fetch('https://www.nouvellerive.eu/api/cron/sync-ebay-luxe?tous=1&max=1', {
           headers: secret ? { Authorization: `Bearer ${secret}` } : {},
         })

@@ -5,14 +5,14 @@ import { formatPrixEuro } from '@/lib/formatPrix'
 
 /**
  * Pièces prévues sur eBay : toutes les pièces postables, dans l'ordre où le robot
- * les publie (les plus chères d'abord), 3 par jour à 10h, 14h et 18h — une à la fois,
+ * les publie (les plus chères d'abord), 4 par jour à 10h, 13h, 16h et 19h — une à la fois,
  * jamais en masse (cf. restriction de juillet 2026).
  * Robot : cron pingEbaySync → /api/cron/sync-ebay-luxe?tous=1&max=1.
  */
 
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MOIS = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc']
-const CRENEAUX = [10, 14, 18]
+const CRENEAUX = [10, 13, 16, 19]
 const AFFICHES = 30
 
 type Candidat = {
@@ -51,7 +51,7 @@ export default function EbayPostingCalendar({ candidats = [] }: { candidats?: Ca
         <div>
           <h2 className="font-bold text-sm">📅 Pièces prévues</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Le robot publie 3 pièces par jour, une à la fois : 10h, 14h et 18h. Les plus chères d&apos;abord.
+            Le robot publie 4 pièces luxe par jour (marque luxe ou prix ≥ 450 €), une à la fois : 10h, 13h, 16h et 19h. Les plus chères d&apos;abord.
           </p>
         </div>
         <p className="text-xs text-gray-600 text-right">

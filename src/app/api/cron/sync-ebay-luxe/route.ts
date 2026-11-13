@@ -12,9 +12,9 @@
 // sans passer par les règles luxe, et ne retire RIEN. Sert aux files dédiées lentes
 // (ex. Vintage Therapy, 2/jour) branchées sur le cron pingEbaySync.
 //
-// Mode file générale (?tous=1) : toutes les pièces postables de marque LUXE
-// (lib/marquesLuxe, tous trigrammes, hors règles de la page luxe), les plus chères d'abord, publication seule, aucun retrait. Le cron
-// pingEbaySync l'appelle avec max=1 à 3 heures différentes → 3 pièces/jour espacées.
+// Mode file générale (?tous=1) : toutes les pièces postables LUXE (marque luxe OU prix ≥ 450 €,
+// lib/marquesLuxe ; tous trigrammes, hors règles de la page luxe), les plus chères d'abord, publication seule, aucun retrait. Le cron
+// pingEbaySync l'appelle avec max=1 à 4 heures différentes → 4 pièces/jour espacées.
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -31,7 +31,7 @@ import {
   getAccessToken,
   type EbayGender,
 } from '@/lib/ebay'
-import { isMarqueLuxe } from '@/lib/marquesLuxe'
+import { isPieceLuxe } from '@/lib/marquesLuxe'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
     const visible = isVisibleOnSite(p, tous ? { regles: [] } : config)
     // En mode trigramme on ignore les règles luxe : le périmètre, c'est le préfixe SKU.
     const eligible = tous
-      ? visible && isMarqueLuxe(p.marque)
+      ? visible && isPieceLuxe(p)
       : tri
       ? visible && (p.sku || '').toUpperCase().startsWith(tri)
       : visible && matchesLuxeRules(p, config, chineuses)

@@ -20,3 +20,12 @@ export function isMarqueLuxe(marque?: string | null): boolean {
     return s.includes(` ${bb} `) || s.includes(` ${bb}s `)
   })
 }
+
+// Seuil prix : au-delà, une pièce sans grande marque compte comme luxe pour eBay
+// (ex. fourrures, cuirs, pièces de créateur).
+export const PRIX_LUXE_MIN = 450
+
+// Pièce « luxe » pour eBay = marque luxe OU prix ≥ 450 €.
+export function isPieceLuxe(p: { marque?: string | null; prix?: number | null }): boolean {
+  return isMarqueLuxe(p.marque) || (Number(p.prix) || 0) >= PRIX_LUXE_MIN
+}
