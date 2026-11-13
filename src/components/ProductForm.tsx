@@ -18,7 +18,7 @@
   import { detectBagSizeName, getBagModelsForBrand } from '@/lib/bagSizes'
   import { isHousePurchaseTrigramme } from '@/lib/roles'
   import { margeTtcVersHt } from '@/lib/marge'
-  import { OPERATION_EN_COURS, plafondRemise, prixClient, choixRemise, periodeCourte } from '@/lib/remiseOperation'
+  import { OPERATION_EN_COURS, plafondPiece, prixClient, choixRemisePiece, periodeCourte } from '@/lib/remiseOperation'
   import { formatPrix } from '@/lib/formatPrix'
 
   // Conversion base64 robuste pour gros fichiers
@@ -1843,16 +1843,16 @@ async function compressImage(file: File): Promise<string> {
               </div>
 
               {/* Black Week */}
-              {typeof tauxCom === 'number' && (
+              {(typeof tauxCom === 'number' || isHousePurchaseTrigramme(trigramme)) && (
                 <div>
-                  <label className="block text-xs font-medium mb-1">{OPERATION_EN_COURS.label} (max {plafondRemise(OPERATION_EN_COURS, tauxCom)} %)</label>
+                  <label className="block text-xs font-medium mb-1">{OPERATION_EN_COURS.label} (max {plafondPiece(OPERATION_EN_COURS, { maison: isHousePurchaseTrigramme(trigramme), tauxCom })} %)</label>
                   <select
                     value={formData.remiseBlackWeek ?? '0'}
                     onChange={(e) => setFormData({ ...formData, remiseBlackWeek: e.target.value })}
                     className="w-full border border-black bg-black text-white rounded px-2 py-1.5 text-sm"
                   >
                     <option value="0">Aucune</option>
-                    {choixRemise(OPERATION_EN_COURS, tauxCom).map(v => (
+                    {choixRemisePiece(OPERATION_EN_COURS, { maison: isHousePurchaseTrigramme(trigramme), tauxCom }).map(v => (
                       <option key={v} value={String(v)}>-{v} %</option>
                     ))}
                   </select>

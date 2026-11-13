@@ -32,6 +32,8 @@ export type OperationRemise = {
   partNR: number
   /** Plafond de remise selon le taux de commission (%), du plus haut au plus bas. */
   plafonds: { tauxComMin: number; remiseMax: number }[]
+  /** Plafond de remise pour le stock maison (pièces achetées NR / ACH). */
+  plafondMaison: number
   /** Remise minimale proposée (%) et pas entre deux choix (ex. 10, 15, 20…). */
   remiseMin: number
   pas: number
@@ -48,6 +50,7 @@ export const BLACK_WEEK_2026: OperationRemise = {
     { tauxComMin: 30, remiseMax: 30 },
     { tauxComMin: 20, remiseMax: 20 },
   ],
+  plafondMaison: 50,
   remiseMin: 10,
   pas: 5,
 }
@@ -57,6 +60,20 @@ export const OPERATION_EN_COURS: OperationRemise = BLACK_WEEK_2026
 
 /** Libellé en capitales pour les badges (ex. « BLACK WEEK »). */
 export const libelleMaj = (op: OperationRemise) => op.label.toUpperCase()
+
+/** Plafond d'une pièce : stock maison (NR/ACH) → plafondMaison ; chineuse → selon sa commission. */
+export function plafondPiece(op: OperationRemise, opts: { maison?: boolean; tauxCom?: number }): number {
+  if (opts.maison) return op.plafondMaison
+  return typeof opts.tauxCom === 'number' ? plafondRemise(op, opts.tauxCom) : 0
+}
+
+/** Choix de remise proposés : remiseMin, +pas… jusqu'au plafond de la pièce. */
+export function choixRemisePiece(op: OperationRemise, opts: { maison?: boolean; tauxCom?: number }): number[] {
+  const max = plafondPiece(op, opts)
+  const out: number[] = []
+  for (let v = op.remiseMin; v <= max; v += op.pas) out.push(v)
+  return out
+}
 
 /** Choix de remise proposés à la chineuse : remiseMin, +pas… jusqu'au plafond. */
 export function choixRemise(op: OperationRemise, tauxCom: number): number[] {
