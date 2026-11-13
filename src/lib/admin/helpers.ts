@@ -139,7 +139,7 @@ export function canUseFashnAI(categorie: string): boolean {
 
 // Marques de luxe (priorité eBay US)
 import { LUXURY_BRANDS } from '@/lib/marquesLuxe'
-export { LUXURY_BRANDS, isMarqueLuxe, isPieceLuxe } from '@/lib/marquesLuxe'
+export { LUXURY_BRANDS, isMarqueLuxe, isPieceLuxe, ordreEbay } from '@/lib/marquesLuxe'
 
 export function getBrandPriority(marque?: string): number {
   if (!marque) return 999

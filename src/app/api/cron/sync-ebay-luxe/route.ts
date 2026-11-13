@@ -13,7 +13,7 @@
 // (ex. Vintage Therapy, 2/jour) branchées sur le cron pingEbaySync.
 //
 // Mode file générale (?tous=1) : toutes les pièces postables LUXE (marque luxe OU prix ≥ 450 €,
-// lib/marquesLuxe ; tous trigrammes, hors règles de la page luxe), les plus chères d'abord, publication seule, aucun retrait. Le cron
+// lib/marquesLuxe ; tous trigrammes, hors règles de la page luxe), sacs d'abord puis les plus chères, publication seule, aucun retrait. Le cron
 // pingEbaySync l'appelle avec max=1 à 4 heures différentes → 4 pièces/jour espacées.
 export const runtime = 'nodejs'
 
@@ -31,7 +31,7 @@ import {
   getAccessToken,
   type EbayGender,
 } from '@/lib/ebay'
-import { isPieceLuxe } from '@/lib/marquesLuxe'
+import { isPieceLuxe, ordreEbay } from '@/lib/marquesLuxe'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -191,8 +191,8 @@ export async function GET(req: NextRequest) {
     else if (!tri && !tous && !eligible && isOnEbay) toRemove.push(p)
   }
 
-  // File générale : les plus chères d'abord (même ordre que « Pièces prévues » en admin).
-  if (tous) toPublish.sort((a, b) => (b.prix ?? 0) - (a.prix ?? 0))
+  // File générale : sacs d'abord, puis les plus chères (même ordre que « Pièces prévues » en admin).
+  if (tous) toPublish.sort(ordreEbay)
 
   const publishBatch = toPublish.slice(0, max)
   const removeBatch = toRemove.slice(0, max)

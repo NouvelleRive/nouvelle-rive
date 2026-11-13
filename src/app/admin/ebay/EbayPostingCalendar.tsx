@@ -5,7 +5,7 @@ import { formatPrixEuro } from '@/lib/formatPrix'
 
 /**
  * Pièces prévues sur eBay : toutes les pièces postables, dans l'ordre où le robot
- * les publie (les plus chères d'abord), 4 par jour à 10h, 13h, 16h et 19h — une à la fois,
+ * les publie (sacs d'abord, puis les plus chères), 4 par jour à 10h, 13h, 16h et 19h — une à la fois,
  * jamais en masse (cf. restriction de juillet 2026).
  * Robot : cron pingEbaySync → /api/cron/sync-ebay-luxe?tous=1&max=1.
  */
@@ -51,7 +51,7 @@ export default function EbayPostingCalendar({ candidats = [] }: { candidats?: Ca
         <div>
           <h2 className="font-bold text-sm">📅 Pièces prévues</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Le robot publie 4 pièces luxe par jour (marque luxe ou prix ≥ 450 €), une à la fois : 10h, 13h, 16h et 19h. Les plus chères d&apos;abord.
+            Le robot publie 4 pièces luxe par jour (marque luxe ou prix ≥ 450 €), une à la fois : 10h, 13h, 16h et 19h. Les sacs d&apos;abord, puis les plus chères.
           </p>
         </div>
         <p className="text-xs text-gray-600 text-right">

@@ -29,3 +29,19 @@ export const PRIX_LUXE_MIN = 450
 export function isPieceLuxe(p: { marque?: string | null; prix?: number | null }): boolean {
   return isMarqueLuxe(p.marque) || (Number(p.prix) || 0) >= PRIX_LUXE_MIN
 }
+
+// Sac ? (catégorie « … - Sac », ou nom qui commence par Sac/Cabas/Pochette).
+// Sert à poster les sacs en priorité sur eBay.
+export function isSac(p: { categorie?: unknown; nom?: string | null }): boolean {
+  const c: any = p.categorie
+  const cat = (typeof c === 'object' && c ? c.label : c) || ''
+  if (/\bsacs?\b/i.test(String(cat))) return true
+  return /^\s*(sac|cabas|pochette)\b/i.test(p.nom || '')
+}
+
+// Ordre de publication eBay : sacs d'abord, puis les plus chères.
+export function ordreEbay(a: any, b: any): number {
+  const sa = isSac(a) ? 0 : 1, sb = isSac(b) ? 0 : 1
+  if (sa !== sb) return sa - sb
+  return (b.prix ?? 0) - (a.prix ?? 0)
+}

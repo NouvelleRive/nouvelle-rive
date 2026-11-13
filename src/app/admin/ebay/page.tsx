@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useAdmin } from '@/lib/admin/context'
-import { getBrandPriority, isPieceLuxe } from '@/lib/admin/helpers'
+import { getBrandPriority, isPieceLuxe, ordreEbay } from '@/lib/admin/helpers'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import EbayPostingCalendar from './EbayPostingCalendar'
@@ -224,7 +224,7 @@ useEffect(() => {
   // (jamais une pièce masquée), reçue, sexe connu, photos suffisantes.
   const candidatsPrevus = useMemo(() =>
     [...pretes]
-      .sort((a, b) => (b.prix ?? 0) - (a.prix ?? 0))
+      .sort(ordreEbay)
       .map(p => ({
         id: p.id,
         nom: p.nom || '—',
