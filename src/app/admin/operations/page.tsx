@@ -31,6 +31,16 @@ export default function OperationsPage() {
 
   const stats = useMemo(() => statsOperation(produits), [produits])
   const pcts = Object.keys(stats.parPct).map(Number).sort((a, b) => a - b)
+  // Axe du graphique : tous les paliers possibles (remiseMin → plafond max, par pas)
+  const paliers = useMemo(() => {
+    const max = Math.max(...OPERATION_EN_COURS.plafonds.map(p => p.remiseMax), ...pcts)
+    const out: number[] = []
+    for (let v = OPERATION_EN_COURS.remiseMin; v <= max; v += OPERATION_EN_COURS.pas) out.push(v)
+    pcts.forEach(p => { if (!out.includes(p)) out.push(p) })
+    return out.sort((a, b) => a - b)
+  }, [pcts.join(',')])
+  const maxPieces = Math.max(1, ...Object.values(stats.parPct))
+  const [survol, setSurvol] = useState<number | null>(null)
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -58,7 +68,36 @@ export default function OperationsPage() {
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Détail par remise</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">Répartition des pièces par remise</h3>
+              {pcts.length > 0 && (
+                <div className="mb-4">
+                  <div className="h-5 text-xs text-gray-600">
+                    {survol !== null ? `-${survol} % · ${stats.parPct[survol] || 0} pièce${(stats.parPct[survol] || 0) > 1 ? 's' : ''}` : ''}
+                  </div>
+                  <div className="flex items-end gap-[2px] h-40 border-b border-gray-300" role="img" aria-label="Nombre de pièces par pourcentage de remise">
+                    {paliers.map(p => {
+                      const n = stats.parPct[p] || 0
+                      return (
+                        <div
+                          key={p}
+                          className="flex-1 h-full flex flex-col justify-end items-center cursor-default"
+                          onMouseEnter={() => setSurvol(p)}
+                          onMouseLeave={() => setSurvol(null)}
+                        >
+                          {n > 0 && <span className="text-[11px] text-gray-600 mb-1">{n}</span>}
+                          <div
+                            className="w-full max-w-[40px] rounded-t-[4px]"
+                            style={{ height: `${(n / maxPieces) * 100}%`, minHeight: n > 0 ? 2 : 0, background: survol === p ? '#16146b' : '#22209C' }}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="flex gap-[2px] mt-1">
+                    {paliers.map(p => <div key={p} className="flex-1 text-center text-[11px] text-gray-500">-{p}%</div>)}
+                  </div>
+                </div>
+              )}
               {pcts.length === 0 ? (
                 <p className="text-sm text-gray-400">Aucune pièce en réduction pour l&apos;instant.</p>
               ) : (
