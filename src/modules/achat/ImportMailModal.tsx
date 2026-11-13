@@ -84,6 +84,8 @@ export type ItemFields = {
   // Spécifique Fleek : un item = un LOT de N pièces.
   quantiteLot?: number
   prixLot?: number
+  /** Décoché dans l'aperçu (ex. lot pas reçu) → pas créé */
+  exclu?: boolean
 }
 
 type Step = 'paste' | 'preview' | 'creating' | 'done'
@@ -105,11 +107,12 @@ export const ItemCard = memo(function ItemCard({
 }) {
   const isFleek = item.provenance === 'fleek'
   return (
-    <div className="border rounded-xl p-4 bg-gray-50">
+    <div className={`border rounded-xl p-4 bg-gray-50 ${item.exclu ? 'opacity-40' : ''}`}>
       {total > 1 && (
-        <div className="text-xs font-semibold text-[#09B1BA] mb-2">
-          {isFleek ? `Lot ${index + 1}/${total}` : `Pièce ${index + 1}/${total}`}
-        </div>
+        <label className="flex items-center gap-2 text-xs font-semibold text-[#09B1BA] mb-2 cursor-pointer">
+          <input type="checkbox" checked={!item.exclu} onChange={(e) => onPatch(index, { exclu: !e.target.checked })} />
+          {isFleek ? `Lot ${index + 1}/${total}` : `Pièce ${index + 1}/${total}`} — créer
+        </label>
       )}
       {isFleek && (
         <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
@@ -336,8 +339,14 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
 
   const handleCreate = async () => {
     // validation : tous les champs obligatoires doivent être remplis avant création
+    const aCreer = items.filter((it) => !it.exclu)
+    if (aCreer.length === 0) {
+      setErrorMsg('Aucune pièce cochée.')
+      return
+    }
     for (let i = 0; i < items.length; i++) {
       const it = items[i]
+      if (it.exclu) continue
       const isFleek = it.provenance === 'fleek'
       const prefix = items.length > 1 ? (isFleek ? `Lot ${i + 1} : ` : `Pièce ${i + 1} : `) : ''
       if (!it.titre?.trim()) {
@@ -387,7 +396,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
-          validatedItems: items,
+          validatedItems: aCreer,
           targetChineuse: targetChineuse || null,
         }),
       })
@@ -397,7 +406,7 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
         setStep('preview')
         return
       }
-      setResultMsg(`✓ ${items.length} pièce(s) créée(s)`)
+      setResultMsg(`✓ ${aCreer.length} pièce(s) créée(s)`)
       setStep('done')
     } catch (e: any) {
       setErrorMsg(e?.message || 'Erreur inattendue')
@@ -495,11 +504,12 @@ export default function ImportMailModal({ onClose, targetChineuse, categories = 
               {items.map((it, i) => {
                 const isFleek = it.provenance === 'fleek'
                 return (
-                <div key={i} className="border rounded-xl p-4 bg-gray-50">
+                <div key={i} className={`border rounded-xl p-4 bg-gray-50 ${it.exclu ? 'opacity-40' : ''}`}>
                   {items.length > 1 && (
-                    <div className="text-xs font-semibold text-[#09B1BA] mb-2">
-                      {isFleek ? `Lot ${i + 1}/${items.length}` : `Pièce ${i + 1}/${items.length}`}
-                    </div>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-[#09B1BA] mb-2 cursor-pointer">
+                      <input type="checkbox" checked={!it.exclu} onChange={(e) => updateItem(i, { exclu: !e.target.checked })} />
+                      {isFleek ? `Lot ${i + 1}/${items.length}` : `Pièce ${i + 1}/${items.length}`} — créer
+                    </label>
                   )}
                   {isFleek && (
                     <div className="mb-3 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">

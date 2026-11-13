@@ -37,8 +37,11 @@ export default function AchatPreviewSection({
 
   const handleCreate = async () => {
     // Validation identique à l'ancienne modal
+    const aCreer = items.filter((it) => !it.exclu)
+    if (aCreer.length === 0) { setErrorMsg('Aucune pièce cochée.'); return }
     for (let i = 0; i < items.length; i++) {
       const it = items[i]
+      if (it.exclu) continue
       const isFleek = it.provenance === 'fleek'
       const prefix = items.length > 1 ? (isFleek ? `Lot ${i + 1} : ` : `Pièce ${i + 1} : `) : ''
       if (!it.titre?.trim()) { setErrorMsg(`${prefix}le titre est obligatoire.`); return }
@@ -63,7 +66,7 @@ export default function AchatPreviewSection({
       const res = await fetch('/api/achat/import-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ validatedItems: items, targetChineuse }),
+        body: JSON.stringify({ validatedItems: aCreer, targetChineuse }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json.ok === false) {
