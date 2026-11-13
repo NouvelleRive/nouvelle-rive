@@ -1,6 +1,6 @@
 'use client'
 // Page admin « Opérations » : suivi de l'opération de remise en cours
-// (lib/remiseOperation). Données = caches produits/chineuses (0 lecture Firestore).
+// (lib/remiseOperation). Pièces remisées lues en direct (/api/admin/operations).
 import { useEffect, useMemo, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
 import { OPERATION_EN_COURS, statsOperation, periodeCourte, type ProduitOperation } from '@/lib/remiseOperation'
@@ -16,7 +16,7 @@ export default function OperationsPage() {
         const token = await auth.currentUser?.getIdToken()
         const headers = token ? { Authorization: `Bearer ${token}` } : undefined
         const [pRes, cRes] = await Promise.all([
-          fetch('/api/admin/produits-full', { headers, cache: 'no-store' }),
+          fetch('/api/admin/operations', { headers, cache: 'no-store' }),
           fetch('/api/admin/chineuses-full', { headers }),
         ])
         const p = pRes.ok ? await pRes.json() : { produits: [] }
