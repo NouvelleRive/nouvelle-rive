@@ -1209,7 +1209,7 @@
                           </button>
                         )}
                         {showWhatnot && isAdmin && (
-                          <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#FF6B00] text-white rounded-lg text-sm hover:bg-[#e55f00] transition-colors">
+                          <button onClick={() => setImportModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#F5C842] text-black rounded-lg text-sm hover:bg-[#e5b832] transition-colors">
                             Fleek
                           </button>
                         )}
