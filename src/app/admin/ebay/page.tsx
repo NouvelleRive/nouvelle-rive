@@ -136,8 +136,7 @@ useEffect(() => {
     if (p.statutRecuperation) return 'Signalée à récupérer'
     const nb = compterPhotos(p)
     if (nb === 0) return 'Aucune photo'
-    if (!p.videoUrl && nb < 4) return `${nb} photo(s) — il en faut 4`
-    if (!p.videoUrl && (p.prix || 0) > 300 && nb < 5) return `${nb} photos — il en faut 5 au-dessus de 300 €`
+    if (nb < 5) return `${nb} photo(s) — il en faut 5`
     if (!resoudreSexe(p)) return 'Sexe inconnu (chineuse unisexe / trigramme inconnu)'
     return null
   }

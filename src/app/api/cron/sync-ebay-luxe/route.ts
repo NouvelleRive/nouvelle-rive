@@ -98,11 +98,9 @@ function isVisibleOnSite(p: any, config: LuxeConfig): boolean {
 // Garde-fou anti-contrefaçon de publishToEbay, évalué en amont pour ne pas
 // bloquer le quota `max` avec des pièces qui échoueront à tous les coups.
 function passePhotos(p: any): boolean {
+  // 5 photos minimum, vidéo ou pas (même règle que publishToEbay).
   const nbPhotos = Array.isArray(p.imageUrls) ? p.imageUrls.length : (p.imageUrl ? 1 : 0)
-  if (p.videoUrl) return true
-  if (nbPhotos < 4) return false
-  if ((p.prix || 0) > 300 && nbPhotos < 5) return false
-  return true
+  return nbPhotos >= 5
 }
 
 function matchesLuxeRules(p: any, config: LuxeConfig, chineuses: Chineuse[]): boolean {
@@ -184,7 +182,7 @@ export async function GET(req: NextRequest) {
       // Sans genre, publishToEbay échouerait en GENDER_REQUIRED et bloquerait
       // le quota `max` à chaque passage : on les écarte pour que la file avance.
       if (!resolveGender(p)) sansGenre.push(p.sku || p.id)
-      // Idem pour le garde-fou anti-contrefaçon (4 photos, 5 au-dessus de 300 €) :
+      // Idem pour le garde-fou anti-contrefaçon (5 photos min) :
       // ces pièces échoueraient en boucle et gèleraient le quota.
       else if (!passePhotos(p)) sansPhotos.push(p.sku || p.id)
       else toPublish.push(p)
