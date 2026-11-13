@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useAdmin } from '@/lib/admin/context'
 import { getBrandPriority } from '@/lib/admin/helpers'
 import { db } from '@/lib/firebaseConfig'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore'
 import EbayPostingCalendar from './EbayPostingCalendar'
 import { formatPrixEuro } from '@/lib/formatPrix'
 
@@ -20,6 +20,17 @@ export default function AdminEbayPage() {
   const [filterStatus, setFilterStatus] = useState<'published' | 'ready' | 'blocked'>('ready')
   const [search, setSearch] = useState('')
   const [filterChineuse, setFilterChineuse] = useState('')
+
+  // Sexe choisi via les boutons H/F (affichage immédiat, sans recharger la page)
+  const [genreLocal, setGenreLocal] = useState<Record<string, 'women' | 'men'>>({})
+  const choisirSexe = async (id: string, g: 'women' | 'men') => {
+    try {
+      await updateDoc(doc(db, 'produits', id), { gender: g })
+      setGenreLocal(prev => ({ ...prev, [id]: g }))
+    } catch (err: any) {
+      alert(`❌ Sexe non enregistré : ${err?.message || 'erreur'}`)
+    }
+  }
 
   const [chineusesList, setChineusesList] = useState<{trigramme: string, wearType: string}[]>([])
 
@@ -106,6 +117,8 @@ useEffect(() => {
 
   // Sexe résolu comme à la publi : champ gender du produit, sinon wearType de la chineuse
   const resoudreSexe = (p: any): 'Femme' | 'Homme' | null => {
+    if (genreLocal[p.id] === 'women') return 'Femme'
+    if (genreLocal[p.id] === 'men') return 'Homme'
     if (p.gender === 'women') return 'Femme'
     if (p.gender === 'men') return 'Homme'
     const tri = (p.chineuse || p.trigramme || p.sku?.match(/^[A-Z]+/)?.[0] || '').toUpperCase()
@@ -372,6 +385,12 @@ useEffect(() => {
                     <span className={!sexe ? 'text-red-600 font-medium' : 'text-gray-500'}>{sexe || 'sexe ?'}</span>
                     {blocage && (
                       <span className="bg-red-50 text-red-700 px-1.5 py-0.5 rounded font-medium">⛔ {blocage}</span>
+                    )}
+                    {blocage?.startsWith('Sexe inconnu') && (
+                      <>
+                        <button onClick={() => choisirSexe(p.id, 'men')} className="px-2 py-0.5 rounded bg-blue-500 text-white font-bold hover:bg-blue-600">H</button>
+                        <button onClick={() => choisirSexe(p.id, 'women')} className="px-2 py-0.5 rounded bg-pink-500 text-white font-bold hover:bg-pink-600">F</button>
+                      </>
                     )}
                     {!blocage && (
                       <span className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-medium">✅ prête</span>
