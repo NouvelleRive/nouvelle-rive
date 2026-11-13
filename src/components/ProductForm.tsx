@@ -1509,7 +1509,7 @@ async function compressImage(file: File): Promise<string> {
         {/* === ENCART IMPORTER (Excel + Vinted) === */}
         {mode === 'create' && showExcelImport && onExcelImport && (() => {
           // Excel (toujours) + Vinted optionnel → on calcule le nb de colonnes.
-          const nbCols = 1 + (onVintedImport ? 1 : 0) + (onFleekImport ? 1 : 0)
+          const nbCols = 1 + (onVintedImport ? 1 : 0) + (onWhatnotImport ? 1 : 0) + (onFleekImport ? 1 : 0)
           const gridClass =
             nbCols === 4 ? 'grid-cols-4'
             : nbCols === 3 ? 'grid-cols-3'
@@ -1535,6 +1535,15 @@ async function compressImage(file: File): Promise<string> {
                   className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#09B1BA] text-white rounded-lg text-sm hover:bg-[#078a91] transition-colors"
                 >
                   Vinted
+                </button>
+              )}
+              {onWhatnotImport && (
+                <button
+                  type="button"
+                  onClick={onWhatnotImport}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-[#FFCD2D] text-black rounded-lg text-sm hover:bg-[#f0c020] transition-colors"
+                >
+                  Whatnot
                 </button>
               )}
               {onFleekImport && (
