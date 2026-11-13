@@ -7,6 +7,7 @@ import { getBrandPriority } from '@/lib/admin/helpers'
 import { db } from '@/lib/firebaseConfig'
 import { collection, onSnapshot } from 'firebase/firestore'
 import EbayPostingCalendar from './EbayPostingCalendar'
+import { formatPrixEuro } from '@/lib/formatPrix'
 
 export default function AdminEbayPage() {
   const { produitsFiltres, loadData, loading } = useAdmin()
@@ -16,7 +17,7 @@ export default function AdminEbayPage() {
   const [publishingId, setPublishingId] = useState<string | null>(null)
   const [genderModal, setGenderModal] = useState<{ productIds: string[] } | null>(null)
   const [filterBrand, setFilterBrand] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'not_published'>('not_published')
+  const [filterStatus, setFilterStatus] = useState<'published' | 'ready' | 'blocked'>('ready')
   const [search, setSearch] = useState('')
   const [filterChineuse, setFilterChineuse] = useState('')
 
@@ -54,12 +55,6 @@ useEffect(() => {
   const produitsEbay = useMemo(() => {
     let result = [...produitsActifs]
 
-    if (filterStatus === 'published') {
-      result = result.filter(p => p.ebayListingId)
-    } else if (filterStatus === 'not_published') {
-      result = result.filter(p => !p.ebayListingId)
-    }
-
     if (filterBrand) {
       result = result.filter(p => 
         p.marque?.toLowerCase().includes(filterBrand.toLowerCase())
@@ -91,7 +86,7 @@ useEffect(() => {
     })
 
     return result
-  }, [produitsActifs, filterStatus, filterBrand, search, filterChineuse])
+  }, [produitsActifs, filterBrand, search, filterChineuse])
 
   const getMainImage = (p: any): string | null => {
     if (p.photos?.face) return p.photos.face
@@ -122,9 +117,13 @@ useEffect(() => {
 
   // Raison qui empêche la publication eBay (null = prête à publier)
   const blocageEbay = (p: any): string | null => {
+    if (p.hidden === true || p.forceDisplay === false) return 'Masquée sur le site'
     if (p.recu !== true) return 'Pas encore reçue en boutique'
     if (p.statutRecuperation) return 'Signalée à récupérer'
-    if (compterPhotos(p) === 0) return 'Aucune photo'
+    const nb = compterPhotos(p)
+    if (nb === 0) return 'Aucune photo'
+    if (!p.videoUrl && nb < 4) return `${nb} photo(s) — il en faut 4`
+    if (!p.videoUrl && (p.prix || 0) > 300 && nb < 5) return `${nb} photos — il en faut 5 au-dessus de 300 €`
     if (!resoudreSexe(p)) return 'Sexe inconnu (chineuse unisexe / trigramme inconnu)'
     return null
   }
@@ -137,11 +136,17 @@ useEffect(() => {
     })
   }
 
-  const notPublishedCount = produitsEbay.filter(p => !p.ebayListingId).length
+  // 3 onglets : en ligne / prêtes (le robot les postera) / bloquées (avec la raison)
+  const enLigne = produitsEbay.filter(p => p.ebayListingId)
+  const pretes = produitsEbay.filter(p => !p.ebayListingId && blocageEbay(p) === null)
+  const bloquees = produitsEbay.filter(p => !p.ebayListingId && blocageEbay(p) !== null)
+  const produitsListe = filterStatus === 'published' ? enLigne : filterStatus === 'blocked' ? bloquees : pretes
+
+  const notPublishedCount = filterStatus === 'ready' ? pretes.length : 0
 
   const toggleAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(produitsEbay.filter(p => !p.ebayListingId).map(p => p.id)))
+      setSelectedIds(new Set(pretes.map(p => p.id)))
     } else {
       setSelectedIds(new Set())
     }
@@ -200,23 +205,12 @@ useEffect(() => {
     setGenderModal({ productIds })
   }
 
-  // Stats
-  const publishedCount = produitsActifs.filter(p => p.ebayListingId).length
-  const totalCount = produitsActifs.length
 
   // Pièces prévues = toutes les pièces postables, dans l'ordre du robot (plus chères
   // d'abord). Mêmes critères que /api/cron/sync-ebay-luxe?tous=1 : visible sur le site
   // (jamais une pièce masquée), reçue, sexe connu, photos suffisantes.
   const candidatsPrevus = useMemo(() =>
-    produitsActifs
-      .filter((p: any) => {
-        if (p.ebayListingId || p.vendu === true) return false
-        if (p.hidden === true || p.forceDisplay === false) return false
-        if (blocageEbay(p) !== null) return false
-        const nb = compterPhotos(p)
-        if (!p.videoUrl && (nb < 4 || ((p.prix || 0) > 300 && nb < 5))) return false
-        return true
-      })
+    [...pretes]
       .sort((a, b) => (b.prix ?? 0) - (a.prix ?? 0))
       .map(p => ({
         id: p.id,
@@ -226,7 +220,7 @@ useEffect(() => {
         sku: p.sku || '',
         image: getMainImage(p),
       })),
-  [produitsActifs, chineusesList])
+  [pretes])
 
   if (loading) {
     return (
@@ -241,37 +235,26 @@ useEffect(() => {
       {/* Pièces prévues : file du robot, 3/jour espacées */}
       <EbayPostingCalendar candidats={candidatsPrevus} />
 
-      {/* Stats */}
+      {/* Onglets : en ligne / prêtes / bloquées */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-          <p className="text-3xl font-bold text-yellow-600">{publishedCount}</p>
-          <p className="text-sm text-gray-600">Publiés sur eBay</p>
-        </div>
-        <div className="bg-gray-50 border rounded-lg p-4 text-center">
-          <p className="text-3xl font-bold text-gray-600">{totalCount - publishedCount}</p>
-          <p className="text-sm text-gray-600">En attente</p>
-        </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-          <p className="text-3xl font-bold text-green-600">{totalCount}</p>
-          <p className="text-sm text-gray-600">Total actifs</p>
-        </div>
+        {([
+          { k: 'published', n: enLigne.length, label: 'En ligne sur eBay', on: 'bg-green-50 border-green-400', txt: 'text-green-600' },
+          { k: 'ready', n: pretes.length, label: 'Prêtes (le robot les poste)', on: 'bg-yellow-50 border-yellow-400', txt: 'text-yellow-600' },
+          { k: 'blocked', n: bloquees.length, label: 'Bloquées (voir la raison)', on: 'bg-red-50 border-red-400', txt: 'text-red-600' },
+        ] as const).map(t => (
+          <button
+            key={t.k}
+            onClick={() => { setFilterStatus(t.k); setSelectedIds(new Set()) }}
+            className={`border-2 rounded-lg p-4 text-center ${filterStatus === t.k ? t.on : 'bg-white border-gray-200'}`}
+          >
+            <p className={`text-3xl font-bold ${t.txt}`}>{t.n}</p>
+            <p className="text-sm text-gray-600">{t.label}</p>
+          </button>
+        ))}
       </div>
 
       {/* Filtres */}
       <div className="flex flex-wrap gap-4 items-end bg-white border rounded-lg p-4">
-        <div className="flex-1 min-w-[120px]">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Statut eBay</label>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="w-full border rounded px-3 py-2 text-sm"
-          >
-            <option value="not_published">Non publiés</option>
-            <option value="published">Publiés</option>
-            <option value="all">Tous</option>
-          </select>
-        </div>
-
         <div className="flex-1 min-w-[120px]">
           <label className="block text-xs font-medium text-gray-600 mb-1">Marque</label>
           <input
@@ -320,7 +303,7 @@ useEffect(() => {
       </div>
 
       {/* Sélection globale */}
-      {filterStatus !== 'published' && notPublishedCount > 0 && (
+      {filterStatus === 'ready' && notPublishedCount > 0 && (
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <input
             type="checkbox"
@@ -334,7 +317,7 @@ useEffect(() => {
 
       {/* Liste des produits */}
       <div className="space-y-2">
-        {produitsEbay.map((p) => {
+        {produitsListe.map((p) => {
           const cat = typeof p.categorie === 'object' ? p.categorie?.label : p.categorie
           const mainImage = getMainImage(p)
           const isLuxury = getBrandPriority(p.marque) < 20
@@ -399,7 +382,7 @@ useEffect(() => {
 
               {/* Prix */}
               <div className="text-right w-20">
-                <p className="font-bold text-sm">{p.prix ? `${p.prix}€` : '—'}</p>
+                <p className="font-bold text-sm">{p.prix ? formatPrixEuro(p.prix) : '—'}</p>
                 <p className="text-xs text-gray-400 font-mono">{p.sku || '—'}</p>
               </div>
 
@@ -421,7 +404,7 @@ useEffect(() => {
           )
         })}
 
-        {produitsEbay.length === 0 && (
+        {produitsListe.length === 0 && (
           <p className="text-center text-gray-400 py-8">Aucun produit trouvé</p>
         )}
       </div>
