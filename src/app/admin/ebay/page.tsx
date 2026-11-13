@@ -35,6 +35,7 @@ useEffect(() => {
   // Filtrer les produits actifs
   const produitsActifs = produitsFiltres.filter(p =>
     (p.quantite ?? 1) > 0 &&
+    p.vendu !== true &&
     p.statut !== 'vendu' &&
     p.statut !== 'supprime' &&
     p.statut !== 'retour'
