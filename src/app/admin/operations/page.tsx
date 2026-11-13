@@ -3,10 +3,11 @@
 // (lib/remiseOperation). Pièces remisées lues en direct (/api/admin/operations).
 import { useEffect, useMemo, useState } from 'react'
 import { auth } from '@/lib/firebaseConfig'
-import { OPERATION_EN_COURS, statsOperation, periodeCourte, type ProduitOperation } from '@/lib/remiseOperation'
+import { OPERATION_EN_COURS, statsOperation, periodeCourte, estEngagee, type ProduitOperation } from '@/lib/remiseOperation'
+import ProductGrid from '@/components/ProductGrid'
 
 export default function OperationsPage() {
-  const [produits, setProduits] = useState<ProduitOperation[]>([])
+  const [produits, setProduits] = useState<(ProduitOperation & { id: string; prix: number })[]>([])
   const [noms, setNoms] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
@@ -108,18 +109,7 @@ export default function OperationsPage() {
                   </div>
                 )
               })()}
-              {pcts.length === 0 ? (
-                <p className="text-sm text-gray-400">Aucune pièce en réduction pour l&apos;instant.</p>
-              ) : (
-                <div className="flex gap-2 flex-wrap">
-                  {pcts.map(p => (
-                    <div key={p} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                      <span className="font-semibold">-{p} %</span>
-                      <span className="text-gray-500 ml-2">{stats.parPct[p]} pièce{stats.parPct[p] > 1 ? 's' : ''}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {pcts.length === 0 && <p className="text-sm text-gray-400">Aucune pièce en réduction pour l&apos;instant.</p>}
             </div>
 
             {stats.parChineuse.length > 0 && (
@@ -143,6 +133,14 @@ export default function OperationsPage() {
           </>
         )}
       </div>
+
+      {/* Pièces remisées — grille photo du site (réutilisée), sans filtres ni vidéos */}
+      {!loading && stats.nbPieces > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <h3 className="text-sm font-semibold text-gray-700 px-6 pt-5 pb-3">Pièces en réduction ({stats.nbPieces})</h3>
+          <ProductGrid produits={produits.filter(estEngagee) as any} columns={4} showFilters={false} videoTrigrammeWhitelist={['__aucune__']} />
+        </div>
+      )}
     </div>
   )
 }

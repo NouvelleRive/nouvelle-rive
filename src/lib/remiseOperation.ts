@@ -241,15 +241,20 @@ export type StatsOperation = {
   parChineuse: { trigramme: string; nbPieces: number; parPct: Record<number, number> }[]
 }
 
+/** Pièce en stock (non vendue, non récupérée) avec une remise d'opération. */
+export function estEngagee(p: ProduitOperation): boolean {
+  if ((Number(p.remiseBlackWeek) || 0) <= 0 || p.vendu || (p.quantite ?? 1) <= 0) return false
+  return !(p.statut === 'retour' || p.statut === 'supprime' || p.statutRecuperation)
+}
+
 /** Pièces en stock (non vendues, non récupérées) engagées dans l'opération. */
 export function statsOperation(produits: ProduitOperation[]): StatsOperation {
   const parPct: Record<number, number> = {}
   const parTri = new Map<string, { trigramme: string; nbPieces: number; parPct: Record<number, number> }>()
   let nbPieces = 0
   for (const p of produits) {
+    if (!estEngagee(p)) continue
     const pct = Number(p.remiseBlackWeek) || 0
-    if (pct <= 0 || p.vendu || (p.quantite ?? 1) <= 0) continue
-    if (p.statut === 'retour' || p.statut === 'supprime' || p.statutRecuperation) continue
     const tri = (p.trigramme || '?').toUpperCase()
     nbPieces++
     parPct[pct] = (parPct[pct] || 0) + 1
