@@ -3,7 +3,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Camera, Image as ImageIcon } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
@@ -111,13 +111,9 @@ function ChampPhoto({ label, file, urlExistante, sansApercu, onChange, onRetirer
             </button>
           </div>
         )}
-        <label title="Image déjà prise" aria-label="Image déjà prise" className="w-11 h-11 flex items-center justify-center border border-[#22209C] text-[#22209C] rounded cursor-pointer">
-          <ImageIcon size={20} />
+        <label title="Ajouter une photo" aria-label="Ajouter une photo" className="w-11 h-11 flex items-center justify-center border border-[#22209C] text-[#22209C] rounded cursor-pointer">
+          <Plus size={22} />
           <input type="file" accept="image/*" className="hidden" onChange={e => onChange(e.target.files?.[0] || null)} />
-        </label>
-        <label title="Nouvelle photo" aria-label="Nouvelle photo" className="w-11 h-11 flex items-center justify-center border border-[#22209C] text-[#22209C] rounded cursor-pointer">
-          <Camera size={20} />
-          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => onChange(e.target.files?.[0] || null)} />
         </label>
       </div>
     </div>
