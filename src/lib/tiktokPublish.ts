@@ -102,7 +102,7 @@ async function fetchStatus(token: string, publishId: string): Promise<string> {
 // video.publish est accordé, sinon brouillon dans l'inbox de la créatrice.
 export async function publishTikTokVideo(videoUrl: string, caption = '', opts: TikTokPostOptions = {}): Promise<{ publishId: string; status: string; mode: 'direct' | 'draft' }> {
   const token = await getAccessToken()
-  const direct = await canDirectPost()
+  let direct = await canDirectPost()
 
   // 1) Récupère les octets de la vidéo (Firebase/Bunny)
   const vid = await fetch(videoUrl)
@@ -138,7 +138,16 @@ export async function publishTikTokVideo(videoUrl: string, caption = '', opts: T
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
     body: JSON.stringify(body),
   })
-  const initData = await initRes.json()
+  let initData = await initRes.json()
+  // App pas encore auditée : Direct Post refusé → repli en brouillon (inbox)
+  if (direct && initData?.error?.code === 'unaudited_client_can_only_post_to_private_accounts') {
+    direct = false
+    initData = await fetch('https://open.tiktokapis.com/v2/post/publish/inbox/video/init/', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify({ source_info }),
+    }).then((r) => r.json())
+  }
   const uploadUrl = initData?.data?.upload_url
   const publishId = initData?.data?.publish_id
   if (!uploadUrl || !publishId) throw new Error(`TikTok init échoué: ${JSON.stringify(initData)}`)
