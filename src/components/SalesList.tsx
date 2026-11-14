@@ -130,6 +130,11 @@ export default function SalesList({
   // HELPERS
   // =====================
 
+  // KPI par chineuse : ventes du mois en cours
+  const estDuMois = (v: Vente): boolean => {
+    const d = getDateFromVente(v), n = new Date()
+    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear()
+  }
   const getDateFromVente = (v: Vente): Date => {
     if (v.dateVente && typeof (v.dateVente as any).toDate === 'function') {
       return (v.dateVente as any).toDate()
@@ -238,7 +243,7 @@ export default function SalesList({
             <span className="font-bold text-blue-600">{formatPrix(stats.ca)}€</span>
           </div>
           {kpisParChineuse?.map(k => {
-            const vs = ventesFiltrées.filter(v => v.trigramme === k.trigramme)
+            const vs = ventes.filter(v => v.trigramme === k.trigramme && estDuMois(v))
             return (
               <div key={k.trigramme} className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2">
                 <span className="text-xs text-gray-500">{k.label}</span>
@@ -258,7 +263,7 @@ export default function SalesList({
         {kpisParChineuse && kpisParChineuse.length > 0 && (
           <div className="lg:hidden w-full grid grid-cols-2 gap-2">
             {kpisParChineuse.map(k => {
-              const vs = ventesFiltrées.filter(v => v.trigramme === k.trigramme)
+              const vs = ventes.filter(v => v.trigramme === k.trigramme && estDuMois(v))
               return (
                 <div key={k.trigramme} className="bg-white border rounded-lg px-3 py-2">
                   <div className="text-xs text-gray-500 truncate">{k.label}</div>
