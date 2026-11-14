@@ -410,7 +410,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
             <div className="flex-1 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece} onChange={choisirPiece} onRetirer={() => { setPhotoPiece(null); setUrlPiece('') }} />
-              <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket} sansApercu={!!grandTicket} onChange={choisirTicket} onRetirer={retirerTicket} />
+              <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket} onChange={choisirTicket} onRetirer={retirerTicket} />
             </div>
             {grandTicket && <div className="lg:hidden">{ticketGrand}</div>}
             {lectureTicket && <p className="text-xs text-[#22209C] -mt-2">{lectureTicket}</p>}
