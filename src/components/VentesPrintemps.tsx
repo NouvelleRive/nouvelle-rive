@@ -3,6 +3,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Camera, Image as ImageIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
@@ -87,7 +88,7 @@ async function uploaderPhoto(file: File): Promise<string> {
   return (await res.json()).url
 }
 
-function ChampPhoto({ label, file, urlExistante, onChange, onRetirer }: { label: string; file: File | null; urlExistante?: string; onChange: (f: File | null) => void; onRetirer: () => void }) {
+function ChampPhoto({ label, file, urlExistante, sansApercu, onChange, onRetirer }: { label: string; file: File | null; urlExistante?: string; sansApercu?: boolean; onChange: (f: File | null) => void; onRetirer: () => void }) {
   const [apercu, setApercu] = useState<string | null>(null)
   useEffect(() => {
     if (!file) { setApercu(null); return }
@@ -96,25 +97,26 @@ function ChampPhoto({ label, file, urlExistante, onChange, onRetirer }: { label:
     return () => URL.revokeObjectURL(url)
   }, [file])
 
+  const src = apercu || urlExistante
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {(apercu || urlExistante) && (
-        <div className="relative w-24 h-24 mb-2">
-          <img src={apercu || urlExistante} alt="" className="w-24 h-24 object-cover rounded border" />
-          <button type="button" onClick={onRetirer} aria-label="Retirer la photo"
-            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-white border shadow text-gray-600 text-sm leading-none flex items-center justify-center">
-            ×
-          </button>
-        </div>
-      )}
-      <div className="flex gap-2">
-        <label className="flex-1 text-center text-sm border border-[#22209C] text-[#22209C] rounded px-3 py-2 cursor-pointer">
-          Image déjà prise
+      <div className="flex items-center gap-2">
+        {src && !sansApercu && (
+          <div className="relative w-16 h-16 shrink-0">
+            <img src={src} alt="" className="w-16 h-16 object-cover rounded border" />
+            <button type="button" onClick={onRetirer} aria-label="Retirer la photo"
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-white border shadow text-gray-600 text-xs leading-none flex items-center justify-center">
+              ×
+            </button>
+          </div>
+        )}
+        <label title="Image déjà prise" aria-label="Image déjà prise" className="w-11 h-11 flex items-center justify-center border border-[#22209C] text-[#22209C] rounded cursor-pointer">
+          <ImageIcon size={20} />
           <input type="file" accept="image/*" className="hidden" onChange={e => onChange(e.target.files?.[0] || null)} />
         </label>
-        <label className="flex-1 text-center text-sm border border-[#22209C] text-[#22209C] rounded px-3 py-2 cursor-pointer">
-          Nouvelle photo
+        <label title="Nouvelle photo" aria-label="Nouvelle photo" className="w-11 h-11 flex items-center justify-center border border-[#22209C] text-[#22209C] rounded cursor-pointer">
+          <Camera size={20} />
           <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => onChange(e.target.files?.[0] || null)} />
         </label>
       </div>
@@ -314,8 +316,19 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
     }
   }
 
-  const grandePiece = urlPiece
   const grandTicket = urlTicket
+  function retirerTicket() { setPhotoTicket(null); setUrlTicket(''); setLignesTicket([]); setLectureTicket('') }
+  const ticketGrand = (
+    <div className="relative">
+      <a href={grandTicket} target="_blank" rel="noreferrer">
+        <img src={grandTicket} alt="Ticket" className="w-full max-h-[80vh] object-contain rounded border bg-white" />
+      </a>
+      <button type="button" onClick={retirerTicket} aria-label="Retirer le ticket"
+        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border shadow text-gray-600 text-sm leading-none flex items-center justify-center">
+        ×
+      </button>
+    </div>
+  )
 
   // Relecture par mois : la chineuse valide ses ventes d'un mois (bouton vert).
   const moisVentes = Array.from(new Set(ventes.map(v => `${v.dateVente.slice(5, 7)}-${v.dateVente.slice(0, 4)}`)))
@@ -389,21 +402,21 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
         // Pas de fermeture au clic sur le fond : le double-clic dans la fenêtre
         // de choix de fichier retombait dessus et vidait le formulaire.
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <form onSubmit={enregistrer} className={`bg-white rounded-lg w-full ${grandePiece || grandTicket ? 'max-w-5xl' : 'max-w-md'} max-h-[90vh] overflow-y-auto p-5`}>
+          <form onSubmit={enregistrer} className={`bg-white rounded-lg w-full ${grandTicket ? 'max-w-5xl' : 'max-w-md'} max-h-[90vh] overflow-y-auto p-5`}>
             <h2 className="text-lg font-bold text-[#22209C] uppercase mb-4">{enEdition ? 'Modifier la vente' : 'Nouvelle vente'}</h2>
 
             <div className="flex flex-col lg:flex-row gap-5">
-            {/* Photos en grand, pour rédiger la description et vérifier le ticket */}
-            {(grandePiece || grandTicket) && (
-              <div className="lg:w-2/5 grid grid-cols-2 lg:grid-cols-1 gap-3">
-                {grandePiece && <a href={grandePiece} target="_blank" rel="noreferrer"><img src={grandePiece} alt="Pièce" className="w-full aspect-square object-cover rounded border" /></a>}
-                {grandTicket && <a href={grandTicket} target="_blank" rel="noreferrer"><img src={grandTicket} alt="Ticket" className="w-full aspect-square object-cover rounded border" /></a>}
-              </div>
+            {/* Ticket en grand (desktop : colonne de gauche) */}
+            {grandTicket && (
+              <div className="hidden lg:block lg:w-1/2">{ticketGrand}</div>
             )}
 
             <div className="flex-1 space-y-4">
-            <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece} onChange={choisirPiece} onRetirer={() => { setPhotoPiece(null); setUrlPiece('') }} />
-            <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket} onChange={choisirTicket} onRetirer={() => { setPhotoTicket(null); setUrlTicket(''); setLignesTicket([]); setLectureTicket('') }} />
+            <div className="grid grid-cols-2 gap-3">
+              <ChampPhoto label="Photo pièce" file={photoPiece} urlExistante={urlPiece} onChange={choisirPiece} onRetirer={() => { setPhotoPiece(null); setUrlPiece('') }} />
+              <ChampPhoto label="Photo ticket" file={photoTicket} urlExistante={urlTicket} sansApercu={!!grandTicket} onChange={choisirTicket} onRetirer={retirerTicket} />
+            </div>
+            {grandTicket && <div className="lg:hidden">{ticketGrand}</div>}
             {lectureTicket && <p className="text-xs text-[#22209C] -mt-2">{lectureTicket}</p>}
             {lignesTicket.length > 0 && (
               <div className="flex flex-wrap gap-2 -mt-2">
