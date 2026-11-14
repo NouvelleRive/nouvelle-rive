@@ -254,6 +254,23 @@ export default function SalesList({
             </div>
           )}
         </div>
+        {/* KPI par chineuse — mobile */}
+        {kpisParChineuse && kpisParChineuse.length > 0 && (
+          <div className="lg:hidden w-full grid grid-cols-2 gap-2">
+            {kpisParChineuse.map(k => {
+              const vs = ventesFiltrées.filter(v => v.trigramme === k.trigramme)
+              return (
+                <div key={k.trigramme} className="bg-white border rounded-lg px-3 py-2">
+                  <div className="text-xs text-gray-500 truncate">{k.label}</div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-bold">{formatPrix(vs.reduce((s, v) => s + getPrix(v), 0))}€</span>
+                    <span className="text-xs text-gray-400">{vs.length}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Filtres + Toggle + Télécharger */}
