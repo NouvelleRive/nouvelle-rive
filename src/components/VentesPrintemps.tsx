@@ -137,6 +137,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
   const [lignesTicket, setLignesTicket] = useState<LigneTicket[]>([])
 
   const [description, setDescription] = useState('')
+  const [suggestionsOuvertes, setSuggestionsOuvertes] = useState(false)
   const [prix, setPrix] = useState('')
   const [proprietaire, setProprietaire] = useState('')
   const [photoPiece, setPhotoPiece] = useState<File | null>(null)
@@ -313,6 +314,13 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
   }
 
   const grandTicket = urlTicket
+  const sansAccent = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const saisie = sansAccent(description.trim())
+  const suggestionsDescription = saisie
+    ? Array.from(new Set(ventes.map(v => v.description).filter(Boolean)))
+        .filter(d => sansAccent(d).includes(saisie) && sansAccent(d) !== saisie)
+        .slice(0, 8)
+    : []
   function retirerTicket() { setPhotoTicket(null); setUrlTicket(''); setLignesTicket([]); setLectureTicket('') }
   const ticketGrand = (
     <div className="relative">
@@ -430,11 +438,22 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <input required list="descriptions-printemps" autoComplete="off" value={description} onChange={e => setDescription(e.target.value)} className="w-full border rounded px-3 py-2 text-sm" />
-              {/* Suggestions au fil de la frappe : les pièces upcycling reviennent souvent */}
-              <datalist id="descriptions-printemps">
-                {Array.from(new Set(ventes.map(v => v.description))).map(d => <option key={d} value={d} />)}
-              </datalist>
+              <div className="relative">
+                <input required autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} value={description}
+                  onChange={e => setDescription(e.target.value)} onFocus={() => setSuggestionsOuvertes(true)} onBlur={() => setSuggestionsOuvertes(false)}
+                  className="w-full border rounded px-3 py-2 text-sm" />
+                {/* Suggestions des titres déjà créés (liste maison : le datalist iPhone finissait dans la barre du clavier) */}
+                {suggestionsOuvertes && suggestionsDescription.length > 0 && (
+                  <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border rounded shadow max-h-56 overflow-y-auto">
+                    {suggestionsDescription.map(d => (
+                      <li key={d}>
+                        <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setDescription(d); setSuggestionsOuvertes(false) }}
+                          className="w-full text-left text-sm px-3 py-2 hover:bg-gray-100">{d}</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
 
             <div>
