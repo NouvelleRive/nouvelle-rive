@@ -140,7 +140,7 @@ export default function SalesGrid({
 
             {/* Overlay infos au tap/hover */}
             <div
-              className="absolute inset-0 bg-white/95 flex flex-col justify-between p-2 transition-opacity duration-200 opacity-0 group-hover:opacity-100"
+              className="absolute inset-0 z-10 bg-white/95 flex flex-col justify-between p-2 transition-opacity duration-200 opacity-0 group-hover:opacity-100"
             >
               <div>
                 {marque && (
