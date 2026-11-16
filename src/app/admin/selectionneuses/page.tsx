@@ -263,26 +263,18 @@
       setShowModal(true)
     }
 
+    // Photo de créatrice : fichier original tel quel (pas le pipeline produit qui
+    // carre l'image avec des bandes blanches). La page la recadre en `object-cover`
+    // pour remplir le carré, centrée sur `imagePosition`.
     const uploadToBunny = async (file: File): Promise<string> => {
-
-      const arrayBuffer = await file.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      let binary = ''
-      const chunkSize = 8192
-      for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        binary += String.fromCharCode(...uint8Array.slice(i, i + chunkSize))
-      }
-      const base64 = btoa(binary)
-
-      const response = await fetch('/api/detourage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64, skipDetourage: true, mode: 'erased' })
-      })
-
+      const form = new FormData()
+      form.append('file', file)
+      form.append('folder', 'produits/creatrices/')
+      const response = await fetch('/api/upload-bunny', { method: 'POST', body: form })
       if (!response.ok) throw new Error('Erreur upload')
       const data = await response.json()
-      return data.maskUrl
+      if (!data.url) throw new Error('Erreur upload')
+      return data.url
     }
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
