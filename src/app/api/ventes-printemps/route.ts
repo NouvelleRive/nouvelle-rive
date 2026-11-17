@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, adminAuth } from '@/lib/firebaseAdmin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { sendPushToOwner } from '@/lib/webpush'
+import { VENDEUSES_PRINTEMPS } from '@/lib/vendeusesPrintemps'
 import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS as PROPRIETAIRES, CANAUX_PRINTEMPS as CANAUX, TRIGRAMME_PROPRIETAIRE } from '@/lib/ventesPrintemps'
 
 const MAX_VENTES = 300
@@ -83,6 +84,7 @@ export async function GET(req: NextRequest) {
       dateVente: v.dateVente,
       canal: v.canal,
       atelier: v.atelier === true,
+      vendeuse: v.vendeuse || '',
       saisiePar: v.saisiePar,
     }
   })
@@ -116,6 +118,9 @@ export async function POST(req: NextRequest) {
   if (!PROPRIETAIRES.includes(b.proprietaire)) return NextResponse.json({ error: 'propriétaire invalide' }, { status: 400 })
   if (!CANAUX.includes(b.canal)) return NextResponse.json({ error: 'vendu sur invalide' }, { status: 400 })
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVente)) return NextResponse.json({ error: 'date invalide' }, { status: 400 })
+  // Vendeuse Printemps facultative (anciennes ventes, table encore incomplète).
+  const vendeuse = String(b.vendeuse || '')
+  if (vendeuse && !VENDEUSES_PRINTEMPS.includes(vendeuse)) return NextResponse.json({ error: 'vendeuse invalide' }, { status: 400 })
   if (!b.photoPiece || !b.photoTicket) return NextResponse.json({ error: 'photos requises' }, { status: 400 })
 
   // ID fourni par le client : un double clic ou un renvoi réécrit la même vente,
@@ -131,6 +136,7 @@ export async function POST(req: NextRequest) {
     dateVente,
     canal: b.canal,
     atelier: b.atelier === true,
+    vendeuse,
     ...(existe
       ? { modifiePar: email, modifieLe: FieldValue.serverTimestamp() }
       : { saisiePar: email, createdAt: FieldValue.serverTimestamp() }),

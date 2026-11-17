@@ -73,6 +73,7 @@ interface SalesListProps {
   sousTitre?: React.ReactNode // affiché sous le titre (ex. bouton « Nouvelle vente »)
   sousFiltres?: React.ReactNode // affiché sous les filtres (ex. relecture des ventes Printemps)
   kpisParChineuse?: Array<{ trigramme: string; label: string }> // KPI ventes par chineuse (ex. Printemps)
+  ongletBis?: { label: string; contenu: React.ReactNode } // 2e onglet sous les KPI (ex. vendeuses Printemps)
   loading?: boolean
   // Callbacks admin
   onAttribuer?: (vente: Vente) => void
@@ -102,6 +103,7 @@ export default function SalesList({
   sousTitre,
   sousFiltres,
   kpisParChineuse,
+  ongletBis,
   loading = false,
   onAttribuer,
   onModifierPrix, 
@@ -118,6 +120,9 @@ export default function SalesList({
   // Infinite scroll
   const [visibleCount, setVisibleCount] = useState(20)
   const loaderRef = useRef<HTMLDivElement>(null)
+
+  // Onglet : ventes (défaut) ou ongletBis
+  const [surOngletBis, setSurOngletBis] = useState(false)
 
   // Vue
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -278,6 +283,20 @@ export default function SalesList({
         )}
       </div>
 
+      {ongletBis && (
+        <div className="flex gap-1 mb-6 border-b">
+          {[{ label: 'Ventes', bis: false }, { label: ongletBis.label, bis: true }].map(o => (
+            <button key={o.label} onClick={() => setSurOngletBis(o.bis)}
+              className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 ${surOngletBis === o.bis ? 'border-[#22209C] text-[#22209C]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {ongletBis && surOngletBis && ongletBis.contenu}
+      {/* Masqué plutôt que démonté : les filtres restent en place au retour sur l'onglet */}
+      <div className={ongletBis && surOngletBis ? 'hidden' : ''}>
       {/* Filtres + Toggle + Télécharger */}
       <SalesFilters
         ventes={ventes}
@@ -487,6 +506,7 @@ export default function SalesList({
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#22209C]" />
         </div>
       )}
+      </div>
 
       {/* Fiche détail (vue liste) */}
       {detail && (

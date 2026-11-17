@@ -12,6 +12,7 @@ import { auth } from '@/lib/firebaseConfig'
 import { formatPrix } from '@/lib/formatPrix'
 import SalesList, { ChineuseMeta } from '@/components/SalesList'
 import { lireTicketPrintemps, LigneTicket } from '@/lib/lireTicketPrintemps'
+import { VENDEUSES_PRINTEMPS, vendeuseDuCode } from '@/lib/vendeusesPrintemps'
 import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS, CANAUX_PRINTEMPS, TRIGRAMME_PROPRIETAIRE } from '@/lib/ventesPrintemps'
 
 type VentePrintemps = {
@@ -24,7 +25,16 @@ type VentePrintemps = {
   dateVente: string
   canal: string
   atelier?: boolean
+  vendeuse?: string
 }
+
+// Colonnes du tableau vendeuses : propriétaire → libellé court.
+const MARQUES_VENDEUSES: Array<{ proprietaire: string; label: string }> = [
+  { proprietaire: 'INES PINEAU', label: 'IP' },
+  { proprietaire: "TETE D'ORANGE", label: 'TDO' },
+  { proprietaire: 'GIGI PARIS', label: 'GIGI' },
+  { proprietaire: 'CHINEUZ2BLING', label: 'CDB' },
+]
 
 const BROUILLON = 'nr_brouillon_vente_printemps'
 const aujourdhui = () => new Date().toISOString().slice(0, 10)
@@ -145,6 +155,8 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
   const [dateVente, setDateVente] = useState(aujourdhui())
   const [canal, setCanal] = useState('')
   const [atelier, setAtelier] = useState(false)
+  const [vendeuse, setVendeuse] = useState('')
+  const [moisVendeuses, setMoisVendeuses] = useState(() => format(new Date(), 'MM-yyyy'))
   // Photos envoyées dès qu'on les choisit : leur URL survit à un rechargement.
   const [urlPiece, setUrlPiece] = useState('')
   const [urlTicket, setUrlTicket] = useState('')
@@ -158,7 +170,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
       const b = JSON.parse(localStorage.getItem(BROUILLON) || 'null')
       if (!b) return
       setDescription(b.description || ''); setPrix(b.prix || ''); setProprietaire(b.proprietaire || '')
-      setDateVente(b.dateVente || aujourdhui()); setCanal(b.canal || ''); setAtelier(b.atelier === true)
+      setDateVente(b.dateVente || aujourdhui()); setCanal(b.canal || ''); setAtelier(b.atelier === true); setVendeuse(b.vendeuse || '')
       setUrlPiece(b.urlPiece || ''); setUrlTicket(b.urlTicket || '')
       setEnEdition(null); setShowModal(true)
     } catch { /* pas de brouillon */ }
@@ -167,9 +179,9 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
   useEffect(() => {
     if (!showModal || enEdition) return
     try {
-      localStorage.setItem(BROUILLON, JSON.stringify({ description, prix, proprietaire, dateVente, canal, atelier, urlPiece, urlTicket }))
+      localStorage.setItem(BROUILLON, JSON.stringify({ description, prix, proprietaire, dateVente, canal, atelier, vendeuse, urlPiece, urlTicket }))
     } catch { /* stockage indisponible */ }
-  }, [showModal, enEdition, description, prix, proprietaire, dateVente, canal, atelier, urlPiece, urlTicket])
+  }, [showModal, enEdition, description, prix, proprietaire, dateVente, canal, atelier, vendeuse, urlPiece, urlTicket])
 
   function fermerModal() {
     setShowModal(false)
@@ -231,8 +243,12 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
       if (lu.prix) setPrix(String(lu.prix).replace('.', ','))
       if (lu.dateVente) setDateVente(lu.dateVente)
       if (lu.canal) setCanal(lu.canal)
+      const v = vendeuseDuCode(lu.operateur)
+      if (v) setVendeuse(v)
       setLignesTicket(lu.lignes || [])
-      setLectureTicket(lu.lignes
+      setLectureTicket(lu.operateur && !v
+        ? `Opérateur ${lu.operateur} inconnu : choisis la vendeuse à la main`
+        : lu.lignes
         ? `Ticket à ${lu.lignes.length} pièces : clique sur celle que tu saisis`
         : lu.prix || lu.dateVente || lu.canal
           ? 'Ticket lu : vérifie les champs préremplis'
@@ -245,7 +261,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
   function ouvrirModal() {
     setLectureTicket(''); setLignesTicket([])
     setEnEdition(null)
-    setDescription(''); setPrix(''); setProprietaire(''); setCanal(''); setAtelier(false)
+    setDescription(''); setPrix(''); setProprietaire(''); setCanal(''); setAtelier(false); setVendeuse('')
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(aujourdhui()); setErreur('')
     setUrlPiece(''); setUrlTicket('')
     setShowModal(true)
@@ -256,7 +272,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
     if (!v) return
     setEnEdition(v)
     setLectureTicket(''); setLignesTicket([])
-    setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal); setAtelier(v.atelier === true)
+    setDescription(v.description); setPrix(String(v.prix).replace('.', ',')); setProprietaire(v.proprietaire); setCanal(v.canal); setAtelier(v.atelier === true); setVendeuse(v.vendeuse || '')
     setPhotoPiece(null); setPhotoTicket(null); setDateVente(v.dateVente); setErreur('')
     setUrlPiece(v.photoPiece); setUrlTicket(v.photoTicket)
     setShowModal(true)
@@ -300,6 +316,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
           dateVente,
           canal,
           atelier,
+          vendeuse,
         }),
       })
       const data = await res.json()
@@ -351,6 +368,54 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
     if (!res.ok) { alert('Validation non enregistrée'); fetchVentes(user) }
   }
 
+  // Onglet Vendeuses : CA du mois choisi par vendeuse et par marque.
+  const ventesDuMois = ventes.filter(v => `${v.dateVente.slice(5, 7)}-${v.dateVente.slice(0, 4)}` === moisVendeuses)
+  const lignesVendeuses = Array.from(new Set(ventesDuMois.map(v => v.vendeuse || '')))
+    .map(nom => {
+      const siennes = ventesDuMois.filter(v => (v.vendeuse || '') === nom)
+      return {
+        nom: nom || 'Non renseignée',
+        parMarque: MARQUES_VENDEUSES.map(m => siennes.filter(v => v.proprietaire === m.proprietaire).reduce((s, v) => s + v.prix, 0)),
+        total: siennes.reduce((s, v) => s + v.prix, 0),
+      }
+    })
+    .sort((a, b) => b.total - a.total)
+  const moisChoix = Array.from(new Set([moisVendeuses, ...moisVentes]))
+    .sort((a, b) => b.slice(3).localeCompare(a.slice(3)) || b.localeCompare(a))
+  const euros = (n: number) => n ? `${formatPrix(n, { decimals: n % 1 ? 2 : 0 })} €` : '–'
+  const tableauVendeuses = (
+    <div className="space-y-4">
+      <select value={moisVendeuses} onChange={e => setMoisVendeuses(e.target.value)} className="border rounded px-3 py-2 text-sm bg-white">
+        {moisChoix.map(m => {
+          const [mm, aaaa] = m.split('-').map(Number)
+          return <option key={m} value={m}>{format(new Date(aaaa, mm - 1, 1), 'MMMM yyyy', { locale: fr })}</option>
+        })}
+      </select>
+      <div className="bg-white rounded-xl border overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Vendeuse</th>
+              {MARQUES_VENDEUSES.map(m => <th key={m.label} className="text-right px-4 py-3 font-medium text-gray-600">{m.label}</th>)}
+              <th className="text-right px-4 py-3 font-medium text-gray-600">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lignesVendeuses.length === 0 ? (
+              <tr><td colSpan={MARQUES_VENDEUSES.length + 2} className="px-4 py-8 text-center text-gray-400">Aucune vente ce mois-ci</td></tr>
+            ) : lignesVendeuses.map(l => (
+              <tr key={l.nom} className="border-b last:border-0">
+                <td className={`px-4 py-3 font-medium ${l.nom === 'Non renseignée' ? 'text-gray-400 italic' : 'text-gray-900'}`}>{l.nom}</td>
+                {l.parMarque.map((ca, i) => <td key={i} className="px-4 py-3 text-right text-gray-600">{euros(ca)}</td>)}
+                <td className="px-4 py-3 text-right font-semibold text-gray-900">{euros(l.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+
   const ventesListe = ventes.map(v => ({
     id: v.id,
     nom: v.description,
@@ -393,6 +458,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
         ventesFacture={chineuse ? ventesListe.filter(v => TRIGRAMME_PROPRIETAIRE[v.trigramme] === chineuse.codeChineuse) : []}
         chineuses={PROPRIETAIRES_PRINTEMPS.map(p => ({ trigramme: p, nom: p }))}
         avecFiltreChineuse
+        ongletBis={{ label: 'Vendeuses', contenu: tableauVendeuses }}
         kpisParChineuse={['GIGI PARIS', 'INES PINEAU', "TETE D'ORANGE", 'CHINEUZ2BLING'].map(p => ({ trigramme: p, label: TRIGRAMME_PROPRIETAIRE[p] }))}
         chineuse={chineuse}
         userEmail={user?.email || undefined}
@@ -479,6 +545,14 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
               <select required value={canal} onChange={e => setCanal(e.target.value)} className="w-full border rounded px-3 py-2 text-sm bg-white">
                 <option value="" disabled>Choisir…</option>
                 {CANAUX_PRINTEMPS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vendeuse</label>
+              <select value={vendeuse} onChange={e => setVendeuse(e.target.value)} className="w-full border rounded px-3 py-2 text-sm bg-white">
+                <option value="">Choisir…</option>
+                {VENDEUSES_PRINTEMPS.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
 

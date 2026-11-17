@@ -8,7 +8,8 @@
 export type Canal = 'VINTAGE' | 'UPCYCLING'
 export type LigneTicket = { prix: number; canal: Canal }
 // lignes : toutes les pièces du stand quand le ticket en porte plusieurs.
-export type TicketLu = { prix?: number; dateVente?: string; canal?: Canal; lignes?: LigneTicket[] }
+// operateur : numéro de la vendeuse Printemps (« Opérateur 121165 »).
+export type TicketLu = { prix?: number; dateVente?: string; canal?: Canal; lignes?: LigneTicket[]; operateur?: string }
 
 const montant = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'))
 // « 145,00 » ou « 1 250,00 », jamais collé à un code article (« 0208 95,00 »).
@@ -39,6 +40,8 @@ export function lireTicketPrintemps(texte: string, aujourdhui = new Date()): Tic
   const t = texte.replace(/[ \t]+/g, ' ')
   const res: TicketLu = {}
   res.dateVente = lireDate(t, aujourdhui)
+  // « Opérateur 121165 » : l'OCR abîme souvent l'accent (« Op6rateur », « Operateur »).
+  res.operateur = t.match(/Op\S{0,2}rat\S{0,2}ur\s*:?\s*(\d{4,7})(?!\d)/i)?.[1]
 
   const iTotal = t.search(/Total\s*pay/i)
   const avantTotal = iTotal > 0 ? t.slice(0, iTotal) : t
