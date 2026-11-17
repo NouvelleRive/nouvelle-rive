@@ -114,6 +114,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
   }
 
+  // Restriction eBay 10 jours (contrefaçon, avis du 16/11/2026) : aucune publication
+  // tant qu'elle court — retenter pendant une restriction aggrave le dossier.
+  if (Date.now() < Date.parse('2026-11-27T00:00:00+01:00')) {
+    return NextResponse.json({ success: true, skipped: 'restriction-ebay-jusquau-27-11' })
+  }
+
   if (!isEbayConfigured()) {
     return NextResponse.json({ success: false, error: 'ebay-non-configure' }, { status: 500 })
   }
