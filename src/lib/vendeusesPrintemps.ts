@@ -30,3 +30,9 @@ export function vendeuseDuCode(code?: string): string | undefined {
   const noms = OPERATEURS_PRINTEMPS.filter(o => o.code === code).map(o => o.nom)
   return noms.length === 1 ? noms[0] : undefined
 }
+
+// Libellé du menu : « Nas · 98635 », juste le prénom pour les sans-code.
+export function libelleVendeuse(nom: string): string {
+  const codes = OPERATEURS_PRINTEMPS.filter(o => o.nom === nom).map(o => o.code)
+  return codes.length ? `${nom} · ${codes.join(', ')}` : nom
+}

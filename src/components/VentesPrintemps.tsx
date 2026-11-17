@@ -12,7 +12,7 @@ import { auth } from '@/lib/firebaseConfig'
 import { formatPrix } from '@/lib/formatPrix'
 import SalesList, { ChineuseMeta } from '@/components/SalesList'
 import { lireTicketPrintemps, LigneTicket } from '@/lib/lireTicketPrintemps'
-import { VENDEUSES_PRINTEMPS, vendeuseDuCode } from '@/lib/vendeusesPrintemps'
+import { VENDEUSES_PRINTEMPS, vendeuseDuCode, libelleVendeuse } from '@/lib/vendeusesPrintemps'
 import { EMAILS_PRINTEMPS, PROPRIETAIRES_PRINTEMPS, CANAUX_PRINTEMPS, TRIGRAMME_PROPRIETAIRE } from '@/lib/ventesPrintemps'
 
 type VentePrintemps = {
@@ -552,7 +552,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
               <label className="block text-sm font-medium text-gray-700 mb-1">Vendeuse</label>
               <select value={vendeuse} onChange={e => setVendeuse(e.target.value)} className="w-full border rounded px-3 py-2 text-sm bg-white">
                 <option value="">Choisir…</option>
-                {VENDEUSES_PRINTEMPS.map(n => <option key={n} value={n}>{n}</option>)}
+                {VENDEUSES_PRINTEMPS.map(n => <option key={n} value={n}>{libelleVendeuse(n)}</option>)}
               </select>
             </div>
 
