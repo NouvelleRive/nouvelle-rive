@@ -130,10 +130,12 @@ interface ProductGridProps {
   onSearchActiveChange?: (active: boolean) => void
   /** Admin : affiche en gros le % de remise sur la photo, même hors période. */
   badgeRemiseGros?: boolean
+  /** Admin : affiche le SKU devant la marque. */
+  showSku?: boolean
 }
 
 
-export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist, facetSource, onSearchActiveChange, badgeRemiseGros = false }: ProductGridProps) {
+export default function ProductGrid({ produits, columns = 3, showFilters = true, emphasizeBrand = false, videoTrigrammeWhitelist, facetSource, onSearchActiveChange, badgeRemiseGros = false, showSku = false }: ProductGridProps) {
   const lang = useLang()
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isTriOpen, setIsTriOpen] = useState(false)
@@ -861,7 +863,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                     >
                       {formatDisplayTitle(produit, lang)}
                     </h3>
-                    {produit.marque && (
+                    {(produit.marque || (showSku && produit.sku)) && (
                       <p
                         className="mt-1 uppercase"
                         style={{
@@ -871,6 +873,9 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                           color: '#666'
                         }}
                       >
+                        {showSku && produit.sku && (
+                          <span className="font-semibold text-black">{produit.sku}{produit.marque ? ' · ' : ''}</span>
+                        )}
                         {produit.marque}
                       </p>
                     )}

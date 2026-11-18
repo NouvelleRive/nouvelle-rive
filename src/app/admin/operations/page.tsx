@@ -155,7 +155,7 @@ export default function OperationsPage() {
             </select>
             <input type="search" value={recherche} onChange={e => setRecherche(e.target.value)} placeholder="Rechercher (SKU, nom, marque)" className="border border-gray-300 rounded px-2 py-1.5 text-sm w-56" />
           </div>
-          <ProductGrid produits={piecesAffichees as any} columns={4} showFilters={false} videoTrigrammeWhitelist={['__aucune__']} badgeRemiseGros />
+          <ProductGrid produits={piecesAffichees as any} columns={4} showFilters={false} videoTrigrammeWhitelist={['__aucune__']} badgeRemiseGros showSku />
         </div>
       )}
     </div>
