@@ -65,6 +65,12 @@ export default function OperationsPage() {
                 <div className="text-2xl font-semibold">{stats.nbPieces}</div>
                 <div className="text-xs text-gray-500">pièces en réduction</div>
               </div>
+              {pcts.map(p => (
+                <div key={p} className="px-4 py-3 bg-white border border-gray-200 rounded-lg">
+                  <div className="text-2xl font-semibold">{stats.parPct[p]}</div>
+                  <div className="text-xs text-gray-500">à -{p} %</div>
+                </div>
+              ))}
             </div>
 
             <div>
