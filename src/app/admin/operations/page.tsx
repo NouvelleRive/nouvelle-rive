@@ -32,6 +32,11 @@ export default function OperationsPage() {
 
   const stats = useMemo(() => statsOperation(produits), [produits])
   const pcts = Object.keys(stats.parPct).map(Number).sort((a, b) => a - b)
+  // Récap du haut : IP et TDO mis à part (affichés différemment en boutique)
+  const A_PART = ['IP', 'TDO']
+  const statsHorsAPart = useMemo(() => statsOperation(produits.filter(p => !A_PART.includes(String(p.trigramme || '').toUpperCase()))), [produits])
+  const pctsHorsAPart = Object.keys(statsHorsAPart.parPct).map(Number).sort((a, b) => a - b)
+  const nbAPart = stats.nbPieces - statsHorsAPart.nbPieces
   const [survol, setSurvol] = useState<number | null>(null)
   const [filtreTri, setFiltreTri] = useState('')
   const [recherche, setRecherche] = useState('')
@@ -65,12 +70,24 @@ export default function OperationsPage() {
                 <div className="text-2xl font-semibold">{stats.nbPieces}</div>
                 <div className="text-xs text-gray-500">pièces en réduction</div>
               </div>
-              {pcts.map(p => (
-                <div key={p} className="px-4 py-3 bg-white border border-gray-200 rounded-lg">
-                  <div className="text-2xl font-semibold">{stats.parPct[p]}</div>
-                  <div className="text-xs text-gray-500">à -{p} %</div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                Récap hors IP et TDO ({statsHorsAPart.nbPieces} pièces)
+              </h3>
+              <div className="flex gap-3 flex-wrap">
+                {pctsHorsAPart.map(p => (
+                  <div key={p} className="px-4 py-3 bg-white border border-gray-200 rounded-lg">
+                    <div className="text-2xl font-semibold">{statsHorsAPart.parPct[p]}</div>
+                    <div className="text-xs text-gray-500">à -{p} %</div>
+                  </div>
+                ))}
+                <div className="px-4 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
+                  <div className="text-2xl font-semibold text-gray-500">{nbAPart}</div>
+                  <div className="text-xs text-gray-500">IP et TDO, à part</div>
                 </div>
-              ))}
+              </div>
             </div>
 
             <div>
