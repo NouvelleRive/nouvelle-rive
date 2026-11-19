@@ -220,6 +220,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
 
   const [filters, setFilters] = useState({
     promotion: false,
+    remisePcts: [] as number[],
     marque: [] as string[],
     prixMin: '',
     prixMax: '',
@@ -301,6 +302,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   // ne pas restreindre l'accordéon aux 60 premiers produits paginés côté client.
   const marquesSource = facetSource && facetSource.length > 0 ? facetSource : produits
   const marques = [...new Set(marquesSource.map(p => p.marque).filter(Boolean))].sort((a, b) => a!.localeCompare(b!, 'fr'))
+  const remisePctsDispo = [...new Set(marquesSource.map(p => remiseAffichee(OPERATION_EN_COURS, p.remiseBlackWeek)).filter(v => v > 0))].sort((a, b) => a - b)
 
   const isMarqueLuxe = (m: string) => {
     const low = m.toLowerCase().trim()
@@ -409,6 +411,10 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   if (filters.promotion) {
     // Promotion = flag manuel OU remise Black Week active (lib/remiseOperation)
     filteredProduits = filteredProduits.filter(p => p.promotion || remiseAffichee(OPERATION_EN_COURS, p.remiseBlackWeek) > 0)
+  }
+  if (filters.remisePcts.length > 0) {
+    // Filtre par % de remise de l'opération (-10 %, -20 %…), cumulable
+    filteredProduits = filteredProduits.filter(p => filters.remisePcts.includes(remiseAffichee(OPERATION_EN_COURS, p.remiseBlackWeek)))
   }
   if (filters.marque.length > 0) {
     filteredProduits = filteredProduits.filter(p => p.marque && filters.marque.includes(p.marque))
@@ -609,6 +615,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
   const resetFilters = () => {
     setFilters({
       promotion: false,
+      remisePcts: [] as number[],
       marque: [] as string[],
       prixMin: '',
       prixMax: '',
@@ -1333,6 +1340,23 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                               {t('En promotion uniquement', 'On sale only', lang)}
                             </span>
                           </label>
+                          {remisePctsDispo.map(pct => {
+                            const coche = filters.remisePcts.includes(pct)
+                            return (
+                              <label key={pct} className="flex items-center gap-3 cursor-pointer mt-3">
+                                <div
+                                  className="w-5 h-5 flex items-center justify-center"
+                                  style={{ border: '1px solid #000' }}
+                                  onClick={() => setFilters({ ...filters, remisePcts: coche ? filters.remisePcts.filter(x => x !== pct) : [...filters.remisePcts, pct] })}
+                                >
+                                  {coche && <span className="text-sm">✓</span>}
+                                </div>
+                                <span className="text-sm uppercase tracking-wide" style={{ fontFamily: HELVETICA }}>
+                                  -{pct} %
+                                </span>
+                              </label>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
