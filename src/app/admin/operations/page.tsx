@@ -32,6 +32,9 @@ export default function OperationsPage() {
 
   const stats = useMemo(() => statsOperation(produits), [produits])
   const pcts = Object.keys(stats.parPct).map(Number).sort((a, b) => a - b)
+  // Chineuses par ordre alphabétique (liste des participantes + filtre)
+  const chineusesAlpha = [...stats.parChineuse].sort((a, b) =>
+    (noms[a.trigramme] || a.trigramme).localeCompare(noms[b.trigramme] || b.trigramme, 'fr', { sensitivity: 'base' }))
   // Récap du haut : IP et TDO mis à part (affichés différemment en boutique)
   const A_PART = ['IP', 'TDO']
   const statsHorsAPart = useMemo(() => statsOperation(produits.filter(p => !A_PART.includes(String(p.trigramme || '').toUpperCase()))), [produits])
@@ -148,7 +151,7 @@ export default function OperationsPage() {
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Chineuses participantes</h3>
                 <table className="w-full text-sm">
                   <tbody>
-                    {stats.parChineuse.map(c => (
+                    {chineusesAlpha.map(c => (
                       <tr key={c.trigramme} className="border-t border-gray-100">
                         <td className="py-2 font-medium">{(noms[c.trigramme] || c.trigramme).toUpperCase()}</td>
                         <td className="py-2 text-gray-500">
@@ -172,9 +175,7 @@ export default function OperationsPage() {
             <h3 className="text-sm font-semibold text-gray-700 mr-auto">Pièces en réduction ({piecesAffichees.length})</h3>
             <select value={filtreTri} onChange={e => setFiltreTri(e.target.value)} className="border border-gray-300 rounded px-2 py-1.5 text-sm">
               <option value="">Toutes les chineuses</option>
-              {[...stats.parChineuse]
-                .sort((a, b) => (noms[a.trigramme] || a.trigramme).localeCompare(noms[b.trigramme] || b.trigramme, 'fr', { sensitivity: 'base' }))
-                .map(c => (
+              {chineusesAlpha.map(c => (
                 <option key={c.trigramme} value={c.trigramme}>{(noms[c.trigramme] || c.trigramme).toUpperCase()}</option>
               ))}
             </select>
