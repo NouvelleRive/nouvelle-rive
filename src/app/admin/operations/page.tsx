@@ -172,7 +172,9 @@ export default function OperationsPage() {
             <h3 className="text-sm font-semibold text-gray-700 mr-auto">Pièces en réduction ({piecesAffichees.length})</h3>
             <select value={filtreTri} onChange={e => setFiltreTri(e.target.value)} className="border border-gray-300 rounded px-2 py-1.5 text-sm">
               <option value="">Toutes les chineuses</option>
-              {stats.parChineuse.map(c => (
+              {[...stats.parChineuse]
+                .sort((a, b) => (noms[a.trigramme] || a.trigramme).localeCompare(noms[b.trigramme] || b.trigramme, 'fr', { sensitivity: 'base' }))
+                .map(c => (
                 <option key={c.trigramme} value={c.trigramme}>{(noms[c.trigramme] || c.trigramme).toUpperCase()}</option>
               ))}
             </select>
