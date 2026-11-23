@@ -5,7 +5,6 @@ export const OPERATEURS_PRINTEMPS: Array<{ code: string; nom: string }> = [
   { code: '11842', nom: 'Estelle' },
   { code: '107225', nom: 'Steve' },
   { code: '97964', nom: 'Lucas' },
-  { code: '104208', nom: 'Hina' },
   { code: '105885', nom: 'Paul' },
   { code: '98635', nom: 'Nas' },
   { code: '107305', nom: 'Anna' },
