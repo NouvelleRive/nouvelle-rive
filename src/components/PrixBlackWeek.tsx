@@ -48,7 +48,7 @@ export function BadgeBlackWeek({ remiseBlackWeek, taille = 13, avecPct = false }
   if (!pct) return null
   return (
     <span style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: taille, fontWeight: 700, letterSpacing: '0.08em', padding: `${Math.round(taille / 4)}px ${Math.round(taille * 0.6)}px`, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-      {libelleMaj(OPERATION_EN_COURS)}{avecPct ? ` ${pct}%` : ''}
+      {libelleMaj(OPERATION_EN_COURS)}{avecPct ? ` -${pct}%` : ''}
     </span>
   )
 }
