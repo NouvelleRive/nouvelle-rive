@@ -13,7 +13,7 @@ import { getTypeSlug } from '@/lib/produitSlug'
 import { getTypeShortLabel } from '@/lib/typeLabels'
 import { LUXURY_BRANDS } from '@/lib/admin/helpers'
 import { formatPrix } from '@/lib/formatPrix'
-import { PrixBlackWeekFiche } from '@/components/PrixBlackWeek'
+import { PrixBlackWeekFiche, BandeauBlackWeekFiche } from '@/components/PrixBlackWeek'
 import { OPERATION_EN_COURS, remiseEffective, prixClient } from '@/lib/remiseOperation'
 import { marketingAllowed } from '@/lib/consent'
 import { pixelViewContent } from '@/lib/metaPixel'
@@ -254,6 +254,7 @@ export default function ProduitClient({
       <div className="w-full lg:w-1/2 lg:h-screen lg:overflow-y-auto">
         <div className="px-6 lg:px-12 py-8 lg:py-12">
           <div className="pb-8 mb-0">
+            <BandeauBlackWeekFiche remiseBlackWeek={produit.remiseBlackWeek} />
             <Breadcrumbs
               typeSlug={getTypeSlug(produit.categorie)}
               marque={produit.marque}

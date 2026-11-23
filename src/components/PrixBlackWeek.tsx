@@ -85,11 +85,24 @@ export function PrixBlackWeekFiche({ prix, remiseBlackWeek }: { prix: number; re
     <>
       <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
       <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
-      <span style={{ display: 'block', marginTop: 8 }}>
+      {/* Sur mobile, tag + décompte sont en haut de la fiche (BandeauBlackWeekFiche) */}
+      <span className="hidden lg:block" style={{ marginTop: 8 }}>
         <span style={{ display: 'inline-block', background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.01em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)} -{pct} %</span>
         <CompteARebours />
       </span>
     </>
+  )
+}
+
+/** Fiche produit, MOBILE uniquement : « BLACK WEEK -X % » + décompte tout en haut, avant le titre. */
+export function BandeauBlackWeekFiche({ remiseBlackWeek }: { remiseBlackWeek?: number }) {
+  const pct = remiseAffichee(OPERATION_EN_COURS, remiseBlackWeek)
+  if (!pct) return null
+  return (
+    <div className="lg:hidden mb-4" style={{ fontSize: '16px' }}>
+      <span style={{ display: 'inline-block', background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.01em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)} -{pct} %</span>
+      <CompteARebours />
+    </div>
   )
 }
 
