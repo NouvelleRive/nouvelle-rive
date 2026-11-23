@@ -12,7 +12,6 @@ export const OPERATEURS_PRINTEMPS: Array<{ code: string; nom: string }> = [
   { code: '109169', nom: 'Altesse' },
   { code: '109068', nom: 'Tess' },
   { code: '32716', nom: 'Wanda' },
-  { code: '107428', nom: 'Alex' },
   { code: '112692', nom: 'Yoan' },
   { code: '116730', nom: 'Ursula' },
   { code: '122372', nom: 'Leslie' },
