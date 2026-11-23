@@ -861,24 +861,30 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
                   </>
                 ) : (
                   <>
+                    {/* Hauteurs fixes (titre 2 lignes, marque 1 ligne, réservée même vide) :
+                        titres, marques et prix tombent alignés d'une tuile à l'autre. */}
                     <h3
                       className="uppercase font-semibold line-clamp-2"
                       style={{
                         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                         fontSize: '10px',
-                        letterSpacing: '0.03em'
+                        letterSpacing: '0.03em',
+                        lineHeight: 1.4,
+                        minHeight: '2.8em'
                       }}
                     >
                       {formatDisplayTitle(produit, lang)}
                     </h3>
-                    {(produit.marque || (showSku && produit.sku)) && (
+                    {(
                       <p
-                        className="mt-1 uppercase"
+                        className="mt-1 uppercase line-clamp-1"
                         style={{
                           fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
                           fontSize: '10px',
                           letterSpacing: '0.05em',
-                          color: '#666'
+                          color: '#666',
+                          lineHeight: 1.4,
+                          minHeight: '1.4em'
                         }}
                       >
                         {showSku && produit.sku && (
