@@ -147,7 +147,7 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
     onSearchActiveChange?.(searchQuery.trim().length > 0)
   }, [searchQuery, onSearchActiveChange])
 
-  // Fréquence d'intercalation des vidéos : 7 partout (desktop + mobile).
+  // Fréquence d'intercalation des vidéos : 8 partout (desktop + mobile).
   const [isDesktop, setIsDesktop] = useState(false)
   useEffect(() => {
     const mql = window.matchMedia('(min-width: 1024px)')
@@ -557,11 +557,12 @@ export default function ProductGrid({ produits, columns = 3, showFilters = true,
       return m ? m[1].toUpperCase() : null
     }
 
-    const blockSize = 7
+    // 8 pièces par bloc : nombre pair → lignes pleines sur mobile (2 col.), et 8 + 1 vidéo = 3 lignes sur desktop (3 col.). Jamais de case blanche.
+    const blockSize = 8
     let boundaryCount = 0
     for (let i = 0; i < filteredProduits.length; i++) {
       items.push({ type: 'product', data: filteredProduits[i] })
-      // Moins de 7 pièces : aucune vidéo ne tomberait → une vidéo après la dernière pièce.
+      // Moins de 8 pièces : aucune vidéo ne tomberait → une vidéo après la dernière pièce.
       const isBoundary = (i + 1) % blockSize === 0
         || (filteredProduits.length < blockSize && i === filteredProduits.length - 1)
       if (!isBoundary || chineuseByTrigramme.size === 0) continue
