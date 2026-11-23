@@ -21,6 +21,8 @@ type BoutiqueListingProps = {
    *  depuis /api/boutique-produits (cache 6h à l'edge, 0 read Firestore) et on paginate côté
    *  client via IntersectionObserver. */
   allBoutiqueMode?: boolean
+  /** Mode toute la boutique restreint aux pièces remisées par l'opération (page /black-week). */
+  remiseOnly?: boolean
 }
 
 export default function BoutiqueListing({
@@ -30,6 +32,7 @@ export default function BoutiqueListing({
   h1En,
   skipClientRefetch = false,
   allBoutiqueMode = false,
+  remiseOnly = false,
 }: BoutiqueListingProps) {
   const { produits, loadingMore } = useFilteredProducts(pageId, {
     skip: skipClientRefetch || allBoutiqueMode,
@@ -84,7 +87,8 @@ export default function BoutiqueListing({
   }, [allBoutiqueMode])
 
   // Choix de la source affichée : mode all-boutique = liste API paginée, sinon logique siteConfig.
-  const allBoutiqueSource = allBoutique.length > 0 ? allBoutique : initialProduits
+  const allBoutiqueSource = (allBoutique.length > 0 ? allBoutique : initialProduits)
+    .filter(p => !remiseOnly || ((p as any).remiseBlackWeek ?? 0) > 0)
   const displayProduits = (
     allBoutiqueMode
       ? allBoutiqueSource.slice(0, infiniteCount)

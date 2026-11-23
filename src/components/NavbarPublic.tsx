@@ -2,6 +2,7 @@
 'use client'
 
 import Link from 'next/link'
+import { OPERATION_EN_COURS, operationActive, libelleMaj } from '@/lib/remiseOperation'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -138,10 +139,16 @@ export default function NavbarPublic() {
   // Source : dynamicNav (siteConfig/_nav) une fois chargé, sinon STATIC_LINKS pour le
   // premier paint (SSR + hydratation).
   const activeLinks = dynamicNav ?? STATIC_LINKS
-  const boutiqueLinks = activeLinks.map(p => ({
-    href: `${p.path}${p.hash || ''}`,
-    label: t(p.labelFr, p.labelEn, lang),
-  }))
+  // Pendant une opération de remise : onglet dédié en tête de nav (bleu, gras)
+  const boutiqueLinks: { href: string; label: string; operation?: boolean }[] = [
+    ...(operationActive(OPERATION_EN_COURS)
+      ? [{ href: '/black-week#titre', label: libelleMaj(OPERATION_EN_COURS), operation: true }]
+      : []),
+    ...activeLinks.map(p => ({
+      href: `${p.path}${p.hash || ''}`,
+      label: t(p.labelFr, p.labelEn, lang),
+    })),
+  ]
 
   const cartLabel = t('PANIER', 'CART', lang)
   const accountLabel = t('MON COMPTE', 'MY ACCOUNT', lang)
@@ -217,8 +224,8 @@ export default function NavbarPublic() {
                     style={{
                       fontSize: '11px',
                       letterSpacing: '0.2em',
-                      color: active ? bleuElectrique : '#000',
-                      fontWeight: active ? '600' : '400',
+                      color: active || link.operation ? bleuElectrique : '#000',
+                      fontWeight: link.operation ? '700' : active ? '600' : '400',
                       lineHeight: '1.8',
                     }}
                   >
@@ -369,8 +376,8 @@ export default function NavbarPublic() {
                   style={{
                     fontSize: '11px',
                     letterSpacing: '0.2em',
-                    color: active ? bleuElectrique : '#000',
-                    fontWeight: active ? '600' : '400',
+                    color: active || link.operation ? bleuElectrique : '#000',
+                    fontWeight: link.operation ? '700' : active ? '600' : '400',
                     lineHeight: '1.8'
                   }}
                 >
