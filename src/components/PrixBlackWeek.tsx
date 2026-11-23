@@ -49,7 +49,7 @@ export function BadgeBlackWeek({ remiseBlackWeek, taille = 13, avecPct = false }
   if (!pct) return null
   // Masqué sur mobile : la mention sous le prix suffit (doublon sinon)
   return (
-    <span className="hidden lg:block" style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: `clamp(9px, 3vw, ${taille}px)`, fontWeight: 700, letterSpacing: '0.08em', padding: '0.25em 0.6em', fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <span className="hidden lg:block" style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: `clamp(9px, 3vw, ${taille}px)`, fontWeight: 700, letterSpacing: '0.01em', padding: '0.25em 0.6em', fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       {libelleMaj(OPERATION_EN_COURS)}{avecPct ? ` -${pct}%` : ''}
     </span>
   )
@@ -86,7 +86,7 @@ export function PrixBlackWeekFiche({ prix, remiseBlackWeek }: { prix: number; re
       <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
       <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
       <span style={{ display: 'block', marginTop: 8 }}>
-        <span style={{ display: 'inline-block', background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)} -{pct} %</span>
+        <span style={{ display: 'inline-block', background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.01em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)} -{pct} %</span>
         <CompteARebours />
       </span>
     </>
@@ -99,7 +99,7 @@ export function PrixBlackWeekGrille({ prix, remiseBlackWeek }: { prix: number; r
   if (!pct) return <>{formatPrix(prix)} €</>
   return (
     <>
-      <span style={{ display: 'inline-block', marginRight: 6, background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)}</span>
+      <span style={{ display: 'inline-block', marginRight: 6, background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.01em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)}<span className="lg:hidden"> -{pct}%</span></span>
       <span style={{ textDecoration: 'line-through', fontWeight: 700, marginRight: 6 }}>{fmt(prix)} €</span>
       <span>{fmt(prixClient(prix, pct))} €</span>
     </>
