@@ -261,7 +261,7 @@ export default function ProduitClient({
             />
             <h1 className="uppercase mb-4">
               {produit.marque && (
-                <span className="block mb-1" style={{ fontSize: '48px', letterSpacing: '0.05em', fontWeight: '700', lineHeight: '1.1' }}>
+                <span className="block mb-1" style={{ fontSize: 'clamp(28px, 9vw, 48px)', letterSpacing: '0.05em', fontWeight: '700', lineHeight: '1.1', overflowWrap: 'break-word' }}>
                   {produit.marque}
                 </span>
               )}

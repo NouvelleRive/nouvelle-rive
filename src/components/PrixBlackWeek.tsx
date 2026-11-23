@@ -47,8 +47,9 @@ export default function PrixBlackWeek({ prix, remiseBlackWeek, badge = false }: 
 export function BadgeBlackWeek({ remiseBlackWeek, taille = 13, avecPct = false }: { remiseBlackWeek?: number; taille?: number; avecPct?: boolean }) {
   const pct = remiseAffichee(OPERATION_EN_COURS, remiseBlackWeek)
   if (!pct) return null
+  // Masqué sur mobile : la mention sous le prix suffit (doublon sinon)
   return (
-    <span style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: `clamp(9px, 3vw, ${taille}px)`, fontWeight: 700, letterSpacing: '0.08em', padding: '0.25em 0.6em', fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+    <span className="hidden lg:block" style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', zIndex: 10, background: '#000', color: '#fff', fontSize: `clamp(9px, 3vw, ${taille}px)`, fontWeight: 700, letterSpacing: '0.08em', padding: '0.25em 0.6em', fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
       {libelleMaj(OPERATION_EN_COURS)}{avecPct ? ` -${pct}%` : ''}
     </span>
   )
@@ -74,8 +75,8 @@ function CompteARebours() {
   return <span style={{ marginLeft: 8, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{txt}</span>
 }
 
-/** Fiche produit — rendu validé, FIGÉ (version du commit fbcbc535) :
- *  prix barré gris, prix client en gras, puis badge « BLACK WEEK -X % ».
+/** Fiche produit : prix barré gris, prix client en gras, puis à la ligne
+ *  badge « BLACK WEEK -X % » + décompte.
  *  Ne pas modifier avec la grille. */
 export function PrixBlackWeekFiche({ prix, remiseBlackWeek }: { prix: number; remiseBlackWeek?: number }) {
   const pct = remiseAffichee(OPERATION_EN_COURS, remiseBlackWeek)
@@ -84,8 +85,10 @@ export function PrixBlackWeekFiche({ prix, remiseBlackWeek }: { prix: number; re
     <>
       <span style={{ textDecoration: 'line-through', color: '#999', marginRight: 6 }}>{fmt(prix)} €</span>
       <span style={{ fontWeight: 600 }}>{fmt(prixClient(prix, pct))} €</span>
-      <span style={{ display: 'inline-block', marginLeft: 6, background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)} -{pct} %</span>
-      <CompteARebours />
+      <span style={{ display: 'block', marginTop: 8 }}>
+        <span style={{ display: 'inline-block', background: '#000', color: '#fff', fontSize: '0.8em', fontWeight: 700, letterSpacing: '0.05em', padding: '1px 6px' }}>{libelleMaj(OPERATION_EN_COURS)} -{pct} %</span>
+        <CompteARebours />
+      </span>
     </>
   )
 }
