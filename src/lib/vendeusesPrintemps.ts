@@ -3,8 +3,6 @@
 // personnes : dans ce cas le ticket ne préremplit pas, on choisit à la main.
 export const OPERATEURS_PRINTEMPS: Array<{ code: string; nom: string }> = [
   { code: '11842', nom: 'Estelle' },
-  { code: '107225', nom: 'Steve' },
-  { code: '105885', nom: 'Paul' },
   { code: '98635', nom: 'Nas' },
   { code: '109169', nom: 'Altesse' },
   { code: '109068', nom: 'Tess' },
