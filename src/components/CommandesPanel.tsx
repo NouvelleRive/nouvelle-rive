@@ -20,6 +20,8 @@ interface Commande {
   taille?: string
   couleur?: string
   prix: number
+  prixInitial?: number
+  fraisLivraison?: number
   client: {
     nom: string
     prenom: string
@@ -113,6 +115,8 @@ export default function CommandesPanel({
           taille: data.taille || data.productTaille || '',
           couleur: data.couleur || data.productCouleur || '',
           prix: data.prix || 0,
+          prixInitial: data.prixInitial || undefined,
+          fraisLivraison: data.fraisLivraison || undefined,
           client: data.client || { nom: '', prenom: '', email: '' },
           modeLivraison: data.modeLivraison || 'retrait',
           adresse: data.adresse || null,
@@ -434,7 +438,13 @@ export default function CommandesPanel({
             </p>
             <p className="text-xs text-gray-400 mt-0.5">Commandé le {formatDate(commande.dateCommande)}</p>
           </div>
-          <p className="font-bold text-sm whitespace-nowrap">{formatPrix(commande.prix, { decimals: 2 })} €</p>
+          <div className="text-right whitespace-nowrap">
+            <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
+            {commande.prixInitial && commande.prixInitial > commande.prix && (
+              <p className="text-xs text-gray-400 line-through">{formatPrix(commande.prixInitial, { decimals: 2 })} €</p>
+            )}
+            {commande.fraisLivraison && <p className="text-xs text-gray-500">+ {formatPrix(commande.fraisLivraison, { decimals: 2 })} € livraison</p>}
+          </div>
         </div>
 
         {/* Bloc destinataire — nom + adresse pour le colis */}
@@ -595,6 +605,10 @@ export default function CommandesPanel({
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-sm">{formatPrix(commande.prix, { decimals: 2 })} €</p>
+                  {commande.prixInitial && commande.prixInitial > commande.prix && (
+                    <p className="text-xs text-gray-400 line-through">{formatPrix(commande.prixInitial, { decimals: 2 })} €</p>
+                  )}
+                  {commande.fraisLivraison && <p className="text-xs text-gray-500">+ {formatPrix(commande.fraisLivraison, { decimals: 2 })} € livraison</p>}
                   {commande.numeroSuivi && (
                     <p className="text-xs text-gray-500 mt-1">Suivi : {commande.numeroSuivi}</p>
                   )}

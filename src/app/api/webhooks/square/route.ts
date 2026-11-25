@@ -64,8 +64,10 @@ async function traiterProduit(opts: {
   lineItemPrice: number
   productNameFallback: string
   marketing: Record<string, string> | null
+  /** Frais de port de la commande, portés par la 1re pièce du panier seulement */
+  fraisLivraison: number
 }) {
-  const { productId, paymentId, orderId, saleTimestamp, clientInfo, modeLivraison, adresse, numeroGroupe, lineItem, lineItemPrice, productNameFallback, marketing } = opts
+  const { productId, paymentId, orderId, saleTimestamp, clientInfo, modeLivraison, adresse, numeroGroupe, lineItem, lineItemPrice, productNameFallback, marketing, fraisLivraison } = opts
 
   const produitRef = adminDb.collection('produits').doc(productId)
   const produitSnap = await produitRef.get()
@@ -177,6 +179,11 @@ async function traiterProduit(opts: {
     }
   }
 
+  // Black Week : remise active à la date de la vente → prix encaissé = prix client
+  const bwVente = remiseEffective(OPERATION_EN_COURS, Number(produitData.remiseBlackWeek) || 0, saleTimestamp.toDate())
+  const prixDepartVente = produitData.prix || lineItemPrice
+  const prixPaye = bwVente ? calcPrixClient(prixDepartVente, bwVente) : prixDepartVente
+
   // Création de la commande
   const nouvelleCommande = {
     orderId,
@@ -185,7 +192,9 @@ async function traiterProduit(opts: {
     productSku: produitData.sku || null,
     productMarque: produitData.marque || null,
     productImage: produitData.images?.[0] || produitData.imageUrl || produitData.photos?.face || produitData.imageUrls?.[0] || null,
-    prix: produitData.prix || lineItemPrice,
+    prix: prixPaye,
+    ...(bwVente ? { prixInitial: prixDepartVente, remiseBlackWeek: bwVente } : {}),
+    ...(fraisLivraison > 0 ? { fraisLivraison } : {}),
 
     client: clientInfo,
     modeLivraison,
@@ -234,9 +243,6 @@ async function traiterProduit(opts: {
     }
   }
 
-  // Black Week : remise active à la date de la vente → prix encaissé = prix client
-  const bwVente = remiseEffective(OPERATION_EN_COURS, Number(produitData.remiseBlackWeek) || 0, saleTimestamp.toDate())
-  const prixDepartVente = produitData.prix || lineItemPrice
   const venteData = {
     paymentId,
     orderId,
@@ -286,6 +292,7 @@ async function traiterProduit(opts: {
     isNewVente,
     commandeCreated,
     contentId: produitData.sku || productId,
+    prixPaye,
   }
 }
 
@@ -571,7 +578,7 @@ export async function POST(request: Request) {
     }
     const marketing = Object.keys(marketingRaw).length > 0 ? marketingRaw : null
 
-    const traitements: { commandeId: string; produitData: any; nouvelleQuantite: number; isNewVente: boolean; commandeCreated: boolean; contentId: string }[] = []
+    const traitements: { commandeId: string; produitData: any; nouvelleQuantite: number; isNewVente: boolean; commandeCreated: boolean; contentId: string; prixPaye: number }[] = []
     for (let i = 0; i < productIds.length; i++) {
       const productId = productIds[i]
       const lineItem = lineItems[i] || null
@@ -594,6 +601,7 @@ export async function POST(request: Request) {
           lineItemPrice,
           productNameFallback,
           marketing,
+          fraisLivraison: i === 0 && modeLivraison === 'livraison' ? Number(metadata.fraisLivraison || 0) : 0,
         })
         if (result) traitements.push(result)
       } catch (e: any) {
@@ -606,7 +614,7 @@ export async function POST(request: Request) {
     // moins une vente réellement nouvelle (les re-livraisons de webhook sont ignorées ;
     // même si elle passait, l'event_id partagé la ferait dédupliquer côté Meta).
     if (metadata.mktConsent === '1' && traitements.some(t => t.isNewVente)) {
-      const totalCapi = traitements.reduce((s, t) => s + (Number(t.produitData.prix) || 0), 0)
+      const totalCapi = traitements.reduce((s, t) => s + (Number(t.prixPaye) || 0), 0)
       const contentIds = traitements.map(t => t.contentId).filter(Boolean)
       await sendCapiPurchase({
         eventId: `purchase_${orderId}`, // identique au Pixel navigateur (confirmation)
@@ -640,7 +648,7 @@ export async function POST(request: Request) {
     // Confirmation de commande AU CLIENT (une seule fois — dédup anti-retry webhook
     // via commandeCreated, comme la CAPI s'appuie sur isNewVente).
     if (clientInfo.email && traitements.some(t => t.commandeCreated)) {
-      const totalArticlesPrix = traitements.reduce((s, t) => s + (Number(t.produitData.prix) || 0), 0)
+      const totalArticlesPrix = traitements.reduce((s, t) => s + (Number(t.prixPaye) || 0), 0)
       const fraisLivraisonClient = Number(metadata.fraisLivraison || 0)
       await sendConfirmationCommande({
         email: clientInfo.email,
@@ -649,7 +657,7 @@ export async function POST(request: Request) {
           nom: t.produitData.nom,
           sku: t.produitData.sku,
           marque: t.produitData.marque,
-          prix: t.produitData.prix,
+          prix: t.prixPaye,
           image: t.produitData.images?.[0] || t.produitData.imageUrl || t.produitData.photos?.face || t.produitData.imageUrls?.[0] || null,
         })),
         modeLivraison,
@@ -661,7 +669,7 @@ export async function POST(request: Request) {
     // Email récap unique pour tout le panier
     if (traitements.length > 0) {
       const totalArticles = traitements.length
-      const totalPrix = traitements.reduce((s, t) => s + (Number(t.produitData.prix) || 0), 0)
+      const totalPrix = traitements.reduce((s, t) => s + (Number(t.prixPaye) || 0), 0)
       const fraisLivraison = Number(metadata.fraisLivraison || 0)
 
       const articlesHtml = traitements.map(t => `
@@ -669,7 +677,7 @@ export async function POST(request: Request) {
           <p style="margin: 0;"><strong>${t.produitData.nom || 'Produit'}</strong></p>
           ${t.produitData.sku ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">SKU: ${t.produitData.sku}</p>` : ''}
           ${t.produitData.marque ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">${t.produitData.marque}</p>` : ''}
-          <p style="margin: 4px 0 0 0;">${(t.produitData.prix || 0).toFixed(2)} €</p>
+          <p style="margin: 4px 0 0 0;">${(t.prixPaye || 0).toFixed(2)} €${t.prixPaye < (Number(t.produitData.prix) || 0) ? ` <span style="color:#999;text-decoration:line-through;">${Number(t.produitData.prix).toFixed(2)} €</span>` : ''}</p>
           ${t.nouvelleQuantite === 0 ? '<p style="color: #d32f2f; font-size: 12px; margin: 4px 0 0 0;">🗑️ Plus de stock</p>' : ''}
         </div>
       `).join('')
