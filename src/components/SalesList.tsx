@@ -278,7 +278,7 @@ export default function SalesList({
         {/* KPI par chineuse — mobile */}
         {((kpisParChineuse && kpisParChineuse.length > 0) || kpisSupplementaires.length > 0) && (
           <div className="lg:hidden w-full grid grid-cols-2 gap-2">
-            {kpisParChineuse.map(k => {
+            {kpisParChineuse?.map(k => {
               const vs = ventes.filter(v => v.trigramme === k.trigramme && estDuMois(v))
               return (
                 <div key={k.trigramme} className="bg-white border rounded-lg px-3 py-2">
