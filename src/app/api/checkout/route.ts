@@ -204,12 +204,31 @@ export async function POST(request: Request) {
       })
     }
 
+    // Square refuse la commande (donc le paiement) au-delà de 10 métadonnées ou
+    // d'une valeur de plus de 255 caractères. On garde d'abord ce que lit le
+    // webhook pour la commande, puis le tracking Meta, puis les UTM.
+    if (metadata.adresseLivraison?.length > 255) {
+      const { pays, ...court } = adresse || {}
+      metadata.adresseLivraison = JSON.stringify(court)
+      if (metadata.adresseLivraison.length > 255) {
+        metadata.adresseLivraison = JSON.stringify({ ...court, adresse: String(court.adresse || '').slice(0, 255 - metadata.adresseLivraison.length + String(court.adresse || '').length) })
+      }
+    }
+    const PRIORITE_META = [
+      'productIds', 'clientEmail', 'clientNom', 'modeLivraison', 'fraisLivraison', 'adresseLivraison', 'clientTelephone',
+      'mktConsent', 'fbc', 'fbp', 'utmSource', 'utmCampaign', 'utmMedium', 'fbclid', 'utmContent', 'utmTerm',
+      'promoCode', 'remise', 'remiseBlackWeek', 'sousTotal', 'nombreArticles',
+    ]
+    const clesMeta = PRIORITE_META.filter(k => metadata[k] != null && metadata[k] !== '')
+    const metaSquare: Record<string, string> = Object.fromEntries(clesMeta.slice(0, 10).map(k => [k, String(metadata[k]).slice(0, 255)]))
+    if (clesMeta.length > 10) console.log('ℹ️ Métadonnées Square non envoyées (limite 10):', clesMeta.slice(10).join(', '))
+
     const orderResponse = await client.ordersApi.createOrder({
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
         lineItems,
         ...(discounts ? { discounts } : {}),
-        metadata
+        metadata: metaSquare
       },
       idempotencyKey
     })
@@ -254,7 +273,7 @@ export async function POST(request: Request) {
         locationId: process.env.SQUARE_LOCATION_ID!,
         lineItems,
         ...(discounts ? { discounts } : {}),
-        metadata
+        metadata: metaSquare
       },
       checkoutOptions: {
         redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/confirmation?orderId=${orderId}&productIds=${encodeURIComponent(productIds)}`,
