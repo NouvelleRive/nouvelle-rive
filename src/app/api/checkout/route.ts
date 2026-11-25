@@ -229,8 +229,13 @@ export async function POST(request: Request) {
       }
     }
 
+    // Square refuse tout numéro sans indicatif (« 0612… », « 6946… ») et fait
+    // échouer le paiement : on envoie le format +XX…, sinon rien (le numéro
+    // reste dans les metadata de la commande).
     if (clientInfo.telephone && clientInfo.telephone.trim() !== '') {
-      prePopulatedData.buyerPhoneNumber = clientInfo.telephone
+      const tel = clientInfo.telephone.replace(/[\s.\-()]/g, '').replace(/^00/, '+')
+      const e164 = tel.startsWith('+') ? tel : codePays === 'FR' && /^0\d{9}$/.test(tel) ? `+33${tel.slice(1)}` : null
+      if (e164 && /^\+\d{8,15}$/.test(e164)) prePopulatedData.buyerPhoneNumber = e164
     }
 
     if (modeLivraison === 'livraison' && adresse) {
@@ -243,8 +248,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const checkoutResponse = await client.checkoutApi.createPaymentLink({
-      idempotencyKey: `checkout-${idempotencyKey}`,
+    const creerLien = (idem: string) => client.checkoutApi.createPaymentLink({
+      idempotencyKey: idem,
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
         lineItems,
@@ -256,6 +261,12 @@ export async function POST(request: Request) {
         askForShippingAddress: modeLivraison === 'livraison'
       },
       prePopulatedData
+    })
+    // Numéro encore refusé par Square → on relance sans lui, plutôt que de bloquer la vente.
+    const checkoutResponse = await creerLien(`checkout-${idempotencyKey}`).catch(async (e: any) => {
+      if (!prePopulatedData.buyerPhoneNumber || !JSON.stringify(e?.errors || '').includes('INVALID_PHONE_NUMBER')) throw e
+      delete prePopulatedData.buyerPhoneNumber
+      return creerLien(`checkout-${idempotencyKey}-sanstel`)
     })
 
     const checkoutUrl = checkoutResponse.result.paymentLink?.url

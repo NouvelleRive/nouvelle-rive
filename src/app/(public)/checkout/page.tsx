@@ -316,7 +316,7 @@ function CheckoutContent() {
                     <p style={{ fontSize: '13px' }}>{t('Livraison à domicile', 'Home delivery', lang)}</p>
                     {fraisLivraisonPreview > 0 && (
                       <p style={{ fontSize: '11px', color: '#666' }}>
-                        {t('À partir de', 'From', lang)} {fraisLivraisonPreview}€
+                        {fraisLivraisonPreview}€
                       </p>
                     )}
                   </div>
