@@ -11,6 +11,7 @@ export const OPERATEURS_PRINTEMPS: Array<{ code: string; nom: string }> = [
   { code: '122372', nom: 'Leslie' },
   { code: '115374', nom: 'Constance' },
   { code: '121165', nom: 'Kimia' },
+  { code: '118762', nom: 'Maxence' },
 ]
 
 // Vendeuses sans code caisse : seulement dans la liste déroulante.
