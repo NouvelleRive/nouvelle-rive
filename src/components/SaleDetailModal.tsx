@@ -140,6 +140,7 @@ export default function SaleDetailModal({ vente, produit, isAdmin = false, onClo
             <Ligne label="Entré le" value={dateEntree ? format(dateEntree, 'dd/MM/yyyy', { locale: fr }) : undefined} />
             <Ligne label="Chineuse" value={vente.trigramme || vente.chineur} />
             <Ligne label="Source" value={vente.source} />
+            <Ligne label="Vendeuse" value={vente.vendeuse} />
             {isAdmin && <Ligne label="Prix achat" value={typeof p.prixAchat === 'number' ? `${formatPrix(p.prixAchat)} €` : undefined} />}
             {isAdmin && <Ligne label="Frais port" value={typeof p.fraisPort === 'number' ? `${formatPrix(p.fraisPort)} €` : undefined} />}
             {isAdmin && <Ligne label="Marge nette" value={marge !== null ? `${formatPrix(marge)} €` : undefined} />}

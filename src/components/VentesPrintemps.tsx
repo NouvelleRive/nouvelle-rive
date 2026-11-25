@@ -424,7 +424,18 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
     prix: v.prix,
     dateVente: v.dateVente,
     imageUrls: [v.photoPiece, v.photoTicket],
+    vendeuse: v.vendeuse || undefined,
   }))
+
+  // KPI ventes par vendeuse : mois en cours, comme les KPI par chineuse.
+  const moisCourant = format(new Date(), 'yyyy-MM')
+  const duMoisCourant = ventes.filter(v => v.vendeuse && v.dateVente.startsWith(moisCourant))
+  const kpisVendeuses = Array.from(new Set(duMoisCourant.map(v => v.vendeuse!)))
+    .map(nom => {
+      const siennes = duMoisCourant.filter(v => v.vendeuse === nom)
+      return { label: nom, ca: siennes.reduce((s, v) => s + v.prix, 0), nb: siennes.length }
+    })
+    .sort((a, b) => b.ca - a.ca)
 
   return (
     <>
@@ -459,6 +470,7 @@ export default function VentesPrintemps({ emailChineuse }: { emailChineuse?: str
         chineuses={PROPRIETAIRES_PRINTEMPS.map(p => ({ trigramme: p, nom: p }))}
         avecFiltreChineuse
         ongletBis={{ label: 'Vendeuses', contenu: tableauVendeuses }}
+        kpisSupplementaires={kpisVendeuses}
         kpisParChineuse={['GIGI PARIS', 'INES PINEAU', "TETE D'ORANGE", 'CHINEUZ2BLING'].map(p => ({ trigramme: p, label: TRIGRAMME_PROPRIETAIRE[p] }))}
         chineuse={chineuse}
         userEmail={user?.email || undefined}

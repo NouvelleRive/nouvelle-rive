@@ -41,6 +41,8 @@ export interface Vente {
   source?: string
   isAttribue?: boolean
   vendu?: boolean
+  /** Printemps : vendeuse du grand magasin (opérateur caisse) */
+  vendeuse?: string
 }
 
 export interface ChineuseMeta {
@@ -74,6 +76,7 @@ interface SalesListProps {
   sousFiltres?: React.ReactNode // affiché sous les filtres (ex. relecture des ventes Printemps)
   kpisParChineuse?: Array<{ trigramme: string; label: string }> // KPI ventes par chineuse (ex. Printemps)
   ongletBis?: { label: string; contenu: React.ReactNode } // 2e onglet sous les KPI (ex. vendeuses Printemps)
+  kpisSupplementaires?: Array<{ label: string; ca: number; nb: number }> // KPI déjà calculés (ex. ventes par vendeuse Printemps)
   loading?: boolean
   // Callbacks admin
   onAttribuer?: (vente: Vente) => void
@@ -104,6 +107,7 @@ export default function SalesList({
   sousFiltres,
   kpisParChineuse,
   ongletBis,
+  kpisSupplementaires = [],
   loading = false,
   onAttribuer,
   onModifierPrix, 
@@ -257,6 +261,13 @@ export default function SalesList({
               </div>
             )
           })}
+          {kpisSupplementaires.map(k => (
+            <div key={k.label} className="bg-white border rounded-lg px-3 py-2 flex items-center gap-2">
+              <span className="text-xs text-gray-500">{k.label}</span>
+              <span className="font-bold">{formatPrix(k.ca)}€</span>
+              <span className="text-xs text-gray-400">{k.nb}</span>
+            </div>
+          ))}
           {isDeposante && (
             <div className="bg-white border border-[#22209C]/30 rounded-lg px-3 py-2 flex items-center gap-2">
               <span className="text-xs text-[#22209C]">Ma cagnotte</span>
@@ -265,7 +276,7 @@ export default function SalesList({
           )}
         </div>
         {/* KPI par chineuse — mobile */}
-        {kpisParChineuse && kpisParChineuse.length > 0 && (
+        {((kpisParChineuse && kpisParChineuse.length > 0) || kpisSupplementaires.length > 0) && (
           <div className="lg:hidden w-full grid grid-cols-2 gap-2">
             {kpisParChineuse.map(k => {
               const vs = ventes.filter(v => v.trigramme === k.trigramme && estDuMois(v))
@@ -279,6 +290,15 @@ export default function SalesList({
                 </div>
               )
             })}
+            {kpisSupplementaires.map(k => (
+              <div key={k.label} className="bg-white border rounded-lg px-3 py-2">
+                <div className="text-xs text-gray-500 truncate">{k.label}</div>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-bold">{formatPrix(k.ca)}€</span>
+                  <span className="text-xs text-gray-400">{k.nb}</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
