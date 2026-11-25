@@ -363,7 +363,17 @@ export async function POST(request: Request) {
         : new Date()
     const saleTimestamp = Timestamp.fromDate(saleDate)
 
-    const metadata = order?.metadata || {}
+    let metadata: Record<string, string> = order?.metadata || {}
+    // Vente en ligne : infos que Square n'a pas pu porter (limite 10), cf. /api/checkout.
+    if (metadata.productIds && orderId) {
+      try {
+        const extra = await adminDb.collection('checkoutMeta').doc(orderId).get()
+        if (extra.exists) {
+          const { createdAt, ...reste } = extra.data() as any
+          metadata = { ...metadata, ...reste } // version complète (non tronquée)
+        }
+      } catch (e: any) { console.warn('⚠️ checkoutMeta lecture KO:', e?.message) }
+    }
 
     // Multi-articles (panier) ou legacy mono-produit ?
     const productIdsCsv: string = metadata.productIds || metadata.productId || ''

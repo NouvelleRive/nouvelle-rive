@@ -293,6 +293,14 @@ export async function POST(request: Request) {
 
     console.log('✅ Lien de paiement créé')
 
+    // Infos au-delà des 10 acceptées par Square : rangées dans Firestore sous l'id
+    // de la commande du lien, le webhook les relit à la vente. Jamais bloquant.
+    const orderIdLien = checkoutResponse.result.paymentLink?.orderId
+    if (orderIdLien && (clesMeta.length > 10 || clesMeta.some(k => String(metadata[k]).length > 255))) {
+      await adminDb.collection('checkoutMeta').doc(orderIdLien).set({ ...metadata, createdAt: new Date() })
+        .catch(e => console.error('⚠️ checkoutMeta KO:', e?.message))
+    }
+
     return NextResponse.json({
       success: true,
       orderId,
