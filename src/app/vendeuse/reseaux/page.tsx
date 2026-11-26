@@ -37,7 +37,7 @@ const CHRONIQUES = [
     captionDefaut: "Parmi nos favoris dans les arrivages de la semaine. Lien vers tous nos week fav en bio !\n\nA few of our favourites from this week's new arrivals. Link to all our week favs in bio!",
   },
   {
-    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: 'Partage DM', formatDefaut: 'publi',
+    key: 'shabbat-quote', day: 5, jour: 'Vendredi', titre: 'SHABBAT QUOTE', responsable: 'Salomé', heureDefaut: '11:00', objectifDefaut: 'Partage DM', formatDefaut: 'reel',
     captionDefaut: "Shabbat Shalom 🌊 la quote de la semaine pour bien commencer le week-end 🦋",
   },
   {
