@@ -157,6 +157,16 @@ export async function POST(req: NextRequest) {
         })
       }
     } catch (e) { console.warn('Push vente Printemps KO:', e) }
+    // Et à l'admin (canal « boutique », comme les ventes eBay), pour toutes les ventes.
+    try {
+      await sendPushToOwner('boutique', {
+        title: `🎉 Vente Printemps · ${b.proprietaire}`,
+        body: `${description} vendu ${prix}€${vendeuse ? ` par ${vendeuse}` : ''}`,
+        url: '/admin/printemps',
+        tag: `pri_admin_${id}`,
+        image: String(b.photoPiece),
+      })
+    } catch (e) { console.warn('Push admin vente Printemps KO:', e) }
   }
   return NextResponse.json({ ok: true, id })
 }
