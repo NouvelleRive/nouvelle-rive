@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
           url: '/chineuse/printemps',
           tag: `pri_${id}`,
           image: String(b.photoPiece),
-          icon: '/icon-192-blanc.png',
+          icon: '/icon-printemps.png',
         })
       }
     } catch (e) { console.warn('Push vente Printemps KO:', e) }
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
         url: '/admin/printemps',
         tag: `pri_admin_${id}`,
         image: String(b.photoPiece),
-        icon: '/icon-192-blanc.png',
+        icon: '/icon-printemps.png',
       })
     } catch (e) { console.warn('Push admin vente Printemps KO:', e) }
   }
